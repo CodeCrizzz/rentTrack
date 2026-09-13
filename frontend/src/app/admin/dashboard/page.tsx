@@ -133,6 +133,34 @@ export default function AdminDashboard() {
                 </div>
             </div>
 
+            {/* Quick Actions */}
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
+                <Link href="/admin/rooms" className="group bg-white dark:bg-[#0a0a0a] border border-slate-200 dark:border-zinc-800 hover:border-emerald-500/50 dark:hover:border-emerald-500/50 rounded-2xl p-4 flex items-center gap-4 transition-all shadow-[0_2px_8px_rgba(0,0,0,0.04)] dark:shadow-none hover:shadow-md cursor-pointer">
+                    <div className="w-10 h-10 rounded-full bg-emerald-50 dark:bg-emerald-500/10 flex items-center justify-center text-emerald-600 dark:text-emerald-400 group-hover:scale-110 transition-transform">
+                        <Plus className="w-5 h-5" />
+                    </div>
+                    <span className="font-bold text-sm text-slate-800 dark:text-white group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors">Add New Room</span>
+                </Link>
+                <Link href="/admin/tenants" className="group bg-white dark:bg-[#0a0a0a] border border-slate-200 dark:border-zinc-800 hover:border-emerald-500/50 dark:hover:border-emerald-500/50 rounded-2xl p-4 flex items-center gap-4 transition-all shadow-[0_2px_8px_rgba(0,0,0,0.04)] dark:shadow-none hover:shadow-md cursor-pointer">
+                    <div className="w-10 h-10 rounded-full bg-emerald-50 dark:bg-emerald-500/10 flex items-center justify-center text-emerald-600 dark:text-emerald-400 group-hover:scale-110 transition-transform">
+                        <UserCheck className="w-5 h-5" />
+                    </div>
+                    <span className="font-bold text-sm text-slate-800 dark:text-white group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors">Review Registrations</span>
+                </Link>
+                <Link href="/admin/billing" className="group bg-white dark:bg-[#0a0a0a] border border-slate-200 dark:border-zinc-800 hover:border-emerald-500/50 dark:hover:border-emerald-500/50 rounded-2xl p-4 flex items-center gap-4 transition-all shadow-[0_2px_8px_rgba(0,0,0,0.04)] dark:shadow-none hover:shadow-md cursor-pointer">
+                    <div className="w-10 h-10 rounded-full bg-emerald-50 dark:bg-emerald-500/10 flex items-center justify-center text-emerald-600 dark:text-emerald-400 group-hover:scale-110 transition-transform">
+                        <FileText className="w-5 h-5" />
+                    </div>
+                    <span className="font-bold text-sm text-slate-800 dark:text-white group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors">Generate Bills</span>
+                </Link>
+                <Link href="/admin/requests" className="group bg-white dark:bg-[#0a0a0a] border border-slate-200 dark:border-zinc-800 hover:border-emerald-500/50 dark:hover:border-emerald-500/50 rounded-2xl p-4 flex items-center gap-4 transition-all shadow-[0_2px_8px_rgba(0,0,0,0.04)] dark:shadow-none hover:shadow-md cursor-pointer">
+                    <div className="w-10 h-10 rounded-full bg-emerald-50 dark:bg-emerald-500/10 flex items-center justify-center text-emerald-600 dark:text-emerald-400 group-hover:scale-110 transition-transform">
+                        <Wrench className="w-5 h-5" />
+                    </div>
+                    <span className="font-bold text-sm text-slate-800 dark:text-white group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors">Maintenance Requests</span>
+                </Link>
+            </div>
+
             {/* Stat Cards */}
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-5">
                 {/* Occupancy Rate */}
@@ -213,55 +241,29 @@ export default function AdminDashboard() {
                 </div>
             </div>
 
-            {/* Chart & Quick Actions */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                {/* Billing vs Collection Trend */}
-                <div className={`lg:col-span-2 ${cardClass}`}>
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-6 gap-4">
-                        <div>
-                            <h2 className="text-lg font-bold text-slate-800 dark:text-white">Billing vs. Collection Trend</h2>
-                            <p className="text-sm text-slate-500 dark:text-zinc-400 mt-0.5">Last 6 months cash flow overview</p>
-                        </div>
-                        <div className="flex items-center gap-4 text-xs font-semibold text-slate-500 dark:text-zinc-400">
-                            <div className="flex items-center gap-1.5"><div className="w-3 h-3 bg-[#059669] dark:bg-[#059669] rounded-sm"></div> Billed</div>
-                            <div className="flex items-center gap-1.5"><div className="w-3 h-3 bg-[#34d399] dark:bg-[#34d399] rounded-sm"></div> Collected</div>
-                        </div>
+            {/* Chart */}
+            <div className={cardClass}>
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-6 gap-4">
+                    <div>
+                        <h2 className="text-lg font-bold text-slate-800 dark:text-white">Billing vs. Collection Trend</h2>
+                        <p className="text-sm text-slate-500 dark:text-zinc-400 mt-0.5">Last 6 months cash flow overview</p>
                     </div>
-                    <div className="h-[280px] w-full">
-                        <ResponsiveContainer width="100%" height="100%">
-                            <BarChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }} barGap={4} barSize={14}>
-                                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(150,150,150,0.1)" />
-                                <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 12, fontWeight: 500 }} dy={10} />
-                                <YAxis axisLine={false} tickLine={false} tick={false} width={0} />
-                                <Tooltip cursor={{fill: 'rgba(150,150,150,0.1)'}} contentStyle={{ borderRadius: '8px', border: '1px solid rgba(255,255,255,0.1)', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)', backgroundColor: '#0a0a0a', color: '#fff' }} itemStyle={{ color: '#fff' }} />
-                                <Bar dataKey="Billed" fill="#059669" radius={[2, 2, 0, 0]} />
-                                <Bar dataKey="Collected" fill="#34d399" radius={[2, 2, 0, 0]} />
-                            </BarChart>
-                        </ResponsiveContainer>
+                    <div className="flex items-center gap-4 text-xs font-semibold text-slate-500 dark:text-zinc-400">
+                        <div className="flex items-center gap-1.5"><div className="w-3 h-3 bg-[#059669] dark:bg-[#059669] rounded-sm"></div> Billed</div>
+                        <div className="flex items-center gap-1.5"><div className="w-3 h-3 bg-[#34d399] dark:bg-[#34d399] rounded-sm"></div> Collected</div>
                     </div>
                 </div>
-
-                {/* Quick Actions */}
-                <div className={cardClass}>
-                    <h2 className="text-lg font-bold text-slate-800 dark:text-white mb-6">Quick Actions</h2>
-                    <div className="space-y-3 flex-1 flex flex-col justify-center">
-                        <Link href="/admin/rooms" className="flex items-center gap-3 w-full p-3 bg-slate-50 dark:bg-white/5 hover:bg-slate-100 dark:hover:bg-white/10 text-slate-700 dark:text-zinc-300 rounded-xl transition-colors">
-                            <Plus className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-                            <span className="font-semibold text-sm">Add New Room</span>
-                        </Link>
-                        <Link href="/admin/tenants" className="flex items-center gap-3 w-full p-3 bg-slate-50 dark:bg-white/5 hover:bg-slate-100 dark:hover:bg-white/10 text-slate-700 dark:text-zinc-300 rounded-xl transition-colors">
-                            <UserCheck className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-                            <span className="font-semibold text-sm">Review Tenant Registrations</span>
-                        </Link>
-                        <Link href="/admin/billing" className="flex items-center gap-3 w-full p-3 bg-slate-50 dark:bg-white/5 hover:bg-slate-100 dark:hover:bg-white/10 text-slate-700 dark:text-zinc-300 rounded-xl transition-colors">
-                            <FileText className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-                            <span className="font-semibold text-sm">Generate Monthly Bills</span>
-                        </Link>
-                        <Link href="/admin/requests" className="flex items-center gap-3 w-full p-3 bg-slate-50 dark:bg-white/5 hover:bg-slate-100 dark:hover:bg-white/10 text-slate-700 dark:text-zinc-300 rounded-xl transition-colors">
-                            <Wrench className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-                            <span className="font-semibold text-sm">View Maintenance Requests</span>
-                        </Link>
-                    </div>
+                <div className="h-[280px] w-full">
+                    <ResponsiveContainer width="100%" height="100%">
+                        <BarChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }} barGap={4} barSize={14}>
+                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(150,150,150,0.1)" />
+                            <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 12, fontWeight: 500 }} dy={10} />
+                            <YAxis axisLine={false} tickLine={false} tick={false} width={0} />
+                            <Tooltip cursor={{fill: 'rgba(150,150,150,0.1)'}} contentStyle={{ borderRadius: '8px', border: '1px solid rgba(255,255,255,0.1)', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)', backgroundColor: '#0a0a0a', color: '#fff' }} itemStyle={{ color: '#fff' }} />
+                            <Bar dataKey="Billed" fill="#059669" radius={[2, 2, 0, 0]} />
+                            <Bar dataKey="Collected" fill="#34d399" radius={[2, 2, 0, 0]} />
+                        </BarChart>
+                    </ResponsiveContainer>
                 </div>
             </div>
 
