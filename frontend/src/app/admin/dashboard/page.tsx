@@ -102,7 +102,7 @@ export default function AdminDashboard() {
     };
 
     return (
-        <div className="max-w-7xl mx-auto space-y-6 pb-12 font-sans text-slate-900 min-h-screen">
+        <div className="w-full space-y-6 pb-12 font-sans text-slate-900 min-h-screen">
             {/* Header */}
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 py-2">
                 <div>
