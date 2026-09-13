@@ -114,7 +114,7 @@ export default function AdminDashboard() {
 
     return (
         <div className="w-full space-y-6 pb-12 font-sans text-slate-900 dark:text-white min-h-screen">
-            {/* 1. Welcome Header */}
+            {/* Welcome Header */}
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 py-2">
                 <div className="flex items-center gap-4">
                     <div className="w-14 h-14 rounded-full bg-slate-200 dark:bg-zinc-800 overflow-hidden flex-shrink-0 border-2 border-white dark:border-[#0a0a0a] shadow-sm">
@@ -130,16 +130,12 @@ export default function AdminDashboard() {
                         <Calendar className="w-4 h-4 text-slate-500 dark:text-zinc-400" />
                         {currentDate}
                     </div>
-                    <button className="relative p-2.5 bg-white dark:bg-[#0a0a0a] border border-slate-200 dark:border-zinc-800 rounded-xl text-slate-500 dark:text-zinc-400 hover:bg-slate-50 dark:hover:bg-white/5 transition-colors shadow-sm">
-                        <Bell className="w-5 h-5" />
-                        <span className="absolute top-2 right-2 w-2 h-2 bg-rose-500 rounded-full border border-white dark:border-[#0a0a0a]"></span>
-                    </button>
                 </div>
             </div>
 
-            {/* 2-5. Stat Cards */}
+            {/* Stat Cards */}
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-5">
-                {/* 2. Occupancy Rate */}
+                {/* Occupancy Rate */}
                 <div className={cardClass}>
                     <div className="flex items-center justify-between mb-4">
                         <h3 className="text-sm font-medium text-slate-500 dark:text-zinc-400">Occupancy Rate</h3>
@@ -156,7 +152,7 @@ export default function AdminDashboard() {
                     </div>
                 </div>
 
-                {/* 3. Pending Dues */}
+                {/* Pending Dues */}
                 <div className={cardClass}>
                     <div className="flex items-center justify-between mb-4">
                         <h3 className="text-sm font-medium text-slate-500 dark:text-zinc-400">Pending Dues</h3>
@@ -176,7 +172,7 @@ export default function AdminDashboard() {
                     </div>
                 </div>
 
-                {/* 4. Pending Maintenance */}
+                {/* Pending Maintenance */}
                 <div className={cardClass}>
                     <div className="flex items-center justify-between mb-4">
                         <h3 className="text-sm font-medium text-slate-500 dark:text-zinc-400">Pending Maintenance</h3>
@@ -196,7 +192,7 @@ export default function AdminDashboard() {
                     </div>
                 </div>
 
-                {/* 5. Total Revenue */}
+                {/* Total Revenue */}
                 <div className={cardClass}>
                     <div className="flex items-center justify-between mb-4">
                         <h3 className="text-sm font-medium text-slate-500 dark:text-zinc-400">Total Revenue</h3>
@@ -217,9 +213,9 @@ export default function AdminDashboard() {
                 </div>
             </div>
 
-            {/* 7 & 8. Chart & Quick Actions */}
+            {/* Chart & Quick Actions */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                {/* 7. Billing vs Collection Trend */}
+                {/* Billing vs Collection Trend */}
                 <div className={`lg:col-span-2 ${cardClass}`}>
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-6 gap-4">
                         <div>
@@ -245,7 +241,7 @@ export default function AdminDashboard() {
                     </div>
                 </div>
 
-                {/* 8. Quick Actions */}
+                {/* Quick Actions */}
                 <div className={cardClass}>
                     <h2 className="text-lg font-bold text-slate-800 dark:text-white mb-6">Quick Actions</h2>
                     <div className="space-y-3 flex-1 flex flex-col justify-center">
@@ -269,9 +265,9 @@ export default function AdminDashboard() {
                 </div>
             </div>
 
-            {/* 6 & 10. Approvals Row */}
+            {/* Approvals Row */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                {/* 6. Pending Tenant Registrations */}
+                {/* Pending Tenant Registrations */}
                 <div className={cardClass}>
                     <div className={headerClass}>
                         <h2>Pending Registrations <span className="ml-2 px-2 py-0.5 bg-amber-100 dark:bg-amber-500/20 text-amber-700 dark:text-amber-400 text-xs rounded-full">{stats.pendingTenantsList.length}</span></h2>
@@ -295,7 +291,7 @@ export default function AdminDashboard() {
                     </div>
                 </div>
 
-                {/* 10. Pending Payment Verification */}
+                {/* Pending Payment Verification */}
                 <div className={cardClass}>
                     <div className={headerClass}>
                         <h2>Payment Verifications <span className="ml-2 px-2 py-0.5 bg-amber-100 dark:bg-amber-500/20 text-amber-700 dark:text-amber-400 text-xs rounded-full">{mockPendingVerifications.length}</span></h2>
@@ -317,9 +313,9 @@ export default function AdminDashboard() {
                 </div>
             </div>
 
-            {/* 9 & 12. Financial Row */}
+            {/* Financial Row */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                {/* 9. Recent Payments */}
+                {/* Recent Payments */}
                 <div className={cardClass}>
                     <div className={headerClass}>
                         <h2>Recent Payments</h2>
@@ -349,7 +345,7 @@ export default function AdminDashboard() {
                     </div>
                 </div>
 
-                {/* 12. Overdue Bills */}
+                {/* Overdue Bills */}
                 <div className={cardClass}>
                     <div className={headerClass}>
                         <h2>Overdue Bills <span className="ml-2 px-2 py-0.5 bg-rose-100 dark:bg-rose-500/20 text-rose-700 dark:text-rose-400 text-xs rounded-full">{stats.overdueAccounts.length}</span></h2>
@@ -374,9 +370,9 @@ export default function AdminDashboard() {
                 </div>
             </div>
 
-            {/* 11 & 13. Operations Row */}
+            {/* Operations Row */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                {/* 11. Recent Maintenance Requests */}
+                {/* Recent Maintenance Requests */}
                 <div className={cardClass}>
                     <div className={headerClass}>
                         <h2>Recent Maintenance</h2>
@@ -410,7 +406,7 @@ export default function AdminDashboard() {
                     </div>
                 </div>
 
-                {/* 13. Recent Activity */}
+                {/* Recent Activity */}
                 <div className={cardClass}>
                     <div className={headerClass}>
                         <h2>Recent Activity</h2>
@@ -428,7 +424,7 @@ export default function AdminDashboard() {
                 </div>
             </div>
 
-            {/* 14. Notifications Panel */}
+            {/* Notifications Panel */}
             <div className={cardClass}>
                 <div className={headerClass}>
                     <h2>Notifications</h2>
@@ -451,28 +447,6 @@ export default function AdminDashboard() {
                         </div>
                     ))}
                 </div>
-            </div>
-
-            {/* 15. View All / Quick Navigation Footer */}
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 pt-6 border-t border-slate-200 dark:border-zinc-800">
-                <Link href="/admin/tenants" className="flex flex-col items-center justify-center p-4 rounded-xl bg-slate-50 dark:bg-white/5 hover:bg-slate-100 dark:hover:bg-white/10 text-slate-600 dark:text-zinc-300 transition-colors gap-2">
-                    <Users className="w-5 h-5"/> <span className="text-xs font-semibold">All Tenants</span>
-                </Link>
-                <Link href="/admin/rooms" className="flex flex-col items-center justify-center p-4 rounded-xl bg-slate-50 dark:bg-white/5 hover:bg-slate-100 dark:hover:bg-white/10 text-slate-600 dark:text-zinc-300 transition-colors gap-2">
-                    <Users className="w-5 h-5"/> <span className="text-xs font-semibold">All Rooms</span>
-                </Link>
-                <Link href="/admin/billing" className="flex flex-col items-center justify-center p-4 rounded-xl bg-slate-50 dark:bg-white/5 hover:bg-slate-100 dark:hover:bg-white/10 text-slate-600 dark:text-zinc-300 transition-colors gap-2">
-                    <Receipt className="w-5 h-5"/> <span className="text-xs font-semibold">All Billing</span>
-                </Link>
-                <Link href="/admin/billing" className="flex flex-col items-center justify-center p-4 rounded-xl bg-slate-50 dark:bg-white/5 hover:bg-slate-100 dark:hover:bg-white/10 text-slate-600 dark:text-zinc-300 transition-colors gap-2">
-                    <Wallet className="w-5 h-5"/> <span className="text-xs font-semibold">All Payments</span>
-                </Link>
-                <Link href="/admin/requests" className="flex flex-col items-center justify-center p-4 rounded-xl bg-slate-50 dark:bg-white/5 hover:bg-slate-100 dark:hover:bg-white/10 text-slate-600 dark:text-zinc-300 transition-colors gap-2">
-                    <Wrench className="w-5 h-5"/> <span className="text-xs font-semibold">All Requests</span>
-                </Link>
-                <Link href="/admin/chat" className="flex flex-col items-center justify-center p-4 rounded-xl bg-slate-50 dark:bg-white/5 hover:bg-slate-100 dark:hover:bg-white/10 text-slate-600 dark:text-zinc-300 transition-colors gap-2">
-                    <MessageSquare className="w-5 h-5"/> <span className="text-xs font-semibold">All Messages</span>
-                </Link>
             </div>
         </div>
     );
