@@ -13,7 +13,21 @@ import {
 } from "@/components/ui/sidebar";
 import { AppSidebar } from '@/components/app-sidebar';
 import { FullscreenToggle } from '@/components/fullscreen-toggle';
-import { LayoutDashboard, Building2, Users, CreditCard, Wrench, MessageSquare, Bell } from 'lucide-react';
+import { LayoutDashboard, Building2, Users, CreditCard, Wrench, MessageSquare, Bell, AlertCircle } from 'lucide-react';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+
+const mockNotifications = [
+    { id: 1, title: "New tenant registration", desc: "Juan dela Cruz applied for Room 101.", time: "10m ago", unread: true },
+    { id: 2, title: "High-priority maintenance", desc: "Leaking pipe in Room 204.", time: "1h ago", unread: true },
+    { id: 3, title: "Payment awaiting verification", desc: "Maria Clara submitted a payment of ₱4,500.", time: "2h ago", unread: false }
+];
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
     const pathname = usePathname();
@@ -142,12 +156,41 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
                         <div className="flex items-center gap-2">
                             <FullscreenToggle />
-                            <button className="relative p-2 text-slate-500 hover:text-slate-900 dark:text-zinc-400 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/5 rounded-full transition-colors">
-                                <Bell className="w-5 h-5" strokeWidth={2} />
-                                {(unreadCount > 0 || pendingTenantsCount > 0) && (
-                                    <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-rose-500 rounded-full border-2 border-white dark:border-[#0a0a0a]"></span>
-                                )}
-                            </button>
+                            <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                    <button className="relative p-2 text-slate-500 hover:text-slate-900 dark:text-zinc-400 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/5 rounded-full transition-colors outline-none">
+                                        <Bell className="w-5 h-5" strokeWidth={2} />
+                                        {(unreadCount > 0 || pendingTenantsCount > 0) && (
+                                            <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-rose-500 rounded-full border-2 border-white dark:border-[#0a0a0a]"></span>
+                                        )}
+                                    </button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end" className="w-80 p-0 border border-slate-200 dark:border-zinc-800 rounded-xl overflow-hidden shadow-xl bg-white dark:bg-[#0a0a0a]">
+                                    <div className="flex items-center justify-between p-4 border-b border-slate-100 dark:border-zinc-800">
+                                        <span className="font-bold text-sm text-slate-800 dark:text-white">Notifications</span>
+                                        <div className="flex gap-3 text-xs font-semibold">
+                                            <button className="text-emerald-600 dark:text-emerald-400 hover:underline">Mark all read</button>
+                                        </div>
+                                    </div>
+                                    <div className="max-h-[300px] overflow-y-auto">
+                                        {mockNotifications.map(notif => (
+                                            <div key={notif.id} className={`p-4 border-b border-slate-100 dark:border-zinc-800/50 last:border-0 ${notif.unread ? 'bg-slate-50 dark:bg-white/[0.02]' : ''} flex items-start gap-3 hover:bg-slate-100 dark:hover:bg-white/[0.04] transition-colors cursor-pointer`}>
+                                                <div className={`mt-0.5 ${notif.unread ? 'text-emerald-500' : 'text-slate-400'}`}>
+                                                    <AlertCircle className="w-4 h-4" />
+                                                </div>
+                                                <div className="flex-1 min-w-0">
+                                                    <p className="font-bold text-sm text-slate-800 dark:text-white truncate">{notif.title}</p>
+                                                    <p className="text-xs text-slate-600 dark:text-zinc-400 mt-0.5 line-clamp-2">{notif.desc}</p>
+                                                    <span className="text-[10px] font-bold text-slate-400 uppercase mt-2 block">{notif.time}</span>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                    <div className="p-3 border-t border-slate-100 dark:border-zinc-800 text-center bg-slate-50 dark:bg-white/[0.02]">
+                                        <button className="text-xs font-semibold text-slate-500 dark:text-zinc-400 hover:text-slate-800 dark:hover:text-white transition-colors">View all notifications</button>
+                                    </div>
+                                </DropdownMenuContent>
+                            </DropdownMenu>
                             <ThemeToggle />
                         </div>
                     </header>

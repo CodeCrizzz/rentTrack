@@ -106,11 +106,6 @@ export default function AdminDashboard() {
         { id: 2, name: "Jose Rizal", room: "305-A", amount: 5000, date: "2026-10-22", ref: "BPI-00123" }
     ];
 
-    const mockNotifications = [
-        { id: 1, title: "New tenant registration", desc: "Juan dela Cruz applied for Room 101.", time: "10m ago", unread: true },
-        { id: 2, title: "High-priority maintenance", desc: "Leaking pipe in Room 204.", time: "1h ago", unread: true },
-        { id: 3, title: "Payment awaiting verification", desc: "Maria Clara submitted a payment of ₱4,500.", time: "2h ago", unread: false }
-    ];
 
     return (
         <div className="w-full space-y-6 pb-12 font-sans text-slate-900 dark:text-white min-h-screen">
@@ -251,19 +246,19 @@ export default function AdminDashboard() {
                             <p className="text-sm text-slate-500 dark:text-zinc-400 mt-0.5">Last 6 months cash flow overview</p>
                         </div>
                         <div className="flex items-center gap-4 text-xs font-semibold text-slate-500 dark:text-zinc-400">
-                            <div className="flex items-center gap-1.5"><div className="w-3 h-3 bg-[#059669] dark:bg-[#059669] rounded-sm"></div> Billed</div>
-                            <div className="flex items-center gap-1.5"><div className="w-3 h-3 bg-[#34d399] dark:bg-[#34d399] rounded-sm"></div> Collected</div>
+                            <div className="flex items-center gap-1.5"><div className="w-3 h-3 bg-[#6366f1] dark:bg-[#6366f1] rounded-sm"></div> Billed</div>
+                            <div className="flex items-center gap-1.5"><div className="w-3 h-3 bg-[#10b981] dark:bg-[#10b981] rounded-sm"></div> Collected</div>
                         </div>
                     </div>
-                    <div className="h-[330px] w-full">
+                    <div className="flex-1 min-h-[410px] w-full">
                         <ResponsiveContainer width="100%" height="100%">
                             <BarChart data={chartData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }} barGap={4} barSize={14}>
                                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(150,150,150,0.1)" />
                                 <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 12, fontWeight: 500 }} dy={10} />
                                 <YAxis domain={[0, 100000]} axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 12, fontWeight: 500 }} tickFormatter={(value) => value === 0 ? '0' : `${value / 1000}k`} width={45} />
                                 <Tooltip cursor={{fill: 'rgba(150,150,150,0.1)'}} contentStyle={{ borderRadius: '8px', border: '1px solid rgba(255,255,255,0.1)', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)', backgroundColor: '#0a0a0a', color: '#fff' }} itemStyle={{ color: '#fff' }} />
-                                <Bar dataKey="Billed" fill="#059669" radius={[2, 2, 0, 0]} />
-                                <Bar dataKey="Collected" fill="#34d399" radius={[2, 2, 0, 0]} />
+                                <Bar dataKey="Billed" fill="#6366f1" radius={[2, 2, 0, 0]} />
+                                <Bar dataKey="Collected" fill="#10b981" radius={[2, 2, 0, 0]} />
                             </BarChart> 
                         </ResponsiveContainer>
                     </div>
@@ -274,10 +269,11 @@ export default function AdminDashboard() {
                     <div className={headerClass}>
                         <h2>Recent Activity</h2>
                     </div>
-                    <div className="relative border-l border-slate-200 dark:border-zinc-800 ml-3 space-y-6 flex-1 py-2">
-                        {stats.recentActivities.slice(0, 5).map((act, i) => (
-                            <div key={act.id} className="pl-6 relative">
-                                <span className="absolute -left-1.5 top-1 w-3 h-3 rounded-full bg-emerald-500 ring-4 ring-white dark:ring-[#0a0a0a]"></span>
+                    <div className="flex-1 overflow-y-auto max-h-[410px] pr-2 -mr-2 scrollbar-thin scrollbar-thumb-slate-200 dark:scrollbar-thumb-zinc-800">
+                        <div className="relative border-l border-slate-200 dark:border-zinc-800 ml-3 space-y-6 py-2">
+                            {stats.recentActivities.map((act, i) => (
+                                <div key={act.id} className="pl-6 relative">
+                                    <span className="absolute -left-[6.5px] top-1 w-3 h-3 rounded-full bg-emerald-500 ring-4 ring-white dark:ring-[#0a0a0a]"></span>
                                 <p className="font-bold text-sm text-slate-800 dark:text-white">{act.title}</p>
                                 <p className="text-xs text-slate-500 dark:text-zinc-400 mt-1">{act.description}</p>
                                 <p className="text-[10px] font-bold text-slate-400 dark:text-zinc-500 mt-2 uppercase tracking-wider">{new Date(act.date).toLocaleString()}</p>
@@ -286,6 +282,7 @@ export default function AdminDashboard() {
                     </div>
                 </div>
             </div>
+        </div>
 
             {/* Approvals Row */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -393,7 +390,7 @@ export default function AdminDashboard() {
             </div>
 
             {/* Operations Row */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 gap-6">
                 {/* Recent Maintenance Requests */}
                 <div className={cardClass}>
                     <div className={headerClass}>
@@ -425,31 +422,6 @@ export default function AdminDashboard() {
                             );
                         })}
                         {stats.recentRequests.length === 0 && <p className="text-sm text-slate-500 text-center py-4">No recent maintenance requests.</p>}
-                    </div>
-                </div>
-
-                {/* Notifications Panel */}
-                <div className={cardClass}>
-                    <div className={headerClass}>
-                        <h2>Notifications</h2>
-                        <div className="flex gap-3 text-xs font-semibold">
-                            <button className="text-emerald-600 dark:text-emerald-400 hover:underline">Mark all as read</button>
-                            <button className="text-slate-500 dark:text-zinc-400 hover:underline">Clear all</button>
-                        </div>
-                    </div>
-                    <div className="space-y-3">
-                        {mockNotifications.map(notif => (
-                            <div key={notif.id} className={`p-4 rounded-xl border ${notif.unread ? 'bg-slate-50 dark:bg-white/5 border-emerald-100 dark:border-emerald-500/20' : 'bg-transparent border-slate-100 dark:border-zinc-800'} flex items-start gap-4`}>
-                                <div className={`mt-0.5 ${notif.unread ? 'text-emerald-500' : 'text-slate-400'}`}>
-                                    <AlertCircle className="w-5 h-5" />
-                                </div>
-                                <div className="flex-1">
-                                    <p className="font-bold text-sm text-slate-800 dark:text-white">{notif.title}</p>
-                                    <p className="text-xs text-slate-600 dark:text-zinc-400 mt-1">{notif.desc}</p>
-                                </div>
-                                <span className="text-[10px] font-bold text-slate-400 uppercase">{notif.time}</span>
-                            </div>
-                        ))}
                     </div>
                 </div>
             </div>
