@@ -157,13 +157,11 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                         <div className="flex items-center gap-2">
                             <FullscreenToggle />
                             <DropdownMenu>
-                                <DropdownMenuTrigger asChild>
-                                    <button className="relative p-2 text-slate-500 hover:text-slate-900 dark:text-zinc-400 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/5 rounded-full transition-colors outline-none">
-                                        <Bell className="w-5 h-5" strokeWidth={2} />
-                                        {(unreadCount > 0 || pendingTenantsCount > 0) && (
-                                            <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-rose-500 rounded-full border-2 border-white dark:border-[#0a0a0a]"></span>
-                                        )}
-                                    </button>
+                                <DropdownMenuTrigger className="relative p-2 text-slate-500 hover:text-slate-900 dark:text-zinc-400 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/5 rounded-full transition-colors outline-none">
+                                    <Bell className="w-5 h-5" strokeWidth={2} />
+                                    {(unreadCount > 0 || pendingTenantsCount > 0) && (
+                                        <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-rose-500 rounded-full border-2 border-white dark:border-[#0a0a0a]"></span>
+                                    )}
                                 </DropdownMenuTrigger>
                                 <DropdownMenuContent align="end" className="w-80 p-0 border border-slate-200 dark:border-zinc-800 rounded-xl overflow-hidden shadow-xl bg-white dark:bg-[#0a0a0a]">
                                     <div className="flex items-center justify-between p-4 border-b border-slate-100 dark:border-zinc-800">
