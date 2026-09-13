@@ -241,29 +241,49 @@ export default function AdminDashboard() {
                 </div>
             </div>
 
-            {/* Chart */}
-            <div className={cardClass}>
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-6 gap-4">
-                    <div>
-                        <h2 className="text-lg font-bold text-slate-800 dark:text-white">Billing vs. Collection Trend</h2>
-                        <p className="text-sm text-slate-500 dark:text-zinc-400 mt-0.5">Last 6 months cash flow overview</p>
+            {/* Chart & Recent Activity */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                {/* Billing vs Collection Trend */}
+                <div className={`lg:col-span-2 ${cardClass}`}>
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-6 gap-4">
+                        <div>
+                            <h2 className="text-lg font-bold text-slate-800 dark:text-white">Billing vs. Collection Trend</h2>
+                            <p className="text-sm text-slate-500 dark:text-zinc-400 mt-0.5">Last 6 months cash flow overview</p>
+                        </div>
+                        <div className="flex items-center gap-4 text-xs font-semibold text-slate-500 dark:text-zinc-400">
+                            <div className="flex items-center gap-1.5"><div className="w-3 h-3 bg-[#059669] dark:bg-[#059669] rounded-sm"></div> Billed</div>
+                            <div className="flex items-center gap-1.5"><div className="w-3 h-3 bg-[#34d399] dark:bg-[#34d399] rounded-sm"></div> Collected</div>
+                        </div>
                     </div>
-                    <div className="flex items-center gap-4 text-xs font-semibold text-slate-500 dark:text-zinc-400">
-                        <div className="flex items-center gap-1.5"><div className="w-3 h-3 bg-[#059669] dark:bg-[#059669] rounded-sm"></div> Billed</div>
-                        <div className="flex items-center gap-1.5"><div className="w-3 h-3 bg-[#34d399] dark:bg-[#34d399] rounded-sm"></div> Collected</div>
+                    <div className="h-[330px] w-full">
+                        <ResponsiveContainer width="100%" height="100%">
+                            <BarChart data={chartData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }} barGap={4} barSize={14}>
+                                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(150,150,150,0.1)" />
+                                <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 12, fontWeight: 500 }} dy={10} />
+                                <YAxis domain={[0, 100000]} axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 12, fontWeight: 500 }} tickFormatter={(value) => value === 0 ? '0' : `${value / 1000}k`} width={45} />
+                                <Tooltip cursor={{fill: 'rgba(150,150,150,0.1)'}} contentStyle={{ borderRadius: '8px', border: '1px solid rgba(255,255,255,0.1)', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)', backgroundColor: '#0a0a0a', color: '#fff' }} itemStyle={{ color: '#fff' }} />
+                                <Bar dataKey="Billed" fill="#059669" radius={[2, 2, 0, 0]} />
+                                <Bar dataKey="Collected" fill="#34d399" radius={[2, 2, 0, 0]} />
+                            </BarChart> 
+                        </ResponsiveContainer>
                     </div>
                 </div>
-                <div className="h-[280px] w-full">
-                    <ResponsiveContainer width="100%" height="100%">
-                        <BarChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }} barGap={4} barSize={14}>
-                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(150,150,150,0.1)" />
-                            <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 12, fontWeight: 500 }} dy={10} />
-                            <YAxis axisLine={false} tickLine={false} tick={false} width={0} />
-                            <Tooltip cursor={{fill: 'rgba(150,150,150,0.1)'}} contentStyle={{ borderRadius: '8px', border: '1px solid rgba(255,255,255,0.1)', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)', backgroundColor: '#0a0a0a', color: '#fff' }} itemStyle={{ color: '#fff' }} />
-                            <Bar dataKey="Billed" fill="#059669" radius={[2, 2, 0, 0]} />
-                            <Bar dataKey="Collected" fill="#34d399" radius={[2, 2, 0, 0]} />
-                        </BarChart>
-                    </ResponsiveContainer>
+
+                {/* Recent Activity */}
+                <div className={cardClass}>
+                    <div className={headerClass}>
+                        <h2>Recent Activity</h2>
+                    </div>
+                    <div className="relative border-l border-slate-200 dark:border-zinc-800 ml-3 space-y-6 flex-1 py-2">
+                        {stats.recentActivities.slice(0, 5).map((act, i) => (
+                            <div key={act.id} className="pl-6 relative">
+                                <span className="absolute -left-1.5 top-1 w-3 h-3 rounded-full bg-emerald-500 ring-4 ring-white dark:ring-[#0a0a0a]"></span>
+                                <p className="font-bold text-sm text-slate-800 dark:text-white">{act.title}</p>
+                                <p className="text-xs text-slate-500 dark:text-zinc-400 mt-1">{act.description}</p>
+                                <p className="text-[10px] font-bold text-slate-400 dark:text-zinc-500 mt-2 uppercase tracking-wider">{new Date(act.date).toLocaleString()}</p>
+                            </div>
+                        ))}
+                    </div>
                 </div>
             </div>
 
@@ -408,46 +428,29 @@ export default function AdminDashboard() {
                     </div>
                 </div>
 
-                {/* Recent Activity */}
+                {/* Notifications Panel */}
                 <div className={cardClass}>
                     <div className={headerClass}>
-                        <h2>Recent Activity</h2>
+                        <h2>Notifications</h2>
+                        <div className="flex gap-3 text-xs font-semibold">
+                            <button className="text-emerald-600 dark:text-emerald-400 hover:underline">Mark all as read</button>
+                            <button className="text-slate-500 dark:text-zinc-400 hover:underline">Clear all</button>
+                        </div>
                     </div>
-                    <div className="relative border-l border-slate-200 dark:border-zinc-800 ml-3 space-y-6 flex-1 py-2">
-                        {stats.recentActivities.slice(0, 5).map((act, i) => (
-                            <div key={act.id} className="pl-6 relative">
-                                <span className="absolute -left-1.5 top-1 w-3 h-3 rounded-full bg-emerald-500 ring-4 ring-white dark:ring-[#0a0a0a]"></span>
-                                <p className="font-bold text-sm text-slate-800 dark:text-white">{act.title}</p>
-                                <p className="text-xs text-slate-500 dark:text-zinc-400 mt-1">{act.description}</p>
-                                <p className="text-[10px] font-bold text-slate-400 dark:text-zinc-500 mt-2 uppercase tracking-wider">{new Date(act.date).toLocaleString()}</p>
+                    <div className="space-y-3">
+                        {mockNotifications.map(notif => (
+                            <div key={notif.id} className={`p-4 rounded-xl border ${notif.unread ? 'bg-slate-50 dark:bg-white/5 border-emerald-100 dark:border-emerald-500/20' : 'bg-transparent border-slate-100 dark:border-zinc-800'} flex items-start gap-4`}>
+                                <div className={`mt-0.5 ${notif.unread ? 'text-emerald-500' : 'text-slate-400'}`}>
+                                    <AlertCircle className="w-5 h-5" />
+                                </div>
+                                <div className="flex-1">
+                                    <p className="font-bold text-sm text-slate-800 dark:text-white">{notif.title}</p>
+                                    <p className="text-xs text-slate-600 dark:text-zinc-400 mt-1">{notif.desc}</p>
+                                </div>
+                                <span className="text-[10px] font-bold text-slate-400 uppercase">{notif.time}</span>
                             </div>
                         ))}
                     </div>
-                </div>
-            </div>
-
-            {/* Notifications Panel */}
-            <div className={cardClass}>
-                <div className={headerClass}>
-                    <h2>Notifications</h2>
-                    <div className="flex gap-3 text-xs font-semibold">
-                        <button className="text-emerald-600 dark:text-emerald-400 hover:underline">Mark all as read</button>
-                        <button className="text-slate-500 dark:text-zinc-400 hover:underline">Clear all</button>
-                    </div>
-                </div>
-                <div className="space-y-3">
-                    {mockNotifications.map(notif => (
-                        <div key={notif.id} className={`p-4 rounded-xl border ${notif.unread ? 'bg-slate-50 dark:bg-white/5 border-emerald-100 dark:border-emerald-500/20' : 'bg-transparent border-slate-100 dark:border-zinc-800'} flex items-start gap-4`}>
-                            <div className={`mt-0.5 ${notif.unread ? 'text-emerald-500' : 'text-slate-400'}`}>
-                                <AlertCircle className="w-5 h-5" />
-                            </div>
-                            <div className="flex-1">
-                                <p className="font-bold text-sm text-slate-800 dark:text-white">{notif.title}</p>
-                                <p className="text-xs text-slate-600 dark:text-zinc-400 mt-1">{notif.desc}</p>
-                            </div>
-                            <span className="text-[10px] font-bold text-slate-400 uppercase">{notif.time}</span>
-                        </div>
-                    ))}
                 </div>
             </div>
         </div>
