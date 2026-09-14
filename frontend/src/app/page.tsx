@@ -29,7 +29,7 @@ export default function Home() {
         className="relative z-10 flex flex-col items-center justify-center"
       >
         <div className="w-48 sm:w-64 h-48 sm:h-64 mb-2 flex items-center justify-center">
-            <img src="/rentTrack_logo_ver2.png" alt="RentTrack Logo" className="w-full h-full object-contain" />
+            <img src="/renttrack_logo.png" alt="RentTrack Logo" className="w-full h-full object-contain" />
         </div>
         
         <div className="flex flex-col items-center gap-3">

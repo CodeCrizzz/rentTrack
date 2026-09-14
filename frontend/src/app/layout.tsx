@@ -21,7 +21,7 @@ export const metadata: Metadata = {
   title: "RentTrack",
   description: "Boarding House Management System",
   icons: {
-    icon: "/rentTrack_logo_ver2.png",
+    icon: "/renttrack_logo_tab.png",
   },
 };
 
