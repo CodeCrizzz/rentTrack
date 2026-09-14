@@ -48,7 +48,7 @@ export default function TenantMaintenance() {
     const [searchQuery, setSearchQuery] = useState("");
     const [filterStatus, setFilterStatus] = useState("All");
     const [filterCategory, setFilterCategory] = useState("All");
-    const [filterPriority, setFilterPriority] = useState("All");
+    const [filterPriority] = useState("All");
     const [sortBy, setSortBy] = useState("date_desc");
     const [currentPage, setCurrentPage] = useState(1);
     const itemsPerPage = 7;

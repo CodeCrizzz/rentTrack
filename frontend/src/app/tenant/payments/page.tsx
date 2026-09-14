@@ -26,7 +26,7 @@ export default function TenantPayments() {
     const [payments, setPayments] = useState<any[]>([]);
     const [currentBill, setCurrentBill] = useState<any>(defaultBill);
     const [summary, setSummary] = useState({ monthTotal: 0, yearTotal: 0, txCount: 0 });
-    const [isLoading, setIsLoading] = useState(true);
+    const [, setIsLoading] = useState(true);
 
     const [searchQuery, setSearchQuery] = useState("");
     const [filterStatus, setFilterStatus] = useState("All");
