@@ -36,6 +36,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     const [adminEmail, setAdminEmail] = useState('admin@renttrack.com');
     const [unreadCount, setUnreadCount] = useState(0);
     const [pendingTenantsCount, setPendingTenantsCount] = useState(0);
+    const [showAllNotifications, setShowAllNotifications] = useState(false);
 
     const fetchUnreadCount = async () => {
         try {
@@ -170,7 +171,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                                             <button className="text-emerald-600 dark:text-emerald-400 hover:underline">Mark all read</button>
                                         </div>
                                     </div>
-                                    <div className="max-h-[300px] overflow-y-auto">
+                                    <div className={`overflow-y-auto transition-all duration-300 ease-in-out ${showAllNotifications ? 'max-h-[60vh]' : 'max-h-[300px]'}`}>
                                         {mockNotifications.map(notif => (
                                             <div key={notif.id} className={`p-4 border-b border-slate-100 dark:border-zinc-800/50 last:border-0 ${notif.unread ? 'bg-slate-50 dark:bg-white/[0.02]' : ''} flex items-start gap-3 hover:bg-slate-100 dark:hover:bg-white/[0.04] transition-colors cursor-pointer`}>
                                                 <div className={`mt-0.5 ${notif.unread ? 'text-emerald-500' : 'text-slate-400'}`}>
@@ -185,7 +186,15 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                                         ))}
                                     </div>
                                     <div className="p-3 border-t border-slate-100 dark:border-zinc-800 text-center bg-slate-50 dark:bg-white/[0.02]">
-                                        <button className="text-xs font-semibold text-slate-500 dark:text-zinc-400 hover:text-slate-800 dark:hover:text-white transition-colors">View all notifications</button>
+                                        <button 
+                                            onClick={(e) => {
+                                                e.preventDefault();
+                                                setShowAllNotifications(!showAllNotifications);
+                                            }}
+                                            className="text-xs font-semibold text-slate-500 dark:text-zinc-400 hover:text-slate-800 dark:hover:text-white transition-colors"
+                                        >
+                                            {showAllNotifications ? 'View fewer notifications' : 'View all notifications'}
+                                        </button>
                                     </div>
                                 </DropdownMenuContent>
                             </DropdownMenu>
