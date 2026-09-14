@@ -13,21 +13,12 @@ import {
 } from "@/components/ui/sidebar";
 import { AppSidebar } from '@/components/app-sidebar';
 import { FullscreenToggle } from '@/components/fullscreen-toggle';
-import { LayoutDashboard, Building2, Users, CreditCard, Wrench, MessageSquare, Bell, AlertCircle } from 'lucide-react';
+import { LayoutDashboard, Building2, Users, CreditCard, Wrench, MessageSquare, Bell } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-
-const mockNotifications = [
-    { id: 1, title: "New tenant registration", desc: "Juan dela Cruz applied for Room 101.", time: "10m ago", unread: true },
-    { id: 2, title: "High-priority maintenance", desc: "Leaking pipe in Room 204.", time: "1h ago", unread: true },
-    { id: 3, title: "Payment awaiting verification", desc: "Maria Clara submitted a payment of ₱4,500.", time: "2h ago", unread: false }
-];
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
     const pathname = usePathname();
@@ -172,18 +163,10 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                                         </div>
                                     </div>
                                     <div className={`overflow-y-auto transition-all duration-300 ease-in-out ${showAllNotifications ? 'max-h-[60vh]' : 'max-h-[300px]'}`}>
-                                        {mockNotifications.map(notif => (
-                                            <div key={notif.id} className={`p-4 border-b border-slate-100 dark:border-zinc-800/50 last:border-0 ${notif.unread ? 'bg-slate-50 dark:bg-white/[0.02]' : ''} flex items-start gap-3 hover:bg-slate-100 dark:hover:bg-white/[0.04] transition-colors cursor-pointer`}>
-                                                <div className={`mt-0.5 ${notif.unread ? 'text-emerald-500' : 'text-slate-400'}`}>
-                                                    <AlertCircle className="w-4 h-4" />
-                                                </div>
-                                                <div className="flex-1 min-w-0">
-                                                    <p className="font-bold text-sm text-slate-800 dark:text-white truncate">{notif.title}</p>
-                                                    <p className="text-xs text-slate-600 dark:text-zinc-400 mt-0.5 line-clamp-2">{notif.desc}</p>
-                                                    <span className="text-[10px] font-bold text-slate-400 uppercase mt-2 block">{notif.time}</span>
-                                                </div>
-                                            </div>
-                                        ))}
+                                        <div className="p-8 text-center text-slate-500 dark:text-zinc-400">
+                                            <Bell className="w-8 h-8 mx-auto mb-3 opacity-20" />
+                                            <p className="text-sm font-semibold">No new notifications</p>
+                                        </div>
                                     </div>
                                     <div className="p-3 border-t border-slate-100 dark:border-zinc-800 text-center bg-slate-50 dark:bg-white/[0.02]">
                                         <button 

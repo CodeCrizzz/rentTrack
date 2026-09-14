@@ -4,9 +4,8 @@ import Link from 'next/link';
 import api from '@/lib/api';
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis, ResponsiveContainer, Tooltip } from "recharts";
 import { 
-    Users, Receipt, Bell, Calendar, Plus, UserPlus, FileText, Wrench, Wallet,
-    CheckCircle, XCircle, Clock, Activity, ChevronRight, Image as ImageIcon, 
-    MessageSquare, AlertCircle, Check, X, ArrowUpRight, ArrowDownRight, Eye, UserCheck
+    Users, Receipt, Calendar, Plus, FileText, Wrench, Wallet,
+    ChevronRight, Check, X, ArrowUpRight, Eye, UserCheck
 } from 'lucide-react';
 
 interface ExpiringContract {
@@ -83,12 +82,10 @@ export default function AdminDashboard() {
             const found = historical.find(h => h.year === d.getFullYear() && h.month === (d.getMonth() + 1));
             
             const collected = found ? Number(found.total) : 0;
-            const billed = collected === 0 ? Math.floor(Math.random() * 50000 + 20000) : Math.floor(collected * (1 + Math.random() * 0.15));
             
             data.push({
                 month: monthName,
-                Billed: collected === 0 && historical.length === 0 ? Math.floor(Math.random() * 80000 + 40000) : billed,
-                Collected: collected === 0 && historical.length === 0 ? Math.floor(Math.random() * 70000 + 30000) : collected
+                Collected: collected
             });
         }
         return data;
@@ -98,17 +95,12 @@ export default function AdminDashboard() {
 
     // Reusable styles
     const cardClass = "bg-white dark:bg-[#0a0a0a] rounded-2xl border border-slate-100 dark:border-zinc-800 p-6 shadow-[0_4px_12px_rgba(0,0,0,0.03)] dark:shadow-none flex flex-col";
+    const listCardClass = `${cardClass} h-[420px]`;
     const headerClass = "text-lg font-bold text-slate-800 dark:text-white mb-6 flex items-center justify-between";
-
-    // Mock data for new sections
-    const mockPendingVerifications = [
-        { id: 1, name: "Maria Clara", room: "201-B", amount: 4500, date: "2026-10-23", ref: "GC-883719" },
-        { id: 2, name: "Jose Rizal", room: "305-A", amount: 5000, date: "2026-10-22", ref: "BPI-00123" }
-    ];
 
 
     return (
-        <div className="w-full space-y-6 pb-12 font-sans text-slate-900 dark:text-white min-h-screen">
+        <div className="w-full space-y-6 pb-1 font-sans text-slate-900 dark:text-white min-h-screen">
             {/* Welcome Header */}
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 py-2">
                 <div className="flex items-center gap-4">
@@ -117,7 +109,7 @@ export default function AdminDashboard() {
                     </div>
                     <div>
                         <h1 className="text-3xl font-bold tracking-tight text-slate-900 dark:text-white">Welcome back, {adminName}</h1>
-                        <p className="text-sm text-slate-500 dark:text-zinc-400 mt-1">StayTrack operations are fully active today.</p>
+                        <p className="text-sm text-slate-500 dark:text-zinc-400 mt-1">RentTrack operations are fully active today.</p>
                     </div>
                 </div>
                 <div className="flex items-center gap-3">
@@ -246,7 +238,6 @@ export default function AdminDashboard() {
                             <p className="text-sm text-slate-500 dark:text-zinc-400 mt-0.5">Last 6 months cash flow overview</p>
                         </div>
                         <div className="flex items-center gap-4 text-xs font-semibold text-slate-500 dark:text-zinc-400">
-                            <div className="flex items-center gap-1.5"><div className="w-3 h-3 bg-[#6366f1] dark:bg-[#6366f1] rounded-sm"></div> Billed</div>
                             <div className="flex items-center gap-1.5"><div className="w-3 h-3 bg-[#10b981] dark:bg-[#10b981] rounded-sm"></div> Collected</div>
                         </div>
                     </div>
@@ -257,7 +248,6 @@ export default function AdminDashboard() {
                                 <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 12, fontWeight: 500 }} dy={10} />
                                 <YAxis domain={[0, 100000]} axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 12, fontWeight: 500 }} tickFormatter={(value) => value === 0 ? '0' : `${value / 1000}k`} width={45} />
                                 <Tooltip cursor={{fill: 'rgba(150,150,150,0.1)'}} contentStyle={{ borderRadius: '8px', border: '1px solid rgba(255,255,255,0.1)', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)', backgroundColor: '#0a0a0a', color: '#fff' }} itemStyle={{ color: '#fff' }} />
-                                <Bar dataKey="Billed" fill="#6366f1" radius={[2, 2, 0, 0]} />
                                 <Bar dataKey="Collected" fill="#10b981" radius={[2, 2, 0, 0]} />
                             </BarChart> 
                         </ResponsiveContainer>
@@ -271,7 +261,7 @@ export default function AdminDashboard() {
                     </div>
                     <div className="flex-1 overflow-y-auto max-h-[410px] pr-2 -mr-2 scrollbar-thin scrollbar-thumb-slate-200 dark:scrollbar-thumb-zinc-800">
                         <div className="relative border-l border-slate-200 dark:border-zinc-800 ml-3 space-y-6 py-2">
-                            {stats.recentActivities.map((act, i) => (
+                            {stats.recentActivities.map((act) => (
                                 <div key={act.id} className="pl-6 relative">
                                     <span className="absolute -left-[6.5px] top-1 w-3 h-3 rounded-full bg-emerald-500 ring-4 ring-white dark:ring-[#0a0a0a]"></span>
                                 <p className="font-bold text-sm text-slate-800 dark:text-white">{act.title}</p>
@@ -287,13 +277,13 @@ export default function AdminDashboard() {
             {/* Approvals Row */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 {/* Pending Tenant Registrations */}
-                <div className={cardClass}>
+                <div className={listCardClass}>
                     <div className={headerClass}>
                         <h2>Pending Registrations <span className="ml-2 px-2 py-0.5 bg-amber-100 dark:bg-amber-500/20 text-amber-700 dark:text-amber-400 text-xs rounded-full">{stats.pendingTenantsList.length}</span></h2>
                         <Link href="/admin/tenants" className="text-sm font-semibold text-emerald-600 dark:text-emerald-400 hover:underline">View All</Link>
                     </div>
-                    <div className="space-y-4 flex-1">
-                        {stats.pendingTenantsList.slice(0, 4).map(tenant => (
+                    <div className="space-y-4 flex-1 overflow-y-auto pr-2 -mr-2 scrollbar-thin scrollbar-thumb-slate-200 dark:scrollbar-thumb-zinc-800">
+                        {stats.pendingTenantsList.slice(0, 5).map(tenant => (
                             <div key={tenant.id} className="flex items-center justify-between p-3 border border-slate-100 dark:border-zinc-800 rounded-xl bg-slate-50/50 dark:bg-white/[0.02]">
                                 <div>
                                     <p className="font-bold text-sm text-slate-800 dark:text-white">{tenant.name}</p>
@@ -309,38 +299,27 @@ export default function AdminDashboard() {
                         {stats.pendingTenantsList.length === 0 && <p className="text-sm text-slate-500 text-center py-4">No pending registrations.</p>}
                     </div>
                 </div>
-
                 {/* Pending Payment Verification */}
-                <div className={cardClass}>
+                <div className={listCardClass}>
                     <div className={headerClass}>
-                        <h2>Payment Verifications <span className="ml-2 px-2 py-0.5 bg-amber-100 dark:bg-amber-500/20 text-amber-700 dark:text-amber-400 text-xs rounded-full">{mockPendingVerifications.length}</span></h2>
+                        <h2>Payment Verifications <span className="ml-2 px-2 py-0.5 bg-amber-100 dark:bg-amber-500/20 text-amber-700 dark:text-amber-400 text-xs rounded-full">0</span></h2>
                     </div>
-                    <div className="space-y-4 flex-1">
-                        {mockPendingVerifications.map(payment => (
-                            <div key={payment.id} className="flex items-center justify-between p-3 border border-slate-100 dark:border-zinc-800 rounded-xl bg-slate-50/50 dark:bg-white/[0.02]">
-                                <div>
-                                    <p className="font-bold text-sm text-slate-800 dark:text-white">{payment.name} <span className="text-slate-400 font-normal">({payment.room})</span></p>
-                                    <p className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 mt-0.5">₱{payment.amount.toLocaleString()} <span className="text-slate-400 font-normal ml-1">Ref: {payment.ref}</span></p>
-                                </div>
-                                <div className="flex gap-2">
-                                    <button className="p-2 bg-slate-100 dark:bg-white/10 text-slate-600 dark:text-zinc-300 rounded-lg hover:bg-slate-200 dark:hover:bg-white/20 transition-colors" title="View Proof"><ImageIcon className="w-4 h-4"/></button>
-                                    <button className="p-2 bg-emerald-100 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 rounded-lg hover:bg-emerald-200 dark:hover:bg-emerald-500/30 transition-colors" title="Approve"><Check className="w-4 h-4"/></button>
-                                </div>
-                            </div>
-                        ))}
+                    <div className="space-y-4 flex-1 overflow-y-auto pr-2 -mr-2 scrollbar-thin scrollbar-thumb-slate-200 dark:scrollbar-thumb-zinc-800">
+                        <p className="text-sm text-slate-500 text-center py-4">No pending payment verifications.</p>
                     </div>
                 </div>
+
             </div>
 
             {/* Financial Row */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 {/* Recent Payments */}
-                <div className={cardClass}>
+                <div className={listCardClass}>
                     <div className={headerClass}>
                         <h2>Recent Payments</h2>
                         <Link href="/admin/billing" className="text-sm font-semibold text-emerald-600 dark:text-emerald-400 hover:underline">View All</Link>
                     </div>
-                    <div className="space-y-4 flex-1">
+                    <div className="space-y-4 flex-1 overflow-y-auto pr-2 -mr-2 scrollbar-thin scrollbar-thumb-slate-200 dark:scrollbar-thumb-zinc-800">
                         {stats.recentPayments.slice(0, 5).map((payment, i) => {
                             const methods = ['Gcash', 'Bank Transfer', 'Cash'];
                             const method = methods[i % methods.length];
@@ -365,12 +344,12 @@ export default function AdminDashboard() {
                 </div>
 
                 {/* Overdue Bills */}
-                <div className={cardClass}>
+                <div className={listCardClass}>
                     <div className={headerClass}>
                         <h2>Overdue Bills <span className="ml-2 px-2 py-0.5 bg-rose-100 dark:bg-rose-500/20 text-rose-700 dark:text-rose-400 text-xs rounded-full">{stats.overdueAccounts.length}</span></h2>
                         <Link href="/admin/billing" className="text-sm font-semibold text-emerald-600 dark:text-emerald-400 hover:underline">View All</Link>
                     </div>
-                    <div className="space-y-4 flex-1">
+                    <div className="space-y-4 flex-1 overflow-y-auto pr-2 -mr-2 scrollbar-thin scrollbar-thumb-slate-200 dark:scrollbar-thumb-zinc-800">
                         {stats.overdueAccounts.slice(0, 5).map((acc, i) => (
                             <div key={acc.tenant_id} className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-zinc-800 last:border-0 last:pb-0">
                                 <div>
@@ -392,12 +371,12 @@ export default function AdminDashboard() {
             {/* Operations Row */}
             <div className="grid grid-cols-1 gap-6">
                 {/* Recent Maintenance Requests */}
-                <div className={cardClass}>
+                <div className={listCardClass}>
                     <div className={headerClass}>
                         <h2>Recent Maintenance</h2>
                         <Link href="/admin/requests" className="text-sm font-semibold text-emerald-600 dark:text-emerald-400 hover:underline">View All</Link>
                     </div>
-                    <div className="space-y-4 flex-1">
+                    <div className="space-y-4 flex-1 overflow-y-auto pr-2 -mr-2 scrollbar-thin scrollbar-thumb-slate-200 dark:scrollbar-thumb-zinc-800">
                         {stats.recentRequests.slice(0, 5).map((request, i) => {
                             const priorities = ['High', 'Normal', 'Low'];
                             const categories = ['Plumbing', 'Electrical', 'Appliance'];

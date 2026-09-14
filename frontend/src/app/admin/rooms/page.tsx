@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState } from 'react';
 import api from '@/lib/api';
 import { Search, Plus, ChevronDown, ChevronLeft, Edit2, Trash2, Banknote, Users, Sparkles, Ghost, Info, X, Building } from 'lucide-react';
 import { motion, AnimatePresence, Variants } from 'framer-motion';
@@ -56,7 +56,7 @@ export default function AdminRooms() {
     const [searchQuery, setSearchQuery] = useState('');
     const [statusFilter, setStatusFilter] = useState('All');
     const [typeFilter, setTypeFilter] = useState('All');
-    const [floorFilter, setFloorFilter] = useState('All');
+    const [floorFilter] = useState('All');
     const [error, setError] = useState('');
 
     const [formData, setFormData] = useState({
@@ -159,7 +159,7 @@ export default function AdminRooms() {
         }
     };
 
-    const distinctFloors = Array.from(new Set(rooms.map(r => r.floor).filter(Boolean)));
+
 
     const filteredRooms = rooms.filter(r => 
         (statusFilter === 'All' || r.status.toLowerCase() === statusFilter.toLowerCase()) &&
