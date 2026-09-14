@@ -5,14 +5,6 @@
 
 @custom-variant dark (&:is(.dark *));
 
-.theme-transitioning,
-.theme-transitioning *,
-.theme-transitioning ::before,
-.theme-transitioning ::after {
-  transition-property: color, background-color, border-color, text-decoration-color, fill, stroke, transform, opacity !important;
-  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1) !important;
-  transition-duration: 300ms !important;
-}
 
 :root {
   --background: oklch(1 0 0);

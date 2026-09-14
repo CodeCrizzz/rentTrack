@@ -1,8 +1,7 @@
 "use client";
 
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import { useRouter } from "next/navigation"
-import { cn } from "@/lib/utils"
 import api from "@/lib/api"
 import { Loader2 } from "lucide-react"
 import { motion } from "framer-motion"
@@ -16,21 +15,17 @@ import {
 } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
 import Link from "next/link"
+import { toast } from "sonner"
 
 export default function LoginPage() {
-  const [isMounted, setIsMounted] = useState(false);
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [isLoading, setIsLoading] = useState(false)
-  const [errorMsg, setErrorMsg] = useState('')
   const router = useRouter()
-
-  useEffect(() => { setIsMounted(true); }, []);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
-    setErrorMsg('');
     
     try {
         const response = await api.post('/auth/login', { email, password });
@@ -44,24 +39,28 @@ export default function LoginPage() {
             throw new Error("No token returned");
         }
     } catch (err: any) {
-        setErrorMsg(err.response?.data?.message || err.message || "Login failed. Please check credentials.");
+        toast.error(err.response?.data?.message || err.message || "Login failed. Please check credentials.");
     } finally {
         setIsLoading(false);
     }
   };
 
-  if (!isMounted) return <div className="dark min-h-screen bg-black" />;
-
   return (
-    <div className="dark flex min-h-screen flex-col items-center justify-center bg-black p-4 md:p-10 font-sans selection:bg-cyan-500/30 relative overflow-hidden">
+    <div 
+      className="dark flex min-h-screen flex-col items-center justify-center p-4 md:p-10 font-sans selection:bg-cyan-500/30 relative overflow-hidden bg-cover bg-center bg-no-repeat bg-fixed"
+      style={{ backgroundImage: "url('/bg_img.png')" }}
+    >
+      {/* Overlay for better readability */}
+      <div className="absolute inset-0 bg-slate-900/40 dark:bg-black/70 backdrop-blur-[2px] z-0" />
+
       <motion.div 
         initial={{ opacity: 0, scale: 0.95, y: 20 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
-        transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
+        transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1], opacity: { duration: 1, ease: "easeInOut" } }}
         className="relative z-10 w-full max-w-sm md:max-w-4xl"
       >
         <div className="flex flex-col gap-6">
-          <Card className="overflow-hidden p-0 rounded-3xl border border-slate-200 dark:border-white/10 shadow-none bg-white dark:bg-[#0a0a0a]">
+          <Card className="overflow-hidden p-0 rounded-3xl border border-white/20 dark:border-white/10 shadow-2xl bg-white/90 dark:bg-[#0f172a]/80 backdrop-blur-xl">
             <CardContent className="grid p-0 md:grid-cols-2">
               {/* Left Column: Form */}
               <form className="p-8 sm:p-12 flex flex-col justify-center" onSubmit={handleLogin}>
@@ -72,13 +71,6 @@ export default function LoginPage() {
                       Enter your credentials to access your portal.
                     </p>
                   </div>
-
-                  {errorMsg && (
-                    <div className="mb-6 p-4 bg-red-500/10 border border-red-500/20 rounded-2xl text-red-600 dark:text-red-400 text-sm font-bold flex items-center gap-3">
-                      <svg className="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
-                      <span>{errorMsg}</span>
-                    </div>
-                  )}
 
                   <Field className="space-y-2.5">
                     <FieldLabel htmlFor="email" className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-zinc-400 ml-1">Email</FieldLabel>
@@ -143,8 +135,8 @@ export default function LoginPage() {
               </form>
 
               {/* Right Column: Logo */}
-              <div className="relative hidden bg-slate-50 dark:bg-white/[0.02] md:flex flex-col items-center justify-center p-12 border-l border-white/20 dark:border-white/10">
-                <div className="relative w-64 h-64 mb-6 flex items-center justify-center drop-shadow-2xl">
+              <div className="relative hidden bg-white/50 dark:bg-[#1e293b]/50 md:flex flex-col items-center justify-center p-12 border-l border-white/20 dark:border-white/10">
+                <div className="relative w-96 h-96 mb-6 flex items-center justify-center drop-shadow-2xl">
                     <img src="/renttrack_logo.png" alt="StayTrack Logo" className="w-full h-full object-contain drop-shadow-lg" />
                 </div>
                 <div className="text-center">
