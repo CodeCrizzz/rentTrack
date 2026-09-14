@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Loader2 } from "lucide-react";
 
 export default function SignupPage() {
@@ -25,6 +26,7 @@ export default function SignupPage() {
     const [errorMsg, setErrorMsg] = useState('');
     const [isMounted, setIsMounted] = useState(false);
     const [showSuccessModal, setShowSuccessModal] = useState(false);
+    const [acceptTerms, setAcceptTerms] = useState(false);
 
     const router = useRouter();
 
@@ -36,6 +38,10 @@ export default function SignupPage() {
 
         if (password !== confirmPassword) {
             return setErrorMsg("Passwords do not match. Please try again.");
+        }
+        
+        if (!acceptTerms) {
+            return setErrorMsg("Please accept the terms and privacy policy to continue.");
         }
 
         setIsLoading(true);
@@ -123,10 +129,26 @@ export default function SignupPage() {
                         </div>
                     </div>
 
+                    <div className="flex items-center space-x-3 mt-4">
+                        <Checkbox 
+                            id="terms" 
+                            checked={acceptTerms} 
+                            onCheckedChange={(checked) => setAcceptTerms(checked as boolean)}
+                            disabled={isLoading}
+                            className="border-slate-300 dark:border-zinc-700 data-[state=checked]:bg-cyan-500 data-[state=checked]:text-white data-[state=checked]:border-cyan-500"
+                        />
+                        <label 
+                            htmlFor="terms" 
+                            className="text-sm font-medium leading-none text-slate-600 dark:text-zinc-400 cursor-pointer"
+                        >
+                            I accept the <Link href="/terms" className="text-cyan-600 dark:text-cyan-400 hover:underline">Terms of Service</Link> and <Link href="/privacy" className="text-cyan-600 dark:text-cyan-400 hover:underline">Privacy Policy</Link>
+                        </label>
+                    </div>
+
                     <Button 
                         type="submit" 
-                        className="w-full h-14 mt-6 bg-cyan-500 hover:bg-cyan-400 text-black rounded-xl font-bold tracking-wide text-base transition-all shadow-none" 
-                        disabled={isLoading}
+                        className="w-full h-14 mt-6 bg-cyan-500 hover:bg-cyan-400 text-black rounded-xl font-bold tracking-wide text-base transition-all shadow-none disabled:bg-blue-900 disabled:text-white/50 disabled:opacity-100 disabled:cursor-not-allowed" 
+                        disabled={isLoading || !acceptTerms}
                     >
                         {isLoading ? (
                             <>
