@@ -276,15 +276,33 @@ const payBill = async (req, res) => {
 const generateMonthlyBills = async (req, res) => {
     try {
         const activeTenantsQuery = `
-            SELECT u.id as tenant_id, u.room_id, r.price as rent_amount
+            SELECT u.id as tenant_id, u.room_id, u.created_at, r.price as rent_amount, r.rental_type
             FROM users u
             JOIN rooms r ON u.room_id = r.id
             WHERE u.role = 'tenant' AND u.status = 'Active' AND u.room_id IS NOT NULL
+            ORDER BY u.created_at ASC
         `;
-        const { rows: tenants } = await db.query(activeTenantsQuery);
+        const { rows: allTenants } = await db.query(activeTenantsQuery);
 
-        if (tenants.length === 0) {
+        if (allTenants.length === 0) {
             return res.json({ message: 'No active tenants found for automatic billing.' });
+        }
+
+        // Filter tenants based on rental_type
+        // For 'Whole Room', only bill the first active tenant in that room
+        const billedRoomIds = new Set();
+        const tenantsToBill = [];
+
+        for (const tenant of allTenants) {
+            if (tenant.rental_type === 'Whole Room') {
+                if (!billedRoomIds.has(tenant.room_id)) {
+                    billedRoomIds.add(tenant.room_id);
+                    tenantsToBill.push(tenant);
+                }
+            } else {
+                // For 'Per Bed / Bedspace', bill everyone
+                tenantsToBill.push(tenant);
+            }
         }
 
         const currentDate = new Date();
@@ -296,7 +314,7 @@ const generateMonthlyBills = async (req, res) => {
         const dueDate = new Date(currentDate.getFullYear(), currentDate.getMonth(), 5);
         let billsGenerated = 0;
 
-        for (const tenant of tenants) {
+        for (const tenant of tenantsToBill) {
             const checkBillQuery = `
                 SELECT id FROM bills WHERE tenant_id = $1 AND billing_month = $2
             `;

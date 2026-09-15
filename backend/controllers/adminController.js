@@ -298,7 +298,7 @@ const getAllRooms = async (req, res) => {
         const query = `
             SELECT 
                 r.id, r.room_number, r.capacity, r.price, r.status,
-                r.type, r.floor, r.description,
+                r.type, r.rental_type, r.amenities, r.floor, r.description,
                 CAST(COUNT(u.id) AS INTEGER) as current_occupants,
                 CAST((r.capacity - COUNT(u.id)) AS INTEGER) as available_slots,
                 COALESCE(
@@ -308,6 +308,7 @@ const getAllRooms = async (req, res) => {
                             'name', u.name,
                             'phone', u.phone,
                             'date_moved_in', u.date_moved_in,
+                            'bed_space', u.bed_space,
                             'balance', COALESCE((
                                 SELECT SUM(balance) FROM bills b 
                                 WHERE b.tenant_id = u.id AND b.status IN ('Unpaid', 'Partial', 'Overdue')
@@ -316,12 +317,28 @@ const getAllRooms = async (req, res) => {
                     ) FILTER (WHERE u.id IS NOT NULL), '[]'::json -- <--- CRITICAL FIX: Added ::json here
                 ) as occupants
             FROM rooms r
-            LEFT JOIN users u ON r.id = u.room_id AND u.role = 'tenant'
+            LEFT JOIN users u ON r.id = u.room_id AND u.role = 'tenant' AND u.status != 'Moved Out'
             GROUP BY r.id
             ORDER BY r.room_number ASC
         `;
         const rooms = await db.query(query);
-        res.status(200).json(rooms.rows);
+
+        // Dynamically compute status based on capacity vs occupants
+        const mappedRooms = rooms.rows.map(room => {
+            let computedStatus = room.status;
+            if (room.status !== 'Maintenance' && room.status !== 'Unavailable') {
+                if (room.current_occupants === 0) {
+                    computedStatus = 'Available';
+                } else if (room.current_occupants >= room.capacity) {
+                    computedStatus = 'Occupied';
+                } else {
+                    computedStatus = 'Partially Occupied';
+                }
+            }
+            return { ...room, status: computedStatus };
+        });
+
+        res.status(200).json(mappedRooms);
     } catch (error) {
         // print the exact SQL error to the backend terminal
         console.error("Get All Rooms Error Details:", error.message); 
@@ -332,7 +349,7 @@ const getAllRooms = async (req, res) => {
 // @desc    Create a new Room
 // @route   POST /api/admin/rooms
 const createRoom = async (req, res) => {
-    const { room_number, type, capacity, price, floor, description, status } = req.body;
+    const { room_number, type, rental_type, capacity, price, floor, description, amenities, status } = req.body;
     try {
         // Check if room number already exists to prevent duplicates
         const roomExists = await db.query('SELECT * FROM rooms WHERE room_number = $1', [room_number]);
@@ -342,17 +359,19 @@ const createRoom = async (req, res) => {
 
         // Insert the new room
         const query = `
-            INSERT INTO rooms (room_number, type, capacity, price, floor, description, status) 
-            VALUES ($1, $2, $3, $4, $5, $6, $7) 
+            INSERT INTO rooms (room_number, type, rental_type, capacity, price, floor, description, amenities, status) 
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) 
             RETURNING *
         `;
         const newRoom = await db.query(query, [
             room_number, 
             type || 'Single', 
+            rental_type || 'Whole Room',
             capacity, 
             price, 
             floor || null, 
             description || null, 
+            amenities || null,
             status || 'Available'
         ]);
         
@@ -367,22 +386,24 @@ const createRoom = async (req, res) => {
 // @route   PUT /api/admin/rooms/:id
 const updateRoom = async (req, res) => {
     const { id } = req.params;
-    const { room_number, type, capacity, price, floor, description, status } = req.body;
+    const { room_number, type, rental_type, capacity, price, floor, description, amenities, status } = req.body;
     
     try {
         const query = `
             UPDATE rooms 
-            SET room_number = $1, type = $2, capacity = $3, price = $4, floor = $5, description = $6, status = $7 
-            WHERE id = $8 
+            SET room_number = $1, type = $2, rental_type = $3, capacity = $4, price = $5, floor = $6, description = $7, amenities = $8, status = $9 
+            WHERE id = $10 
             RETURNING *
         `;
         const updatedRoom = await db.query(query, [
             room_number, 
             type || 'Single', 
+            rental_type || 'Whole Room',
             capacity, 
             price, 
             floor || null, 
             description || null, 
+            amenities || null,
             status, 
             id
         ]);
@@ -673,6 +694,110 @@ const getPendingTenantsCount = async (req, res) => {
     }
 };
 
+// @desc    Get Cash Flow Overview
+// @route   GET /api/admin/cashflow
+const getCashFlowOverview = async (req, res) => {
+    try {
+        const { range, startDate, endDate } = req.query;
+        let start, end;
+        const now = new Date();
+        
+        if (range === 'last_6_months' || !range) {
+            start = new Date(now.getFullYear(), now.getMonth() - 5, 1);
+            end = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+        } else if (range === 'last_12_months') {
+            start = new Date(now.getFullYear(), now.getMonth() - 11, 1);
+            end = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+        } else if (range === 'this_year') {
+            start = new Date(now.getFullYear(), 0, 1);
+            end = new Date(now.getFullYear(), 11, 31);
+        } else if (range === 'last_year') {
+            start = new Date(now.getFullYear() - 1, 0, 1);
+            end = new Date(now.getFullYear() - 1, 11, 31);
+        } else if (range === 'custom') {
+            if (!startDate || !endDate) {
+                return res.status(400).json({ message: 'startDate and endDate required for custom range' });
+            }
+            start = new Date(startDate);
+            end = new Date(endDate);
+        } else {
+            return res.status(400).json({ message: 'Invalid range parameter' });
+        }
+
+        const billsQuery = `
+            SELECT 
+                EXTRACT(YEAR FROM due_date) as year,
+                EXTRACT(MONTH FROM due_date) as month,
+                SUM(total_amount) as billed,
+                SUM(balance) as outstanding
+            FROM bills
+            WHERE due_date >= $1 AND due_date <= $2
+            GROUP BY year, month
+            ORDER BY year ASC, month ASC
+        `;
+        
+        const paymentsQuery = `
+            SELECT 
+                EXTRACT(YEAR FROM payment_date) as year,
+                EXTRACT(MONTH FROM payment_date) as month,
+                SUM(amount_paid) as collected
+            FROM payments
+            WHERE payment_date >= $1 AND payment_date <= $2
+            GROUP BY year, month
+            ORDER BY year ASC, month ASC
+        `;
+
+        const [billsResult, paymentsResult] = await Promise.all([
+            db.query(billsQuery, [start.toISOString().split('T')[0], end.toISOString().split('T')[0]]),
+            db.query(paymentsQuery, [start.toISOString().split('T')[0], end.toISOString().split('T')[0]])
+        ]);
+
+        const mergedData = {};
+        
+        let current = new Date(start);
+        current.setDate(1);
+        while (current <= end) {
+            const y = current.getFullYear();
+            const m = current.getMonth() + 1;
+            const key = `${y}-${m}`;
+            mergedData[key] = {
+                year: y,
+                month: current.toLocaleString('default', { month: 'short' }),
+                monthNumber: m,
+                billed: 0,
+                collected: 0,
+                outstanding: 0
+            };
+            current.setMonth(current.getMonth() + 1);
+        }
+
+        billsResult.rows.forEach(r => {
+            const key = `${r.year}-${r.month}`;
+            if (mergedData[key]) {
+                mergedData[key].billed = parseFloat(r.billed) || 0;
+                mergedData[key].outstanding = parseFloat(r.outstanding) || 0;
+            }
+        });
+
+        paymentsResult.rows.forEach(r => {
+            const key = `${r.year}-${r.month}`;
+            if (mergedData[key]) {
+                mergedData[key].collected = parseFloat(r.collected) || 0;
+            }
+        });
+
+        const sortedData = Object.values(mergedData).sort((a, b) => {
+            if (a.year !== b.year) return a.year - b.year;
+            return a.monthNumber - b.monthNumber;
+        });
+
+        res.status(200).json(sortedData);
+    } catch (error) {
+        console.error('Get Cash Flow Overview Error:', error);
+        res.status(500).json({ message: 'Server error fetching cash flow overview' });
+    }
+};
+
 module.exports = { 
     getDashboardStats, 
     getAllRooms, 
@@ -688,5 +813,6 @@ module.exports = {
     getMessages,  
     sendMessage,
     getUnreadCount,
-    getPendingTenantsCount
+    getPendingTenantsCount,
+    getCashFlowOverview
 };
