@@ -13,7 +13,14 @@ const getDashboardStats = async (req, res) => {
         ] = await Promise.all([
             // Rooms Overview
             db.query('SELECT COUNT(*) FROM rooms'),
-            db.query('SELECT status, COUNT(*) FROM rooms GROUP BY status'),
+            db.query(`
+                SELECT 
+                    r.id, r.status, r.capacity, 
+                    CAST(COUNT(u.id) AS INTEGER) as current_occupants 
+                FROM rooms r 
+                LEFT JOIN users u ON r.id = u.room_id AND u.role = 'tenant' AND u.status != 'Moved Out' 
+                GROUP BY r.id
+            `),
             
             // Tenants Overview (Total & Status)
             db.query("SELECT COUNT(*) FROM users WHERE role = 'tenant'"),
@@ -112,14 +119,27 @@ const getDashboardStats = async (req, res) => {
         ]);
 
         // --- Process Room Stats ---
-        const totalRooms = parseInt(roomsResult.rows[0].count);
-        let occupiedRooms = 0, availableRooms = 0, maintenanceRooms = 0;
-        roomStatusResult.rows.forEach(r => {
-            if (r.status.toLowerCase() === 'occupied' || r.status.toLowerCase() === 'partial') occupiedRooms += parseInt(r.count);
-            else if (r.status.toLowerCase() === 'available') availableRooms += parseInt(r.count);
-            else if (r.status.toLowerCase() === 'maintenance') maintenanceRooms += parseInt(r.count);
+        const totalRooms = roomStatusResult.rows.length;
+        let occupiedRooms = 0, availableRooms = 0, partiallyOccupiedRooms = 0, maintenanceRooms = 0, unavailableRooms = 0;
+        
+        roomStatusResult.rows.forEach(room => {
+            let status = room.status;
+            if (status !== 'Maintenance' && status !== 'Unavailable') {
+                if (room.current_occupants === 0) {
+                    status = 'Available';
+                } else if (room.current_occupants >= room.capacity) {
+                    status = 'Occupied';
+                } else {
+                    status = 'Partially Occupied';
+                }
+            }
+            
+            if (status === 'Occupied') occupiedRooms++;
+            else if (status === 'Available') availableRooms++;
+            else if (status === 'Partially Occupied') partiallyOccupiedRooms++;
+            else if (status === 'Maintenance') maintenanceRooms++;
+            else if (status === 'Unavailable') unavailableRooms++;
         });
-        const unavailableRooms = totalRooms - occupiedRooms - availableRooms;
 
         // --- Process Tenant Stats ---
         const totalTenants = parseInt(tenantsResult.rows[0].count);
@@ -271,7 +291,7 @@ const getDashboardStats = async (req, res) => {
 
         // --- Final Response Object ---
         res.status(200).json({
-            rooms: { totalRooms, occupiedRooms, availableRooms, maintenanceRooms, unavailableRooms },
+            rooms: { totalRooms, occupiedRooms, availableRooms, partiallyOccupiedRooms, maintenanceRooms, unavailableRooms },
             tenants: { totalTenants, activeTenants, pendingTenants, inactiveTenants },
             billing: { monthlyIncome, pendingDues, overduePayments, totalBilled, collectionRate, historicalIncome },
             maintenance: { totalRequests, pendingRequests, inProgressRequests, resolvedRequests },
