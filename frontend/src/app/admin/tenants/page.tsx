@@ -2,6 +2,7 @@
 import { useState, useEffect } from 'react';
 import api from '@/lib/api';
 import { motion, AnimatePresence, Variants } from 'framer-motion';
+import { toast } from 'sonner';
 
 // 1. Updated Interface matching all your required fields
 interface Tenant {
@@ -136,6 +137,7 @@ export default function AdminTenants() {
             contract_end_date: tenant.contract_end_date || '',
             status: intention === 'approve' ? 'Active' : tenant.status
         });
+        setError('');
         setIsModalOpen(true);
     };
 
@@ -152,12 +154,13 @@ export default function AdminTenants() {
         try {
             if (editingTenant) {
                 await api.put(`/admin/tenants/${editingTenant.id}`, formData);
+                toast.success('Tenant updated successfully');
             }
             setIsModalOpen(false);
             fetchTenants(); 
         } catch (err: any) {
-            console.error("Operation failed:", err);
-            setError(err.response?.data?.message || "Operation failed. Please check your data.");
+            const errMsg = err.response?.data?.message || "Operation failed. Please check your data.";
+            setError(errMsg);
         } finally {
             setIsSubmitting(false);
         }
@@ -171,10 +174,13 @@ export default function AdminTenants() {
         
         try {
             await api.delete(`/admin/tenants/${id}`);
+            toast.success('Tenant moved to trash');
             setTenants((prev) => prev.filter((tenant) => tenant.id !== id));
         } catch (err: any) {
             console.error("Failed to delete tenant:", err);
-            setError("Failed to delete resident. They might have active dependencies (like payments).");
+            const errMsg = "Failed to delete resident. They might have active dependencies (like payments).";
+            setError(errMsg);
+            toast.error(errMsg);
         } finally {
             setIsDeleting(null);
         }
@@ -259,13 +265,6 @@ export default function AdminTenants() {
                     <p className="text-slate-500 dark:text-zinc-400 font-bold text-sm uppercase tracking-[0.2em] mt-2">Manage Active Residents & Applications</p>
                 </div>
             </motion.div>
-
-            {error && (
-                <motion.div initial={{opacity:0, scale:0.95}} animate={{opacity:1, scale:1}} className="mb-6 p-4 bg-rose-500/10 border border-rose-500/20 rounded-2xl text-rose-400 font-bold text-sm flex items-center gap-3 relative z-10 shadow-[0_0_20px_rgba(244,63,94,0.1)]">
-                    <div className="w-2 h-2 rounded-full bg-rose-500 animate-pulse shadow-[0_0_8px_rgba(244,63,94,0.8)]"></div>
-                    {error}
-                </motion.div>
-            )}
 
             {/* Filters */}
             <motion.div initial={{opacity:0, y:20}} animate={{opacity:1, y:0}} transition={{delay: 0.1}} className="flex flex-col sm:flex-row gap-4 relative z-10 mb-8 bg-white dark:bg-black backdrop-blur-2xl p-4 rounded-[2rem] border border-slate-200/60 dark:border-zinc-800/60 shadow-xl dark:shadow-2xl">
@@ -511,7 +510,7 @@ export default function AdminTenants() {
                             </div>
                         </form>
                         <div className="p-8 border-t border-slate-200 dark:border-zinc-800/80 flex flex-col-reverse sm:flex-row justify-end gap-3 bg-slate-50/50 dark:bg-zinc-900/30">
-                            <button type="button" onClick={() => setIsModalOpen(false)} className="w-full sm:w-auto px-8 py-4 font-black text-slate-500 dark:text-zinc-400 bg-slate-100 dark:bg-zinc-800 hover:bg-slate-200 dark:hover:bg-zinc-700 rounded-2xl transition-all uppercase tracking-widest text-xs">Cancel</button>
+                            <button type="button" onClick={() => { setIsModalOpen(false); setError(''); }} className="w-full sm:w-auto px-8 py-4 font-black text-slate-500 dark:text-zinc-400 bg-slate-100 dark:bg-zinc-800 hover:bg-slate-200 dark:hover:bg-zinc-700 rounded-2xl transition-all uppercase tracking-widest text-xs">Cancel</button>
                             <button type="submit" disabled={isSubmitting} className="w-full sm:w-auto px-8 py-4 font-black bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white rounded-2xl transition-all shadow-[0_0_20px_rgba(79,70,229,0.3)] hover:shadow-[0_0_30px_rgba(79,70,229,0.5)] flex items-center justify-center gap-2 uppercase tracking-widest text-xs disabled:opacity-70">
                                 {isSubmitting ? <div className="w-5 h-5 border-2 border-white/20 border-t-white rounded-full animate-spin"></div> : 'Save Changes'}
                             </button>

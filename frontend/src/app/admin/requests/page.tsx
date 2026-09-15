@@ -2,6 +2,7 @@
 import { useEffect, useState, useMemo } from 'react';
 import api from '@/lib/api';
 import { motion, AnimatePresence, Variants } from 'framer-motion';
+import { toast } from 'sonner';
 
 interface Request {
     id: number;
@@ -108,11 +109,12 @@ export default function AdminRequests() {
                 scheduled_date: updateScheduledDate || null,
                 date_resolved: updateDateResolved || null
             });
+            toast.success('Request updated successfully');
             await fetchRequests();
             setUpdateModalReq(null);
-        } catch (error) {
+        } catch (error: any) {
             console.error("Failed to update request:", error);
-            alert("Failed to update request");
+            toast.error(error.response?.data?.message || "Failed to update request");
         } finally {
             setIsUpdating(false);
         }

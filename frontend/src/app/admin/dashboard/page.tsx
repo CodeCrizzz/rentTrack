@@ -2,7 +2,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import api from '@/lib/api';
-import { Bar, BarChart, CartesianGrid, XAxis, YAxis, ResponsiveContainer, Tooltip } from "recharts";
+import { Bar, BarChart, CartesianGrid, XAxis, YAxis, ResponsiveContainer, Tooltip, ComposedChart, Line, Legend } from "recharts";
 import { 
     Users, Receipt, Calendar, Plus, FileText, Wrench, Wallet,
     ChevronRight, Check, X, ArrowUpRight, Eye, UserCheck
@@ -33,6 +33,8 @@ interface DashboardStats {
 
 export default function AdminDashboard() {
     const [stats, setStats] = useState<DashboardStats | null>(null);
+    const [cashflowData, setCashflowData] = useState<any[]>([]);
+    const [dateRange, setDateRange] = useState("last_6_months");
     const [isLoading, setIsLoading] = useState(true);
     const [currentDate, setCurrentDate] = useState("");
     const [adminName, setAdminName] = useState('Admin');
@@ -62,6 +64,18 @@ export default function AdminDashboard() {
         fetchDashboardData();
     }, []);
 
+    useEffect(() => {
+        const fetchCashFlow = async () => {
+            try {
+                const { data } = await api.get(`/admin/cashflow?range=${dateRange}`);
+                setCashflowData(data);
+            } catch (error) {
+                console.error("Failed to fetch cash flow data:", error);
+            }
+        };
+        fetchCashFlow();
+    }, [dateRange]);
+
     if (isLoading || !stats || !stats.billing) {
         return (
             <div className="flex items-center justify-center min-h-[70vh]">
@@ -70,28 +84,7 @@ export default function AdminDashboard() {
         );
     }
 
-    const generateChartData = () => {
-        if (!stats?.billing) return [];
-        const historical = stats.billing.historicalIncome || [];
-        const data = [];
-        const now = new Date();
-        
-        for (let i = 5; i >= 0; i--) {
-            const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-            const monthName = d.toLocaleString('default', { month: 'short' });
-            const found = historical.find(h => h.year === d.getFullYear() && h.month === (d.getMonth() + 1));
-            
-            const collected = found ? Number(found.total) : 0;
-            
-            data.push({
-                month: monthName,
-                Collected: collected
-            });
-        }
-        return data;
-    };
 
-    const chartData = generateChartData();
 
     // Reusable styles
     const cardClass = "bg-white dark:bg-[#0a0a0a] rounded-2xl border border-slate-100 dark:border-zinc-800 p-6 shadow-[0_4px_12px_rgba(0,0,0,0.03)] dark:shadow-none flex flex-col";
@@ -104,7 +97,7 @@ export default function AdminDashboard() {
             {/* Welcome Header */}
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 py-2">
                 <div className="flex items-center gap-4">
-                    <div className="w-14 h-14 rounded-full bg-slate-200 dark:bg-zinc-800 overflow-hidden flex-shrink-0 border-2 border-white dark:border-[#0a0a0a] shadow-sm">
+                    <div className="w-14 h-14 rounded-full bg-slate-200 dark:bg-zinc-800 overflow-hidden shrink-0 border-2 border-white dark:border-[#0a0a0a] shadow-sm">
                         <img src={`https://api.dicebear.com/7.x/initials/svg?seed=${adminName}&backgroundColor=059669`} alt="Admin" className="w-full h-full object-cover" />
                     </div>
                     <div>
@@ -122,29 +115,29 @@ export default function AdminDashboard() {
 
             {/* Quick Actions */}
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
-                <Link href="/admin/rooms" className="group bg-white dark:bg-[#0a0a0a] border border-slate-200 dark:border-zinc-800 hover:border-emerald-500/50 dark:hover:border-emerald-500/50 rounded-2xl p-4 flex items-center gap-4 transition-all shadow-[0_2px_8px_rgba(0,0,0,0.04)] dark:shadow-none hover:shadow-md cursor-pointer">
+                <Link href="/admin/rooms" className="group bg-white dark:bg-[#0a0a0a] border border-slate-200 dark:border-zinc-800 hover:border-emerald-500/50 dark:hover:border-emerald-500/50 rounded-2xl p-4 flex items-center gap-4 transition-transform shadow-[0_2px_8px_rgba(0,0,0,0.04)] dark:shadow-none hover:shadow-md cursor-pointer">
                     <div className="w-10 h-10 rounded-full bg-emerald-50 dark:bg-emerald-500/10 flex items-center justify-center text-emerald-600 dark:text-emerald-400 group-hover:scale-110 transition-transform">
                         <Plus className="w-5 h-5" />
                     </div>
-                    <span className="font-bold text-sm text-slate-800 dark:text-white group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors">Add New Room</span>
+                    <span className="font-bold text-sm text-slate-800 dark:text-white group-hover:text-emerald-600 dark:group-hover:text-emerald-400">Add New Room</span>
                 </Link>
-                <Link href="/admin/tenants" className="group bg-white dark:bg-[#0a0a0a] border border-slate-200 dark:border-zinc-800 hover:border-emerald-500/50 dark:hover:border-emerald-500/50 rounded-2xl p-4 flex items-center gap-4 transition-all shadow-[0_2px_8px_rgba(0,0,0,0.04)] dark:shadow-none hover:shadow-md cursor-pointer">
+                <Link href="/admin/tenants" className="group bg-white dark:bg-[#0a0a0a] border border-slate-200 dark:border-zinc-800 hover:border-emerald-500/50 dark:hover:border-emerald-500/50 rounded-2xl p-4 flex items-center gap-4 transition-transform shadow-[0_2px_8px_rgba(0,0,0,0.04)] dark:shadow-none hover:shadow-md cursor-pointer">
                     <div className="w-10 h-10 rounded-full bg-emerald-50 dark:bg-emerald-500/10 flex items-center justify-center text-emerald-600 dark:text-emerald-400 group-hover:scale-110 transition-transform">
                         <UserCheck className="w-5 h-5" />
                     </div>
-                    <span className="font-bold text-sm text-slate-800 dark:text-white group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors">Review Registrations</span>
+                    <span className="font-bold text-sm text-slate-800 dark:text-white group-hover:text-emerald-600 dark:group-hover:text-emerald-400">Review Registrations</span>
                 </Link>
-                <Link href="/admin/billing" className="group bg-white dark:bg-[#0a0a0a] border border-slate-200 dark:border-zinc-800 hover:border-emerald-500/50 dark:hover:border-emerald-500/50 rounded-2xl p-4 flex items-center gap-4 transition-all shadow-[0_2px_8px_rgba(0,0,0,0.04)] dark:shadow-none hover:shadow-md cursor-pointer">
+                <Link href="/admin/billing" className="group bg-white dark:bg-[#0a0a0a] border border-slate-200 dark:border-zinc-800 hover:border-emerald-500/50 dark:hover:border-emerald-500/50 rounded-2xl p-4 flex items-center gap-4 transition-transform shadow-[0_2px_8px_rgba(0,0,0,0.04)] dark:shadow-none hover:shadow-md cursor-pointer">
                     <div className="w-10 h-10 rounded-full bg-emerald-50 dark:bg-emerald-500/10 flex items-center justify-center text-emerald-600 dark:text-emerald-400 group-hover:scale-110 transition-transform">
-                        <FileText className="w-5 h-5" />
+                        <Wallet className="w-5 h-5" />
                     </div>
-                    <span className="font-bold text-sm text-slate-800 dark:text-white group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors">Generate Bills</span>
+                    <span className="font-bold text-sm text-slate-800 dark:text-white group-hover:text-emerald-600 dark:group-hover:text-emerald-400">Process Payments</span>
                 </Link>
-                <Link href="/admin/requests" className="group bg-white dark:bg-[#0a0a0a] border border-slate-200 dark:border-zinc-800 hover:border-emerald-500/50 dark:hover:border-emerald-500/50 rounded-2xl p-4 flex items-center gap-4 transition-all shadow-[0_2px_8px_rgba(0,0,0,0.04)] dark:shadow-none hover:shadow-md cursor-pointer">
+                <Link href="/admin/requests" className="group bg-white dark:bg-[#0a0a0a] border border-slate-200 dark:border-zinc-800 hover:border-emerald-500/50 dark:hover:border-emerald-500/50 rounded-2xl p-4 flex items-center gap-4 transition-transform shadow-[0_2px_8px_rgba(0,0,0,0.04)] dark:shadow-none hover:shadow-md cursor-pointer">
                     <div className="w-10 h-10 rounded-full bg-emerald-50 dark:bg-emerald-500/10 flex items-center justify-center text-emerald-600 dark:text-emerald-400 group-hover:scale-110 transition-transform">
                         <Wrench className="w-5 h-5" />
                     </div>
-                    <span className="font-bold text-sm text-slate-800 dark:text-white group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors">Maintenance Requests</span>
+                    <span className="font-bold text-sm text-slate-800 dark:text-white group-hover:text-emerald-600 dark:group-hover:text-emerald-400">View Requests</span>
                 </Link>
             </div>
 
@@ -229,37 +222,49 @@ export default function AdminDashboard() {
             </div>
 
             {/* Chart & Recent Activity */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                {/* Billing vs Collection Trend */}
-                <div className={`lg:col-span-2 ${cardClass}`}>
+            <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+                {/* Cash Flow Overview */}
+                <div className={`lg:col-span-3 ${cardClass}`}>
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-6 gap-4">
                         <div>
-                            <h2 className="text-lg font-bold text-slate-800 dark:text-white">Billing vs. Collection Trend</h2>
-                            <p className="text-sm text-slate-500 dark:text-zinc-400 mt-0.5">Last 6 months cash flow overview</p>
+                            <h2 className="text-lg font-bold text-slate-800 dark:text-white">Cash Flow Overview</h2>
+                            <p className="text-sm text-slate-500 dark:text-zinc-400 mt-0.5">Bills, collections, and unpaid balances</p>
                         </div>
-                        <div className="flex items-center gap-4 text-xs font-semibold text-slate-500 dark:text-zinc-400">
-                            <div className="flex items-center gap-1.5"><div className="w-3 h-3 bg-[#10b981] dark:bg-[#10b981] rounded-sm"></div> Collected</div>
+                        <div className="flex items-center gap-4">
+                            <select 
+                                value={dateRange} 
+                                onChange={(e) => setDateRange(e.target.value)}
+                                className="bg-slate-50 dark:bg-[#111111] border border-slate-200 dark:border-zinc-800 text-sm font-semibold text-slate-700 dark:text-zinc-300 rounded-xl px-3 py-2 outline-none focus:ring-2 focus:ring-emerald-500/20"
+                            >
+                                <option value="last_6_months">Last 6 Months</option>
+                                <option value="last_12_months">Last 12 Months</option>
+                                <option value="this_year">This Year</option>
+                                <option value="last_year">Last Year</option>
+                            </select>
                         </div>
                     </div>
-                    <div className="flex-1 min-h-[410px] w-full">
+                    <div className="flex-1 min-h-[400px] w-full">
                         <ResponsiveContainer width="100%" height="100%">
-                            <BarChart data={chartData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }} barGap={4} barSize={14}>
+                            <ComposedChart data={cashflowData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }} barGap={4} barSize={12}>
                                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(150,150,150,0.1)" />
                                 <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 12, fontWeight: 500 }} dy={10} />
-                                <YAxis domain={[0, 100000]} axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 12, fontWeight: 500 }} tickFormatter={(value) => value === 0 ? '0' : `${value / 1000}k`} width={45} />
-                                <Tooltip cursor={{fill: 'rgba(150,150,150,0.1)'}} contentStyle={{ borderRadius: '8px', border: '1px solid rgba(255,255,255,0.1)', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)', backgroundColor: '#0a0a0a', color: '#fff' }} itemStyle={{ color: '#fff' }} />
-                                <Bar dataKey="Collected" fill="#10b981" radius={[2, 2, 0, 0]} />
-                            </BarChart> 
+                                <YAxis axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 12, fontWeight: 500 }} tickFormatter={(value) => value === 0 ? '0' : `₱${value >= 1000 ? (value / 1000) + 'k' : value}`} width={60} />
+                                <Tooltip cursor={{fill: 'rgba(150,150,150,0.05)'}} contentStyle={{ borderRadius: '12px', border: '1px solid rgba(255,255,255,0.1)', boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)', backgroundColor: '#0a0a0a', color: '#fff', fontSize: '13px', fontWeight: 600 }} itemStyle={{ padding: '2px 0' }} formatter={(value: any) => `₱${Number(value).toLocaleString()}`} />
+                                <Legend wrapperStyle={{ paddingTop: '20px', fontSize: '12px', fontWeight: 600 }} />
+                                <Bar dataKey="collected" name="Collected" fill="#10b981" radius={[4, 4, 0, 0]} />
+                                <Bar dataKey="outstanding" name="Outstanding" fill="#f43f5e" radius={[4, 4, 0, 0]} />
+                                <Line type="monotone" dataKey="billed" name="Billed" stroke="#3b82f6" strokeWidth={3} dot={{ r: 4, strokeWidth: 2 }} activeDot={{ r: 6 }} />
+                            </ComposedChart> 
                         </ResponsiveContainer>
                     </div>
                 </div>
 
                 {/* Recent Activity */}
-                <div className={cardClass}>
+                <div className={`lg:col-span-1 ${cardClass}`}>
                     <div className={headerClass}>
                         <h2>Recent Activity</h2>
                     </div>
-                    <div className="flex-1 overflow-y-auto max-h-[410px] pr-2 -mr-2 scrollbar-thin scrollbar-thumb-slate-200 dark:scrollbar-thumb-zinc-800">
+                    <div className="flex-1 overflow-y-auto max-h-[400px] pr-2 -mr-2 scrollbar-thin scrollbar-thumb-slate-200 dark:scrollbar-thumb-zinc-800">
                         <div className="relative border-l border-slate-200 dark:border-zinc-800 ml-3 space-y-6 py-2">
                             {stats.recentActivities.map((act) => (
                                 <div key={act.id} className="pl-6 relative">
@@ -284,7 +289,7 @@ export default function AdminDashboard() {
                     </div>
                     <div className="space-y-4 flex-1 overflow-y-auto pr-2 -mr-2 scrollbar-thin scrollbar-thumb-slate-200 dark:scrollbar-thumb-zinc-800">
                         {stats.pendingTenantsList.slice(0, 5).map(tenant => (
-                            <div key={tenant.id} className="flex items-center justify-between p-3 border border-slate-100 dark:border-zinc-800 rounded-xl bg-slate-50/50 dark:bg-white/[0.02]">
+                            <div key={tenant.id} className="flex items-center justify-between p-3 border border-slate-100 dark:border-zinc-800 rounded-xl bg-slate-50/50 dark:bg-white/5">
                                 <div>
                                     <p className="font-bold text-sm text-slate-800 dark:text-white">{tenant.name}</p>
                                     <p className="text-xs text-slate-500 dark:text-zinc-400 mt-0.5">Applied: {new Date(tenant.created_at).toLocaleDateString()}</p>
