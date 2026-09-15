@@ -4,7 +4,7 @@ import api from '@/lib/api';
 import { motion, AnimatePresence, Variants } from 'framer-motion';
 import { toast } from 'sonner';
 
-// 1. Updated Interface matching all your required fields
+//  Updated Interface matching all your required fields
 interface Tenant {
     id: number;
     name: string;

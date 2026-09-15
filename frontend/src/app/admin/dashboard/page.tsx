@@ -2,7 +2,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import api from '@/lib/api';
-import { Bar, BarChart, CartesianGrid, XAxis, YAxis, ResponsiveContainer, Tooltip, ComposedChart, Line, Legend } from "recharts";
+import { Bar, BarChart, CartesianGrid, XAxis, YAxis, ResponsiveContainer, Tooltip, ComposedChart, Line, Legend, PieChart, Pie, Cell, Area } from "recharts";
 import { 
     Users, Receipt, Calendar, Plus, FileText, Wrench, Wallet,
     ChevronRight, Check, X, ArrowUpRight, Eye, UserCheck
@@ -17,7 +17,7 @@ interface ExpiringContract {
 }
 
 interface DashboardStats {
-    rooms: { totalRooms: number; occupiedRooms: number; availableRooms: number; maintenanceRooms: number; unavailableRooms: number };
+    rooms: { totalRooms: number; occupiedRooms: number; availableRooms: number; partiallyOccupiedRooms: number; maintenanceRooms: number; unavailableRooms: number };
     tenants: { totalTenants: number; activeTenants: number; pendingTenants: number; inactiveTenants: number };
     billing: { monthlyIncome: number; pendingDues: number; overduePayments: number; totalBilled: number; collectionRate: number; historicalIncome?: { year: number, month: number, total: number }[] };
     maintenance: { totalRequests: number; pendingRequests: number; inProgressRequests: number; resolvedRequests: number };
@@ -30,6 +30,33 @@ interface DashboardStats {
     overdueAccounts: { tenant_id: number; tenant_name: string; room_number: string | null; total_overdue: number }[];
     upcomingRent: { id: number; tenant_name: string; room_number: string | null; balance: number; due_date: string }[];
 }
+
+const CustomTooltip = ({ active, payload, label }: any) => {
+    if (active && payload && payload.length) {
+        return (
+            <div className="bg-[#0a0a0a]/95 backdrop-blur-md border border-white/5 shadow-2xl rounded-2xl p-4 text-[13px] font-semibold text-white min-w-40">
+                <p className="mb-3 text-slate-400">{label}</p>
+                {payload.map((entry: any, index: number) => {
+                    let color = entry.color;
+                    if (entry.name === 'Collected') color = '#10b981';
+                    if (entry.name === 'Outstanding') color = '#f43f5e';
+                    if (entry.name === 'Billed') color = '#3b82f6';
+                    
+                    return (
+                        <div key={`item-${index}`} className="flex justify-between items-center gap-6 py-1">
+                            <div className="flex items-center gap-2">
+                                <span className="w-2 h-2 rounded-full" style={{ backgroundColor: color }}></span>
+                                <span style={{ color }}>{entry.name}</span>
+                            </div>
+                            <span className="font-bold text-white">₱ {Number(entry.value).toLocaleString()}</span>
+                        </div>
+                    );
+                })}
+            </div>
+        );
+    }
+    return null;
+};
 
 export default function AdminDashboard() {
     const [stats, setStats] = useState<DashboardStats | null>(null);
@@ -87,8 +114,8 @@ export default function AdminDashboard() {
 
 
     // Reusable styles
-    const cardClass = "bg-white dark:bg-[#0a0a0a] rounded-2xl border border-slate-100 dark:border-zinc-800 p-6 shadow-[0_4px_12px_rgba(0,0,0,0.03)] dark:shadow-none flex flex-col";
-    const listCardClass = `${cardClass} h-[420px]`;
+    const cardClass = "bg-white dark:bg-[#0a0a0a] rounded-2xl border border-slate-100 dark:border-zinc-800 p-7 shadow-[0_4px_12px_rgba(0,0,0,0.03)] dark:shadow-none flex flex-col min-h-[220px]";
+    const listCardClass = `bg-white dark:bg-[#0a0a0a] rounded-2xl border border-slate-100 dark:border-zinc-800 p-7 shadow-[0_4px_12px_rgba(0,0,0,0.03)] dark:shadow-none flex flex-col h-[450px]`;
     const headerClass = "text-lg font-bold text-slate-800 dark:text-white mb-6 flex items-center justify-between";
 
 
@@ -115,47 +142,91 @@ export default function AdminDashboard() {
 
             {/* Quick Actions */}
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
-                <Link href="/admin/rooms" className="group bg-white dark:bg-[#0a0a0a] border border-slate-200 dark:border-zinc-800 hover:border-emerald-500/50 dark:hover:border-emerald-500/50 rounded-2xl p-4 flex items-center gap-4 transition-transform shadow-[0_2px_8px_rgba(0,0,0,0.04)] dark:shadow-none hover:shadow-md cursor-pointer">
-                    <div className="w-10 h-10 rounded-full bg-emerald-50 dark:bg-emerald-500/10 flex items-center justify-center text-emerald-600 dark:text-emerald-400 group-hover:scale-110 transition-transform">
-                        <Plus className="w-5 h-5" />
+                <Link href="/admin/rooms" className="group bg-white dark:bg-[#0a0a0a] border border-slate-200 dark:border-zinc-800 hover:border-emerald-500/50 dark:hover:border-emerald-500/50 rounded-2xl p-5 flex items-center gap-4 transition-transform shadow-[0_2px_8px_rgba(0,0,0,0.04)] dark:shadow-none hover:shadow-md cursor-pointer">
+                    <div className="w-12 h-12 rounded-full bg-emerald-50 dark:bg-emerald-500/10 flex items-center justify-center text-emerald-600 dark:text-emerald-400 group-hover:scale-110 transition-transform">
+                        <Plus className="w-6 h-6" />
                     </div>
-                    <span className="font-bold text-sm text-slate-800 dark:text-white group-hover:text-emerald-600 dark:group-hover:text-emerald-400">Add New Room</span>
+                    <span className="font-bold text-[15px] text-slate-800 dark:text-white group-hover:text-emerald-600 dark:group-hover:text-emerald-400">Add New Room</span>
                 </Link>
-                <Link href="/admin/tenants" className="group bg-white dark:bg-[#0a0a0a] border border-slate-200 dark:border-zinc-800 hover:border-emerald-500/50 dark:hover:border-emerald-500/50 rounded-2xl p-4 flex items-center gap-4 transition-transform shadow-[0_2px_8px_rgba(0,0,0,0.04)] dark:shadow-none hover:shadow-md cursor-pointer">
-                    <div className="w-10 h-10 rounded-full bg-emerald-50 dark:bg-emerald-500/10 flex items-center justify-center text-emerald-600 dark:text-emerald-400 group-hover:scale-110 transition-transform">
-                        <UserCheck className="w-5 h-5" />
+                <Link href="/admin/tenants" className="group bg-white dark:bg-[#0a0a0a] border border-slate-200 dark:border-zinc-800 hover:border-emerald-500/50 dark:hover:border-emerald-500/50 rounded-2xl p-5 flex items-center gap-4 transition-transform shadow-[0_2px_8px_rgba(0,0,0,0.04)] dark:shadow-none hover:shadow-md cursor-pointer">
+                    <div className="w-12 h-12 rounded-full bg-emerald-50 dark:bg-emerald-500/10 flex items-center justify-center text-emerald-600 dark:text-emerald-400 group-hover:scale-110 transition-transform">
+                        <UserCheck className="w-6 h-6" />
                     </div>
-                    <span className="font-bold text-sm text-slate-800 dark:text-white group-hover:text-emerald-600 dark:group-hover:text-emerald-400">Review Registrations</span>
+                    <span className="font-bold text-[15px] text-slate-800 dark:text-white group-hover:text-emerald-600 dark:group-hover:text-emerald-400">Review Registrations</span>
                 </Link>
-                <Link href="/admin/billing" className="group bg-white dark:bg-[#0a0a0a] border border-slate-200 dark:border-zinc-800 hover:border-emerald-500/50 dark:hover:border-emerald-500/50 rounded-2xl p-4 flex items-center gap-4 transition-transform shadow-[0_2px_8px_rgba(0,0,0,0.04)] dark:shadow-none hover:shadow-md cursor-pointer">
-                    <div className="w-10 h-10 rounded-full bg-emerald-50 dark:bg-emerald-500/10 flex items-center justify-center text-emerald-600 dark:text-emerald-400 group-hover:scale-110 transition-transform">
-                        <Wallet className="w-5 h-5" />
+                <Link href="/admin/billing" className="group bg-white dark:bg-[#0a0a0a] border border-slate-200 dark:border-zinc-800 hover:border-emerald-500/50 dark:hover:border-emerald-500/50 rounded-2xl p-5 flex items-center gap-4 transition-transform shadow-[0_2px_8px_rgba(0,0,0,0.04)] dark:shadow-none hover:shadow-md cursor-pointer">
+                    <div className="w-12 h-12 rounded-full bg-emerald-50 dark:bg-emerald-500/10 flex items-center justify-center text-emerald-600 dark:text-emerald-400 group-hover:scale-110 transition-transform">
+                        <Wallet className="w-6 h-6" />
                     </div>
-                    <span className="font-bold text-sm text-slate-800 dark:text-white group-hover:text-emerald-600 dark:group-hover:text-emerald-400">Process Payments</span>
+                    <span className="font-bold text-[15px] text-slate-800 dark:text-white group-hover:text-emerald-600 dark:group-hover:text-emerald-400">Process Payments</span>
                 </Link>
-                <Link href="/admin/requests" className="group bg-white dark:bg-[#0a0a0a] border border-slate-200 dark:border-zinc-800 hover:border-emerald-500/50 dark:hover:border-emerald-500/50 rounded-2xl p-4 flex items-center gap-4 transition-transform shadow-[0_2px_8px_rgba(0,0,0,0.04)] dark:shadow-none hover:shadow-md cursor-pointer">
-                    <div className="w-10 h-10 rounded-full bg-emerald-50 dark:bg-emerald-500/10 flex items-center justify-center text-emerald-600 dark:text-emerald-400 group-hover:scale-110 transition-transform">
-                        <Wrench className="w-5 h-5" />
+                <Link href="/admin/requests" className="group bg-white dark:bg-[#0a0a0a] border border-slate-200 dark:border-zinc-800 hover:border-emerald-500/50 dark:hover:border-emerald-500/50 rounded-2xl p-5 flex items-center gap-4 transition-transform shadow-[0_2px_8px_rgba(0,0,0,0.04)] dark:shadow-none hover:shadow-md cursor-pointer">
+                    <div className="w-12 h-12 rounded-full bg-emerald-50 dark:bg-emerald-500/10 flex items-center justify-center text-emerald-600 dark:text-emerald-400 group-hover:scale-110 transition-transform">
+                        <Wrench className="w-6 h-6" />
                     </div>
-                    <span className="font-bold text-sm text-slate-800 dark:text-white group-hover:text-emerald-600 dark:group-hover:text-emerald-400">View Requests</span>
+                    <span className="font-bold text-[15px] text-slate-800 dark:text-white group-hover:text-emerald-600 dark:group-hover:text-emerald-400">View Requests</span>
                 </Link>
             </div>
 
             {/* Stat Cards */}
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-5">
-                {/* Occupancy Rate */}
+                {/* Room Occupancy */}
                 <div className={cardClass}>
-                    <div className="flex items-center justify-between mb-4">
-                        <h3 className="text-sm font-medium text-slate-500 dark:text-zinc-400">Occupancy Rate</h3>
+                    <div className="flex items-center justify-between mb-2">
+                        <h3 className="text-sm font-medium text-slate-500 dark:text-zinc-400">Room Occupancy</h3>
                         <div className="w-8 h-8 rounded-full bg-emerald-50 dark:bg-emerald-500/10 flex items-center justify-center text-emerald-600 dark:text-emerald-400">
                             <Users className="w-4 h-4" />
                         </div>
                     </div>
-                    <div className="flex-1">
-                        <div className="text-3xl font-bold text-slate-900 dark:text-white">{Math.round((stats.rooms.occupiedRooms / (stats.rooms.totalRooms || 1)) * 100)}%</div>
-                        <div className="mt-2 text-xs text-slate-500 dark:text-zinc-400 space-y-1">
-                            <div className="flex justify-between"><span className="text-emerald-600 dark:text-emerald-400 font-semibold">{stats.rooms.occupiedRooms} Occupied</span> <span>{stats.rooms.totalRooms} Total</span></div>
-                            <div className="flex justify-between"><span className="text-cyan-600 dark:text-cyan-400 font-semibold">{stats.rooms.availableRooms} Available</span></div>
+                    <div className="flex-1 flex gap-4 items-center mt-2">
+                        <div className="relative w-28 h-28 shrink-0">
+                            <ResponsiveContainer width="100%" height="100%">
+                                <PieChart>
+                                    <Pie
+                                        data={[
+                                            { name: 'Occupied', value: stats.rooms.occupiedRooms, color: '#10b981' },
+                                            { name: 'Available', value: stats.rooms.availableRooms, color: '#0ea5e9' },
+                                            { name: 'Partial', value: stats.rooms.partiallyOccupiedRooms, color: '#f59e0b' },
+                                            { name: 'Maintenance', value: stats.rooms.maintenanceRooms, color: '#f43f5e' },
+                                            { name: 'Unavailable', value: stats.rooms.unavailableRooms, color: '#64748b' }
+                                        ].filter(item => item.value > 0)}
+                                        innerRadius={36}
+                                        outerRadius={55}
+                                        paddingAngle={2}
+                                        dataKey="value"
+                                        stroke="none"
+                                    >
+                                        {
+                                            [
+                                                { name: 'Occupied', value: stats.rooms.occupiedRooms, color: '#10b981' },
+                                                { name: 'Available', value: stats.rooms.availableRooms, color: '#0ea5e9' },
+                                                { name: 'Partial', value: stats.rooms.partiallyOccupiedRooms, color: '#f59e0b' },
+                                                { name: 'Maintenance', value: stats.rooms.maintenanceRooms, color: '#f43f5e' },
+                                                { name: 'Unavailable', value: stats.rooms.unavailableRooms, color: '#64748b' }
+                                            ].filter(item => item.value > 0).map((entry, index) => (
+                                                <Cell key={`cell-${index}`} fill={entry.color} />
+                                            ))
+                                        }
+                                    </Pie>
+                                    <Tooltip 
+                                        formatter={(value: any, name: any) => [`${value} Room${value !== 1 ? 's' : ''} (${Math.round((value / (stats.rooms.totalRooms || 1)) * 100)}%)`, name === 'Partial' ? 'Partially Occupied' : name]}
+                                        contentStyle={{ borderRadius: '8px', border: '1px solid rgba(255,255,255,0.1)', backgroundColor: '#0a0a0a', color: '#fff', fontSize: '11px', padding: '4px 8px' }}
+                                    />
+                                </PieChart>
+                            </ResponsiveContainer>
+                            <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                                <span className="text-sm font-bold text-slate-900 dark:text-white">
+                                    {Math.round((stats.rooms.occupiedRooms / (stats.rooms.totalRooms || 1)) * 100)}%
+                               </span>
+                            </div>
+                        </div>
+                        <div className="flex-1 space-y-1 text-[10px] text-slate-500 dark:text-zinc-400">
+                            <div className="flex justify-between items-center"><span className="flex items-center gap-1.5"><span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0"></span>Occupied</span> <span className="font-bold text-slate-700 dark:text-zinc-300">{stats.rooms.occupiedRooms}</span></div>
+                            <div className="flex justify-between items-center"><span className="flex items-center gap-1.5"><span className="w-1.5 h-1.5 rounded-full bg-sky-500 shrink-0"></span>Available</span> <span className="font-bold text-slate-700 dark:text-zinc-300">{stats.rooms.availableRooms}</span></div>
+                            <div className="flex justify-between items-center"><span className="flex items-center gap-1.5"><span className="w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0"></span>Partial</span> <span className="font-bold text-slate-700 dark:text-zinc-300">{stats.rooms.partiallyOccupiedRooms}</span></div>
+                            <div className="flex justify-between items-center"><span className="flex items-center gap-1.5"><span className="w-1.5 h-1.5 rounded-full bg-rose-500 shrink-0"></span>Maint.</span> <span className="font-bold text-slate-700 dark:text-zinc-300">{stats.rooms.maintenanceRooms}</span></div>
+                            <div className="flex justify-between items-center"><span className="flex items-center gap-1.5"><span className="w-1.5 h-1.5 rounded-full bg-slate-500 shrink-0"></span>Unavail.</span> <span className="font-bold text-slate-700 dark:text-zinc-300">{stats.rooms.unavailableRooms}</span></div>
+                            <div className="flex justify-between items-center pt-1 mt-1 border-t border-slate-100 dark:border-zinc-800"><span>Total</span> <span className="font-bold text-slate-700 dark:text-zinc-300">{stats.rooms.totalRooms}</span></div>
                         </div>
                     </div>
                 </div>
@@ -243,17 +314,34 @@ export default function AdminDashboard() {
                             </select>
                         </div>
                     </div>
-                    <div className="flex-1 min-h-[400px] w-full">
+                    <div className="flex-1 min-h-100 w-full mt-4">
                         <ResponsiveContainer width="100%" height="100%">
-                            <ComposedChart data={cashflowData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }} barGap={4} barSize={12}>
-                                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(150,150,150,0.1)" />
-                                <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 12, fontWeight: 500 }} dy={10} />
-                                <YAxis axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 12, fontWeight: 500 }} tickFormatter={(value) => value === 0 ? '0' : `₱${value >= 1000 ? (value / 1000) + 'k' : value}`} width={60} />
-                                <Tooltip cursor={{fill: 'rgba(150,150,150,0.05)'}} contentStyle={{ borderRadius: '12px', border: '1px solid rgba(255,255,255,0.1)', boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)', backgroundColor: '#0a0a0a', color: '#fff', fontSize: '13px', fontWeight: 600 }} itemStyle={{ padding: '2px 0' }} formatter={(value: any) => `₱${Number(value).toLocaleString()}`} />
-                                <Legend wrapperStyle={{ paddingTop: '20px', fontSize: '12px', fontWeight: 600 }} />
-                                <Bar dataKey="collected" name="Collected" fill="#10b981" radius={[4, 4, 0, 0]} />
-                                <Bar dataKey="outstanding" name="Outstanding" fill="#f43f5e" radius={[4, 4, 0, 0]} />
-                                <Line type="monotone" dataKey="billed" name="Billed" stroke="#3b82f6" strokeWidth={3} dot={{ r: 4, strokeWidth: 2 }} activeDot={{ r: 6 }} />
+                            <ComposedChart data={cashflowData} margin={{ top: 20, right: 20, left: 0, bottom: 0 }} barGap={8} barSize={16}>
+                                <defs>
+                                    <linearGradient id="colorBilled" x1="0" y1="0" x2="0" y2="1">
+                                        <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.4}/>
+                                        <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
+                                    </linearGradient>
+                                    <linearGradient id="colorCollected" x1="0" y1="0" x2="0" y2="1">
+                                        <stop offset="0%" stopColor="#34d399"/>
+                                        <stop offset="100%" stopColor="#059669"/>
+                                    </linearGradient>
+                                    <linearGradient id="colorOutstanding" x1="0" y1="0" x2="0" y2="1">
+                                        <stop offset="0%" stopColor="#fb7185"/>
+                                        <stop offset="100%" stopColor="#e11d48"/>
+                                    </linearGradient>
+                                </defs>
+                                <CartesianGrid strokeDasharray="4 4" vertical={false} stroke="rgba(150,150,150,0.15)" />
+                                <XAxis dataKey="month" scale="point" axisLine={false} tickLine={false} tick={{ fill: '#64748b', fontSize: 13, fontWeight: 600 }} dy={12} />
+                                <YAxis axisLine={false} tickLine={false} tick={{ fill: '#64748b', fontSize: 13, fontWeight: 600 }} tickFormatter={(value) => value === 0 ? '0' : `₱ ${value >= 1000 ? (value / 1000) + 'k' : value}`} width={60} ticks={[0, 5000, 10000, 15000, 20000, 25000, 30000, 35000, 40000, 45000, 50000]} domain={[0, 50000]} />
+                                <Tooltip 
+                                    cursor={{fill: 'rgba(150,150,150,0.05)'}} 
+                                    content={<CustomTooltip />} 
+                                />
+                                <Legend wrapperStyle={{ paddingTop: '20px', fontSize: '13px', fontWeight: 600 }} iconType="circle" />
+                                <Area type="monotone" dataKey="billed" name="Billed" stroke="#3b82f6" strokeWidth={3} fillOpacity={1} fill="url(#colorBilled)" activeDot={{ r: 6, fill: '#3b82f6', stroke: '#fff', strokeWidth: 2 }} />
+                                <Bar dataKey="collected" name="Collected" fill="url(#colorCollected)" radius={[8, 8, 0, 0]} />
+                                <Bar dataKey="outstanding" name="Outstanding" fill="url(#colorOutstanding)" radius={[8, 8, 0, 0]} />
                             </ComposedChart> 
                         </ResponsiveContainer>
                     </div>
@@ -264,7 +352,7 @@ export default function AdminDashboard() {
                     <div className={headerClass}>
                         <h2>Recent Activity</h2>
                     </div>
-                    <div className="flex-1 overflow-y-auto max-h-[400px] pr-2 -mr-2 scrollbar-thin scrollbar-thumb-slate-200 dark:scrollbar-thumb-zinc-800">
+                    <div className="flex-1 overflow-y-auto max-h-100 pr-2 -mr-2 scrollbar-thin scrollbar-thumb-slate-200 dark:scrollbar-thumb-zinc-800">
                         <div className="relative border-l border-slate-200 dark:border-zinc-800 ml-3 space-y-6 py-2">
                             {stats.recentActivities.map((act) => (
                                 <div key={act.id} className="pl-6 relative">

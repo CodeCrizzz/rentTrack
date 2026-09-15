@@ -40,7 +40,6 @@ export default function LoginPage() {
         }
     } catch (err: any) {
         toast.error(err.response?.data?.message || err.message || "Login failed. Please check credentials.");
-    } finally {
         setIsLoading(false);
     }
   };
