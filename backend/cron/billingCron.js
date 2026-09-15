@@ -7,16 +7,31 @@ cron.schedule('0 0 1 * *', async () => {
     try {
         // Find all active tenants with an assigned room
         const activeTenantsQuery = `
-            SELECT u.id as tenant_id, u.room_id, r.price as rent_amount
+            SELECT u.id as tenant_id, u.room_id, u.created_at, r.price as rent_amount, r.rental_type
             FROM users u
             JOIN rooms r ON u.room_id = r.id
             WHERE u.role = 'tenant' AND u.status = 'Active' AND u.room_id IS NOT NULL
+            ORDER BY u.created_at ASC
         `;
-        const { rows: tenants } = await db.query(activeTenantsQuery);
+        const { rows: allTenants } = await db.query(activeTenantsQuery);
 
-        if (tenants.length === 0) {
+        if (allTenants.length === 0) {
             console.log('No active tenants found for automatic billing.');
             return;
+        }
+
+        const billedRoomIds = new Set();
+        const tenantsToBill = [];
+
+        for (const tenant of allTenants) {
+            if (tenant.rental_type === 'Whole Room') {
+                if (!billedRoomIds.has(tenant.room_id)) {
+                    billedRoomIds.add(tenant.room_id);
+                    tenantsToBill.push(tenant);
+                }
+            } else {
+                tenantsToBill.push(tenant);
+            }
         }
 
         const currentDate = new Date();
@@ -28,7 +43,7 @@ cron.schedule('0 0 1 * *', async () => {
         // Due date usually 5th of the month
         const dueDate = new Date(currentDate.getFullYear(), currentDate.getMonth(), 5);
 
-        for (const tenant of tenants) {
+        for (const tenant of tenantsToBill) {
             // Check if a bill already exists for this tenant and this billing month
             const checkBillQuery = `
                 SELECT id FROM bills WHERE tenant_id = $1 AND billing_month = $2
