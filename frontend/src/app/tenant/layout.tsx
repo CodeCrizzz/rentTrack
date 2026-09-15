@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { AnimatePresence } from 'framer-motion';
 import PageTransition from '@/components/PageTransition';
 import api from '@/lib/api';
-import { ThemeToggle } from "@/components/theme-toggle";
+import { Moon } from "lucide-react";
 
 import {
   SidebarProvider,
@@ -13,7 +13,7 @@ import {
 } from "@/components/ui/sidebar";
 import { AppSidebar } from '@/components/app-sidebar';
 import { FullscreenToggle } from '@/components/fullscreen-toggle';
-import { LayoutDashboard, Building2, CreditCard, Wrench, User, MessageSquare, Bell } from 'lucide-react';
+import { LayoutDashboard, Building2, CreditCard, Wrench, User, MessageSquare, Bell, Settings, RefreshCw } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -27,6 +27,8 @@ export default function TenantLayout({ children }: { children: React.ReactNode }
     const [tenantEmail, setTenantEmail] = useState('tenant@renttrack.com');
     const [unreadCount, setUnreadCount] = useState(0);
     const [showAllNotifications, setShowAllNotifications] = useState(false);
+    const [isAllRead, setIsAllRead] = useState(true);
+    const [refreshKey, setRefreshKey] = useState(0);
 
     const fetchUnreadCount = async () => {
         try {
@@ -50,6 +52,20 @@ export default function TenantLayout({ children }: { children: React.ReactNode }
         return () => clearInterval(interval);
     }, [pathname]);
 
+    useEffect(() => {
+        const readUnread = parseInt(localStorage.getItem('tenant_read_unreadCount') || '0');
+        if (unreadCount > readUnread) {
+            setIsAllRead(false);
+        } else {
+            setIsAllRead(true);
+        }
+    }, [unreadCount]);
+
+    const handleMarkAllRead = () => {
+        setIsAllRead(true);
+        localStorage.setItem('tenant_read_unreadCount', unreadCount.toString());
+    };
+
     const handleLogout = () => {
         localStorage.removeItem('token');
         localStorage.removeItem('user');
@@ -61,8 +77,8 @@ export default function TenantLayout({ children }: { children: React.ReactNode }
         { name: 'Rooms', path: '/tenant/rooms', icon: Building2 },
         { name: 'My Payments', path: '/tenant/payments', icon: CreditCard },
         { name: 'Maintenance', path: '/tenant/requests', icon: Wrench },
-        { name: 'My Profile', path: '/tenant/profile', icon: User },
         { name: 'Chat', path: '/tenant/chat', icon: MessageSquare },
+        { name: 'Settings', path: '/tenant/settings', icon: Settings },
     ];
 
     const mappedNavItems = rawNavItems.map(item => {
@@ -125,26 +141,52 @@ export default function TenantLayout({ children }: { children: React.ReactNode }
                         </div>
 
                         <div className="flex items-center gap-2">
+                            <button 
+                                onClick={() => {
+                                    setRefreshKey(prev => prev + 1);
+                                    fetchUnreadCount();
+                                }} 
+                                className="group p-2 text-slate-500 hover:text-slate-900 dark:text-zinc-400 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/5 rounded-full transition-colors outline-none"
+                                title="Refresh Page"
+                            >
+                                <RefreshCw className="w-5 h-5 group-hover:rotate-180 group-active:scale-90 transition-all duration-500" strokeWidth={2} />
+                            </button>
                             <FullscreenToggle />
                             <DropdownMenu>
-                                <DropdownMenuTrigger className="relative p-2 text-slate-500 hover:text-slate-900 dark:text-zinc-400 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/5 rounded-full transition-colors outline-none">
-                                    <Bell className="w-5 h-5" strokeWidth={2} />
-                                    {unreadCount > 0 && (
-                                        <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-rose-500 rounded-full border-2 border-white dark:border-[#0a0a0a]"></span>
+                                <DropdownMenuTrigger className="group relative p-2 text-slate-500 hover:text-slate-900 dark:text-zinc-400 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/5 rounded-full transition-colors outline-none">
+                                    <Bell className="w-5 h-5 group-hover:rotate-12 group-active:-rotate-12 group-active:scale-90 transition-all duration-200 origin-top" strokeWidth={2} />
+                                    {(!isAllRead && unreadCount > 0) && (
+                                        <span className="absolute -top-1 -right-1 bg-rose-500 text-white text-[10px] font-bold px-1 min-w-[20px] h-[20px] flex items-center justify-center rounded-full border-2 border-white dark:border-[#0a0a0a]">
+                                            {unreadCount > 99 ? '99+' : unreadCount}
+                                        </span>
                                     )}
                                 </DropdownMenuTrigger>
                                 <DropdownMenuContent align="end" className="w-80 p-0 border border-slate-200 dark:border-zinc-800 rounded-xl overflow-hidden shadow-xl bg-white dark:bg-[#0a0a0a]">
                                     <div className="flex items-center justify-between p-4 border-b border-slate-100 dark:border-zinc-800">
                                         <span className="font-bold text-sm text-slate-800 dark:text-white">Notifications</span>
                                         <div className="flex gap-3 text-xs font-semibold">
-                                            <button className="text-emerald-600 dark:text-emerald-400 hover:underline">Mark all read</button>
+                                            <button 
+                                                onClick={handleMarkAllRead} 
+                                                className="text-emerald-600 dark:text-emerald-400 hover:underline"
+                                            >
+                                                Mark all read
+                                            </button>
                                         </div>
                                     </div>
-                                    <div className={`overflow-y-auto transition-all duration-300 ease-in-out ${showAllNotifications ? 'max-h-[60vh]' : 'max-h-[300px]'}`}>
-                                        <div className="p-8 text-center text-slate-500 dark:text-zinc-400">
-                                            <Bell className="w-8 h-8 mx-auto mb-3 opacity-20" />
-                                            <p className="text-sm font-semibold">No new notifications</p>
-                                        </div>
+                                    <div className={`overflow-y-auto transition-all duration-300 ease-in-out ${showAllNotifications ? 'max-h-[60vh]' : 'max-h-[150px]'}`}>
+                                        {(!isAllRead && unreadCount > 0) ? (
+                                            <div className="flex flex-col">
+                                                <div className="p-4 border-b border-slate-100 dark:border-zinc-800 hover:bg-slate-50 dark:hover:bg-white/[0.02] transition-colors cursor-pointer" onClick={() => router.push('/tenant/chat')}>
+                                                    <p className="text-sm font-semibold text-slate-800 dark:text-white">Unread Messages</p>
+                                                    <p className="text-xs text-slate-500 dark:text-zinc-400 mt-1">You have {unreadCount} unread message{unreadCount > 1 ? 's' : ''}.</p>
+                                                </div>
+                                            </div>
+                                        ) : (
+                                            <div className="p-8 text-center text-slate-500 dark:text-zinc-400">
+                                                <Bell className="w-8 h-8 mx-auto mb-3 opacity-20" />
+                                                <p className="text-sm font-semibold">No new notifications</p>
+                                            </div>
+                                        )}
                                     </div>
                                     <div className="p-3 border-t border-slate-100 dark:border-zinc-800 text-center bg-slate-50 dark:bg-white/[0.02]">
                                         <button 
@@ -159,7 +201,7 @@ export default function TenantLayout({ children }: { children: React.ReactNode }
                                     </div>
                                 </DropdownMenuContent>
                             </DropdownMenu>
-                            <ThemeToggle />
+
                         </div>
                     </header>
 
@@ -167,7 +209,7 @@ export default function TenantLayout({ children }: { children: React.ReactNode }
                     <div className="flex-1 flex flex-col overflow-y-auto overflow-x-hidden scrollbar-thin scrollbar-thumb-slate-300 dark:scrollbar-thumb-zinc-700 bg-slate-50 dark:bg-black">
                         <div className="px-3 py-4 md:px-4 md:py-6 lg:px-5 lg:py-6 relative z-10">
                             <AnimatePresence mode="wait">
-                                <PageTransition key={pathname}>
+                                <PageTransition key={`${pathname}-${refreshKey}`}>
                                     {children}
                                 </PageTransition>
                             </AnimatePresence>

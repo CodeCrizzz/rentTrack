@@ -44,7 +44,6 @@ export default function TenantProfile() {
     
     // Modal States
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-    const [isPassModalOpen, setIsPassModalOpen] = useState(false);
     
     // Form States
     const [editForm, setEditForm] = useState({ 
@@ -52,12 +51,9 @@ export default function TenantProfile() {
         occupation: '', emergency_contact_name: '', emergency_contact_phone: '',
         password_confirm: '' 
     });
-    const [passForm, setPassForm] = useState({ current: '', new: '', confirm: '' });
-    
     // UI States
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [formError, setFormError] = useState<string | null>(null);
-    const [passError, setPassError] = useState<string | null>(null);
 
     useEffect(() => {
         const fetchProfile = async () => {
@@ -130,24 +126,6 @@ export default function TenantProfile() {
         }
     };
 
-    const handlePasswordChange = async (e: React.FormEvent) => {
-        e.preventDefault();
-        if (passForm.new !== passForm.confirm) return setPassError("New passwords do not match.");
-        if (passForm.new.length < 6) return setPassError("Password must be at least 6 characters.");
-        
-        setPassError(null);
-        setIsSubmitting(true);
-        try {
-            await api.put('/tenant/profile/password', passForm);
-            setIsPassModalOpen(false);
-            setPassForm({ current: '', new: '', confirm: '' });
-        } catch (err: any) {
-            setPassError(err.response?.data?.message || "Failed to update password.");
-        } finally {
-            setIsSubmitting(false);
-        }
-    };
-
     // Animation Variants
     const containerVariants: Variants = {
         hidden: { opacity: 0 },
@@ -176,7 +154,7 @@ export default function TenantProfile() {
                 }
             `}</style>
 
-                                                {/* --- MAIN WRAPPER --- */}
+            {/* --- MAIN WRAPPER --- */}
             <div className="flex w-full flex-col items-center justify-start pt-0 px-3 sm:px-8 pb-6">
                 <motion.div initial="hidden" animate="visible" variants={containerVariants} className="w-full max-w-8xl flex flex-col gap-2 sm:gap-6 relative z-10">
                     
@@ -189,7 +167,7 @@ export default function TenantProfile() {
                         </div>
                     </motion.header>
 
-                    {/* --- 1. PROFILE OVERVIEW & ACTIONS --- */}
+                    {/* PROFILE OVERVIEW & ACTIONS --- */}
                     <motion.div 
                         variants={itemVariants} 
                         whileHover={{ scale: 1.01, translateY: -4 }}
@@ -231,10 +209,6 @@ export default function TenantProfile() {
                                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg>
                                     Edit Profile
                                 </button>
-                                <button onClick={() => setIsPassModalOpen(true)} className="flex-1 md:flex-none px-6 py-3.5 bg-white/50 dark:bg-white/5 border border-neutral-200/50 dark:border-white/5 rounded-xl text-neutral-700 dark:text-neutral-300 hover:bg-white/80 dark:hover:bg-white/10 transition-all font-black text-xs uppercase tracking-widest flex justify-center items-center gap-2 backdrop-blur-md">
-                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path></svg>
-                                    Password
-                                </button>
                             </div>
                         </div>
                     </motion.div>
@@ -262,7 +236,6 @@ export default function TenantProfile() {
                             </div>
                         </motion.div>
 
-                        {/* ACCOUNT INFORMATION */}
                         {/* ACCOUNT INFORMATION */}
                         <motion.div 
                             variants={itemVariants} 
@@ -323,7 +296,6 @@ export default function TenantProfile() {
                 </motion.div>
             </div>
 
-            {/* --- MODALS --- */}
             {/* EDIT PROFILE MODAL */}
             <AnimatePresence>
                 {isEditModalOpen && (
@@ -360,25 +332,6 @@ export default function TenantProfile() {
                     </>
                 )}
 
-                {/* PASSWORD MODAL */}
-                {isPassModalOpen && (
-                    <>
-                        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 bg-[#020617]/60 backdrop-blur-xl z-100" onClick={() => setIsPassModalOpen(false)} />
-                        <div className="fixed inset-0 flex items-center justify-center p-4 z-101 pointer-events-none">
-                            <motion.div initial={{ opacity: 0, scale: 0.95, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95, y: 20 }} className="relative w-full max-w-sm bg-white/80 dark:bg-[#0a0a0a]/80 backdrop-blur-3xl rounded-[2.5rem] shadow-2xl border border-white/20 dark:border-white/10 overflow-hidden pointer-events-auto">
-                                <div className="absolute inset-0 glass-noise"></div>
-                                <div className="relative z-10 p-6 border-b border-black/5 dark:border-white/5 flex justify-between items-center"><h2 className="text-xl font-black tracking-tight">Change Password</h2><button onClick={() => setIsPassModalOpen(false)} className="p-2 rounded-full hover:bg-black/5 dark:hover:bg-white/5 transition-colors"><svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path></svg></button></div>
-                                <form onSubmit={handlePasswordChange} className="relative z-10 p-6 space-y-4">
-                                    {passError && <div className="p-3 bg-rose-500/10 border border-rose-500/20 text-rose-500 text-xs font-bold rounded-xl text-center">{passError}</div>}
-                                    <div className="space-y-1"><label className="text-xs font-bold text-neutral-500 uppercase tracking-widest ml-1">Current Password</label><input type="password" value={passForm.current} onChange={(e) => setPassForm({...passForm, current: e.target.value})} className="w-full bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/5 px-4 py-3 rounded-xl font-bold text-sm outline-none focus:ring-2 focus:ring-blue-500 backdrop-blur-sm" /></div>
-                                    <div className="space-y-1"><label className="text-xs font-bold text-neutral-500 uppercase tracking-widest ml-1">New Password</label><input type="password" value={passForm.new} onChange={(e) => setPassForm({...passForm, new: e.target.value})} className="w-full bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/5 px-4 py-3 rounded-xl font-bold text-sm outline-none focus:ring-2 focus:ring-blue-500 backdrop-blur-sm" /></div>
-                                    <div className="space-y-1"><label className="text-xs font-bold text-neutral-500 uppercase tracking-widest ml-1">Confirm Password</label><input type="password" value={passForm.confirm} onChange={(e) => setPassForm({...passForm, confirm: e.target.value})} className="w-full bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/5 px-4 py-3 rounded-xl font-bold text-sm outline-none focus:ring-2 focus:ring-blue-500 backdrop-blur-sm" /></div>
-                                    <button disabled={isSubmitting} className="w-full mt-2 py-4 bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-xl font-black text-xs uppercase tracking-widest hover:bg-blue-600 dark:hover:bg-cyan-400 transition-all shadow-md">{isSubmitting ? 'Updating...' : 'Update Password'}</button>
-                                </form>
-                            </motion.div>
-                        </div>
-                    </>
-                )}
             </AnimatePresence>
         </div>
     );
