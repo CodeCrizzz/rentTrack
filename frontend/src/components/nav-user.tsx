@@ -21,6 +21,7 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar"
 import { ChevronsUpDownIcon, BadgeCheckIcon, LogOutIcon } from "lucide-react"
+import { useRouter } from "next/navigation"
 
 export function NavUser({
   user,
@@ -35,7 +36,13 @@ export function NavUser({
   onLogout: () => void
 }) {
   const { isMobile } = useSidebar()
+  const router = useRouter()
   const initials = user.name.charAt(0).toUpperCase()
+
+  const handleProfileClick = () => {
+    const basePath = user.role.toLowerCase().includes('admin') ? '/admin' : '/tenant'
+    router.push(`${basePath}/profile`)
+  }
 
   return (
     <SidebarMenu>
@@ -86,7 +93,7 @@ export function NavUser({
             </DropdownMenuGroup>
             <DropdownMenuSeparator className="bg-slate-200 dark:bg-white/10" />
             <DropdownMenuGroup>
-              <DropdownMenuItem className="cursor-pointer hover:bg-slate-100 dark:hover:bg-white/5 rounded-lg">
+              <DropdownMenuItem onClick={handleProfileClick} className="cursor-pointer hover:bg-slate-100 dark:hover:bg-white/5 rounded-lg">
                 <BadgeCheckIcon className="mr-2 h-4 w-4 text-cyan-500" />
                 Account Settings
               </DropdownMenuItem>

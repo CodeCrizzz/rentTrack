@@ -30,13 +30,13 @@ export function FullscreenToggle() {
     return (
         <button 
             onClick={toggleFullscreen}
-            className="relative p-2 text-slate-500 hover:text-slate-900 dark:text-zinc-400 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/5 rounded-full transition-colors"
+            className="group relative p-2 text-slate-500 hover:text-slate-900 dark:text-zinc-400 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/5 rounded-full transition-colors"
             aria-label="Toggle Fullscreen"
         >
             {isFullscreen ? (
-                <Minimize className="w-5 h-5" />
+                <Minimize className="w-5 h-5 group-hover:scale-110 group-active:scale-90 transition-transform duration-200" />
             ) : (
-                <Maximize className="w-5 h-5" />
+                <Maximize className="w-5 h-5 group-hover:scale-110 group-active:scale-90 transition-transform duration-200" />
             )}
         </button>
     );
