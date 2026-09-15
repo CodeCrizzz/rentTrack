@@ -4,7 +4,12 @@ import { motion } from 'framer-motion';
 
 export default function PrivacyPage() {
     return (
-        <div className="min-h-screen w-full flex flex-col items-center justify-start relative overflow-x-hidden bg-black font-sans selection:bg-cyan-500/30 py-24 sm:py-32 px-4 sm:px-6">
+        <div 
+            className="min-h-screen w-full flex flex-col items-center justify-start relative overflow-x-hidden bg-cover bg-center bg-no-repeat bg-fixed font-sans selection:bg-cyan-500/30 py-24 sm:py-32 px-4 sm:px-6"
+            style={{ backgroundImage: "url('/bg_img.png')" }}
+        >
+            {/* Overlay for better readability */}
+            <div className="absolute inset-0 bg-slate-900/40 dark:bg-black/70 backdrop-blur-[2px] z-0" />
             <motion.div 
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
