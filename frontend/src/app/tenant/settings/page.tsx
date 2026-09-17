@@ -69,9 +69,9 @@ export default function TenantSettingsPage() {
                 
                 {/* Account & Security */}
                 <div className="lg:col-span-2 space-y-6">
-                    <div className="bg-white dark:bg-[#0a0a0a] rounded-3xl border border-slate-200 dark:border-zinc-800 p-6 shadow-sm">
+                    <div className="bg-card rounded-3xl border border-slate-200 dark:border-zinc-800 p-6 shadow-sm">
                         <div className="flex items-center gap-3 mb-6">
-                            <div className="w-10 h-10 rounded-full bg-slate-100 dark:bg-zinc-900 flex items-center justify-center text-slate-600 dark:text-zinc-400">
+                            <div className="w-10 h-10 rounded-full bg-secondary flex items-center justify-center text-slate-600 dark:text-zinc-400">
                                 <Shield className="w-5 h-5" />
                             </div>
                             <h2 className="text-lg font-bold text-slate-800 dark:text-white">Account & Security</h2>
@@ -80,32 +80,32 @@ export default function TenantSettingsPage() {
                         <div className="space-y-4">
                             <div>
                                 <label className="block text-xs font-bold text-slate-500 dark:text-zinc-400 uppercase tracking-widest mb-1.5">Account Email</label>
-                                <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} className="w-full h-11 px-4 bg-slate-50 dark:bg-black border border-slate-200 dark:border-zinc-800 rounded-xl text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all dark:text-white" />
+                                <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} className="w-full h-11 px-4 bg-background border border-slate-200 dark:border-zinc-800 rounded-xl text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all dark:text-white" />
                             </div>
                             
                             <div className="pt-4 border-t border-slate-100 dark:border-zinc-800/50">
                                 <h3 className="text-sm font-bold text-slate-800 dark:text-white mb-4">Change Password</h3>
                                 <div className="space-y-3">
-                                    <input type="password" placeholder="Current password" value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)} className="w-full h-11 px-4 bg-slate-50 dark:bg-black border border-slate-200 dark:border-zinc-800 rounded-xl text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all dark:text-white" />
+                                    <input type="password" placeholder="Current password" value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)} className="w-full h-11 px-4 bg-background border border-slate-200 dark:border-zinc-800 rounded-xl text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all dark:text-white" />
                                     
                                     <div>
-                                        <input type="password" placeholder="New password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} className="w-full h-11 px-4 bg-slate-50 dark:bg-black border border-slate-200 dark:border-zinc-800 rounded-xl text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all dark:text-white" />
+                                        <input type="password" placeholder="New password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} className="w-full h-11 px-4 bg-background border border-slate-200 dark:border-zinc-800 rounded-xl text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all dark:text-white" />
                                         <div className="flex items-center gap-1 mt-2 px-1">
                                             <div className={`h-1 flex-1 rounded-full ${strength >= 1 ? 'bg-rose-500' : 'bg-slate-200 dark:bg-zinc-800'}`}></div>
                                             <div className={`h-1 flex-1 rounded-full ${strength >= 2 ? 'bg-amber-500' : 'bg-slate-200 dark:bg-zinc-800'}`}></div>
                                             <div className={`h-1 flex-1 rounded-full ${strength >= 3 ? 'bg-blue-500' : 'bg-slate-200 dark:bg-zinc-800'}`}></div>
                                         </div>
                                     </div>
-                                    <input type="password" placeholder="Confirm new password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} className="w-full h-11 px-4 bg-slate-50 dark:bg-black border border-slate-200 dark:border-zinc-800 rounded-xl text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all dark:text-white" />
+                                    <input type="password" placeholder="Confirm new password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} className="w-full h-11 px-4 bg-background border border-slate-200 dark:border-zinc-800 rounded-xl text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all dark:text-white" />
                                 </div>
                             </div>
                         </div>
                     </div>
 
                     {/* Notification Settings */}
-                    <div className="bg-white dark:bg-[#0a0a0a] rounded-3xl border border-slate-200 dark:border-zinc-800 p-6 shadow-sm">
+                    <div className="bg-card rounded-3xl border border-slate-200 dark:border-zinc-800 p-6 shadow-sm">
                         <div className="flex items-center gap-3 mb-6">
-                            <div className="w-10 h-10 rounded-full bg-slate-100 dark:bg-zinc-900 flex items-center justify-center text-slate-600 dark:text-zinc-400">
+                            <div className="w-10 h-10 rounded-full bg-secondary flex items-center justify-center text-slate-600 dark:text-zinc-400">
                                 <Bell className="w-5 h-5" />
                             </div>
                             <div className="flex-1">
@@ -146,10 +146,10 @@ export default function TenantSettingsPage() {
                     </div>
                     
                     {/* Privacy & Sessions */}
-                    <div className="bg-white dark:bg-[#0a0a0a] rounded-3xl border border-slate-200 dark:border-zinc-800 p-6 shadow-sm">
+                    <div className="bg-card rounded-3xl border border-slate-200 dark:border-zinc-800 p-6 shadow-sm">
                         <h2 className="text-sm font-bold text-slate-800 dark:text-white uppercase tracking-wider mb-4">Privacy & Sessions</h2>
                         <div className="space-y-4">
-                            <div className="flex items-center justify-between p-4 rounded-xl bg-slate-50 dark:bg-zinc-900 border border-slate-100 dark:border-zinc-800">
+                            <div className="flex items-center justify-between p-4 rounded-xl bg-secondary border border-slate-100 dark:border-zinc-800">
                                 <div className="flex items-center gap-3">
                                     <Monitor className="w-5 h-5 text-slate-400" />
                                     <div>
@@ -169,9 +169,9 @@ export default function TenantSettingsPage() {
                 {/* Right Sidebar Columns */}
                 <div className="space-y-6">
                     {/* Appearance */}
-                    <div className="bg-white dark:bg-[#0a0a0a] rounded-3xl border border-slate-200 dark:border-zinc-800 p-6 shadow-sm">
+                    <div className="bg-card rounded-3xl border border-slate-200 dark:border-zinc-800 p-6 shadow-sm">
                         <div className="flex items-center gap-3 mb-6">
-                            <div className="w-10 h-10 rounded-full bg-slate-100 dark:bg-zinc-900 flex items-center justify-center text-slate-600 dark:text-zinc-400">
+                            <div className="w-10 h-10 rounded-full bg-secondary flex items-center justify-center text-slate-600 dark:text-zinc-400">
                                 <Moon className="w-5 h-5" />
                             </div>
                             <h2 className="text-lg font-bold text-slate-800 dark:text-white">Theme</h2>
@@ -185,7 +185,7 @@ export default function TenantSettingsPage() {
                                     className={`py-2 px-1 text-xs font-bold capitalize rounded-lg border transition-all ${
                                         localTheme === t 
                                         ? 'bg-blue-50 dark:bg-blue-500/10 border-blue-200 dark:border-blue-500/30 text-blue-700 dark:text-blue-400'
-                                        : 'bg-white dark:bg-black border-slate-200 dark:border-zinc-800 text-slate-600 dark:text-zinc-400 hover:bg-slate-50 dark:hover:bg-zinc-900'
+                                        : 'bg-card border-slate-200 dark:border-zinc-800 text-slate-600 dark:text-zinc-400 hover:bg-slate-50 dark:hover:bg-zinc-900'
                                     }`}
                                 >
                                     {t}
@@ -195,9 +195,9 @@ export default function TenantSettingsPage() {
                     </div>
 
                     {/* System Information */}
-                    <div className="bg-white dark:bg-[#0a0a0a] rounded-3xl border border-slate-200 dark:border-zinc-800 p-6 shadow-sm">
+                    <div className="bg-card rounded-3xl border border-slate-200 dark:border-zinc-800 p-6 shadow-sm">
                         <div className="flex items-center gap-3 mb-6">
-                            <div className="w-10 h-10 rounded-full bg-slate-100 dark:bg-zinc-900 flex items-center justify-center text-slate-600 dark:text-zinc-400">
+                            <div className="w-10 h-10 rounded-full bg-secondary flex items-center justify-center text-slate-600 dark:text-zinc-400">
                                 <Info className="w-5 h-5" />
                             </div>
                             <h2 className="text-lg font-bold text-slate-800 dark:text-white">System Info</h2>
@@ -222,7 +222,7 @@ export default function TenantSettingsPage() {
                     </div>
 
                     {/* Account Actions */}
-                    <div className="bg-white dark:bg-[#0a0a0a] rounded-3xl border border-slate-200 dark:border-zinc-800 p-6 shadow-sm">
+                    <div className="bg-card rounded-3xl border border-slate-200 dark:border-zinc-800 p-6 shadow-sm">
                         <h2 className="text-sm font-bold text-slate-800 dark:text-white uppercase tracking-wider mb-4">Account Actions</h2>
                         <div className="space-y-3">
                             <button onClick={handleLogout} className="w-full flex items-center justify-center gap-2 h-11 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-zinc-900 dark:hover:bg-zinc-800 text-slate-700 dark:text-white text-sm font-bold transition-colors">

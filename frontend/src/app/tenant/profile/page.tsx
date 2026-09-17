@@ -302,7 +302,7 @@ export default function TenantProfile() {
                     <>
                         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 bg-[#020617]/60 backdrop-blur-xl z-100" onClick={() => setIsEditModalOpen(false)} />
                         <div className="fixed inset-0 flex items-center justify-center p-4 z-101 pointer-events-none">
-                            <motion.div initial={{ opacity: 0, scale: 0.95, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95, y: 20 }} className="relative w-full max-w-2xl bg-white/80 dark:bg-[#0a0a0a]/80 backdrop-blur-3xl rounded-[2.5rem] shadow-2xl border border-white/20 dark:border-white/10 overflow-hidden pointer-events-auto max-h-[90vh] flex flex-col">
+                            <motion.div initial={{ opacity: 0, scale: 0.95, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95, y: 20 }} className="relative w-full max-w-2xl bg-white/80 dark:bg-card/80 backdrop-blur-3xl rounded-[2.5rem] shadow-2xl border border-white/20 dark:border-white/10 overflow-hidden pointer-events-auto max-h-[90vh] flex flex-col">
                                 <div className="absolute inset-0 glass-noise pointer-events-none"></div>
                                 <div className="p-6 border-b border-black/5 dark:border-white/5 flex justify-between items-center bg-transparent z-10 shrink-0">
                                     <div><h2 className="text-xl font-black tracking-tight">Edit Profile</h2></div>

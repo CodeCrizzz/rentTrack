@@ -277,16 +277,16 @@ export default function TenantPayments() {
                     <div className="relative z-10 shrink-0 p-3 sm:p-4 border-b border-neutral-200/50 dark:border-white/10 bg-neutral-50/50 dark:bg-[#18181a] backdrop-blur-2xl flex flex-wrap md:flex-nowrap items-center gap-2 sm:gap-3 justify-between">
                         <div className="relative flex-1 min-w-[130px] md:flex-none md:w-64 h-9 sm:h-12 flex items-center">
                             <svg className="absolute left-2.5 sm:left-4 w-3.5 h-3.5 sm:w-5 sm:h-5 text-neutral-400 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
-                            <input type="text" placeholder="Search..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="w-full h-full bg-white dark:bg-black/20 border border-neutral-200 dark:border-white/10 rounded-lg sm:rounded-xl pl-8 sm:pl-12 pr-2.5 sm:pr-4 text-xs sm:text-sm outline-none focus:ring-2 focus:ring-indigo-500/50 text-neutral-900 dark:text-white m-0" />
+                            <input type="text" placeholder="Search..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="w-full h-full bg-card/20 border border-neutral-200 dark:border-white/10 rounded-lg sm:rounded-xl pl-8 sm:pl-12 pr-2.5 sm:pr-4 text-xs sm:text-sm outline-none focus:ring-2 focus:ring-indigo-500/50 text-neutral-900 dark:text-white m-0" />
                         </div>
-                        <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)} className="flex-1 min-w-[100px] md:flex-none h-9 sm:h-12 bg-white dark:bg-black/20 border border-neutral-200 dark:border-white/10 rounded-lg sm:rounded-xl px-2.5 sm:px-3 text-xs sm:text-sm outline-none cursor-pointer text-neutral-900 dark:text-white shrink-0 m-0">
+                        <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)} className="flex-1 min-w-[100px] md:flex-none h-9 sm:h-12 bg-card/20 border border-neutral-200 dark:border-white/10 rounded-lg sm:rounded-xl px-2.5 sm:px-3 text-xs sm:text-sm outline-none cursor-pointer text-neutral-900 dark:text-white shrink-0 m-0">
                             <option value="All" className="bg-white dark:bg-neutral-900 text-neutral-900 dark:text-white">All Status</option>
                             <option value="Paid" className="bg-white dark:bg-neutral-900 text-neutral-900 dark:text-white">Paid</option>
                             <option value="Pending" className="bg-white dark:bg-neutral-900 text-neutral-900 dark:text-white">Pending</option>
                             <option value="Rejected" className="bg-white dark:bg-neutral-900 text-neutral-900 dark:text-white">Rejected</option>
                         </select>
                         <div className="w-full md:w-auto flex items-center gap-2 sm:gap-3 justify-between md:justify-end md:ml-auto shrink-0">
-                            <select value={sortBy} onChange={(e) => setSortBy(e.target.value)} className="flex-1 md:flex-none md:w-auto h-9 sm:h-12 bg-white dark:bg-black/20 border border-neutral-200 dark:border-white/10 rounded-lg sm:rounded-xl px-2.5 sm:px-3 text-xs sm:text-sm outline-none cursor-pointer text-neutral-900 dark:text-white shrink-0 m-0">
+                            <select value={sortBy} onChange={(e) => setSortBy(e.target.value)} className="flex-1 md:flex-none md:w-auto h-9 sm:h-12 bg-card/20 border border-neutral-200 dark:border-white/10 rounded-lg sm:rounded-xl px-2.5 sm:px-3 text-xs sm:text-sm outline-none cursor-pointer text-neutral-900 dark:text-white shrink-0 m-0">
                                 <option value="date_desc" className="bg-white dark:bg-neutral-900 text-neutral-900 dark:text-white">Newest</option>
                                 <option value="date_asc" className="bg-white dark:bg-neutral-900 text-neutral-900 dark:text-white">Oldest</option>
                                 <option value="amount_desc" className="bg-white dark:bg-neutral-900 text-neutral-900 dark:text-white">High-Low</option>
@@ -302,7 +302,7 @@ export default function TenantPayments() {
                     <div className="relative z-10 w-full overflow-auto max-h-[400px] sm:max-h-none pr-1 pb-4 sm:pb-6 scrollbar-thin scrollbar-thumb-indigo-500/20">
                         {/* Desktop Table View */}
                         <table className="hidden md:table w-full text-left border-collapse min-w-[800px] mb-4">
-                            <thead className="sticky top-0 z-20 bg-linear-to-b from-white/90 to-white/70 dark:from-[#121212]/90 dark:to-[#0a0a0a]/90 backdrop-blur-2xl shadow-sm">
+                            <thead className="sticky top-0 z-20 bg-linear-to-b from-white/90 to-white/70 dark:from-background/90 dark:to-background/90 backdrop-blur-2xl shadow-sm">
                                 <tr>
                                     <th className="px-4 py-4 text-xs font-bold text-neutral-400 uppercase tracking-widest leading-none">Date / Ref</th>
                                     <th className="px-4 py-4 text-xs font-bold text-neutral-400 uppercase tracking-widest leading-none">Method & Desc</th>
@@ -324,7 +324,7 @@ export default function TenantPayments() {
                                                 <p className="text-xs font-mono text-neutral-400 leading-tight mt-0.5">{p.referenceNumber}</p>
                                             </td>
                                             <td className="px-4 py-4 align-middle flex items-center gap-4 min-w-0">
-                                                <div className="w-10 h-10 rounded-xl bg-white/50 dark:bg-black/30 border border-neutral-200/50 dark:border-white/5 flex items-center justify-center shrink-0">
+                                                <div className="w-10 h-10 rounded-xl bg-card/50/30 border border-neutral-200/50 dark:border-white/5 flex items-center justify-center shrink-0">
                                                     {p.method?.includes('GCash') ? <span className="text-sm font-black text-blue-500">G</span> : <svg className="w-5 h-5 text-neutral-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"></path></svg>}
                                                 </div>
                                                 <div className="min-w-0">
@@ -363,7 +363,7 @@ export default function TenantPayments() {
                                         <div className="absolute left-0 top-0 bottom-0 w-1 bg-indigo-500 rounded-r-full"></div>
                                         <div className="flex justify-between items-start pl-1">
                                             <div className="flex items-center gap-2.5">
-                                                <div className="w-8 h-8 rounded-lg bg-white/50 dark:bg-black/30 border border-neutral-200/50 dark:border-white/5 flex items-center justify-center shrink-0">
+                                                <div className="w-8 h-8 rounded-lg bg-card/50/30 border border-neutral-200/50 dark:border-white/5 flex items-center justify-center shrink-0">
                                                     {p.method?.includes('GCash') ? <span className="text-xs font-black text-blue-500">G</span> : <svg className="w-4 h-4 text-neutral-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"></path></svg>}
                                                 </div>
                                                 <div>

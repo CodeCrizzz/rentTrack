@@ -222,12 +222,12 @@ export default function TenantMaintenance() {
                                 
                                 <div>
                                     <label className="block text-xs font-bold text-neutral-500 uppercase tracking-widest mb-1.5 ml-1">Issue Title</label>
-                                    <input type="text" required placeholder="E.g. Leaking Faucet" value={title} onChange={(e) => setTitle(e.target.value)} className="w-full bg-white dark:bg-black/20 border border-neutral-200 dark:border-white/10 rounded-xl px-3 sm:px-4 py-2.5 sm:py-3 text-xs sm:text-sm font-bold focus:ring-2 focus:ring-indigo-500/50 outline-none transition-all shadow-sm text-neutral-900 dark:text-white" />
+                                    <input type="text" required placeholder="E.g. Leaking Faucet" value={title} onChange={(e) => setTitle(e.target.value)} className="w-full bg-card/20 border border-neutral-200 dark:border-white/10 rounded-xl px-3 sm:px-4 py-2.5 sm:py-3 text-xs sm:text-sm font-bold focus:ring-2 focus:ring-indigo-500/50 outline-none transition-all shadow-sm text-neutral-900 dark:text-white" />
                                 </div>
                                 <div className="grid grid-cols-2 gap-3 sm:gap-4">
                                     <div>
                                         <label className="block text-xs font-bold text-neutral-500 uppercase tracking-widest mb-1.5 ml-1">Category</label>
-                                        <select value={category} onChange={(e) => setCategory(e.target.value)} className="w-full bg-white dark:bg-black/20 border border-neutral-200 dark:border-white/10 rounded-xl px-3 sm:px-4 py-2.5 sm:py-3 text-xs sm:text-sm font-bold focus:ring-2 focus:ring-indigo-500/50 outline-none transition-all shadow-sm cursor-pointer text-neutral-900 dark:text-white">
+                                        <select value={category} onChange={(e) => setCategory(e.target.value)} className="w-full bg-card/20 border border-neutral-200 dark:border-white/10 rounded-xl px-3 sm:px-4 py-2.5 sm:py-3 text-xs sm:text-sm font-bold focus:ring-2 focus:ring-indigo-500/50 outline-none transition-all shadow-sm cursor-pointer text-neutral-900 dark:text-white">
                                             <option value="Plumbing" className="bg-white dark:bg-neutral-900 text-neutral-900 dark:text-white">Plumbing</option>
                                             <option value="Electrical" className="bg-white dark:bg-neutral-900 text-neutral-900 dark:text-white">Electrical</option>
                                             <option value="Furniture" className="bg-white dark:bg-neutral-900 text-neutral-900 dark:text-white">Furniture</option>
@@ -237,7 +237,7 @@ export default function TenantMaintenance() {
                                     </div>
                                     <div>
                                         <label className="block text-xs font-bold text-neutral-500 uppercase tracking-widest mb-1.5 ml-1">Priority</label>
-                                        <select value={priority} onChange={(e) => setPriority(e.target.value)} className="w-full bg-white dark:bg-black/20 border border-neutral-200 dark:border-white/10 rounded-xl px-3 sm:px-4 py-2.5 sm:py-3 text-xs sm:text-sm font-bold focus:ring-2 focus:ring-indigo-500/50 outline-none transition-all shadow-sm cursor-pointer text-neutral-900 dark:text-white">
+                                        <select value={priority} onChange={(e) => setPriority(e.target.value)} className="w-full bg-card/20 border border-neutral-200 dark:border-white/10 rounded-xl px-3 sm:px-4 py-2.5 sm:py-3 text-xs sm:text-sm font-bold focus:ring-2 focus:ring-indigo-500/50 outline-none transition-all shadow-sm cursor-pointer text-neutral-900 dark:text-white">
                                             <option value="Low" className="bg-white dark:bg-neutral-900 text-neutral-900 dark:text-white">Low</option>
                                             <option value="Medium" className="bg-white dark:bg-neutral-900 text-neutral-900 dark:text-white">Medium</option>
                                             <option value="High" className="bg-white dark:bg-neutral-900 text-neutral-900 dark:text-white">High</option>
@@ -247,11 +247,11 @@ export default function TenantMaintenance() {
                                 </div>
                                 <div>
                                     <label className="block text-xs font-bold text-neutral-500 uppercase tracking-widest mb-1.5 ml-1">Description</label>
-                                    <textarea required rows={3} placeholder="Explain the issue..." value={description} onChange={(e) => setDescription(e.target.value)} className="w-full bg-white dark:bg-black/20 border border-neutral-200 dark:border-white/10 rounded-xl px-3 sm:px-4 py-2 sm:py-2.5 text-xs sm:text-sm font-medium focus:ring-2 focus:ring-indigo-500/50 outline-none transition-all shadow-sm resize-none text-neutral-900 dark:text-white" />
+                                    <textarea required rows={3} placeholder="Explain the issue..." value={description} onChange={(e) => setDescription(e.target.value)} className="w-full bg-card/20 border border-neutral-200 dark:border-white/10 rounded-xl px-3 sm:px-4 py-2 sm:py-2.5 text-xs sm:text-sm font-medium focus:ring-2 focus:ring-indigo-500/50 outline-none transition-all shadow-sm resize-none text-neutral-900 dark:text-white" />
                                 </div>
                                 <div>
                                     <label className="block text-xs font-bold text-neutral-500 uppercase tracking-widest mb-1.5 ml-1">Pref. Schedule <span className="normal-case opacity-70">(Opt)</span></label>
-                                    <input type="text" placeholder="E.g. Tomorrow morning" value={schedule} onChange={(e) => setSchedule(e.target.value)} className="w-full bg-white dark:bg-black/20 border border-neutral-200 dark:border-white/10 rounded-xl px-3 sm:px-4 py-2.5 sm:py-3 text-xs sm:text-sm font-medium focus:ring-2 focus:ring-indigo-500/50 outline-none transition-all shadow-sm text-neutral-900 dark:text-white" />
+                                    <input type="text" placeholder="E.g. Tomorrow morning" value={schedule} onChange={(e) => setSchedule(e.target.value)} className="w-full bg-card/20 border border-neutral-200 dark:border-white/10 rounded-xl px-3 sm:px-4 py-2.5 sm:py-3 text-xs sm:text-sm font-medium focus:ring-2 focus:ring-indigo-500/50 outline-none transition-all shadow-sm text-neutral-900 dark:text-white" />
                                 </div>
                                 <div className="mt-1">
                                     <div className="w-full border-2 border-dashed border-neutral-200 dark:border-white/10 hover:border-indigo-400 rounded-xl p-3 sm:p-5 flex flex-col items-center cursor-pointer bg-neutral-50/50 dark:bg-white/[0.02] transition-colors" onClick={() => fileInputRef.current?.click()}>
@@ -282,10 +282,10 @@ export default function TenantMaintenance() {
                             
                             <div className="relative flex-1 min-w-[130px] lg:flex-none lg:w-48 h-9 sm:h-10 flex items-center">
                                 <svg className="absolute left-2.5 sm:left-3.5 w-3 h-3 sm:w-4 sm:h-4 text-neutral-400 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
-                                <input type="text" placeholder="Search..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="w-full h-full bg-white dark:bg-black/20 border border-neutral-200 dark:border-white/10 rounded-lg sm:rounded-xl pl-8 sm:pl-10 pr-2 sm:pr-3 text-xs sm:text-sm outline-none focus:ring-2 focus:ring-indigo-500/50 text-neutral-900 dark:text-white m-0" />
+                                <input type="text" placeholder="Search..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="w-full h-full bg-card/20 border border-neutral-200 dark:border-white/10 rounded-lg sm:rounded-xl pl-8 sm:pl-10 pr-2 sm:pr-3 text-xs sm:text-sm outline-none focus:ring-2 focus:ring-indigo-500/50 text-neutral-900 dark:text-white m-0" />
                             </div>
                             
-                            <select value={filterStatus} onChange={(e) => { setFilterStatus(e.target.value); setCurrentPage(1); }} className="flex-1 min-w-[90px] lg:flex-none h-9 sm:h-10 bg-white dark:bg-black/20 border border-neutral-200 dark:border-white/10 rounded-lg sm:rounded-xl px-2 sm:px-3 text-xs sm:text-sm outline-none cursor-pointer text-neutral-900 dark:text-white shrink-0 m-0">
+                            <select value={filterStatus} onChange={(e) => { setFilterStatus(e.target.value); setCurrentPage(1); }} className="flex-1 min-w-[90px] lg:flex-none h-9 sm:h-10 bg-card/20 border border-neutral-200 dark:border-white/10 rounded-lg sm:rounded-xl px-2 sm:px-3 text-xs sm:text-sm outline-none cursor-pointer text-neutral-900 dark:text-white shrink-0 m-0">
                                 <option value="All" className="bg-white dark:bg-neutral-900 text-neutral-900 dark:text-white">Status</option>
                                 <option value="Pending" className="bg-white dark:bg-neutral-900 text-neutral-900 dark:text-white">Pending</option>
                                 <option value="In Progress" className="bg-white dark:bg-neutral-900 text-neutral-900 dark:text-white">In Progress</option>
@@ -293,7 +293,7 @@ export default function TenantMaintenance() {
                                 <option value="Cancelled" className="bg-white dark:bg-neutral-900 text-neutral-900 dark:text-white">Cancelled</option>
                             </select>
                             
-                            <select value={filterCategory} onChange={(e) => { setFilterCategory(e.target.value); setCurrentPage(1); }} className="flex-1 min-w-[100px] lg:flex-none h-9 sm:h-10 bg-white dark:bg-black/20 border border-neutral-200 dark:border-white/10 rounded-lg sm:rounded-xl px-2 sm:px-3 text-xs sm:text-sm outline-none cursor-pointer text-neutral-900 dark:text-white shrink-0 m-0">
+                            <select value={filterCategory} onChange={(e) => { setFilterCategory(e.target.value); setCurrentPage(1); }} className="flex-1 min-w-[100px] lg:flex-none h-9 sm:h-10 bg-card/20 border border-neutral-200 dark:border-white/10 rounded-lg sm:rounded-xl px-2 sm:px-3 text-xs sm:text-sm outline-none cursor-pointer text-neutral-900 dark:text-white shrink-0 m-0">
                                 <option value="All" className="bg-white dark:bg-neutral-900 text-neutral-900 dark:text-white">Category</option>
                                 <option value="Plumbing" className="bg-white dark:bg-neutral-900 text-neutral-900 dark:text-white">Plumbing</option>
                                 <option value="Electrical" className="bg-white dark:bg-neutral-900 text-neutral-900 dark:text-white">Electrical</option>
@@ -303,7 +303,7 @@ export default function TenantMaintenance() {
                             </select>
 
                             <div className="w-full lg:w-auto flex items-center justify-between lg:justify-end lg:ml-auto gap-2 sm:gap-3 shrink-0">
-                                <select value={sortBy} onChange={(e) => setSortBy(e.target.value)} className="flex-1 lg:flex-none h-9 sm:h-10 bg-white dark:bg-black/20 border border-neutral-200 dark:border-white/10 rounded-lg sm:rounded-xl px-2 sm:px-3 text-xs sm:text-sm outline-none cursor-pointer text-neutral-900 dark:text-white shrink-0 m-0">
+                                <select value={sortBy} onChange={(e) => setSortBy(e.target.value)} className="flex-1 lg:flex-none h-9 sm:h-10 bg-card/20 border border-neutral-200 dark:border-white/10 rounded-lg sm:rounded-xl px-2 sm:px-3 text-xs sm:text-sm outline-none cursor-pointer text-neutral-900 dark:text-white shrink-0 m-0">
                                     <option value="date_desc" className="bg-white dark:bg-neutral-900 text-neutral-900 dark:text-white">Newest</option>
                                     <option value="date_asc" className="bg-white dark:bg-neutral-900 text-neutral-900 dark:text-white">Oldest</option>
                                     <option value="priority_desc" className="bg-white dark:bg-neutral-900 text-neutral-900 dark:text-white">Priority</option>
@@ -315,7 +315,7 @@ export default function TenantMaintenance() {
                         <div className="relative z-10 flex-1 overflow-y-auto overflow-x-auto overscroll-contain scrollbar-thin scrollbar-thumb-neutral-300 dark:scrollbar-thumb-neutral-700">
                             {/* Desktop Table View */}
                             <table className="hidden lg:table w-full text-left border-collapse min-w-[700px]">
-                                <thead className="sticky top-0 z-20 bg-linear-to-b from-white/90 to-white/70 dark:from-[#121212]/90 dark:to-[#0a0a0a]/90 backdrop-blur-2xl shadow-sm">
+                                <thead className="sticky top-0 z-20 bg-linear-to-b from-white/90 to-white/70 dark:from-background/90 dark:to-background/90 backdrop-blur-2xl shadow-sm">
                                     <tr>
                                         <th className="px-4 py-4 text-xs font-bold text-neutral-400 uppercase tracking-widest">ID / Date</th>
                                         <th className="px-4 py-4 text-xs font-bold text-neutral-400 uppercase tracking-widest">Issue</th>
