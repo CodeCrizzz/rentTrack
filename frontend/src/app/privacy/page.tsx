@@ -6,7 +6,7 @@ export default function PrivacyPage() {
     return (
         <div 
             className="min-h-screen w-full flex flex-col items-center justify-start relative overflow-x-hidden bg-cover bg-center bg-no-repeat bg-fixed font-sans selection:bg-cyan-500/30 py-24 sm:py-32 px-4 sm:px-6"
-            style={{ backgroundImage: "url('/bg_img.png')" }}
+            style={{ backgroundImage: "url('/images/bg_img.png')" }}
         >
             {/* Overlay for better readability */}
             <div className="absolute inset-0 bg-slate-900/40 dark:bg-black/70 backdrop-blur-[2px] z-0" />
@@ -14,7 +14,7 @@ export default function PrivacyPage() {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
-                className="relative z-10 w-full max-w-4xl px-6 py-10 sm:p-12 bg-white dark:bg-[#0a0a0a] rounded-3xl border border-slate-200 dark:border-white/10 shadow-none"
+                className="relative z-10 w-full max-w-4xl px-6 py-10 sm:p-12 bg-card rounded-3xl border border-slate-200 dark:border-white/10 shadow-none"
             >
                 <div className="mb-10 border-b border-slate-200 dark:border-white/10 pb-8">
                     <h1 className="text-3xl sm:text-5xl font-black text-slate-900 dark:text-white tracking-tight mb-4">Privacy Policy</h1>
