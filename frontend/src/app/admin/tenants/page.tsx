@@ -3,6 +3,8 @@ import { useState, useEffect } from 'react';
 import api from '@/lib/api';
 import { motion, AnimatePresence, Variants } from 'framer-motion';
 import { toast } from 'sonner';
+import { Bell, Calendar, Users, Clock, AlertCircle, Search } from 'lucide-react';
+import CustomSelect from '@/components/CustomSelect';
 
 //  Updated Interface matching all your required fields
 interface Tenant {
@@ -231,14 +233,14 @@ export default function AdminTenants() {
                 dot: 'bg-rose-500 shadow-[0_0_8px_rgba(244,63,94,0.8)]'
             };
             case 'Moved Out': return {
-                bg: 'bg-slate-50 dark:bg-zinc-500/10',
+                bg: 'bg-secondary/50',
                 text: 'text-slate-600 dark:text-zinc-400',
                 border: 'border-slate-200 dark:border-zinc-500/20',
                 glow: '',
                 dot: 'bg-slate-500'
             };
             default: return {
-                bg: 'bg-slate-50 dark:bg-zinc-500/10',
+                bg: 'bg-secondary/50',
                 text: 'text-slate-600 dark:text-zinc-400',
                 border: 'border-slate-200 dark:border-zinc-500/20',
                 glow: '',
@@ -248,57 +250,96 @@ export default function AdminTenants() {
     };
 
     return (
-        <div className="max-w-[1600px] mx-auto pb-10 relative">
+        <div className="max-w-400 mx-auto pb-10 relative">
             {/* Ambient Background */}
-            <div className="fixed top-0 left-1/2 -translate-x-1/2 w-full h-[500px] bg-indigo-500/5 dark:bg-indigo-600/5 blur-[120px] rounded-full pointer-events-none -z-10 mix-blend-screen dark:mix-blend-lighten"></div>
 
-            <motion.div initial={{opacity:0, y:-20}} animate={{opacity:1, y:0}} className="flex flex-col md:flex-row md:items-end justify-between gap-6 relative z-10 mb-8">
+            {/* Header */}
+            <motion.div initial={{opacity:0, y:-20}} animate={{opacity:1, y:0}} className="flex flex-col md:flex-row md:items-start justify-between gap-6 relative z-10 mb-8">
                 <div>
-                    <h1 className="text-4xl sm:text-5xl font-black text-slate-900 dark:text-white tracking-tighter flex items-center gap-4">
-                        Residents
-                        {tenants.filter(t => t.status === 'Pending').length > 0 && (
-                            <span className="inline-flex items-center px-4 py-1.5 rounded-2xl bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/20 text-amber-600 dark:text-amber-400 text-xs font-black uppercase tracking-widest animate-pulse">
-                                {tenants.filter(t => t.status === 'Pending').length} Pending
-                            </span>
-                        )}
+                    <h1 className="text-3xl font-black text-slate-900 dark:text-white tracking-tight flex items-center gap-4">
+                        Manage Tenants
                     </h1>
-                    <p className="text-slate-500 dark:text-zinc-400 font-bold text-sm uppercase tracking-[0.2em] mt-2">Manage Active Residents & Applications</p>
+                    <p className="text-slate-500 dark:text-zinc-400 font-medium text-sm mt-1">Track resident profiles, room contracts, and applications.</p>
+                </div>
+            </motion.div>
+
+            {/* Summary Cards */}
+            <motion.div initial={{opacity:0, y:20}} animate={{opacity:1, y:0}} transition={{delay: 0.1}} className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8 relative z-10">
+                <div className="bg-card rounded-2xl border border-slate-100 dark:border-zinc-800 p-6 flex flex-col justify-between shadow-sm">
+                    <div className="flex justify-between items-start mb-4">
+                        <h3 className="text-sm font-medium text-slate-500 dark:text-zinc-400">Active Tenants</h3>
+                        <div className="w-10 h-10 rounded-xl bg-emerald-50 dark:bg-emerald-500/10 flex items-center justify-center text-emerald-600 dark:text-emerald-400">
+                            <Users className="w-5 h-5" />
+                        </div>
+                    </div>
+                    <div>
+                        <div className="text-2xl font-bold text-slate-900 dark:text-white flex items-baseline gap-2">
+                            {tenants.filter(t => t.status === 'Active').length} <span className="text-lg">Active</span>
+                        </div>
+                    </div>
+                </div>
+                <div className="bg-card rounded-2xl border border-slate-100 dark:border-zinc-800 p-6 flex flex-col justify-between shadow-sm">
+                    <div className="flex justify-between items-start mb-4">
+                        <h3 className="text-sm font-medium text-slate-500 dark:text-zinc-400">Pending Registrations</h3>
+                        <div className="w-10 h-10 rounded-xl bg-amber-50 dark:bg-amber-500/10 flex items-center justify-center text-amber-600 dark:text-amber-400">
+                            <Clock className="w-5 h-5" />
+                        </div>
+                    </div>
+                    <div>
+                        <div className="text-2xl font-bold text-slate-900 dark:text-white flex items-baseline gap-2">
+                            {tenants.filter(t => t.status === 'Pending').length} <span className="text-lg">Pending</span>
+                        </div>
+                        <p className="text-xs font-semibold text-amber-600 mt-1">Awaiting approval</p>
+                    </div>
+                </div>
+                <div className="bg-card rounded-2xl border border-slate-100 dark:border-zinc-800 p-6 flex flex-col justify-between shadow-sm">
+                    <div className="flex justify-between items-start mb-4">
+                        <h3 className="text-sm font-medium text-slate-500 dark:text-zinc-400">Move-out Notices</h3>
+                        <div className="w-10 h-10 rounded-xl bg-rose-50 dark:bg-rose-500/10 flex items-center justify-center text-rose-600 dark:text-rose-400">
+                            <AlertCircle className="w-5 h-5" />
+                        </div>
+                    </div>
+                    <div>
+                        <div className="text-2xl font-bold text-slate-900 dark:text-white flex items-baseline gap-2">
+                            {tenants.filter(t => t.status === 'Moved Out').length} <span className="text-lg">Notices</span>
+                        </div>
+                        <p className="text-xs font-semibold text-rose-600 mt-1">Total Moved Out</p>
+                    </div>
                 </div>
             </motion.div>
 
             {/* Filters */}
-            <motion.div initial={{opacity:0, y:20}} animate={{opacity:1, y:0}} transition={{delay: 0.1}} className="flex flex-col sm:flex-row gap-4 relative z-10 mb-8 bg-white dark:bg-black backdrop-blur-2xl p-4 rounded-[2rem] border border-slate-200/60 dark:border-zinc-800/60 shadow-xl dark:shadow-2xl">
-                <div className="relative">
-                    <select 
-                        value={statusFilter} 
-                        onChange={(e) => setStatusFilter(e.target.value)} 
-                        className="w-full sm:w-48 py-4 pl-5 pr-10 rounded-2xl bg-white/50 dark:bg-zinc-900/50 border border-slate-200 dark:border-zinc-800 text-slate-900 dark:text-white font-bold text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all appearance-none cursor-pointer"
-                    >
-                        <option value="All">All Statuses</option>
-                        <option value="Pending">Pending</option>
-                        <option value="Active">Active</option>
-                        <option value="Declined">Declined</option>
-                        <option value="Moved Out">Moved Out</option>
-                    </select>
-                    <div className="absolute inset-y-0 right-0 pr-4 flex items-center pointer-events-none text-slate-500">
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M19 9l-7 7-7-7"></path></svg>
-                    </div>
-                </div>
-                <div className="relative group flex-1">
-                    <div className="absolute inset-y-0 left-0 pl-5 flex items-center pointer-events-none text-slate-400 dark:text-zinc-500 group-focus-within:text-indigo-500 transition-colors">
-                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+            <motion.div initial={{opacity:0, y:20}} animate={{opacity:1, y:0}} transition={{delay: 0.2}} className="flex flex-col sm:flex-row gap-4 relative z-10 mb-8 bg-card p-3 rounded-2xl border border-slate-100 dark:border-zinc-800 shadow-sm">
+                <div className="relative flex-1 max-w-sm">
+                    <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-400">
+                        <Search className="w-4 h-4" />
                     </div>
                     <input 
                         type="text" 
                         value={searchQuery} 
                         onChange={(e) => setSearchQuery(e.target.value)} 
-                        placeholder="Search residents by name, email, or room..." 
-                        className="w-full pl-14 pr-6 py-4 rounded-2xl bg-white/50 dark:bg-zinc-900/50 border border-slate-200 dark:border-zinc-800 text-slate-900 dark:text-white placeholder-zinc-500 font-bold text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all shadow-inner" 
+                        placeholder="Search tenant name.." 
+                        className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-secondary/50 border-none text-slate-900 dark:text-white text-sm focus:ring-0 outline-none" 
+                    />
+                </div>
+                <div className="relative">
+                    <CustomSelect 
+                        value={statusFilter} 
+                        onChange={(val) => setStatusFilter(val)} 
+                        options={[
+                            { value: "All", label: "Status: All" },
+                            { value: "Pending", label: "Pending" },
+                            { value: "Active", label: "Active" },
+                            { value: "Declined", label: "Declined" },
+                            { value: "Moved Out", label: "Moved Out" }
+                        ]}
+                        className="w-full sm:w-40 py-2.5 pl-4 pr-10 rounded-xl bg-card border border-slate-200 dark:border-zinc-800 text-slate-700 dark:text-zinc-300 text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500"
                     />
                 </div>
             </motion.div>
 
-            {/* Resident Cards Grid */}
+
+            {/* Data Table */}
             {isLoading ? (
                 <div className="flex items-center justify-center min-h-[40vh]">
                     <div className="relative flex flex-col items-center justify-center">
@@ -306,113 +347,99 @@ export default function AdminTenants() {
                         <p className="text-slate-500 dark:text-zinc-400 font-bold text-xs uppercase tracking-[0.2em] mt-6 animate-pulse">Loading Residents...</p>
                     </div>
                 </div>
-            ) : filteredTenants.length === 0 ? (
-                <motion.div initial={{opacity:0}} animate={{opacity:1}} className="bg-white dark:bg-black backdrop-blur-2xl rounded-[2.5rem] border border-slate-200 dark:border-zinc-800 p-16 text-center shadow-2xl">
-                    <div className="w-24 h-24 bg-slate-100 dark:bg-zinc-900 rounded-3xl flex items-center justify-center mx-auto mb-6 shadow-inner border border-slate-200 dark:border-zinc-800">
-                        <svg className="w-10 h-10 text-slate-400 dark:text-zinc-500 stroke-[2]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" /></svg>
-                    </div>
-                    <h3 className="text-xl font-black text-slate-900 dark:text-white mb-2">No residents found</h3>
-                    <p className="text-sm font-bold text-slate-500 dark:text-zinc-500">{searchQuery ? "Try adjusting your search." : "There are currently no residents."}</p>
-                </motion.div>
             ) : (
-                <motion.div variants={containerVariants} initial="hidden" animate="show" className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                    {filteredTenants.map((tenant) => {
-                        const style = getTenantStatusStyles(tenant.status);
-                        
-                        return (
-                            <motion.div key={tenant.id} variants={itemVariants} className="relative group rounded-3xl p-[1px] overflow-hidden bg-gradient-to-b from-slate-200 to-slate-100 dark:from-white/10 dark:to-transparent hover:shadow-[0_0_40px_rgba(0,0,0,0.1)] dark:hover:shadow-[0_0_40px_rgba(255,255,255,0.05)] transition-shadow duration-500">
-                                <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 blur-xl"></div>
-                                <div className="h-full w-full bg-white dark:bg-black backdrop-blur-3xl rounded-[23px] p-6 flex flex-col relative overflow-hidden transition-transform duration-500 group-hover:scale-[0.99]">
-                                    
-                                    {/* Top Row: Avatar & Status */}
-                                    <div className="flex justify-between items-start mb-6">
-                                        <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-indigo-400 to-purple-500 flex items-center justify-center text-white font-black text-2xl shadow-lg group-hover:scale-110 transition-transform duration-500">
-                                            {tenant.name.charAt(0)}
-                                        </div>
-                                        <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full border bg-white/50 dark:bg-[#0a0a0a]/50 backdrop-blur-md ${style.border}`}>
-                                            <div className={`w-2 h-2 rounded-full animate-pulse ${style.dot}`}></div>
-                                            <span className={`text-[9px] font-black uppercase tracking-widest ${style.text}`}>{tenant.status}</span>
-                                        </div>
-                                    </div>
+                <motion.div initial={{opacity:0, y:20}} animate={{opacity:1, y:0}} transition={{delay: 0.4}} className="bg-card rounded-2xl border border-slate-100 dark:border-zinc-800 overflow-hidden shadow-sm">
+                    <div className="overflow-x-auto">
+                        <table className="w-full text-left text-sm text-slate-600 dark:text-zinc-400">
+                            <thead className="bg-secondary/50 text-xs text-slate-500 dark:text-zinc-500 border-b border-slate-100 dark:border-zinc-800">
+                                <tr>
+                                    <th className="px-6 py-4 font-semibold">Tenant Name</th>
+                                    <th className="px-6 py-4 font-semibold">Assigned Room</th>
+                                    <th className="px-6 py-4 font-semibold">Contact Number</th>
+                                    <th className="px-6 py-4 font-semibold">Email Address</th>
+                                    <th className="px-6 py-4 font-semibold">Joined Date</th>
+                                    <th className="px-6 py-4 font-semibold">Status</th>
+                                    <th className="px-6 py-4 font-semibold text-right">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-slate-100 dark:divide-zinc-800">
+                                {filteredTenants.length === 0 ? (
+                                    <tr>
+                                        <td colSpan={7} className="px-6 py-8 text-center text-slate-500">
+                                            No tenants found.
+                                        </td>
+                                    </tr>
+                                ) : (
+                                    filteredTenants.map((tenant) => {
+                                        // Status Pill Logic to match mockup
+                                        let pillClass = "px-2.5 py-1 text-[11px] font-bold rounded-md whitespace-nowrap ";
+                                        let statusText: string = tenant.status;
+                                        if (tenant.status === 'Active') {
+                                            pillClass += "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-400";
+                                        } else if (tenant.status === 'Pending') {
+                                            pillClass += "bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-400";
+                                            statusText = "Pending Approval";
+                                        } else if (tenant.status === 'Declined' || tenant.status === 'Inactive' || tenant.status === 'Moved Out') {
+                                            pillClass += "bg-rose-100 text-rose-700 dark:bg-rose-500/20 dark:text-rose-400";
+                                        } else {
+                                            pillClass += "bg-slate-100 text-slate-700 dark:bg-slate-500/20 dark:text-slate-400";
+                                        }
 
-                                    {/* Info Block */}
-                                    <div className="mb-4">
-                                        <h3 className="font-black text-slate-900 dark:text-white text-xl truncate">{tenant.name}</h3>
-                                        <p className="text-[10px] font-black text-slate-400 dark:text-zinc-500 uppercase tracking-widest mt-1 truncate">{tenant.email}</p>
-                                        <p className="text-xs font-bold text-slate-500 dark:text-zinc-400 mt-1">{tenant.phone}</p>
-                                    </div>
-
-                                    {/* Room Assignment */}
-                                    <div className="mb-6 bg-slate-50 dark:bg-zinc-900/50 rounded-2xl p-4 border border-slate-200 dark:border-zinc-800">
-                                        <p className="text-[10px] font-black text-slate-500 dark:text-zinc-500 uppercase tracking-widest mb-1">Assigned Room</p>
-                                        {tenant.room_number ? (
-                                            <p className="font-black text-slate-900 dark:text-white text-lg">
-                                                Room {tenant.room_number} <span className="text-xs text-slate-400 dark:text-zinc-500 ml-2">• Bed {tenant.bed_space}</span>
-                                            </p>
-                                        ) : (
-                                            <p className="font-black text-slate-400 dark:text-zinc-600 text-lg italic">Unassigned</p>
-                                        )}
-                                    </div>
-
-                                    {/* Financials Preview */}
-                                    <div className="flex justify-between items-end mt-auto pt-4 border-t border-slate-200 dark:border-zinc-800/80">
-                                        <div>
-                                            <p className="text-[10px] font-black text-slate-500 dark:text-zinc-500 uppercase tracking-widest mb-1">Balance</p>
-                                            <p className={`font-black text-xl tracking-tight ${tenant.balance! > 0 ? 'text-rose-500 dark:text-rose-400' : 'text-emerald-500 dark:text-emerald-400'}`}>
-                                                ₱{tenant.balance?.toLocaleString()}
-                                            </p>
-                                        </div>
-                                        
-                                        <div className={`px-2 py-1 rounded-lg border text-[9px] font-black uppercase tracking-widest ${
-                                            tenant.payment_status === 'Paid' ? 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-500/20' : 
-                                            tenant.payment_status === 'Overdue' ? 'bg-rose-50 dark:bg-rose-500/10 text-rose-700 dark:text-rose-400 border-rose-200 dark:border-rose-500/20' :
-                                            'bg-slate-50 dark:bg-zinc-500/10 text-slate-600 dark:text-zinc-400 border-slate-200 dark:border-zinc-500/20'
-                                        }`}>
-                                            {tenant.payment_status}
-                                        </div>
-                                    </div>
-
-                                    {/* Action Hover Overlay */}
-                                    <div className="absolute inset-0 bg-white/60 dark:bg-[#0a0a0a]/80 backdrop-blur-sm opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center gap-3">
-                                        <button onClick={() => handleViewTenant(tenant)} className="w-12 h-12 rounded-2xl bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-700 shadow-xl flex items-center justify-center text-slate-700 dark:text-zinc-300 hover:text-blue-500 hover:border-blue-500 transition-colors hover:scale-110 active:scale-95" title="View Profile">
-                                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path></svg>
-                                        </button>
-                                        {tenant.status === 'Pending' ? (
-                                            <>
-                                                <button onClick={() => handleUpdateStatus(tenant.id, 'Active')} disabled={isStatusUpdating === tenant.id} className="w-12 h-12 rounded-2xl bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-700 shadow-xl flex items-center justify-center text-slate-700 dark:text-zinc-300 hover:text-emerald-500 hover:border-emerald-500 transition-colors hover:scale-110 active:scale-95 disabled:opacity-50 disabled:hover:scale-100 cursor-pointer disabled:cursor-not-allowed" title="Approve">
-                                                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M5 13l4 4L19 7"></path></svg>
-                                                </button>
-                                                <button onClick={() => handleUpdateStatus(tenant.id, 'Declined')} disabled={isStatusUpdating === tenant.id} className="w-12 h-12 rounded-2xl bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-700 shadow-xl flex items-center justify-center text-slate-700 dark:text-zinc-300 hover:text-amber-500 hover:border-amber-500 transition-colors hover:scale-110 active:scale-95 disabled:opacity-50 disabled:hover:scale-100 cursor-pointer disabled:cursor-not-allowed" title="Decline">
-                                                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M6 18L18 6M6 6l12 12"></path></svg>
-                                                </button>
-                                            </>
-                                        ) : (
-                                            <button onClick={() => handleOpenModal(tenant, 'edit')} className="w-12 h-12 rounded-2xl bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-700 shadow-xl flex items-center justify-center text-slate-700 dark:text-zinc-300 hover:text-indigo-500 hover:border-indigo-500 transition-colors hover:scale-110 active:scale-95" title="Edit Profile">
-                                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg>
-                                            </button>
-                                        )}
-                                        <button onClick={() => handleDeleteTenant(tenant.id)} disabled={isDeleting === tenant.id} className="w-12 h-12 rounded-2xl bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-700 shadow-xl flex items-center justify-center text-slate-700 dark:text-zinc-300 hover:text-rose-500 hover:border-rose-500 transition-colors hover:scale-110 active:scale-95 disabled:opacity-50 disabled:hover:scale-100 cursor-pointer disabled:cursor-not-allowed" title="Delete Tenant">
-                                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
-                                        </button>
-                                    </div>
-                                </div>
-                            </motion.div>
-                        );
-                    })}
+                                        return (
+                                            <tr key={tenant.id} className="hover:bg-slate-50 dark:hover:bg-zinc-900/50 transition-colors">
+                                                <td className="px-6 py-4 font-bold text-slate-900 dark:text-white">
+                                                    {tenant.name}
+                                                </td>
+                                                <td className="px-6 py-4 font-bold text-slate-700 dark:text-zinc-300">
+                                                    {tenant.room_number ? `${tenant.room_number}` : (tenant.status === 'Pending' ? 'Pending' : 'None')}
+                                                </td>
+                                                <td className="px-6 py-4">
+                                                    {tenant.phone || 'N/A'}
+                                                </td>
+                                                <td className="px-6 py-4">
+                                                    {tenant.email}
+                                                </td>
+                                                <td className="px-6 py-4">
+                                                    {tenant.date_moved_in ? new Date(tenant.date_moved_in).toLocaleDateString('en-US', {month: 'short', day: '2-digit', year: 'numeric'}) : (tenant.created_at ? new Date(tenant.created_at).toLocaleDateString('en-US', {month: 'short', day: '2-digit', year: 'numeric'}) : 'N/A')}
+                                                </td>
+                                                <td className="px-6 py-4">
+                                                    <span className={pillClass}>{statusText}</span>
+                                                </td>
+                                                <td className="px-6 py-4 text-right">
+                                                    {tenant.status === 'Pending' ? (
+                                                        <div className="flex justify-end gap-2 items-center">
+                                                            <button onClick={() => handleUpdateStatus(tenant.id, 'Active')} className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold rounded-lg transition-colors">Approve</button>
+                                                            <button onClick={() => handleUpdateStatus(tenant.id, 'Declined')} className="px-3 py-1.5 bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 text-xs font-semibold rounded-lg transition-colors">Reject</button>
+                                                            <button onClick={() => handleViewTenant(tenant)} className="text-slate-500 hover:text-slate-700 font-semibold text-xs ml-2">View</button>
+                                                        </div>
+                                                    ) : (
+                                                        <>
+                                                            <button onClick={() => handleViewTenant(tenant)} className="text-emerald-600 hover:text-emerald-700 dark:text-emerald-400 font-semibold mr-3">View</button>
+                                                            <button onClick={() => handleOpenModal(tenant, 'edit')} className="text-slate-500 hover:text-slate-700 font-semibold">Edit</button>
+                                                        </>
+                                                    )}
+                                                </td>
+                                            </tr>
+                                        );
+                                    })
+                                )}
+                            </tbody>
+                        </table>
+                    </div>
                 </motion.div>
             )}
 
             {/* Modals */}
             <AnimatePresence>
             {isModalOpen && (
-                <motion.div initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}} className="fixed inset-0 bg-black/60 backdrop-blur-md z-[100] flex items-center justify-center p-4">
-                    <motion.div initial={{scale:0.9, y:20, opacity:0}} animate={{scale:1, y:0, opacity:1}} exit={{scale:0.95, y:10, opacity:0}} transition={{type: "spring", damping: 25, stiffness: 300}} className="bg-white dark:bg-black backdrop-blur-3xl rounded-[2.5rem] w-full max-w-2xl overflow-hidden shadow-[0_0_50px_rgba(0,0,0,0.3)] border border-slate-200 dark:border-zinc-800 flex flex-col max-h-[90vh]">
-                        <div className="px-8 py-6 border-b border-slate-200 dark:border-zinc-800 flex justify-between items-center bg-white dark:bg-black">
+                <motion.div initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}} className="fixed inset-0 bg-black/60 backdrop-blur-md z-100 flex items-center justify-center p-4">
+                    <motion.div initial={{scale:0.9, y:20, opacity:0}} animate={{scale:1, y:0, opacity:1}} exit={{scale:0.95, y:10, opacity:0}} transition={{type: "spring", damping: 25, stiffness: 300}} className="bg-card backdrop-blur-3xl rounded-[2.5rem] w-full max-w-2xl overflow-hidden shadow-[0_0_50px_rgba(0,0,0,0.3)] border border-slate-200 dark:border-zinc-800 flex flex-col max-h-[90vh]">
+                        <div className="px-8 py-6 border-b border-slate-200 dark:border-zinc-800 flex justify-between items-center bg-card">
                             <div>
                                 <h2 className="text-3xl font-black text-slate-900 dark:text-white tracking-tight">Edit Resident</h2>
                                 <p className="text-xs font-bold text-slate-500 dark:text-zinc-500 uppercase tracking-widest mt-1">Update profile and rental details</p>
                             </div>
-                            <button onClick={() => setIsModalOpen(false)} className="w-12 h-12 rounded-2xl bg-slate-100 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 hover:bg-slate-200 dark:hover:bg-zinc-700 flex items-center justify-center text-slate-500 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white transition-colors">
+                            <button onClick={() => setIsModalOpen(false)} className="w-12 h-12 rounded-2xl bg-secondary border border-slate-200 dark:border-zinc-700 hover:bg-slate-200 dark:hover:bg-zinc-700 flex items-center justify-center text-slate-500 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white transition-colors">
                                 <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M6 18L18 6M6 6l12 12"></path></svg>
                             </button>
                         </div>
@@ -420,52 +447,51 @@ export default function AdminTenants() {
                             <div className="space-y-6">
                                 <div className="space-y-2">
                                     <label className="text-[10px] font-black text-slate-500 dark:text-zinc-500 uppercase tracking-widest pl-1">Full Name <span className="text-rose-500">*</span></label>
-                                    <input required type="text" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} className="w-full px-5 py-4 rounded-2xl bg-slate-50 dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 text-slate-900 dark:text-white font-bold focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition-all shadow-inner" placeholder="e.g. John Doe" />
+                                    <input required type="text" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} className="w-full px-5 py-4 rounded-2xl bg-secondary border border-slate-200 dark:border-zinc-800 text-slate-900 dark:text-white font-bold focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition-all shadow-inner" placeholder="e.g. John Doe" />
                                 </div>
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                                     <div className="space-y-2">
                                         <label className="text-[10px] font-black text-slate-500 dark:text-zinc-500 uppercase tracking-widest pl-1">Email Address <span className="text-rose-500">*</span></label>
-                                        <input required type="email" value={formData.email} onChange={e => setFormData({...formData, email: e.target.value})} className="w-full px-5 py-4 rounded-2xl bg-slate-50 dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 text-slate-900 dark:text-white font-bold focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition-all shadow-inner" placeholder="john@example.com" />
+                                        <input required type="email" value={formData.email} onChange={e => setFormData({...formData, email: e.target.value})} className="w-full px-5 py-4 rounded-2xl bg-secondary border border-slate-200 dark:border-zinc-800 text-slate-900 dark:text-white font-bold focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition-all shadow-inner" placeholder="john@example.com" />
                                     </div>
                                     <div className="space-y-2">
                                         <label className="text-[10px] font-black text-slate-500 dark:text-zinc-500 uppercase tracking-widest pl-1">Phone Number</label>
-                                        <input type="text" value={formData.phone} onChange={e => setFormData({...formData, phone: e.target.value})} className="w-full px-5 py-4 rounded-2xl bg-slate-50 dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 text-slate-900 dark:text-white font-bold focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition-all shadow-inner" placeholder="+63 000 000 0000" />
+                                        <input type="text" value={formData.phone} onChange={e => setFormData({...formData, phone: e.target.value})} className="w-full px-5 py-4 rounded-2xl bg-secondary border border-slate-200 dark:border-zinc-800 text-slate-900 dark:text-white font-bold focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition-all shadow-inner" placeholder="+63 000 000 0000" />
                                     </div>
                                 </div>
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                                     <div className="space-y-2">
                                         <label className="text-[10px] font-black text-slate-500 dark:text-zinc-500 uppercase tracking-widest pl-1">Gender</label>
                                         <div className="relative">
-                                            <select value={formData.gender} onChange={e => setFormData({...formData, gender: e.target.value})} className="w-full px-5 py-4 rounded-2xl bg-slate-50 dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 text-slate-900 dark:text-white font-bold focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none appearance-none transition-all shadow-inner cursor-pointer">
-                                                <option value="">Not Specified</option>
-                                                <option value="Male">Male</option>
-                                                <option value="Female">Female</option>
-                                                <option value="Other">Other</option>
-                                            </select>
-                                            <div className="absolute inset-y-0 right-0 pr-5 flex items-center pointer-events-none text-slate-500">
-                                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M19 9l-7 7-7-7"></path></svg>
-                                            </div>
+                                            <CustomSelect 
+                                                value={formData.gender} 
+                                                onChange={val => setFormData({...formData, gender: val})} 
+                                                options={[
+                                                    { value: "", label: "Not Specified" },
+                                                    { value: "Male", label: "Male" },
+                                                    { value: "Female", label: "Female" },
+                                                    { value: "Other", label: "Other" }
+                                                ]}
+                                                className="w-full px-5 py-4 rounded-2xl bg-secondary border border-slate-200 dark:border-zinc-800 text-slate-900 dark:text-white font-bold focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition-all shadow-inner"
+                                            />
                                         </div>
                                     </div>
                                     <div className="space-y-2">
                                         <label className="text-[10px] font-black text-slate-500 dark:text-zinc-500 uppercase tracking-widest pl-1">Tenant Status</label>
                                         <div className="relative">
-                                            <select value={formData.status} onChange={e => setFormData({...formData, status: e.target.value})} className="w-full px-5 py-4 rounded-2xl bg-slate-50 dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 text-slate-900 dark:text-white font-bold focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none appearance-none transition-all shadow-inner cursor-pointer">
-                                                <option value="Pending">Pending</option>
-                                                <option value="Active">Active</option>
-                                                <option value="Declined">Declined</option>
-                                                <option value="Moved Out">Moved Out</option>
-                                            </select>
-                                            <div className="absolute inset-y-0 right-0 pr-5 flex items-center pointer-events-none text-slate-500">
-                                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M19 9l-7 7-7-7"></path></svg>
-                                            </div>
+                                            <CustomSelect 
+                                                value={formData.status} 
+                                                onChange={val => setFormData({...formData, status: val})} 
+                                                options={["Pending", "Active", "Declined", "Moved Out"]}
+                                                className="w-full px-5 py-4 rounded-2xl bg-secondary border border-slate-200 dark:border-zinc-800 text-slate-900 dark:text-white font-bold focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition-all shadow-inner"
+                                            />
                                         </div>
                                     </div>
                                 </div>
 
                                 <div className="space-y-2">
                                     <label className="text-[10px] font-black text-slate-500 dark:text-zinc-500 uppercase tracking-widest pl-1">Home Address</label>
-                                    <input type="text" value={formData.address} onChange={e => setFormData({...formData, address: e.target.value})} className="w-full px-5 py-4 rounded-2xl bg-slate-50 dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 text-slate-900 dark:text-white font-bold focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition-all shadow-inner" placeholder="123 Main St..." />
+                                    <input type="text" value={formData.address} onChange={e => setFormData({...formData, address: e.target.value})} className="w-full px-5 py-4 rounded-2xl bg-secondary border border-slate-200 dark:border-zinc-800 text-slate-900 dark:text-white font-bold focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition-all shadow-inner" placeholder="123 Main St..." />
                                 </div>
 
                                 <div className="pt-6 pb-2 border-t border-slate-200 dark:border-zinc-800/80">
@@ -476,42 +502,41 @@ export default function AdminTenants() {
                                     <div className="space-y-2">
                                         <label className="text-[10px] font-black text-slate-500 dark:text-zinc-500 uppercase tracking-widest pl-1">Assigned Unit</label>
                                         <div className="relative">
-                                            <select 
+                                            <CustomSelect 
                                                 value={formData.room_id?.toString() || ''} 
-                                                onChange={e => setFormData({...formData, room_id: e.target.value})} 
-                                                className="w-full px-5 py-4 rounded-2xl bg-slate-50 dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 text-slate-900 dark:text-white font-bold focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none appearance-none transition-all shadow-inner cursor-pointer"
-                                            >
-                                                <option value="">Unassigned / Pending</option>
-                                                {rooms.map(room => (
-                                                    <option key={room.id} value={room.id.toString()}>Room {room.room_number} ({room.status})</option>
-                                                ))}
-                                            </select>
-                                            <div className="absolute inset-y-0 right-0 pr-5 flex items-center pointer-events-none text-slate-500">
-                                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M19 9l-7 7-7-7"></path></svg>
-                                            </div>
+                                                onChange={val => setFormData({...formData, room_id: val})} 
+                                                options={[
+                                                    { value: "", label: "Unassigned / Pending" },
+                                                    ...rooms.map(room => ({
+                                                        value: room.id.toString(),
+                                                        label: `Room ${room.room_number} (${room.status})`
+                                                    }))
+                                                ]}
+                                                className="w-full px-5 py-4 rounded-2xl bg-secondary border border-slate-200 dark:border-zinc-800 text-slate-900 dark:text-white font-bold focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition-all shadow-inner"
+                                            />
                                         </div>
                                     </div>
                                     <div className="space-y-2">
                                         <label className="text-[10px] font-black text-slate-500 dark:text-zinc-500 uppercase tracking-widest pl-1">Monthly Rent (₱)</label>
-                                        <input type="number" min="0" step="0.01" value={formData.monthly_rent} onChange={e => setFormData({...formData, monthly_rent: e.target.value})} className="w-full px-5 py-4 rounded-2xl bg-slate-50 dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 text-slate-900 dark:text-white font-bold focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none transition-all shadow-inner" placeholder="e.g. 5000" />
+                                        <input type="number" min="0" step="0.01" value={formData.monthly_rent} onChange={e => setFormData({...formData, monthly_rent: e.target.value})} className="w-full px-5 py-4 rounded-2xl bg-secondary border border-slate-200 dark:border-zinc-800 text-slate-900 dark:text-white font-bold focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none transition-all shadow-inner" placeholder="e.g. 5000" />
                                     </div>
                                 </div>
                                 
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                                     <div className="space-y-2">
                                         <label className="text-[10px] font-black text-slate-500 dark:text-zinc-500 uppercase tracking-widest pl-1">Move-in Date</label>
-                                        <input type="date" value={formData.date_moved_in} onChange={e => setFormData({...formData, date_moved_in: e.target.value})} className="w-full px-5 py-4 rounded-2xl bg-slate-50 dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 text-slate-900 dark:text-white font-bold focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition-all shadow-inner" />
+                                        <input type="date" value={formData.date_moved_in} onChange={e => setFormData({...formData, date_moved_in: e.target.value})} className="w-full px-5 py-4 rounded-2xl bg-secondary border border-slate-200 dark:border-zinc-800 text-slate-900 dark:text-white font-bold focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition-all shadow-inner" />
                                     </div>
                                     <div className="space-y-2">
                                         <label className="text-[10px] font-black text-slate-500 dark:text-zinc-500 uppercase tracking-widest pl-1">Contract End Date</label>
-                                        <input type="date" value={formData.contract_end_date} onChange={e => setFormData({...formData, contract_end_date: e.target.value})} className="w-full px-5 py-4 rounded-2xl bg-slate-50 dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 text-slate-900 dark:text-white font-bold focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition-all shadow-inner" />
+                                        <input type="date" value={formData.contract_end_date} onChange={e => setFormData({...formData, contract_end_date: e.target.value})} className="w-full px-5 py-4 rounded-2xl bg-secondary border border-slate-200 dark:border-zinc-800 text-slate-900 dark:text-white font-bold focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition-all shadow-inner" />
                                     </div>
                                 </div>
                             </div>
                         </form>
-                        <div className="p-8 border-t border-slate-200 dark:border-zinc-800/80 flex flex-col-reverse sm:flex-row justify-end gap-3 bg-slate-50/50 dark:bg-zinc-900/30">
-                            <button type="button" onClick={() => { setIsModalOpen(false); setError(''); }} className="w-full sm:w-auto px-8 py-4 font-black text-slate-500 dark:text-zinc-400 bg-slate-100 dark:bg-zinc-800 hover:bg-slate-200 dark:hover:bg-zinc-700 rounded-2xl transition-all uppercase tracking-widest text-xs">Cancel</button>
-                            <button type="submit" disabled={isSubmitting} className="w-full sm:w-auto px-8 py-4 font-black bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white rounded-2xl transition-all shadow-[0_0_20px_rgba(79,70,229,0.3)] hover:shadow-[0_0_30px_rgba(79,70,229,0.5)] flex items-center justify-center gap-2 uppercase tracking-widest text-xs disabled:opacity-70">
+                        <div className="p-8 border-t border-slate-200 dark:border-zinc-800/80 flex flex-col-reverse sm:flex-row justify-end gap-3 bg-secondary/50">
+                            <button type="button" onClick={() => { setIsModalOpen(false); setError(''); }} className="w-full sm:w-auto px-8 py-4 font-black text-slate-500 dark:text-zinc-400 bg-secondary hover:bg-slate-200 dark:hover:bg-zinc-700 rounded-2xl transition-all uppercase tracking-widest text-xs">Cancel</button>
+                            <button type="submit" disabled={isSubmitting} className="w-full sm:w-auto px-8 py-4 font-black bg-linear-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white rounded-2xl transition-all shadow-[0_0_20px_rgba(79,70,229,0.3)] hover:shadow-[0_0_30px_rgba(79,70,229,0.5)] flex items-center justify-center gap-2 uppercase tracking-widest text-xs disabled:opacity-70">
                                 {isSubmitting ? <div className="w-5 h-5 border-2 border-white/20 border-t-white rounded-full animate-spin"></div> : 'Save Changes'}
                             </button>
                         </div>
@@ -520,11 +545,11 @@ export default function AdminTenants() {
             )}
 
             {isViewModalOpen && viewingTenant && (
-                <motion.div initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}} className="fixed inset-0 bg-black/60 backdrop-blur-md z-[100] flex items-center justify-center p-4">
-                    <motion.div initial={{scale:0.9, y:20, opacity:0}} animate={{scale:1, y:0, opacity:1}} exit={{scale:0.95, y:10, opacity:0}} transition={{type: "spring", damping: 25, stiffness: 300}} className="bg-white dark:bg-black backdrop-blur-3xl rounded-[2.5rem] w-full max-w-3xl overflow-hidden shadow-[0_0_50px_rgba(0,0,0,0.3)] border border-slate-200 dark:border-zinc-800 flex flex-col max-h-[90vh]">
-                        <div className="p-8 border-b border-slate-200 dark:border-zinc-800 bg-white dark:bg-black flex justify-between items-start gap-4">
+                <motion.div initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}} className="fixed inset-0 bg-black/60 backdrop-blur-md z-100 flex items-center justify-center p-4">
+                    <motion.div initial={{scale:0.9, y:20, opacity:0}} animate={{scale:1, y:0, opacity:1}} exit={{scale:0.95, y:10, opacity:0}} transition={{type: "spring", damping: 25, stiffness: 300}} className="bg-card backdrop-blur-3xl rounded-[2.5rem] w-full max-w-3xl overflow-hidden shadow-[0_0_50px_rgba(0,0,0,0.3)] border border-slate-200 dark:border-zinc-800 flex flex-col max-h-[90vh]">
+                        <div className="p-8 border-b border-slate-200 dark:border-zinc-800 bg-card flex justify-between items-start gap-4">
                             <div className="flex items-center gap-5">
-                                <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-indigo-400 to-purple-500 text-white font-black text-2xl flex items-center justify-center shadow-lg">
+                                <div className="w-16 h-16 rounded-2xl bg-linear-to-br from-indigo-400 to-purple-500 text-white font-black text-2xl flex items-center justify-center shadow-lg">
                                     {viewingTenant.name.charAt(0)}
                                 </div>
                                 <div>
@@ -542,7 +567,7 @@ export default function AdminTenants() {
                                         </span>
                                     );
                                 })()}
-                                <button onClick={() => setIsViewModalOpen(false)} className="w-10 h-10 rounded-xl bg-slate-100 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 hover:bg-slate-200 dark:hover:bg-zinc-700 flex items-center justify-center text-slate-500 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white transition-colors">
+                                <button onClick={() => setIsViewModalOpen(false)} className="w-10 h-10 rounded-xl bg-secondary border border-slate-200 dark:border-zinc-700 hover:bg-slate-200 dark:hover:bg-zinc-700 flex items-center justify-center text-slate-500 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white transition-colors">
                                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M6 18L18 6M6 6l12 12"></path></svg>
                                 </button>
                             </div>
@@ -551,7 +576,7 @@ export default function AdminTenants() {
                         <div className="p-8 overflow-y-auto custom-scrollbar w-full">
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 mb-10">
                                 {/* Contact Info */}
-                                <div className="bg-slate-50 dark:bg-zinc-900/50 border border-slate-200 dark:border-zinc-800 p-6 rounded-3xl shadow-inner relative overflow-hidden group">
+                                <div className="bg-secondary/50 border border-slate-200 dark:border-zinc-800 p-6 rounded-3xl shadow-inner relative overflow-hidden group">
                                     <h3 className="text-[10px] font-black text-slate-500 dark:text-zinc-500 uppercase tracking-widest mb-4">Contact Information</h3>
                                     <div className="space-y-3">
                                         <div>
@@ -569,7 +594,7 @@ export default function AdminTenants() {
                                     </div>
                                 </div>
                                 {/* Rental Info */}
-                                <div className="bg-slate-50 dark:bg-zinc-900/50 border border-slate-200 dark:border-zinc-800 p-6 rounded-3xl shadow-inner relative overflow-hidden group">
+                                <div className="bg-secondary/50 border border-slate-200 dark:border-zinc-800 p-6 rounded-3xl shadow-inner relative overflow-hidden group">
                                     <h3 className="text-[10px] font-black text-slate-500 dark:text-zinc-500 uppercase tracking-widest mb-4">Rental Information</h3>
                                     <div className="space-y-3">
                                         <div>
@@ -593,15 +618,15 @@ export default function AdminTenants() {
                                 Financial Status
                             </h3>
                             <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
-                                <div className="bg-slate-50 dark:bg-zinc-900/50 border border-slate-200 dark:border-zinc-800 p-6 rounded-3xl shadow-inner relative overflow-hidden group">
+                                <div className="bg-secondary/50 border border-slate-200 dark:border-zinc-800 p-6 rounded-3xl shadow-inner relative overflow-hidden group">
                                     <p className="text-[10px] font-black text-slate-500 dark:text-zinc-500 uppercase tracking-widest mb-1">Monthly Rent</p>
                                     <p className="text-3xl font-black text-slate-900 dark:text-white tracking-tighter">₱{Number(viewingTenant.monthly_rent || 0).toLocaleString()}</p>
                                 </div>
-                                <div className="bg-slate-50 dark:bg-zinc-900/50 border border-slate-200 dark:border-zinc-800 p-6 rounded-3xl shadow-inner relative overflow-hidden group">
+                                <div className="bg-secondary/50 border border-slate-200 dark:border-zinc-800 p-6 rounded-3xl shadow-inner relative overflow-hidden group">
                                     <p className="text-[10px] font-black text-slate-500 dark:text-zinc-500 uppercase tracking-widest mb-1">Current Balance</p>
                                     <p className={`text-3xl font-black tracking-tighter ${viewingTenant.balance! > 0 ? 'text-rose-500 dark:text-rose-400' : 'text-emerald-500 dark:text-emerald-400'}`}>₱{Number(viewingTenant.balance || 0).toLocaleString()}</p>
                                 </div>
-                                <div className="bg-slate-50 dark:bg-zinc-900/50 border border-slate-200 dark:border-zinc-800 p-6 rounded-3xl shadow-inner relative overflow-hidden group">
+                                <div className="bg-secondary/50 border border-slate-200 dark:border-zinc-800 p-6 rounded-3xl shadow-inner relative overflow-hidden group">
                                     <p className="text-[10px] font-black text-slate-500 dark:text-zinc-500 uppercase tracking-widest mb-1">Last Payment</p>
                                     <p className="text-lg font-black text-slate-900 dark:text-white tracking-tight mt-1">{viewingTenant.last_payment_date}</p>
                                 </div>

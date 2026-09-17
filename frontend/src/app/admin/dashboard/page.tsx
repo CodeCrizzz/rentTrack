@@ -1,7 +1,9 @@
 "use client";
 import { useEffect, useState } from 'react';
+import { motion, Variants } from 'framer-motion';
 import Link from 'next/link';
 import api from '@/lib/api';
+import CustomSelect from '@/components/CustomSelect';
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis, ResponsiveContainer, Tooltip, ComposedChart, Line, Legend, PieChart, Pie, Cell, Area } from "recharts";
 import { 
     Users, Receipt, Calendar, Plus, FileText, Wrench, Wallet,
@@ -56,6 +58,19 @@ const CustomTooltip = ({ active, payload, label }: any) => {
         );
     }
     return null;
+};
+
+const containerVariants: Variants = {
+    hidden: { opacity: 0 },
+    show: {
+        opacity: 1,
+        transition: { staggerChildren: 0.1 }
+    }
+};
+
+const itemVariants: Variants = {
+    hidden: { opacity: 0, y: 20 },
+    show: { opacity: 1, y: 0, transition: { type: "spring", stiffness: 300, damping: 24 } }
 };
 
 export default function AdminDashboard() {
@@ -114,13 +129,13 @@ export default function AdminDashboard() {
 
 
     // Reusable styles
-    const cardClass = "bg-white dark:bg-[#0a0a0a] rounded-2xl border border-slate-100 dark:border-zinc-800 p-7 shadow-[0_4px_12px_rgba(0,0,0,0.03)] dark:shadow-none flex flex-col min-h-[220px]";
-    const listCardClass = `bg-white dark:bg-[#0a0a0a] rounded-2xl border border-slate-100 dark:border-zinc-800 p-7 shadow-[0_4px_12px_rgba(0,0,0,0.03)] dark:shadow-none flex flex-col h-[450px]`;
+    const cardClass = "bg-card rounded-2xl border border-slate-100 dark:border-zinc-800 p-7 shadow-[0_4px_12px_rgba(0,0,0,0.03)] dark:shadow-none flex flex-col min-h-[220px]";
+    const listCardClass = `bg-card rounded-2xl border border-slate-100 dark:border-zinc-800 p-7 shadow-[0_4px_12px_rgba(0,0,0,0.03)] dark:shadow-none flex flex-col h-[450px]`;
     const headerClass = "text-lg font-bold text-slate-800 dark:text-white mb-6 flex items-center justify-between";
 
 
     return (
-        <div className="w-full space-y-6 pb-1 font-sans text-slate-900 dark:text-white min-h-screen">
+        <motion.div variants={containerVariants} initial="hidden" animate="show" className="w-full space-y-6 pb-1 font-sans text-slate-900 dark:text-white min-h-screen">
             {/* Welcome Header */}
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 py-2">
                 <div className="flex items-center gap-4">
@@ -133,7 +148,7 @@ export default function AdminDashboard() {
                     </div>
                 </div>
                 <div className="flex items-center gap-3">
-                    <div className="flex items-center gap-2 px-4 py-2.5 bg-white dark:bg-[#0a0a0a] border border-slate-200 dark:border-zinc-800 rounded-xl text-sm font-medium text-slate-700 dark:text-zinc-300 shadow-sm">
+                    <div className="flex items-center gap-2 px-4 py-2.5 bg-card border border-slate-200 dark:border-zinc-800 rounded-xl text-sm font-medium text-slate-700 dark:text-zinc-300 shadow-sm">
                         <Calendar className="w-4 h-4 text-slate-500 dark:text-zinc-400" />
                         {currentDate}
                     </div>
@@ -141,45 +156,51 @@ export default function AdminDashboard() {
             </div>
 
             {/* Quick Actions */}
-            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
-                <Link href="/admin/rooms" className="group bg-white dark:bg-[#0a0a0a] border border-slate-200 dark:border-zinc-800 hover:border-emerald-500/50 dark:hover:border-emerald-500/50 rounded-2xl p-5 flex items-center gap-4 transition-transform shadow-[0_2px_8px_rgba(0,0,0,0.04)] dark:shadow-none hover:shadow-md cursor-pointer">
+            <motion.div variants={itemVariants} className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
+                <Link href="/admin/rooms" className="group bg-card border border-slate-200 dark:border-zinc-800 hover:border-emerald-500/50 dark:hover:border-emerald-500/50 rounded-2xl p-3 flex items-center gap-4 transition-transform shadow-[0_2px_8px_rgba(0,0,0,0.04)] dark:shadow-none hover:shadow-md cursor-pointer">
                     <div className="w-12 h-12 rounded-full bg-emerald-50 dark:bg-emerald-500/10 flex items-center justify-center text-emerald-600 dark:text-emerald-400 group-hover:scale-110 transition-transform">
                         <Plus className="w-6 h-6" />
                     </div>
                     <span className="font-bold text-[15px] text-slate-800 dark:text-white group-hover:text-emerald-600 dark:group-hover:text-emerald-400">Add New Room</span>
                 </Link>
-                <Link href="/admin/tenants" className="group bg-white dark:bg-[#0a0a0a] border border-slate-200 dark:border-zinc-800 hover:border-emerald-500/50 dark:hover:border-emerald-500/50 rounded-2xl p-5 flex items-center gap-4 transition-transform shadow-[0_2px_8px_rgba(0,0,0,0.04)] dark:shadow-none hover:shadow-md cursor-pointer">
+                <Link href="/admin/tenants" className="group bg-card border border-slate-200 dark:border-zinc-800 hover:border-emerald-500/50 dark:hover:border-emerald-500/50 rounded-2xl p-3 flex items-center gap-4 transition-transform shadow-[0_2px_8px_rgba(0,0,0,0.04)] dark:shadow-none hover:shadow-md cursor-pointer">
                     <div className="w-12 h-12 rounded-full bg-emerald-50 dark:bg-emerald-500/10 flex items-center justify-center text-emerald-600 dark:text-emerald-400 group-hover:scale-110 transition-transform">
                         <UserCheck className="w-6 h-6" />
                     </div>
                     <span className="font-bold text-[15px] text-slate-800 dark:text-white group-hover:text-emerald-600 dark:group-hover:text-emerald-400">Review Registrations</span>
                 </Link>
-                <Link href="/admin/billing" className="group bg-white dark:bg-[#0a0a0a] border border-slate-200 dark:border-zinc-800 hover:border-emerald-500/50 dark:hover:border-emerald-500/50 rounded-2xl p-5 flex items-center gap-4 transition-transform shadow-[0_2px_8px_rgba(0,0,0,0.04)] dark:shadow-none hover:shadow-md cursor-pointer">
+                <Link href="/admin/billing" className="group bg-card border border-slate-200 dark:border-zinc-800 hover:border-emerald-500/50 dark:hover:border-emerald-500/50 rounded-2xl p-3 flex items-center gap-4 transition-transform shadow-[0_2px_8px_rgba(0,0,0,0.04)] dark:shadow-none hover:shadow-md cursor-pointer">
                     <div className="w-12 h-12 rounded-full bg-emerald-50 dark:bg-emerald-500/10 flex items-center justify-center text-emerald-600 dark:text-emerald-400 group-hover:scale-110 transition-transform">
                         <Wallet className="w-6 h-6" />
                     </div>
                     <span className="font-bold text-[15px] text-slate-800 dark:text-white group-hover:text-emerald-600 dark:group-hover:text-emerald-400">Process Payments</span>
                 </Link>
-                <Link href="/admin/requests" className="group bg-white dark:bg-[#0a0a0a] border border-slate-200 dark:border-zinc-800 hover:border-emerald-500/50 dark:hover:border-emerald-500/50 rounded-2xl p-5 flex items-center gap-4 transition-transform shadow-[0_2px_8px_rgba(0,0,0,0.04)] dark:shadow-none hover:shadow-md cursor-pointer">
+                <Link href="/admin/requests" className="group bg-card border border-slate-200 dark:border-zinc-800 hover:border-emerald-500/50 dark:hover:border-emerald-500/50 rounded-2xl p-3 flex items-center gap-4 transition-transform shadow-[0_2px_8px_rgba(0,0,0,0.04)] dark:shadow-none hover:shadow-md cursor-pointer">
                     <div className="w-12 h-12 rounded-full bg-emerald-50 dark:bg-emerald-500/10 flex items-center justify-center text-emerald-600 dark:text-emerald-400 group-hover:scale-110 transition-transform">
                         <Wrench className="w-6 h-6" />
                     </div>
                     <span className="font-bold text-[15px] text-slate-800 dark:text-white group-hover:text-emerald-600 dark:group-hover:text-emerald-400">View Requests</span>
                 </Link>
-            </div>
+            </motion.div>
 
             {/* Stat Cards */}
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-5">
                 {/* Room Occupancy */}
                 <div className={cardClass}>
+                    <motion.div variants={itemVariants} initial="hidden" whileInView="show" viewport={{ once: true, amount: 0.2 }} className="h-full w-full flex flex-col">
                     <div className="flex items-center justify-between mb-2">
-                        <h3 className="text-sm font-medium text-slate-500 dark:text-zinc-400">Room Occupancy</h3>
+                        <h3 className="text-sm font-medium text-slate-500 dark:text-zinc-400">Room Occupancy Rate</h3>
                         <div className="w-8 h-8 rounded-full bg-emerald-50 dark:bg-emerald-500/10 flex items-center justify-center text-emerald-600 dark:text-emerald-400">
                             <Users className="w-4 h-4" />
                         </div>
                     </div>
                     <div className="flex-1 flex gap-4 items-center mt-2">
                         <div className="relative w-28 h-28 shrink-0">
+                            <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                                <span className="text-sm font-bold text-slate-900 dark:text-white">
+                                    {Math.round((stats.rooms.occupiedRooms / (stats.rooms.totalRooms || 1)) * 100)}%
+                               </span>
+                            </div>
                             <ResponsiveContainer width="100%" height="100%">
                                 <PieChart>
                                     <Pie
@@ -214,13 +235,8 @@ export default function AdminDashboard() {
                                     />
                                 </PieChart>
                             </ResponsiveContainer>
-                            <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                                <span className="text-sm font-bold text-slate-900 dark:text-white">
-                                    {Math.round((stats.rooms.occupiedRooms / (stats.rooms.totalRooms || 1)) * 100)}%
-                               </span>
-                            </div>
                         </div>
-                        <div className="flex-1 space-y-1 text-[10px] text-slate-500 dark:text-zinc-400">
+                        <div className="flex-1 space-y-1 text-xs text-slate-500 dark:text-zinc-400">
                             <div className="flex justify-between items-center"><span className="flex items-center gap-1.5"><span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0"></span>Occupied</span> <span className="font-bold text-slate-700 dark:text-zinc-300">{stats.rooms.occupiedRooms}</span></div>
                             <div className="flex justify-between items-center"><span className="flex items-center gap-1.5"><span className="w-1.5 h-1.5 rounded-full bg-sky-500 shrink-0"></span>Available</span> <span className="font-bold text-slate-700 dark:text-zinc-300">{stats.rooms.availableRooms}</span></div>
                             <div className="flex justify-between items-center"><span className="flex items-center gap-1.5"><span className="w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0"></span>Partial</span> <span className="font-bold text-slate-700 dark:text-zinc-300">{stats.rooms.partiallyOccupiedRooms}</span></div>
@@ -229,10 +245,12 @@ export default function AdminDashboard() {
                             <div className="flex justify-between items-center pt-1 mt-1 border-t border-slate-100 dark:border-zinc-800"><span>Total</span> <span className="font-bold text-slate-700 dark:text-zinc-300">{stats.rooms.totalRooms}</span></div>
                         </div>
                     </div>
+                </motion.div>
                 </div>
 
                 {/* Pending Dues */}
                 <div className={cardClass}>
+                    <motion.div variants={itemVariants} initial="hidden" whileInView="show" viewport={{ once: true, amount: 0.2 }} className="h-full w-full flex flex-col">
                     <div className="flex items-center justify-between mb-4">
                         <h3 className="text-sm font-medium text-slate-500 dark:text-zinc-400">Pending Dues</h3>
                         <div className="w-8 h-8 rounded-full bg-orange-50 dark:bg-orange-500/10 flex items-center justify-center text-orange-600 dark:text-orange-400">
@@ -249,10 +267,12 @@ export default function AdminDashboard() {
                         </div>
                         <Link href="/admin/billing" className="mt-4 text-xs font-semibold text-emerald-600 dark:text-emerald-400 hover:underline flex items-center gap-1">View billing <ChevronRight className="w-3 h-3"/></Link>
                     </div>
+                </motion.div>
                 </div>
 
                 {/* Pending Maintenance */}
                 <div className={cardClass}>
+                    <motion.div variants={itemVariants} initial="hidden" whileInView="show" viewport={{ once: true, amount: 0.2 }} className="h-full w-full flex flex-col">
                     <div className="flex items-center justify-between mb-4">
                         <h3 className="text-sm font-medium text-slate-500 dark:text-zinc-400">Pending Maintenance</h3>
                         <div className="w-8 h-8 rounded-full bg-rose-50 dark:bg-rose-500/10 flex items-center justify-center text-rose-600 dark:text-rose-400">
@@ -269,10 +289,12 @@ export default function AdminDashboard() {
                         </div>
                         <Link href="/admin/requests" className="mt-4 text-xs font-semibold text-emerald-600 dark:text-emerald-400 hover:underline flex items-center gap-1">View requests <ChevronRight className="w-3 h-3"/></Link>
                     </div>
+                </motion.div>
                 </div>
 
                 {/* Total Revenue */}
                 <div className={cardClass}>
+                    <motion.div variants={itemVariants} initial="hidden" whileInView="show" viewport={{ once: true, amount: 0.2 }} className="h-full w-full flex flex-col">
                     <div className="flex items-center justify-between mb-4">
                         <h3 className="text-sm font-medium text-slate-500 dark:text-zinc-400">Total Revenue</h3>
                         <div className="w-8 h-8 rounded-full bg-emerald-50 dark:bg-emerald-500/10 flex items-center justify-center text-emerald-600 dark:text-emerald-400">
@@ -289,6 +311,7 @@ export default function AdminDashboard() {
                         </div>
                         <Link href="/admin/billing" className="mt-4 text-xs font-semibold text-emerald-600 dark:text-emerald-400 hover:underline flex items-center gap-1">View financial reports <ChevronRight className="w-3 h-3"/></Link>
                     </div>
+                </motion.div>
                 </div>
             </div>
 
@@ -296,86 +319,92 @@ export default function AdminDashboard() {
             <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
                 {/* Cash Flow Overview */}
                 <div className={`lg:col-span-3 ${cardClass}`}>
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-6 gap-4">
-                        <div>
-                            <h2 className="text-lg font-bold text-slate-800 dark:text-white">Cash Flow Overview</h2>
-                            <p className="text-sm text-slate-500 dark:text-zinc-400 mt-0.5">Bills, collections, and unpaid balances</p>
-                        </div>
-                        <div className="flex items-center gap-4">
-                            <select 
-                                value={dateRange} 
-                                onChange={(e) => setDateRange(e.target.value)}
-                                className="bg-slate-50 dark:bg-[#111111] border border-slate-200 dark:border-zinc-800 text-sm font-semibold text-slate-700 dark:text-zinc-300 rounded-xl px-3 py-2 outline-none focus:ring-2 focus:ring-emerald-500/20"
-                            >
-                                <option value="last_6_months">Last 6 Months</option>
-                                <option value="last_12_months">Last 12 Months</option>
-                                <option value="this_year">This Year</option>
-                                <option value="last_year">Last Year</option>
-                            </select>
-                        </div>
-                    </div>
-                    <div className="flex-1 min-h-100 w-full mt-4">
-                        <ResponsiveContainer width="100%" height="100%">
-                            <ComposedChart data={cashflowData} margin={{ top: 20, right: 20, left: 0, bottom: 0 }} barGap={8} barSize={16}>
-                                <defs>
-                                    <linearGradient id="colorBilled" x1="0" y1="0" x2="0" y2="1">
-                                        <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.4}/>
-                                        <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
-                                    </linearGradient>
-                                    <linearGradient id="colorCollected" x1="0" y1="0" x2="0" y2="1">
-                                        <stop offset="0%" stopColor="#34d399"/>
-                                        <stop offset="100%" stopColor="#059669"/>
-                                    </linearGradient>
-                                    <linearGradient id="colorOutstanding" x1="0" y1="0" x2="0" y2="1">
-                                        <stop offset="0%" stopColor="#fb7185"/>
-                                        <stop offset="100%" stopColor="#e11d48"/>
-                                    </linearGradient>
-                                </defs>
-                                <CartesianGrid strokeDasharray="4 4" vertical={false} stroke="rgba(150,150,150,0.15)" />
-                                <XAxis dataKey="month" scale="point" axisLine={false} tickLine={false} tick={{ fill: '#64748b', fontSize: 13, fontWeight: 600 }} dy={12} />
-                                <YAxis axisLine={false} tickLine={false} tick={{ fill: '#64748b', fontSize: 13, fontWeight: 600 }} tickFormatter={(value) => value === 0 ? '0' : `₱ ${value >= 1000 ? (value / 1000) + 'k' : value}`} width={60} ticks={[0, 5000, 10000, 15000, 20000, 25000, 30000, 35000, 40000, 45000, 50000]} domain={[0, 50000]} />
-                                <Tooltip 
-                                    cursor={{fill: 'rgba(150,150,150,0.05)'}} 
-                                    content={<CustomTooltip />} 
+                    <motion.div variants={itemVariants} initial="hidden" whileInView="show" viewport={{ once: true, amount: 0.2 }} className="h-full w-full flex flex-col">
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-6 gap-4">
+                            <div>
+                                <h2 className="text-lg font-bold text-slate-800 dark:text-white">Cash Flow Overview</h2>
+                                <p className="text-sm text-slate-500 dark:text-zinc-400 mt-0.5">Bills, collections, and unpaid balances</p>
+                            </div>
+                            <div className="flex items-center gap-4">
+                                <CustomSelect 
+                                    value={dateRange} 
+                                    onChange={(val) => setDateRange(val)}
+                                    options={[
+                                        { value: "last_6_months", label: "Last 6 Months" },
+                                        { value: "last_12_months", label: "Last 12 Months" },
+                                        { value: "this_year", label: "This Year" },
+                                        { value: "last_year", label: "Last Year" }
+                                    ]}
+                                    className="w-40 bg-secondary border border-slate-200 dark:border-zinc-800 text-sm font-semibold text-slate-700 dark:text-zinc-300 rounded-xl pl-4 pr-10 py-2 outline-none focus:ring-2 focus:ring-emerald-500/20"
                                 />
-                                <Legend wrapperStyle={{ paddingTop: '20px', fontSize: '13px', fontWeight: 600 }} iconType="circle" />
-                                <Area type="monotone" dataKey="billed" name="Billed" stroke="#3b82f6" strokeWidth={3} fillOpacity={1} fill="url(#colorBilled)" activeDot={{ r: 6, fill: '#3b82f6', stroke: '#fff', strokeWidth: 2 }} />
-                                <Bar dataKey="collected" name="Collected" fill="url(#colorCollected)" radius={[8, 8, 0, 0]} />
-                                <Bar dataKey="outstanding" name="Outstanding" fill="url(#colorOutstanding)" radius={[8, 8, 0, 0]} />
-                            </ComposedChart> 
-                        </ResponsiveContainer>
-                    </div>
+                            </div>
+                        </div>
+                        <div className="flex-1 min-h-[380px] w-full mt-4">
+                            <ResponsiveContainer width="100%" height="100%">
+                                <ComposedChart data={cashflowData} margin={{ top: 20, right: 20, left: 0, bottom: 0 }} barGap={8} barSize={16}>
+                                    <defs>
+                                        <linearGradient id="colorBilled" x1="0" y1="0" x2="0" y2="1">
+                                            <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.4}/>
+                                            <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
+                                        </linearGradient>
+                                        <linearGradient id="colorCollected" x1="0" y1="0" x2="0" y2="1">
+                                            <stop offset="0%" stopColor="#34d399"/>
+                                            <stop offset="100%" stopColor="#059669"/>
+                                        </linearGradient>
+                                        <linearGradient id="colorOutstanding" x1="0" y1="0" x2="0" y2="1">
+                                            <stop offset="0%" stopColor="#fb7185"/>
+                                            <stop offset="100%" stopColor="#e11d48"/>
+                                        </linearGradient>
+                                    </defs>
+                                    <CartesianGrid strokeDasharray="4 4" vertical={false} stroke="rgba(150,150,150,0.15)" />
+                                    <XAxis dataKey="month" scale="point" axisLine={false} tickLine={false} tick={{ fill: '#64748b', fontSize: 13, fontWeight: 600 }} dy={12} />
+                                    <YAxis axisLine={false} tickLine={false} tick={{ fill: '#64748b', fontSize: 13, fontWeight: 600 }} tickFormatter={(value) => value === 0 ? '0' : `₱ ${value >= 1000 ? (value / 1000) + 'k' : value}`} width={60} ticks={[0, 5000, 10000, 15000, 20000, 25000, 30000, 35000, 40000, 45000, 50000]} domain={[0, 50000]} />
+                                    <Tooltip 
+                                        cursor={{fill: 'rgba(150,150,150,0.05)'}} 
+                                        content={<CustomTooltip />} 
+                                    />
+                                    <Legend wrapperStyle={{ paddingTop: '20px', fontSize: '13px', fontWeight: 600 }} iconType="circle" />
+                                    <Area type="monotone" dataKey="billed" name="Billed" stroke="#3b82f6" strokeWidth={3} fillOpacity={1} fill="url(#colorBilled)" activeDot={{ r: 6, fill: '#3b82f6', stroke: '#fff', strokeWidth: 2 }} />
+                                    <Bar dataKey="collected" name="Collected" fill="url(#colorCollected)" radius={[8, 8, 0, 0]} />
+                                    <Bar dataKey="outstanding" name="Outstanding" fill="url(#colorOutstanding)" radius={[8, 8, 0, 0]} />
+                                </ComposedChart> 
+                            </ResponsiveContainer>
+                        </div>
+                    </motion.div>
                 </div>
 
                 {/* Recent Activity */}
                 <div className={`lg:col-span-1 ${cardClass}`}>
-                    <div className={headerClass}>
-                        <h2>Recent Activity</h2>
-                    </div>
-                    <div className="flex-1 overflow-y-auto max-h-100 pr-2 -mr-2 scrollbar-thin scrollbar-thumb-slate-200 dark:scrollbar-thumb-zinc-800">
-                        <div className="relative border-l border-slate-200 dark:border-zinc-800 ml-3 space-y-6 py-2">
-                            {stats.recentActivities.map((act) => (
-                                <div key={act.id} className="pl-6 relative">
-                                    <span className="absolute -left-[6.5px] top-1 w-3 h-3 rounded-full bg-emerald-500 ring-4 ring-white dark:ring-[#0a0a0a]"></span>
-                                <p className="font-bold text-sm text-slate-800 dark:text-white">{act.title}</p>
-                                <p className="text-xs text-slate-500 dark:text-zinc-400 mt-1">{act.description}</p>
-                                <p className="text-[10px] font-bold text-slate-400 dark:text-zinc-500 mt-2 uppercase tracking-wider">{new Date(act.date).toLocaleString()}</p>
+                    <motion.div variants={itemVariants} initial="hidden" whileInView="show" viewport={{ once: true, amount: 0.2 }} className="h-full w-full flex flex-col">
+                        <div className={headerClass}>
+                            <h2>Recent Activity</h2>
+                        </div>
+                        <div className="flex-1 overflow-y-auto max-h-[380px] pr-2 -mr-2 custom-scrollbar">
+                            <div className="relative border-l border-slate-200 dark:border-zinc-800 ml-3 space-y-6 py-2">
+                                {stats.recentActivities.map((act) => (
+                                    <div key={act.id} className="pl-6 relative">
+                                        <span className="absolute -left-[6.5px] top-1 w-3 h-3 rounded-full bg-emerald-500 ring-4 ring-white dark:ring-[#0a0a0a]"></span>
+                                        <p className="font-bold text-sm text-slate-800 dark:text-white">{act.title}</p>
+                                        <p className="text-xs text-slate-500 dark:text-zinc-400 mt-1">{act.description}</p>
+                                        <p className="text-[10px] font-bold text-slate-400 dark:text-zinc-500 mt-2 uppercase tracking-wider">{new Date(act.date).toLocaleString()}</p>
+                                    </div>
+                                ))}
                             </div>
-                        ))}
-                    </div>
+                        </div>
+                    </motion.div>
                 </div>
             </div>
-        </div>
 
             {/* Approvals Row */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 {/* Pending Tenant Registrations */}
                 <div className={listCardClass}>
+                    <motion.div variants={itemVariants} initial="hidden" whileInView="show" viewport={{ once: true, amount: 0.2 }} className="h-full w-full flex flex-col">
                     <div className={headerClass}>
                         <h2>Pending Registrations <span className="ml-2 px-2 py-0.5 bg-amber-100 dark:bg-amber-500/20 text-amber-700 dark:text-amber-400 text-xs rounded-full">{stats.pendingTenantsList.length}</span></h2>
                         <Link href="/admin/tenants" className="text-sm font-semibold text-emerald-600 dark:text-emerald-400 hover:underline">View All</Link>
                     </div>
-                    <div className="space-y-4 flex-1 overflow-y-auto pr-2 -mr-2 scrollbar-thin scrollbar-thumb-slate-200 dark:scrollbar-thumb-zinc-800">
+                    <div className="space-y-4 flex-1 overflow-y-auto pr-2 -mr-2 custom-scrollbar">
                         {stats.pendingTenantsList.slice(0, 5).map(tenant => (
                             <div key={tenant.id} className="flex items-center justify-between p-3 border border-slate-100 dark:border-zinc-800 rounded-xl bg-slate-50/50 dark:bg-white/5">
                                 <div>
@@ -391,15 +420,18 @@ export default function AdminDashboard() {
                         ))}
                         {stats.pendingTenantsList.length === 0 && <p className="text-sm text-slate-500 text-center py-4">No pending registrations.</p>}
                     </div>
+                </motion.div>
                 </div>
                 {/* Pending Payment Verification */}
                 <div className={listCardClass}>
+                    <motion.div variants={itemVariants} initial="hidden" whileInView="show" viewport={{ once: true, amount: 0.2 }} className="h-full w-full flex flex-col">
                     <div className={headerClass}>
                         <h2>Payment Verifications <span className="ml-2 px-2 py-0.5 bg-amber-100 dark:bg-amber-500/20 text-amber-700 dark:text-amber-400 text-xs rounded-full">0</span></h2>
                     </div>
-                    <div className="space-y-4 flex-1 overflow-y-auto pr-2 -mr-2 scrollbar-thin scrollbar-thumb-slate-200 dark:scrollbar-thumb-zinc-800">
+                    <div className="space-y-4 flex-1 overflow-y-auto pr-2 -mr-2 custom-scrollbar">
                         <p className="text-sm text-slate-500 text-center py-4">No pending payment verifications.</p>
                     </div>
+                </motion.div>
                 </div>
 
             </div>
@@ -408,11 +440,12 @@ export default function AdminDashboard() {
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 {/* Recent Payments */}
                 <div className={listCardClass}>
+                    <motion.div variants={itemVariants} initial="hidden" whileInView="show" viewport={{ once: true, amount: 0.2 }} className="h-full w-full flex flex-col">
                     <div className={headerClass}>
                         <h2>Recent Payments</h2>
                         <Link href="/admin/billing" className="text-sm font-semibold text-emerald-600 dark:text-emerald-400 hover:underline">View All</Link>
                     </div>
-                    <div className="space-y-4 flex-1 overflow-y-auto pr-2 -mr-2 scrollbar-thin scrollbar-thumb-slate-200 dark:scrollbar-thumb-zinc-800">
+                    <div className="space-y-4 flex-1 overflow-y-auto pr-2 -mr-2 custom-scrollbar">
                         {stats.recentPayments.slice(0, 5).map((payment, i) => {
                             const methods = ['Gcash', 'Bank Transfer', 'Cash'];
                             const method = methods[i % methods.length];
@@ -434,15 +467,17 @@ export default function AdminDashboard() {
                             );
                         })}
                     </div>
+                </motion.div>
                 </div>
 
                 {/* Overdue Bills */}
                 <div className={listCardClass}>
+                    <motion.div variants={itemVariants} initial="hidden" whileInView="show" viewport={{ once: true, amount: 0.2 }} className="h-full w-full flex flex-col">
                     <div className={headerClass}>
                         <h2>Overdue Bills <span className="ml-2 px-2 py-0.5 bg-rose-100 dark:bg-rose-500/20 text-rose-700 dark:text-rose-400 text-xs rounded-full">{stats.overdueAccounts.length}</span></h2>
                         <Link href="/admin/billing" className="text-sm font-semibold text-emerald-600 dark:text-emerald-400 hover:underline">View All</Link>
                     </div>
-                    <div className="space-y-4 flex-1 overflow-y-auto pr-2 -mr-2 scrollbar-thin scrollbar-thumb-slate-200 dark:scrollbar-thumb-zinc-800">
+                    <div className="space-y-4 flex-1 overflow-y-auto pr-2 -mr-2 custom-scrollbar">
                         {stats.overdueAccounts.slice(0, 5).map((acc, i) => (
                             <div key={acc.tenant_id} className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-zinc-800 last:border-0 last:pb-0">
                                 <div>
@@ -458,6 +493,7 @@ export default function AdminDashboard() {
                         ))}
                         {stats.overdueAccounts.length === 0 && <p className="text-sm text-slate-500 text-center py-4">No overdue bills.</p>}
                     </div>
+                </motion.div>
                 </div>
             </div>
 
@@ -465,11 +501,12 @@ export default function AdminDashboard() {
             <div className="grid grid-cols-1 gap-6">
                 {/* Recent Maintenance Requests */}
                 <div className={listCardClass}>
+                    <motion.div variants={itemVariants} initial="hidden" whileInView="show" viewport={{ once: true, amount: 0.2 }} className="h-full w-full flex flex-col">
                     <div className={headerClass}>
                         <h2>Recent Maintenance</h2>
                         <Link href="/admin/requests" className="text-sm font-semibold text-emerald-600 dark:text-emerald-400 hover:underline">View All</Link>
                     </div>
-                    <div className="space-y-4 flex-1 overflow-y-auto pr-2 -mr-2 scrollbar-thin scrollbar-thumb-slate-200 dark:scrollbar-thumb-zinc-800">
+                    <div className="space-y-4 flex-1 overflow-y-auto pr-2 -mr-2 custom-scrollbar">
                         {stats.recentRequests.slice(0, 5).map((request, i) => {
                             const priorities = ['High', 'Normal', 'Low'];
                             const categories = ['Plumbing', 'Electrical', 'Appliance'];
@@ -495,8 +532,9 @@ export default function AdminDashboard() {
                         })}
                         {stats.recentRequests.length === 0 && <p className="text-sm text-slate-500 text-center py-4">No recent maintenance requests.</p>}
                     </div>
+                </motion.div>
                 </div>
             </div>
-        </div>
+        </motion.div>
     );
 }

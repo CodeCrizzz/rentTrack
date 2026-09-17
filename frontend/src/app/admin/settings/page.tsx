@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import { Shield, Bell, CreditCard, Wrench, Moon, Info, LogOut, Save, Smartphone, ChevronRight } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useTheme } from 'next-themes';
+import CustomSelect from '@/components/CustomSelect';
 
 export default function AdminSettingsPage() {
     const router = useRouter();
@@ -82,9 +83,9 @@ export default function AdminSettingsPage() {
                 
                 {/* Account & Security */}
                 <div className="lg:col-span-2 space-y-6">
-                    <div className="bg-white dark:bg-[#0a0a0a] rounded-3xl border border-slate-200 dark:border-zinc-800 p-6 shadow-sm">
+                    <div className="bg-card rounded-3xl border border-slate-200 dark:border-zinc-800 p-6 shadow-sm">
                         <div className="flex items-center gap-3 mb-6">
-                            <div className="w-10 h-10 rounded-full bg-slate-100 dark:bg-zinc-900 flex items-center justify-center text-slate-600 dark:text-zinc-400">
+                            <div className="w-10 h-10 rounded-full bg-secondary flex items-center justify-center text-slate-600 dark:text-zinc-400">
                                 <Shield className="w-5 h-5" />
                             </div>
                             <h2 className="text-lg font-bold text-slate-800 dark:text-white">Account & Security</h2>
@@ -93,32 +94,32 @@ export default function AdminSettingsPage() {
                         <div className="space-y-4">
                             <div>
                                 <label className="block text-xs font-bold text-slate-500 dark:text-zinc-400 uppercase tracking-widest mb-1.5">Admin Email</label>
-                                <input type="email" value={adminEmail} onChange={(e) => setAdminEmail(e.target.value)} className="w-full h-11 px-4 bg-slate-50 dark:bg-black border border-slate-200 dark:border-zinc-800 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none transition-all dark:text-white" />
+                                <input type="email" value={adminEmail} onChange={(e) => setAdminEmail(e.target.value)} className="w-full h-11 px-4 bg-background border border-slate-200 dark:border-zinc-800 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none transition-all dark:text-white" />
                             </div>
                             
                             <div className="pt-4 border-t border-slate-100 dark:border-zinc-800/50">
                                 <h3 className="text-sm font-bold text-slate-800 dark:text-white mb-4">Change Password</h3>
                                 <div className="space-y-3">
-                                    <input type="password" placeholder="Current password" value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)} className="w-full h-11 px-4 bg-slate-50 dark:bg-black border border-slate-200 dark:border-zinc-800 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none transition-all dark:text-white" />
+                                    <input type="password" placeholder="Current password" value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)} className="w-full h-11 px-4 bg-background border border-slate-200 dark:border-zinc-800 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none transition-all dark:text-white" />
                                     
                                     <div>
-                                        <input type="password" placeholder="New password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} className="w-full h-11 px-4 bg-slate-50 dark:bg-black border border-slate-200 dark:border-zinc-800 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none transition-all dark:text-white" />
+                                        <input type="password" placeholder="New password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} className="w-full h-11 px-4 bg-background border border-slate-200 dark:border-zinc-800 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none transition-all dark:text-white" />
                                         <div className="flex items-center gap-1 mt-2 px-1">
                                             <div className={`h-1 flex-1 rounded-full ${strength >= 1 ? 'bg-rose-500' : 'bg-slate-200 dark:bg-zinc-800'}`}></div>
                                             <div className={`h-1 flex-1 rounded-full ${strength >= 2 ? 'bg-amber-500' : 'bg-slate-200 dark:bg-zinc-800'}`}></div>
                                             <div className={`h-1 flex-1 rounded-full ${strength >= 3 ? 'bg-emerald-500' : 'bg-slate-200 dark:bg-zinc-800'}`}></div>
                                         </div>
                                     </div>
-                                    <input type="password" placeholder="Confirm new password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} className="w-full h-11 px-4 bg-slate-50 dark:bg-black border border-slate-200 dark:border-zinc-800 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none transition-all dark:text-white" />
+                                    <input type="password" placeholder="Confirm new password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} className="w-full h-11 px-4 bg-background border border-slate-200 dark:border-zinc-800 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none transition-all dark:text-white" />
                                 </div>
                             </div>
                         </div>
                     </div>
 
                     {/* Notification Settings */}
-                    <div className="bg-white dark:bg-[#0a0a0a] rounded-3xl border border-slate-200 dark:border-zinc-800 p-6 shadow-sm">
+                    <div className="bg-card rounded-3xl border border-slate-200 dark:border-zinc-800 p-6 shadow-sm">
                         <div className="flex items-center gap-3 mb-6">
-                            <div className="w-10 h-10 rounded-full bg-slate-100 dark:bg-zinc-900 flex items-center justify-center text-slate-600 dark:text-zinc-400">
+                            <div className="w-10 h-10 rounded-full bg-secondary flex items-center justify-center text-slate-600 dark:text-zinc-400">
                                 <Bell className="w-5 h-5" />
                             </div>
                             <div className="flex-1">
@@ -160,9 +161,9 @@ export default function AdminSettingsPage() {
                     </div>
 
                     {/* Billing Settings */}
-                    <div className="bg-white dark:bg-[#0a0a0a] rounded-3xl border border-slate-200 dark:border-zinc-800 p-6 shadow-sm">
+                    <div className="bg-card rounded-3xl border border-slate-200 dark:border-zinc-800 p-6 shadow-sm">
                         <div className="flex items-center gap-3 mb-6">
-                            <div className="w-10 h-10 rounded-full bg-slate-100 dark:bg-zinc-900 flex items-center justify-center text-slate-600 dark:text-zinc-400">
+                            <div className="w-10 h-10 rounded-full bg-secondary flex items-center justify-center text-slate-600 dark:text-zinc-400">
                                 <CreditCard className="w-5 h-5" />
                             </div>
                             <h2 className="text-lg font-bold text-slate-800 dark:text-white">Billing Defaults</h2>
@@ -171,18 +172,25 @@ export default function AdminSettingsPage() {
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                             <div>
                                 <label className="block text-xs font-bold text-slate-500 dark:text-zinc-400 uppercase tracking-widest mb-1.5">Currency</label>
-                                <select value={billing.currency} onChange={(e) => setBilling({...billing, currency: e.target.value})} className="w-full h-11 px-4 bg-slate-50 dark:bg-black border border-slate-200 dark:border-zinc-800 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none transition-all dark:text-white">
-                                    <option>Philippine Peso (₱)</option>
-                                    <option>US Dollar ($)</option>
-                                </select>
+                                <CustomSelect 
+                                    value={billing.currency} 
+                                    onChange={(val) => setBilling({...billing, currency: val})} 
+                                    options={["Philippine Peso (₱)", "US Dollar ($)"]}
+                                    className="w-full h-11 px-4 bg-background border border-slate-200 dark:border-zinc-800 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none transition-all dark:text-white"
+                                />
                             </div>
                             <div>
                                 <label className="block text-xs font-bold text-slate-500 dark:text-zinc-400 uppercase tracking-widest mb-1.5">Default Due Date</label>
-                                <select value={billing.defaultDueDate} onChange={(e) => setBilling({...billing, defaultDueDate: e.target.value})} className="w-full h-11 px-4 bg-slate-50 dark:bg-black border border-slate-200 dark:border-zinc-800 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none transition-all dark:text-white">
-                                    <option value="1">1st of the month</option>
-                                    <option value="5">5th of the month</option>
-                                    <option value="15">15th of the month</option>
-                                </select>
+                                <CustomSelect 
+                                    value={billing.defaultDueDate} 
+                                    onChange={(val) => setBilling({...billing, defaultDueDate: val})} 
+                                    options={[
+                                        { value: "1", label: "1st of the month" },
+                                        { value: "5", label: "5th of the month" },
+                                        { value: "15", label: "15th of the month" }
+                                    ]}
+                                    className="w-full h-11 px-4 bg-background border border-slate-200 dark:border-zinc-800 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none transition-all dark:text-white"
+                                />
                             </div>
                             <div className="sm:col-span-2 pt-2 pb-2">
                                 <div className="flex items-center justify-between">
@@ -200,19 +208,19 @@ export default function AdminSettingsPage() {
                             </div>
                             <div>
                                 <label className="block text-xs font-bold text-slate-500 dark:text-zinc-400 uppercase tracking-widest mb-1.5">Late Payment Fee</label>
-                                <input type="number" value={billing.latePaymentFee} onChange={(e) => setBilling({...billing, latePaymentFee: e.target.value})} className="w-full h-11 px-4 bg-slate-50 dark:bg-black border border-slate-200 dark:border-zinc-800 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none transition-all dark:text-white" />
+                                <input type="number" value={billing.latePaymentFee} onChange={(e) => setBilling({...billing, latePaymentFee: e.target.value})} className="w-full h-11 px-4 bg-background border border-slate-200 dark:border-zinc-800 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none transition-all dark:text-white" />
                             </div>
                             <div>
                                 <label className="block text-xs font-bold text-slate-500 dark:text-zinc-400 uppercase tracking-widest mb-1.5">Default Water Charge</label>
-                                <input type="number" value={billing.defaultWater} onChange={(e) => setBilling({...billing, defaultWater: e.target.value})} className="w-full h-11 px-4 bg-slate-50 dark:bg-black border border-slate-200 dark:border-zinc-800 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none transition-all dark:text-white" />
+                                <input type="number" value={billing.defaultWater} onChange={(e) => setBilling({...billing, defaultWater: e.target.value})} className="w-full h-11 px-4 bg-background border border-slate-200 dark:border-zinc-800 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none transition-all dark:text-white" />
                             </div>
                             <div>
                                 <label className="block text-xs font-bold text-slate-500 dark:text-zinc-400 uppercase tracking-widest mb-1.5">Default Electricity Charge</label>
-                                <input type="number" value={billing.defaultElectricity} onChange={(e) => setBilling({...billing, defaultElectricity: e.target.value})} className="w-full h-11 px-4 bg-slate-50 dark:bg-black border border-slate-200 dark:border-zinc-800 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none transition-all dark:text-white" />
+                                <input type="number" value={billing.defaultElectricity} onChange={(e) => setBilling({...billing, defaultElectricity: e.target.value})} className="w-full h-11 px-4 bg-background border border-slate-200 dark:border-zinc-800 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none transition-all dark:text-white" />
                             </div>
                             <div>
                                 <label className="block text-xs font-bold text-slate-500 dark:text-zinc-400 uppercase tracking-widest mb-1.5">Default Other Fees</label>
-                                <input type="number" value={billing.defaultOther} onChange={(e) => setBilling({...billing, defaultOther: e.target.value})} className="w-full h-11 px-4 bg-slate-50 dark:bg-black border border-slate-200 dark:border-zinc-800 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none transition-all dark:text-white" />
+                                <input type="number" value={billing.defaultOther} onChange={(e) => setBilling({...billing, defaultOther: e.target.value})} className="w-full h-11 px-4 bg-background border border-slate-200 dark:border-zinc-800 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none transition-all dark:text-white" />
                             </div>
                         </div>
                     </div>
@@ -221,9 +229,9 @@ export default function AdminSettingsPage() {
                 {/* Right Sidebar Columns */}
                 <div className="space-y-6">
                     {/* Appearance */}
-                    <div className="bg-white dark:bg-[#0a0a0a] rounded-3xl border border-slate-200 dark:border-zinc-800 p-6 shadow-sm">
+                    <div className="bg-card rounded-3xl border border-slate-200 dark:border-zinc-800 p-6 shadow-sm">
                         <div className="flex items-center gap-3 mb-6">
-                            <div className="w-10 h-10 rounded-full bg-slate-100 dark:bg-zinc-900 flex items-center justify-center text-slate-600 dark:text-zinc-400">
+                            <div className="w-10 h-10 rounded-full bg-secondary flex items-center justify-center text-slate-600 dark:text-zinc-400">
                                 <Moon className="w-5 h-5" />
                             </div>
                             <h2 className="text-lg font-bold text-slate-800 dark:text-white">Theme</h2>
@@ -237,7 +245,7 @@ export default function AdminSettingsPage() {
                                     className={`py-2 px-1 text-xs font-bold capitalize rounded-lg border transition-all ${
                                         localTheme === t 
                                         ? 'bg-emerald-50 dark:bg-emerald-500/10 border-emerald-200 dark:border-emerald-500/30 text-emerald-700 dark:text-emerald-400'
-                                        : 'bg-white dark:bg-black border-slate-200 dark:border-zinc-800 text-slate-600 dark:text-zinc-400 hover:bg-slate-50 dark:hover:bg-zinc-900'
+                                        : 'bg-card border-slate-200 dark:border-zinc-800 text-slate-600 dark:text-zinc-400 hover:bg-slate-50 dark:hover:bg-zinc-900'
                                     }`}
                                 >
                                     {t}
@@ -247,9 +255,9 @@ export default function AdminSettingsPage() {
                     </div>
 
                     {/* Maintenance Settings */}
-                    <div className="bg-white dark:bg-[#0a0a0a] rounded-3xl border border-slate-200 dark:border-zinc-800 p-6 shadow-sm">
+                    <div className="bg-card rounded-3xl border border-slate-200 dark:border-zinc-800 p-6 shadow-sm">
                         <div className="flex items-center gap-3 mb-6">
-                            <div className="w-10 h-10 rounded-full bg-slate-100 dark:bg-zinc-900 flex items-center justify-center text-slate-600 dark:text-zinc-400">
+                            <div className="w-10 h-10 rounded-full bg-secondary flex items-center justify-center text-slate-600 dark:text-zinc-400">
                                 <Wrench className="w-5 h-5" />
                             </div>
                             <h2 className="text-lg font-bold text-slate-800 dark:text-white">Maintenance</h2>
@@ -268,9 +276,9 @@ export default function AdminSettingsPage() {
                     </div>
 
                     {/* System Information */}
-                    <div className="bg-white dark:bg-[#0a0a0a] rounded-3xl border border-slate-200 dark:border-zinc-800 p-6 shadow-sm">
+                    <div className="bg-card rounded-3xl border border-slate-200 dark:border-zinc-800 p-6 shadow-sm">
                         <div className="flex items-center gap-3 mb-6">
-                            <div className="w-10 h-10 rounded-full bg-slate-100 dark:bg-zinc-900 flex items-center justify-center text-slate-600 dark:text-zinc-400">
+                            <div className="w-10 h-10 rounded-full bg-secondary flex items-center justify-center text-slate-600 dark:text-zinc-400">
                                 <Info className="w-5 h-5" />
                             </div>
                             <h2 className="text-lg font-bold text-slate-800 dark:text-white">System Info</h2>
@@ -295,7 +303,7 @@ export default function AdminSettingsPage() {
                     </div>
 
                     {/* Account Actions */}
-                    <div className="bg-white dark:bg-[#0a0a0a] rounded-3xl border border-slate-200 dark:border-zinc-800 p-6 shadow-sm">
+                    <div className="bg-card rounded-3xl border border-slate-200 dark:border-zinc-800 p-6 shadow-sm">
                         <h2 className="text-sm font-bold text-slate-800 dark:text-white uppercase tracking-wider mb-4">Account Actions</h2>
                         <div className="space-y-3">
                             <button className="w-full flex items-center justify-center gap-2 h-11 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-zinc-900 dark:hover:bg-zinc-800 text-slate-700 dark:text-white text-sm font-bold transition-colors">

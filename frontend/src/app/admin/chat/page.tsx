@@ -135,7 +135,6 @@ export default function AdminChat() {
     return (
         <div className="max-w-[1600px] mx-auto h-[calc(100vh-6rem)] md:h-[calc(100vh-8rem)] flex flex-col relative pb-4 md:pb-8">
             {/* Ambient Background */}
-            <div className="fixed top-0 left-1/2 -translate-x-1/2 w-full h-[500px] bg-emerald-500/5 dark:bg-emerald-600/5 blur-[120px] rounded-full pointer-events-none -z-10 mix-blend-screen dark:mix-blend-lighten"></div>
 
             <motion.div initial={{opacity:0, y:-20}} animate={{opacity:1, y:0}} className="mb-6 flex items-center justify-between relative z-10">
                 <div>
@@ -144,10 +143,10 @@ export default function AdminChat() {
                 </div>
             </motion.div>
 
-            <motion.div initial={{opacity:0, y:20}} animate={{opacity:1, y:0}} transition={{delay:0.1}} className="flex-1 bg-white dark:bg-black backdrop-blur-2xl rounded-[2.5rem] shadow-2xl border border-slate-200/60 dark:border-zinc-800/60 overflow-hidden flex relative z-10">
+            <motion.div initial={{opacity:0, y:20}} animate={{opacity:1, y:0}} transition={{delay:0.1}} className="flex-1 bg-card backdrop-blur-2xl rounded-[2.5rem] shadow-2xl border border-slate-200/60 dark:border-zinc-800/60 overflow-hidden flex relative z-10">
 
                 {/* Sidebar Contacts */}
-                <div className={`w-full md:w-[380px] border-r border-slate-200 dark:border-zinc-800/80 flex flex-col bg-white/50 dark:bg-zinc-950/40 ${selectedTenant ? 'hidden md:flex' : 'flex'}`}>
+                <div className={`w-full md:w-[380px] border-r border-slate-200 dark:border-zinc-800/80 flex flex-col bg-card/50 ${selectedTenant ? 'hidden md:flex' : 'flex'}`}>
                     <div className="p-6 border-b border-slate-200 dark:border-zinc-800/80">
                         <div className="relative group">
                             <input 
@@ -155,7 +154,7 @@ export default function AdminChat() {
                                 placeholder="Search tenant or room..." 
                                 value={searchFilter}
                                 onChange={(e) => setSearchFilter(e.target.value)}
-                                className="w-full pl-12 pr-4 py-4 bg-white/60 dark:bg-zinc-900/60 border border-slate-200 dark:border-zinc-800 rounded-2xl text-sm font-bold focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none transition-all placeholder:text-slate-400 text-slate-900 dark:text-white shadow-inner" 
+                                className="w-full pl-12 pr-4 py-4 bg-card/60 border border-slate-200 dark:border-zinc-800 rounded-2xl text-sm font-bold focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none transition-all placeholder:text-slate-400 text-slate-900 dark:text-white shadow-inner" 
                             />
                             <svg className="w-5 h-5 text-slate-400 dark:text-zinc-500 absolute left-4 top-4 group-focus-within:text-emerald-500 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
                         </div>
@@ -184,7 +183,7 @@ export default function AdminChat() {
                                             {isSelected && <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1.5 h-1/2 bg-emerald-500 rounded-r-full shadow-[0_0_10px_rgba(16,185,129,0.8)]"></div>}
                                             <div className="flex items-center gap-4">
                                                 <div className="relative">
-                                                    <div className={`w-12 h-12 rounded-xl flex items-center justify-center font-black text-xl shadow-lg transition-colors ${isSelected ? 'bg-gradient-to-br from-emerald-400 to-teal-500 text-white' : 'bg-white dark:bg-zinc-800 text-slate-600 dark:text-zinc-400 border border-slate-200 dark:border-zinc-700'}`}>
+                                                    <div className={`w-12 h-12 rounded-xl flex items-center justify-center font-black text-xl shadow-lg transition-colors ${isSelected ? 'bg-gradient-to-br from-emerald-400 to-teal-500 text-white' : 'bg-card text-slate-600 dark:text-zinc-400 border border-slate-200 dark:border-zinc-700'}`}>
                                                         {conv.name.charAt(0)}
                                                     </div>
                                                     {unreadCount > 0 && (
@@ -204,7 +203,7 @@ export default function AdminChat() {
                                                         <p className={`text-xs truncate ${unreadCount > 0 ? 'text-slate-900 dark:text-white font-bold' : 'text-slate-500 dark:text-zinc-400 font-medium'}`}>
                                                             {conv.last_message ? conv.last_message : <span className="italic opacity-60">No messages yet</span>}
                                                         </p>
-                                                        <span className="text-[9px] font-black text-slate-400 dark:text-zinc-500 uppercase shrink-0 px-2 py-0.5 rounded-full border border-slate-200 dark:border-zinc-700 bg-white/50 dark:bg-zinc-900/50">
+                                                        <span className="text-[9px] font-black text-slate-400 dark:text-zinc-500 uppercase shrink-0 px-2 py-0.5 rounded-full border border-slate-200 dark:border-zinc-700 bg-card/50">
                                                             Rm {conv.room_number || 'N/A'}
                                                         </span>
                                                     </div>
@@ -222,9 +221,9 @@ export default function AdminChat() {
                 <div className={`flex-1 flex flex-col bg-transparent relative ${!selectedTenant ? 'hidden md:flex' : 'flex'}`}>
                     {selectedTenant ? (
                         <>
-                            <div className="px-6 py-5 border-b border-slate-200 dark:border-zinc-800/80 flex justify-between items-center bg-white/60 dark:bg-zinc-950/60 backdrop-blur-xl z-10">
+                            <div className="px-6 py-5 border-b border-slate-200 dark:border-zinc-800/80 flex justify-between items-center bg-card/60 backdrop-blur-xl z-10">
                                 <div className="flex items-center gap-4">
-                                    <button onClick={() => setSelectedTenant(null)} className="md:hidden w-10 h-10 rounded-xl bg-white dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 flex items-center justify-center text-slate-500 hover:text-slate-900 dark:text-zinc-400 dark:hover:text-white shadow-sm transition-colors">
+                                    <button onClick={() => setSelectedTenant(null)} className="md:hidden w-10 h-10 rounded-xl bg-card border border-slate-200 dark:border-zinc-700 flex items-center justify-center text-slate-500 hover:text-slate-900 dark:text-zinc-400 dark:hover:text-white shadow-sm transition-colors">
                                         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M15 19l-7-7 7-7"></path></svg>
                                     </button>
                                     <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-emerald-400 to-teal-500 text-white flex items-center justify-center font-black text-xl">
@@ -250,7 +249,7 @@ export default function AdminChat() {
                                 <div className="min-h-full flex flex-col justify-end space-y-6">
                                 {messages.length === 0 ? (
                                     <motion.div initial={{opacity:0, scale:0.9}} animate={{opacity:1, scale:1}} className="h-full flex items-center justify-center flex-col gap-4 opacity-50 py-20">
-                                        <div className="w-20 h-20 bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-3xl flex items-center justify-center text-4xl shadow-xl transform -rotate-6">
+                                        <div className="w-20 h-20 bg-card border border-slate-200 dark:border-zinc-800 rounded-3xl flex items-center justify-center text-4xl shadow-xl transform -rotate-6">
                                             💬
                                         </div>
                                         <div className="text-center">
@@ -274,7 +273,7 @@ export default function AdminChat() {
                                                     <div className={`
                                                         ${isFromAdmin 
                                                             ? 'bg-gradient-to-br from-emerald-500 to-teal-500 text-white rounded-[1.5rem] rounded-tr-sm shadow-[0_5px_15px_rgba(16,185,129,0.2)]' 
-                                                            : 'bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 text-slate-900 dark:text-white rounded-[1.5rem] rounded-tl-sm shadow-sm'
+                                                            : 'bg-card border border-slate-200 dark:border-zinc-800 text-slate-900 dark:text-white rounded-[1.5rem] rounded-tl-sm shadow-sm'
                                                         } 
                                                         px-5 py-4 text-sm font-bold leading-relaxed
                                                     `}>
@@ -302,8 +301,8 @@ export default function AdminChat() {
                                 </div>
                             </div>
 
-                            <div className="p-4 md:p-6 bg-white/60 dark:bg-zinc-950/60 backdrop-blur-xl border-t border-slate-200 dark:border-zinc-800/80 z-10">
-                                <form onSubmit={handleSend} className="flex gap-3 items-center bg-white dark:bg-zinc-900 p-2 rounded-2xl border border-slate-200 dark:border-zinc-800 focus-within:border-emerald-500/50 focus-within:ring-4 focus-within:ring-emerald-500/10 transition-all shadow-inner">
+                            <div className="p-4 md:p-6 bg-card/60 backdrop-blur-xl border-t border-slate-200 dark:border-zinc-800/80 z-10">
+                                <form onSubmit={handleSend} className="flex gap-3 items-center bg-card p-2 rounded-2xl border border-slate-200 dark:border-zinc-800 focus-within:border-emerald-500/50 focus-within:ring-4 focus-within:ring-emerald-500/10 transition-all shadow-inner">
                                     <input 
                                         type="text" 
                                         value={newMessage}
@@ -325,7 +324,7 @@ export default function AdminChat() {
                         </>
                     ) : (
                         <div className="flex-1 flex flex-col items-center justify-center text-slate-500 dark:text-zinc-500 gap-6 opacity-80 relative z-10 py-10">
-                            <motion.div initial={{scale:0.8, opacity:0}} animate={{scale:1, opacity:1}} transition={{type:"spring", bounce:0.5}} className="w-32 h-32 bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-[2rem] flex items-center justify-center text-5xl shadow-2xl relative">
+                            <motion.div initial={{scale:0.8, opacity:0}} animate={{scale:1, opacity:1}} transition={{type:"spring", bounce:0.5}} className="w-32 h-32 bg-card border border-slate-200 dark:border-zinc-800 rounded-[2rem] flex items-center justify-center text-5xl shadow-2xl relative">
                                 📬
                                 <div className="absolute -top-3 -right-3 w-8 h-8 bg-emerald-500 rounded-full animate-pulse border-4 border-white dark:border-[#0a0a0a]"></div>
                             </motion.div>

@@ -35,8 +35,10 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         try {
             const { data } = await api.get('/admin/chat/unread');
             setUnreadCount(data.unreadCount);
-        } catch (error) {
-            console.error('Failed to fetch unread count', error);
+        } catch (error: any) {
+            if (error.response?.status !== 401) {
+                console.error('Failed to fetch unread count', error);
+            }
         }
     };
 
@@ -46,20 +48,25 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             if (data && typeof data.pendingCount !== 'undefined') {
                 setPendingTenantsCount(data.pendingCount);
             }
-        } catch (error) {
-            console.warn('Pending tenant count endpoint not found. Defaulting to 0.');
+        } catch (error: any) {
+            if (error.response?.status !== 401) {
+                console.warn('Pending tenant count endpoint not found. Defaulting to 0.');
+            }
             setPendingTenantsCount(0); 
         }
     };
 
     useEffect(() => {
         const userStr = localStorage.getItem('user');
+        const token = localStorage.getItem('token');
         if (userStr) {
             const user = JSON.parse(userStr);
             setAdminName(user.name);
             if (user.email) setAdminEmail(user.email);
         }
         
+        if (!token) return;
+
         const fetchData = () => {
             fetchUnreadCount();
             fetchPendingTenantCount();
@@ -137,7 +144,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
     return (
         <SidebarProvider>
-            <div className="flex h-screen w-full bg-black text-slate-900 dark:text-zinc-50 overflow-hidden selection:bg-cyan-500/30">
+            <div className="flex h-screen w-full bg-background text-foreground overflow-hidden selection:bg-cyan-500/30">
                 <AppSidebar 
                     navLabel="Platform Overview"
                     navItems={mappedNavItems}
@@ -152,7 +159,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
                 <SidebarInset className="flex-1 flex flex-col relative w-full h-[100dvh] overflow-hidden bg-transparent">
                     {/* Modern Top Header */}
-                    <header className="flex h-16 shrink-0 items-center justify-between gap-4 border-b border-slate-200/60 dark:border-white/5 bg-white dark:bg-[#0a0a0a] backdrop-blur-2xl px-4 sm:px-6 lg:px-8 sticky top-0 z-20 shadow-none">
+                    <header className="flex h-16 shrink-0 items-center justify-between gap-4 border-b border-border bg-background/95 backdrop-blur-2xl px-4 sm:px-6 lg:px-8 sticky top-0 z-20 shadow-none">
                         <div className="flex items-center gap-3 sm:gap-4 flex-1">
                             <SidebarTrigger className="-ml-2 text-slate-500 hover:text-slate-900 dark:text-zinc-400 dark:hover:text-white" />
                             <div className="h-5 w-px bg-slate-200 dark:bg-zinc-800 hidden sm:block" />
@@ -188,7 +195,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                                         </span>
                                     )}
                                 </DropdownMenuTrigger>
-                                <DropdownMenuContent align="end" className="w-80 p-0 border border-slate-200 dark:border-zinc-800 rounded-xl overflow-hidden shadow-xl bg-white dark:bg-[#0a0a0a]">
+                                <DropdownMenuContent align="end" className="w-80 p-0 border border-slate-200 dark:border-zinc-800 rounded-xl overflow-hidden shadow-xl bg-card">
                                     <div className="flex items-center justify-between p-4 border-b border-slate-100 dark:border-zinc-800">
                                         <span className="font-bold text-sm text-slate-800 dark:text-white">Notifications</span>
                                         <div className="flex gap-3 text-xs font-semibold">
@@ -241,7 +248,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                     </header>
 
                     {/* Main Content Area */}
-                    <div className="flex-1 flex flex-col overflow-y-auto overflow-x-hidden scrollbar-thin scrollbar-thumb-slate-300 dark:scrollbar-thumb-zinc-700 bg-slate-50 dark:bg-black">
+                    <div className="flex-1 flex flex-col overflow-y-auto overflow-x-hidden custom-scrollbar bg-background">
                         <div className="px-3 py-4 md:px-4 md:py-6 lg:px-5 lg:py-6 relative z-10">
                             <AnimatePresence mode="wait">
                                 <PageTransition key={`${pathname}-${refreshKey}`}>

@@ -3,6 +3,7 @@ import { useEffect, useState, useMemo } from 'react';
 import api from '@/lib/api';
 import { motion, AnimatePresence, Variants } from 'framer-motion';
 import { toast } from 'sonner';
+import CustomSelect from '@/components/CustomSelect';
 
 interface Request {
     id: number;
@@ -145,14 +146,14 @@ export default function AdminRequests() {
                 dot: 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.8)]'
             };
             case 'Cancelled': return {
-                bg: 'bg-slate-50 dark:bg-zinc-500/10',
+                bg: 'bg-secondary/50',
                 text: 'text-slate-600 dark:text-zinc-400',
                 border: 'border-slate-200 dark:border-zinc-500/20',
                 glow: '',
                 dot: 'bg-slate-500'
             };
             default: return {
-                bg: 'bg-slate-50 dark:bg-zinc-500/10',
+                bg: 'bg-secondary/50',
                 text: 'text-slate-600 dark:text-zinc-400',
                 border: 'border-slate-200 dark:border-zinc-500/20',
                 glow: '',
@@ -192,7 +193,7 @@ export default function AdminRequests() {
                 dot: 'bg-blue-500'
             };
             default: return {
-                bg: 'bg-slate-50 dark:bg-zinc-500/10',
+                bg: 'bg-secondary/50',
                 text: 'text-slate-600 dark:text-zinc-400',
                 border: 'border-slate-200 dark:border-zinc-500/20',
                 glow: '',
@@ -213,7 +214,6 @@ export default function AdminRequests() {
     return (
         <div className="max-w-[1600px] mx-auto pb-10 relative">
             {/* Ambient Background */}
-            <div className="fixed top-0 left-1/2 -translate-x-1/2 w-full h-[500px] bg-blue-500/5 dark:bg-blue-600/5 blur-[120px] rounded-full pointer-events-none -z-10 mix-blend-screen dark:mix-blend-lighten"></div>
 
             <motion.div initial={{opacity:0, y:-20}} animate={{opacity:1, y:0}} className="flex flex-col md:flex-row md:items-end justify-between gap-6 relative z-10 mb-8">
                 <div>
@@ -235,7 +235,7 @@ export default function AdminRequests() {
             </motion.div>
 
             {/* Filters */}
-            <motion.div initial={{opacity:0, y:20}} animate={{opacity:1, y:0}} transition={{delay: 0.1}} className="flex flex-col xl:flex-row gap-4 relative z-10 mb-8 bg-white dark:bg-black backdrop-blur-2xl p-4 rounded-[2rem] border border-slate-200/60 dark:border-zinc-800/60 shadow-xl dark:shadow-2xl">
+            <motion.div initial={{opacity:0, y:20}} animate={{opacity:1, y:0}} transition={{delay: 0.1}} className="flex flex-col xl:flex-row gap-4 relative z-10 mb-8 bg-card backdrop-blur-2xl p-4 rounded-[2rem] border border-slate-200/60 dark:border-zinc-800/60 shadow-xl dark:shadow-2xl">
                 <div className="relative group flex-1">
                     <div className="absolute inset-y-0 left-0 pl-5 flex items-center pointer-events-none text-slate-400 dark:text-zinc-500 group-focus-within:text-blue-500 transition-colors">
                         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
@@ -245,61 +245,55 @@ export default function AdminRequests() {
                         value={searchTerm} 
                         onChange={(e) => setSearchTerm(e.target.value)} 
                         placeholder="Search issue or tenant..." 
-                        className="w-full pl-14 pr-6 py-4 rounded-2xl bg-white/50 dark:bg-zinc-900/50 border border-slate-200 dark:border-zinc-800 text-slate-900 dark:text-white placeholder-zinc-500 font-bold text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all shadow-inner" 
+                        className="w-full pl-14 pr-6 py-4 rounded-2xl bg-card/50 border border-slate-200 dark:border-zinc-800 text-slate-900 dark:text-white placeholder-zinc-500 font-bold text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all shadow-inner" 
                     />
                 </div>
                 
                 <div className="flex flex-col sm:flex-row gap-4 shrink-0">
                     <div className="relative w-full sm:w-40">
-                        <select 
+                        <CustomSelect 
                             value={statusFilter} 
-                            onChange={(e) => setStatusFilter(e.target.value)} 
-                            className="w-full py-4 pl-5 pr-10 rounded-2xl bg-white/50 dark:bg-zinc-900/50 border border-slate-200 dark:border-zinc-800 text-slate-900 dark:text-white font-bold text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all appearance-none cursor-pointer"
-                        >
-                            <option value="All">All Statuses</option>
-                            <option value="Pending">Pending</option>
-                            <option value="In Progress">In Progress</option>
-                            <option value="Resolved">Resolved</option>
-                            <option value="Cancelled">Cancelled</option>
-                        </select>
-                        <div className="absolute inset-y-0 right-0 pr-4 flex items-center pointer-events-none text-slate-500">
-                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M19 9l-7 7-7-7"></path></svg>
-                        </div>
+                            onChange={(val) => setStatusFilter(val)} 
+                            options={[
+                                { value: "All", label: "All Statuses" },
+                                { value: "Pending", label: "Pending" },
+                                { value: "In Progress", label: "In Progress" },
+                                { value: "Resolved", label: "Resolved" },
+                                { value: "Cancelled", label: "Cancelled" }
+                            ]}
+                            className="w-full py-4 pl-5 pr-10 rounded-2xl bg-card/50 border border-slate-200 dark:border-zinc-800 text-slate-900 dark:text-white font-bold text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                        />
                     </div>
 
                     <div className="relative w-full sm:w-40">
-                        <select 
+                        <CustomSelect 
                             value={priorityFilter} 
-                            onChange={(e) => setPriorityFilter(e.target.value)} 
-                            className="w-full py-4 pl-5 pr-10 rounded-2xl bg-white/50 dark:bg-zinc-900/50 border border-slate-200 dark:border-zinc-800 text-slate-900 dark:text-white font-bold text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all appearance-none cursor-pointer"
-                        >
-                            <option value="All">All Priorities</option>
-                            <option value="Urgent">Urgent</option>
-                            <option value="High">High</option>
-                            <option value="Medium">Medium</option>
-                            <option value="Low">Low</option>
-                            <option value="Normal">Normal</option>
-                        </select>
-                        <div className="absolute inset-y-0 right-0 pr-4 flex items-center pointer-events-none text-slate-500">
-                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M19 9l-7 7-7-7"></path></svg>
-                        </div>
+                            onChange={(val) => setPriorityFilter(val)} 
+                            options={[
+                                { value: "All", label: "All Priorities" },
+                                { value: "Urgent", label: "Urgent" },
+                                { value: "High", label: "High" },
+                                { value: "Medium", label: "Medium" },
+                                { value: "Low", label: "Low" },
+                                { value: "Normal", label: "Normal" }
+                            ]}
+                            className="w-full py-4 pl-5 pr-10 rounded-2xl bg-card/50 border border-slate-200 dark:border-zinc-800 text-slate-900 dark:text-white font-bold text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                        />
                     </div>
 
                     <div className="relative w-full sm:w-40">
-                        <select 
+                        <CustomSelect 
                             value={categoryFilter} 
-                            onChange={(e) => setCategoryFilter(e.target.value)} 
-                            className="w-full py-4 pl-5 pr-10 rounded-2xl bg-white/50 dark:bg-zinc-900/50 border border-slate-200 dark:border-zinc-800 text-slate-900 dark:text-white font-bold text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all appearance-none cursor-pointer"
-                        >
-                            <option value="All">All Categories</option>
-                            <option value="Plumbing">Plumbing</option>
-                            <option value="Electrical">Electrical</option>
-                            <option value="Furniture">Furniture</option>
-                            <option value="Other">Other</option>
-                        </select>
-                        <div className="absolute inset-y-0 right-0 pr-4 flex items-center pointer-events-none text-slate-500">
-                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M19 9l-7 7-7-7"></path></svg>
-                        </div>
+                            onChange={(val) => setCategoryFilter(val)} 
+                            options={[
+                                { value: "All", label: "All Categories" },
+                                { value: "Plumbing", label: "Plumbing" },
+                                { value: "Electrical", label: "Electrical" },
+                                { value: "Furniture", label: "Furniture" },
+                                { value: "Other", label: "Other" }
+                            ]}
+                            className="w-full py-4 pl-5 pr-10 rounded-2xl bg-card/50 border border-slate-200 dark:border-zinc-800 text-slate-900 dark:text-white font-bold text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                        />
                     </div>
                 </div>
             </motion.div>
@@ -313,8 +307,8 @@ export default function AdminRequests() {
                     </div>
                 </div>
             ) : filteredRequests.length === 0 ? (
-                <motion.div initial={{opacity:0}} animate={{opacity:1}} className="bg-white dark:bg-black backdrop-blur-2xl rounded-[2.5rem] border border-slate-200 dark:border-zinc-800 p-16 text-center shadow-2xl">
-                    <div className="w-24 h-24 bg-slate-100 dark:bg-zinc-900 rounded-3xl flex items-center justify-center mx-auto mb-6 shadow-inner border border-slate-200 dark:border-zinc-800">
+                <motion.div initial={{opacity:0}} animate={{opacity:1}} className="bg-card backdrop-blur-2xl rounded-[2.5rem] border border-slate-200 dark:border-zinc-800 p-16 text-center shadow-2xl">
+                    <div className="w-24 h-24 bg-secondary rounded-3xl flex items-center justify-center mx-auto mb-6 shadow-inner border border-slate-200 dark:border-zinc-800">
                         <svg className="w-10 h-10 text-emerald-500 stroke-[2.5]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0z" /></svg>
                     </div>
                     <h3 className="text-xl font-black text-slate-900 dark:text-white mb-2">No maintenance requests found</h3>
@@ -329,19 +323,19 @@ export default function AdminRequests() {
                         return (
                             <motion.div key={req.id} variants={itemVariants} className="relative group rounded-3xl p-[1px] overflow-hidden bg-gradient-to-b from-slate-200 to-slate-100 dark:from-white/10 dark:to-transparent hover:shadow-[0_0_40px_rgba(0,0,0,0.1)] dark:hover:shadow-[0_0_40px_rgba(255,255,255,0.05)] transition-shadow duration-500">
                                 <div className="absolute inset-0 bg-gradient-to-br from-blue-500/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 blur-xl"></div>
-                                <div className="h-full w-full bg-white dark:bg-black backdrop-blur-3xl rounded-[23px] p-6 flex flex-col relative overflow-hidden transition-transform duration-500 group-hover:scale-[0.99]">
+                                <div className="h-full w-full bg-card backdrop-blur-3xl rounded-[23px] p-6 flex flex-col relative overflow-hidden transition-transform duration-500 group-hover:scale-[0.99]">
                                     
                                     {/* Top Row: Category Icon & Badges */}
                                     <div className="flex justify-between items-start mb-5">
-                                        <div className="w-12 h-12 rounded-2xl bg-slate-100 dark:bg-zinc-800/80 border border-slate-200 dark:border-zinc-700 flex items-center justify-center text-xl shadow-inner group-hover:scale-110 transition-transform duration-500">
+                                        <div className="w-12 h-12 rounded-2xl bg-secondary/80 border border-slate-200 dark:border-zinc-700 flex items-center justify-center text-xl shadow-inner group-hover:scale-110 transition-transform duration-500">
                                             {getCategoryIcon(req.category)}
                                         </div>
                                         <div className="flex flex-col items-end gap-2">
-                                            <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full border bg-white/50 dark:bg-[#0a0a0a]/50 backdrop-blur-md ${sStyle.border}`}>
+                                            <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full border bg-white/50 dark:bg-card/50 backdrop-blur-md ${sStyle.border}`}>
                                                 <div className={`w-1.5 h-1.5 rounded-full ${sStyle.dot}`}></div>
                                                 <span className={`text-[9px] font-black uppercase tracking-widest ${sStyle.text}`}>{req.status}</span>
                                             </div>
-                                            <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md border bg-white/50 dark:bg-[#0a0a0a]/50 backdrop-blur-md ${pStyle.border}`}>
+                                            <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md border bg-white/50 dark:bg-card/50 backdrop-blur-md ${pStyle.border}`}>
                                                 <svg className={`w-3 h-3 ${pStyle.text}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
                                                 <span className={`text-[9px] font-black uppercase tracking-widest ${pStyle.text}`}>{req.priority}</span>
                                             </div>
@@ -360,7 +354,7 @@ export default function AdminRequests() {
                                     </div>
 
                                     {/* Tenant Info */}
-                                    <div className="bg-slate-50 dark:bg-zinc-900/50 rounded-2xl p-4 border border-slate-200 dark:border-zinc-800 flex items-center gap-3">
+                                    <div className="bg-secondary/50 rounded-2xl p-4 border border-slate-200 dark:border-zinc-800 flex items-center gap-3">
                                         <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-400 to-indigo-500 flex items-center justify-center text-white font-black text-xs shadow-md">
                                             {req.tenant_name.charAt(0)}
                                         </div>
@@ -371,11 +365,11 @@ export default function AdminRequests() {
                                     </div>
 
                                     {/* Action Hover Overlay */}
-                                    <div className="absolute inset-0 bg-white/60 dark:bg-[#0a0a0a]/80 backdrop-blur-sm opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center gap-3">
-                                        <button onClick={() => setViewModalReq(req)} className="w-12 h-12 rounded-2xl bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-700 shadow-xl flex items-center justify-center text-slate-700 dark:text-zinc-300 hover:text-blue-500 hover:border-blue-500 transition-colors hover:scale-110 active:scale-95" title="View Details">
+                                    <div className="absolute inset-0 bg-white/60 dark:bg-card/80 backdrop-blur-sm opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center gap-3">
+                                        <button onClick={() => setViewModalReq(req)} className="w-12 h-12 rounded-2xl bg-card border border-slate-200 dark:border-zinc-700 shadow-xl flex items-center justify-center text-slate-700 dark:text-zinc-300 hover:text-blue-500 hover:border-blue-500 transition-colors hover:scale-110 active:scale-95" title="View Details">
                                             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path></svg>
                                         </button>
-                                        <button onClick={() => openUpdateModal(req)} className="w-12 h-12 rounded-2xl bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-700 shadow-xl flex items-center justify-center text-slate-700 dark:text-zinc-300 hover:text-indigo-500 hover:border-indigo-500 transition-colors hover:scale-110 active:scale-95" title="Update Status">
+                                        <button onClick={() => openUpdateModal(req)} className="w-12 h-12 rounded-2xl bg-card border border-slate-200 dark:border-zinc-700 shadow-xl flex items-center justify-center text-slate-700 dark:text-zinc-300 hover:text-indigo-500 hover:border-indigo-500 transition-colors hover:scale-110 active:scale-95" title="Update Status">
                                             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg>
                                         </button>
                                     </div>
@@ -391,11 +385,11 @@ export default function AdminRequests() {
             {/* View Modal */}
             {viewModalReq && (
                 <motion.div initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}} className="fixed inset-0 bg-black/60 backdrop-blur-md z-[100] flex items-center justify-center p-4">
-                    <motion.div initial={{scale:0.9, y:20, opacity:0}} animate={{scale:1, y:0, opacity:1}} exit={{scale:0.95, y:10, opacity:0}} transition={{type: "spring", damping: 25, stiffness: 300}} className="bg-linear-to-br from-white/80 to-slate-50/50 dark:from-[#0a0a0a]/80 dark:to-transparent backdrop-blur-3xl rounded-[2.5rem] w-full max-w-3xl overflow-hidden shadow-[0_0_50px_rgba(0,0,0,0.3)] border border-slate-200 dark:border-zinc-800 flex flex-col max-h-[90vh]">
-                        <div className="p-8 border-b border-slate-200 dark:border-zinc-800 bg-white/50 dark:bg-zinc-900/50 flex justify-between items-start gap-4">
+                    <motion.div initial={{scale:0.9, y:20, opacity:0}} animate={{scale:1, y:0, opacity:1}} exit={{scale:0.95, y:10, opacity:0}} transition={{type: "spring", damping: 25, stiffness: 300}} className="bg-linear-to-br from-white/80 to-slate-50/50 dark:from-background/80 dark:to-transparent backdrop-blur-3xl rounded-[2.5rem] w-full max-w-3xl overflow-hidden shadow-[0_0_50px_rgba(0,0,0,0.3)] border border-slate-200 dark:border-zinc-800 flex flex-col max-h-[90vh]">
+                        <div className="p-8 border-b border-slate-200 dark:border-zinc-800 bg-card/50 flex justify-between items-start gap-4">
                             <div>
                                 <div className="flex items-center gap-3 mb-2">
-                                    <span className="text-[10px] font-black text-slate-400 dark:text-zinc-500 uppercase tracking-widest bg-slate-100 dark:bg-zinc-800 px-3 py-1 rounded-lg">Req #{viewModalReq.id}</span>
+                                    <span className="text-[10px] font-black text-slate-400 dark:text-zinc-500 uppercase tracking-widest bg-secondary px-3 py-1 rounded-lg">Req #{viewModalReq.id}</span>
                                     {(() => {
                                         const sStyle = getStatusStyle(viewModalReq.status);
                                         return (
@@ -408,7 +402,7 @@ export default function AdminRequests() {
                                 </div>
                                 <h2 className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white tracking-tight">{viewModalReq.title}</h2>
                             </div>
-                            <button onClick={() => setViewModalReq(null)} className="w-10 h-10 rounded-xl bg-slate-100 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 hover:bg-slate-200 dark:hover:bg-zinc-700 flex items-center justify-center text-slate-500 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white transition-colors shrink-0">
+                            <button onClick={() => setViewModalReq(null)} className="w-10 h-10 rounded-xl bg-secondary border border-slate-200 dark:border-zinc-700 hover:bg-slate-200 dark:hover:bg-zinc-700 flex items-center justify-center text-slate-500 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white transition-colors shrink-0">
                                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M6 18L18 6M6 6l12 12"></path></svg>
                             </button>
                         </div>
@@ -416,7 +410,7 @@ export default function AdminRequests() {
                         <div className="p-8 overflow-y-auto custom-scrollbar w-full">
                             
                             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
-                                <div className="bg-slate-50 dark:bg-zinc-900/50 border border-slate-200 dark:border-zinc-800 p-5 rounded-2xl shadow-inner">
+                                <div className="bg-secondary/50 border border-slate-200 dark:border-zinc-800 p-5 rounded-2xl shadow-inner">
                                     <p className="text-[9px] font-black text-slate-400 dark:text-zinc-500 uppercase tracking-widest mb-1 flex items-center gap-1.5">
                                         <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>
                                         Reported By
@@ -424,14 +418,14 @@ export default function AdminRequests() {
                                     <p className="font-bold text-slate-900 dark:text-white text-base">{viewModalReq.tenant_name}</p>
                                     <p className="text-[10px] font-bold text-slate-500 dark:text-zinc-500 mt-0.5">Room {viewModalReq.room_number || 'N/A'}</p>
                                 </div>
-                                <div className="bg-slate-50 dark:bg-zinc-900/50 border border-slate-200 dark:border-zinc-800 p-5 rounded-2xl shadow-inner">
+                                <div className="bg-secondary/50 border border-slate-200 dark:border-zinc-800 p-5 rounded-2xl shadow-inner">
                                     <p className="text-[9px] font-black text-slate-400 dark:text-zinc-500 uppercase tracking-widest mb-1 flex items-center gap-1.5">
                                         <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
                                         Date Reported
                                     </p>
                                     <p className="font-bold text-slate-900 dark:text-white text-base">{new Date(viewModalReq.created_at).toLocaleDateString()}</p>
                                 </div>
-                                <div className="bg-slate-50 dark:bg-zinc-900/50 border border-slate-200 dark:border-zinc-800 p-5 rounded-2xl shadow-inner">
+                                <div className="bg-secondary/50 border border-slate-200 dark:border-zinc-800 p-5 rounded-2xl shadow-inner">
                                     <p className="text-[9px] font-black text-slate-400 dark:text-zinc-500 uppercase tracking-widest mb-1 flex items-center gap-1.5">
                                         <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"></path></svg>
                                         Category
@@ -442,7 +436,7 @@ export default function AdminRequests() {
 
                             <div className="mb-8">
                                 <h3 className="text-[10px] font-black text-slate-500 dark:text-zinc-500 uppercase tracking-widest mb-3">Description</h3>
-                                <div className="bg-slate-50 dark:bg-zinc-900/30 border border-slate-200 dark:border-zinc-800 border-dashed rounded-2xl p-6 text-sm font-medium text-slate-700 dark:text-zinc-300 leading-relaxed whitespace-pre-wrap">
+                                <div className="bg-secondary/30 border border-slate-200 dark:border-zinc-800 border-dashed rounded-2xl p-6 text-sm font-medium text-slate-700 dark:text-zinc-300 leading-relaxed whitespace-pre-wrap">
                                     {viewModalReq.description}
                                 </div>
                             </div>
@@ -450,7 +444,7 @@ export default function AdminRequests() {
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
                                 <div>
                                     <h3 className="text-[10px] font-black text-slate-500 dark:text-zinc-500 uppercase tracking-widest mb-3">Assigned Staff</h3>
-                                    <div className="bg-slate-50 dark:bg-zinc-900/50 border border-slate-200 dark:border-zinc-800 rounded-2xl p-4 font-bold text-slate-900 dark:text-white text-sm">
+                                    <div className="bg-secondary/50 border border-slate-200 dark:border-zinc-800 rounded-2xl p-4 font-bold text-slate-900 dark:text-white text-sm">
                                         {viewModalReq.assigned_to ? (
                                             <div className="flex items-center gap-3">
                                                 <div className="w-8 h-8 rounded-full bg-slate-200 dark:bg-zinc-700 flex items-center justify-center text-xs">
@@ -465,7 +459,7 @@ export default function AdminRequests() {
                                 </div>
                                 <div>
                                     <h3 className="text-[10px] font-black text-slate-500 dark:text-zinc-500 uppercase tracking-widest mb-3">Scheduling</h3>
-                                    <div className="bg-slate-50 dark:bg-zinc-900/50 border border-slate-200 dark:border-zinc-800 rounded-2xl p-4 font-bold text-sm space-y-3">
+                                    <div className="bg-secondary/50 border border-slate-200 dark:border-zinc-800 rounded-2xl p-4 font-bold text-sm space-y-3">
                                         <div className="flex justify-between items-center border-b border-slate-200 dark:border-zinc-800 pb-2">
                                             <span className="text-[10px] text-slate-500 dark:text-zinc-500 uppercase tracking-widest">Scheduled</span>
                                             <span className="text-slate-900 dark:text-white">{viewModalReq.scheduled_date ? new Date(viewModalReq.scheduled_date).toLocaleDateString() : <span className="text-slate-400 italic">Not set</span>}</span>
@@ -487,8 +481,8 @@ export default function AdminRequests() {
 
                         </div>
 
-                        <div className="p-6 border-t border-slate-200 dark:border-zinc-800 bg-slate-50/50 dark:bg-zinc-900/30 flex justify-end gap-3">
-                            <button onClick={() => setViewModalReq(null)} className="px-6 py-3.5 font-bold text-slate-500 dark:text-zinc-400 bg-slate-100 dark:bg-zinc-800 hover:bg-slate-200 dark:hover:bg-zinc-700 rounded-xl transition-colors text-xs uppercase tracking-widest">Close</button>
+                        <div className="p-6 border-t border-slate-200 dark:border-zinc-800 bg-secondary/50 flex justify-end gap-3">
+                            <button onClick={() => setViewModalReq(null)} className="px-6 py-3.5 font-bold text-slate-500 dark:text-zinc-400 bg-secondary hover:bg-slate-200 dark:hover:bg-zinc-700 rounded-xl transition-colors text-xs uppercase tracking-widest">Close</button>
                             <button onClick={() => { const req = viewModalReq; setViewModalReq(null); openUpdateModal(req); }} className="px-6 py-3.5 font-bold bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white rounded-xl transition-all shadow-[0_0_20px_rgba(79,70,229,0.3)] hover:shadow-[0_0_30px_rgba(79,70,229,0.5)] flex items-center justify-center gap-2 text-xs uppercase tracking-widest">
                                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg>
                                 Edit Request
@@ -501,13 +495,13 @@ export default function AdminRequests() {
             {/* Update Modal */}
             {updateModalReq && (
                 <motion.div initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}} className="fixed inset-0 bg-black/60 backdrop-blur-md z-[100] flex items-center justify-center p-4">
-                    <motion.div initial={{scale:0.9, y:20, opacity:0}} animate={{scale:1, y:0, opacity:1}} exit={{scale:0.95, y:10, opacity:0}} transition={{type: "spring", damping: 25, stiffness: 300}} className="bg-linear-to-br from-white/80 to-slate-50/50 dark:from-[#0a0a0a]/80 dark:to-transparent backdrop-blur-3xl rounded-[2.5rem] w-full max-w-2xl overflow-hidden shadow-[0_0_50px_rgba(0,0,0,0.3)] border border-slate-200 dark:border-zinc-800 flex flex-col max-h-[90vh]">
-                        <div className="px-8 py-6 border-b border-slate-200 dark:border-zinc-800 flex justify-between items-center bg-white/50 dark:bg-zinc-900/50">
+                    <motion.div initial={{scale:0.9, y:20, opacity:0}} animate={{scale:1, y:0, opacity:1}} exit={{scale:0.95, y:10, opacity:0}} transition={{type: "spring", damping: 25, stiffness: 300}} className="bg-linear-to-br from-white/80 to-slate-50/50 dark:from-background/80 dark:to-transparent backdrop-blur-3xl rounded-[2.5rem] w-full max-w-2xl overflow-hidden shadow-[0_0_50px_rgba(0,0,0,0.3)] border border-slate-200 dark:border-zinc-800 flex flex-col max-h-[90vh]">
+                        <div className="px-8 py-6 border-b border-slate-200 dark:border-zinc-800 flex justify-between items-center bg-card/50">
                             <div>
                                 <h2 className="text-3xl font-black text-slate-900 dark:text-white tracking-tight">Update Request</h2>
                                 <p className="text-xs font-bold text-slate-500 dark:text-zinc-500 uppercase tracking-widest mt-1">Req #{updateModalReq.id}</p>
                             </div>
-                            <button onClick={() => setUpdateModalReq(null)} className="w-12 h-12 rounded-2xl bg-slate-100 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 hover:bg-slate-200 dark:hover:bg-zinc-700 flex items-center justify-center text-slate-500 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white transition-colors">
+                            <button onClick={() => setUpdateModalReq(null)} className="w-12 h-12 rounded-2xl bg-secondary border border-slate-200 dark:border-zinc-700 hover:bg-slate-200 dark:hover:bg-zinc-700 flex items-center justify-center text-slate-500 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white transition-colors">
                                 <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M6 18L18 6M6 6l12 12"></path></svg>
                             </button>
                         </div>
@@ -517,58 +511,51 @@ export default function AdminRequests() {
                                     <div className="space-y-2">
                                         <label className="text-[10px] font-black text-slate-500 dark:text-zinc-500 uppercase tracking-widest pl-1">Status</label>
                                         <div className="relative">
-                                            <select value={updateStatus} onChange={e => setUpdateStatus(e.target.value)} className="w-full px-5 py-4 rounded-2xl bg-slate-50 dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 text-slate-900 dark:text-white font-bold focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none appearance-none transition-all shadow-inner cursor-pointer">
-                                                <option value="Pending">Pending</option>
-                                                <option value="In Progress">In Progress</option>
-                                                <option value="Resolved">Resolved</option>
-                                                <option value="Cancelled">Cancelled</option>
-                                            </select>
-                                            <div className="absolute inset-y-0 right-0 pr-5 flex items-center pointer-events-none text-slate-500">
-                                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M19 9l-7 7-7-7"></path></svg>
-                                            </div>
+                                            <CustomSelect 
+                                                value={updateStatus} 
+                                                onChange={val => setUpdateStatus(val)} 
+                                                options={["Pending", "In Progress", "Resolved", "Cancelled"]}
+                                                className="w-full px-5 py-4 rounded-2xl bg-secondary border border-slate-200 dark:border-zinc-800 text-slate-900 dark:text-white font-bold focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all shadow-inner"
+                                            />
                                         </div>
                                     </div>
                                     <div className="space-y-2">
                                         <label className="text-[10px] font-black text-slate-500 dark:text-zinc-500 uppercase tracking-widest pl-1">Priority</label>
                                         <div className="relative">
-                                            <select value={updatePriority} onChange={e => setUpdatePriority(e.target.value)} className="w-full px-5 py-4 rounded-2xl bg-slate-50 dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 text-slate-900 dark:text-white font-bold focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none appearance-none transition-all shadow-inner cursor-pointer">
-                                                <option value="Urgent">Urgent</option>
-                                                <option value="High">High</option>
-                                                <option value="Medium">Medium</option>
-                                                <option value="Low">Low</option>
-                                                <option value="Normal">Normal</option>
-                                            </select>
-                                            <div className="absolute inset-y-0 right-0 pr-5 flex items-center pointer-events-none text-slate-500">
-                                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M19 9l-7 7-7-7"></path></svg>
-                                            </div>
+                                            <CustomSelect 
+                                                value={updatePriority} 
+                                                onChange={val => setUpdatePriority(val)} 
+                                                options={["Urgent", "High", "Medium", "Low", "Normal"]}
+                                                className="w-full px-5 py-4 rounded-2xl bg-secondary border border-slate-200 dark:border-zinc-800 text-slate-900 dark:text-white font-bold focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all shadow-inner"
+                                            />
                                         </div>
                                     </div>
                                 </div>
 
                                 <div className="space-y-2">
                                     <label className="text-[10px] font-black text-slate-500 dark:text-zinc-500 uppercase tracking-widest pl-1">Assigned Staff</label>
-                                    <input type="text" value={updateAssigned} onChange={e => setUpdateAssigned(e.target.value)} placeholder="e.g. John Doe (Plumber)" className="w-full px-5 py-4 rounded-2xl bg-slate-50 dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 text-slate-900 dark:text-white font-bold focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all shadow-inner placeholder-zinc-500" />
+                                    <input type="text" value={updateAssigned} onChange={e => setUpdateAssigned(e.target.value)} placeholder="e.g. John Doe (Plumber)" className="w-full px-5 py-4 rounded-2xl bg-secondary border border-slate-200 dark:border-zinc-800 text-slate-900 dark:text-white font-bold focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all shadow-inner placeholder-zinc-500" />
                                 </div>
 
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                                     <div className="space-y-2">
                                         <label className="text-[10px] font-black text-slate-500 dark:text-zinc-500 uppercase tracking-widest pl-1">Scheduled Date</label>
-                                        <input type="date" value={updateScheduledDate} onChange={e => setUpdateScheduledDate(e.target.value)} className="w-full px-5 py-4 rounded-2xl bg-slate-50 dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 text-slate-900 dark:text-white font-bold focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all shadow-inner [color-scheme:light_dark]" />
+                                        <input type="date" value={updateScheduledDate} onChange={e => setUpdateScheduledDate(e.target.value)} className="w-full px-5 py-4 rounded-2xl bg-secondary border border-slate-200 dark:border-zinc-800 text-slate-900 dark:text-white font-bold focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all shadow-inner [color-scheme:light_dark]" />
                                     </div>
                                     <div className="space-y-2">
                                         <label className="text-[10px] font-black text-slate-500 dark:text-zinc-500 uppercase tracking-widest pl-1">Date Resolved</label>
-                                        <input type="date" value={updateDateResolved} onChange={e => setUpdateDateResolved(e.target.value)} className="w-full px-5 py-4 rounded-2xl bg-slate-50 dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 text-slate-900 dark:text-white font-bold focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all shadow-inner [color-scheme:light_dark]" />
+                                        <input type="date" value={updateDateResolved} onChange={e => setUpdateDateResolved(e.target.value)} className="w-full px-5 py-4 rounded-2xl bg-secondary border border-slate-200 dark:border-zinc-800 text-slate-900 dark:text-white font-bold focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all shadow-inner [color-scheme:light_dark]" />
                                     </div>
                                 </div>
 
                                 <div className="space-y-2">
                                     <label className="text-[10px] font-black text-slate-500 dark:text-zinc-500 uppercase tracking-widest pl-1">Admin Notes</label>
-                                    <textarea rows={4} value={updateNotes} onChange={e => setUpdateNotes(e.target.value)} placeholder="Add any internal notes, spare parts used, or resolution details here..." className="w-full px-5 py-4 rounded-2xl bg-slate-50 dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 text-slate-900 dark:text-white font-bold focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all shadow-inner resize-none placeholder-zinc-500 custom-scrollbar" />
+                                    <textarea rows={4} value={updateNotes} onChange={e => setUpdateNotes(e.target.value)} placeholder="Add any internal notes, spare parts used, or resolution details here..." className="w-full px-5 py-4 rounded-2xl bg-secondary border border-slate-200 dark:border-zinc-800 text-slate-900 dark:text-white font-bold focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all shadow-inner resize-none placeholder-zinc-500 custom-scrollbar" />
                                 </div>
                             </div>
                         </form>
-                        <div className="p-8 border-t border-slate-200 dark:border-zinc-800/80 flex flex-col-reverse sm:flex-row justify-end gap-3 bg-slate-50/50 dark:bg-zinc-900/30">
-                            <button type="button" onClick={() => setUpdateModalReq(null)} className="w-full sm:w-auto px-8 py-4 font-black text-slate-500 dark:text-zinc-400 bg-slate-100 dark:bg-zinc-800 hover:bg-slate-200 dark:hover:bg-zinc-700 rounded-2xl transition-all uppercase tracking-widest text-xs">Cancel</button>
+                        <div className="p-8 border-t border-slate-200 dark:border-zinc-800/80 flex flex-col-reverse sm:flex-row justify-end gap-3 bg-secondary/50">
+                            <button type="button" onClick={() => setUpdateModalReq(null)} className="w-full sm:w-auto px-8 py-4 font-black text-slate-500 dark:text-zinc-400 bg-secondary hover:bg-slate-200 dark:hover:bg-zinc-700 rounded-2xl transition-all uppercase tracking-widest text-xs">Cancel</button>
                             <button type="submit" disabled={isUpdating} className="w-full sm:w-auto px-8 py-4 font-black bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white rounded-2xl transition-all shadow-[0_0_20px_rgba(79,70,229,0.3)] hover:shadow-[0_0_30px_rgba(79,70,229,0.5)] flex items-center justify-center gap-2 uppercase tracking-widest text-xs disabled:opacity-70">
                                 {isUpdating ? <div className="w-5 h-5 border-2 border-white/20 border-t-white rounded-full animate-spin"></div> : 'Save Changes'}
                             </button>
