@@ -56,7 +56,7 @@ export default function SignupPage() {
     return (
         <div 
             className="min-h-screen w-full flex flex-col items-center justify-center relative overflow-x-hidden font-sans selection:bg-cyan-500/30 py-8 bg-cover bg-center bg-no-repeat bg-fixed"
-            style={{ backgroundImage: "url('/bg_img.png')" }}
+            style={{ backgroundImage: "url('/images/bg_img.png')" }}
         >
             {/* Overlay for better readability */}
             <div className="absolute inset-0 bg-slate-900/40 dark:bg-black/70 backdrop-blur-[2px] z-0" />
@@ -176,7 +176,7 @@ export default function SignupPage() {
                             initial={{ scale: 0.9, opacity: 0, y: 20 }}
                             animate={{ scale: 1, opacity: 1, y: 0 }}
                             transition={{ type: "spring", damping: 25, stiffness: 300 }}
-                            className="bg-white dark:bg-zinc-900 border border-slate-200 dark:border-white/10 rounded-[2rem] p-8 sm:p-10 max-w-sm w-full shadow-2xl relative flex flex-col items-center"
+                            className="bg-card border border-slate-200 dark:border-white/10 rounded-[2rem] p-8 sm:p-10 max-w-sm w-full shadow-2xl relative flex flex-col items-center"
                         >
                             <button 
                                 onClick={() => {

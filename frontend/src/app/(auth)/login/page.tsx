@@ -47,7 +47,7 @@ export default function LoginPage() {
   return (
     <div 
       className="dark flex min-h-screen flex-col items-center justify-center p-4 md:p-10 font-sans selection:bg-cyan-500/30 relative overflow-hidden bg-cover bg-center bg-no-repeat bg-fixed"
-      style={{ backgroundImage: "url('/bg_img.png')" }}
+      style={{ backgroundImage: "url('/images/bg_img.png')" }}
     >
       {/* Overlay for better readability */}
       <div className="absolute inset-0 bg-slate-900/40 dark:bg-black/70 backdrop-blur-[2px] z-0" />
@@ -136,7 +136,7 @@ export default function LoginPage() {
               {/* Right Column: Logo */}
               <div className="relative hidden bg-white/50 dark:bg-[#1e293b]/50 md:flex flex-col items-center justify-center p-12 border-l border-white/20 dark:border-white/10">
                 <div className="relative w-96 h-96 mb-6 flex items-center justify-center drop-shadow-2xl">
-                    <img src="/renttrack_logo.png" alt="StayTrack Logo" className="w-full h-full object-contain drop-shadow-lg" />
+                    <img src="/images/renttrack_logo.png" alt="StayTrack Logo" className="w-full h-full object-contain drop-shadow-lg" />
                 </div>
                 <div className="text-center">
                     <h2 className="text-2xl font-black text-slate-900 dark:text-white tracking-tight mb-2">Welcome to RentTrack</h2>
