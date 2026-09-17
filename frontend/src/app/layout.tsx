@@ -21,8 +21,13 @@ export const metadata: Metadata = {
   title: "RentTrack",
   description: "Boarding House Management System",
   icons: {
-    icon: "/renttrack_logo_tab.png",
+    icon: "/images/renttrack_logo_tab.png",
+    apple: "/images/renttrack_app_logo.png",
   },
+};
+
+export const viewport: import("next").Viewport = {
+  themeColor: "#000000",
 };
 
 import { TooltipProvider } from "@/components/ui/tooltip";
