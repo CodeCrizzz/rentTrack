@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useState } from 'react';
-import { motion, Variants } from 'framer-motion';
+import { motion, Variants, useMotionValue, useTransform, animate } from 'framer-motion';
 import Link from 'next/link';
 import api from '@/lib/api';
 import CustomSelect from '@/components/CustomSelect';
@@ -31,6 +31,19 @@ interface DashboardStats {
     expiringContracts: ExpiringContract[];
     overdueAccounts: { tenant_id: number; tenant_name: string; room_number: string | null; total_overdue: number }[];
     upcomingRent: { id: number; tenant_name: string; room_number: string | null; balance: number; due_date: string }[];
+}
+
+function AnimatedNumber({ value, prefix = "", suffix = "", duration = 0.3 }: { value: number, prefix?: string, suffix?: string, duration?: number }) {
+    const motionValue = useMotionValue(0);
+    const rounded = useTransform(motionValue, (latest) => Math.round(latest));
+    const display = useTransform(rounded, (latest) => `${prefix}${latest.toLocaleString()}${suffix}`);
+
+    useEffect(() => {
+        const controls = animate(motionValue, value, { duration });
+        return controls.stop;
+    }, [value, duration, motionValue]);
+
+    return <motion.span>{display}</motion.span>;
 }
 
 const CustomTooltip = ({ active, payload, label }: any) => {
@@ -188,7 +201,7 @@ export default function AdminDashboard() {
                         <div className="relative w-28 h-28 shrink-0">
                             <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
                                 <span className="text-sm font-bold text-slate-900 dark:text-white">
-                                    {Math.round((stats.rooms.occupiedRooms / (stats.rooms.totalRooms || 1)) * 100)}%
+                                    <AnimatedNumber value={Math.round((stats.rooms.occupiedRooms / (stats.rooms.totalRooms || 1)) * 100)} suffix="%" duration={0.3} />
                                </span>
                             </div>
                             <ResponsiveContainer width="100%" height="100%">
@@ -252,7 +265,7 @@ export default function AdminDashboard() {
                     </motion.div>
                     <div className="flex-1 flex flex-col justify-between">
                         <motion.div variants={scaleUpVariants}>
-                            <div className="text-3xl font-bold text-slate-900 dark:text-white">₱{stats.billing.pendingDues.toLocaleString()}</div>
+                            <div className="text-3xl font-bold text-slate-900 dark:text-white"><AnimatedNumber value={stats.billing.pendingDues} prefix="₱" duration={0.3} /></div>
                             <div className="mt-2 text-xs text-slate-500 dark:text-zinc-400 space-y-1">
                                 <div className="flex justify-between"><span className="text-orange-600 dark:text-orange-400 font-semibold">{stats.billing.overduePayments > 0 ? stats.billing.overduePayments : 0} unpaid bills</span></div>
                                 <div className="flex justify-between"><span className="text-rose-600 dark:text-rose-400 font-semibold">{stats.overdueAccounts.length} overdue</span></div>
@@ -279,7 +292,7 @@ export default function AdminDashboard() {
                     </motion.div>
                     <div className="flex-1 flex flex-col justify-between">
                         <motion.div variants={scaleUpVariants}>
-                            <div className="text-3xl font-bold text-slate-900 dark:text-white">{stats.maintenance.pendingRequests} Active</div>
+                            <div className="text-3xl font-bold text-slate-900 dark:text-white"><AnimatedNumber value={stats.maintenance.pendingRequests} suffix=" Active" duration={0.3} /></div>
                             <div className="mt-2 text-xs text-slate-500 dark:text-zinc-400 space-y-1">
                                 <div className="flex justify-between"><span className="text-cyan-600 dark:text-cyan-400 font-semibold">{stats.maintenance.inProgressRequests} in-progress</span></div>
                                 <div className="flex justify-between"><span className="text-rose-600 dark:text-rose-400 font-semibold">{Math.max(1, Math.floor(stats.maintenance.pendingRequests / 2))} high priority</span></div>
@@ -306,7 +319,7 @@ export default function AdminDashboard() {
                     </motion.div>
                     <div className="flex-1 flex flex-col justify-between">
                         <motion.div variants={scaleUpVariants}>
-                            <div className="text-3xl font-bold text-slate-900 dark:text-white">₱{Number(stats.billing.monthlyIncome).toLocaleString()}</div>
+                            <div className="text-3xl font-bold text-slate-900 dark:text-white"><AnimatedNumber value={Number(stats.billing.monthlyIncome)} prefix="₱" duration={0.3} /></div>
                             <div className="mt-2 text-xs text-slate-500 dark:text-zinc-400 space-y-1">
                                 <div className="flex items-center gap-1.5"><span className="text-emerald-600 dark:text-emerald-400 font-semibold flex items-center"><ArrowUpRight className="w-3 h-3 mr-1"/> 12.5% increase</span> <span>vs last month</span></div>
                                 <div className="flex justify-between"><span>Current month collection</span></div>
