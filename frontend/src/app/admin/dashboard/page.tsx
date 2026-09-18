@@ -62,15 +62,25 @@ const CustomTooltip = ({ active, payload, label }: any) => {
 
 const containerVariants: Variants = {
     hidden: { opacity: 0 },
-    show: {
+    show: (customDelay: number = 0) => ({
         opacity: 1,
-        transition: { staggerChildren: 0.1 }
-    }
+        transition: { staggerChildren: 0.1, delayChildren: customDelay }
+    })
 };
 
 const itemVariants: Variants = {
     hidden: { opacity: 0, y: 20 },
-    show: { opacity: 1, y: 0, transition: { type: "spring", stiffness: 300, damping: 24 } }
+    show: { opacity: 1, y: 0, transition: { duration: 0.4, ease: "easeOut" } }
+};
+
+const slideLeftVariants: Variants = {
+    hidden: { opacity: 0, x: -20 },
+    show: { opacity: 1, x: 0, transition: { duration: 0.4, ease: "easeOut" } }
+};
+
+const scaleUpVariants: Variants = {
+    hidden: { opacity: 0, scale: 0.95 },
+    show: { opacity: 1, scale: 1, transition: { duration: 0.4, ease: "easeOut" } }
 };
 
 export default function AdminDashboard() {
@@ -128,8 +138,8 @@ export default function AdminDashboard() {
 
 
 
-    // Reusable styles
     const cardClass = "bg-card rounded-2xl border border-slate-100 dark:border-zinc-800 p-7 shadow-[0_4px_12px_rgba(0,0,0,0.03)] dark:shadow-none flex flex-col min-h-[220px]";
+    const statCardClass = "bg-card rounded-2xl border border-slate-100 dark:border-zinc-800 p-7 shadow-[0_4px_12px_rgba(0,0,0,0.03)] dark:shadow-none flex flex-col min-h-[220px] relative overflow-hidden";
     const listCardClass = `bg-card rounded-2xl border border-slate-100 dark:border-zinc-800 p-7 shadow-[0_4px_12px_rgba(0,0,0,0.03)] dark:shadow-none flex flex-col h-[450px]`;
     const headerClass = "text-lg font-bold text-slate-800 dark:text-white mb-6 flex items-center justify-between";
 
@@ -155,46 +165,23 @@ export default function AdminDashboard() {
                 </div>
             </div>
 
-            {/* Quick Actions */}
-            <motion.div variants={itemVariants} className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
-                <Link href="/admin/rooms" className="group bg-card border border-slate-200 dark:border-zinc-800 hover:border-emerald-500/50 dark:hover:border-emerald-500/50 rounded-2xl p-3 flex items-center gap-4 transition-transform shadow-[0_2px_8px_rgba(0,0,0,0.04)] dark:shadow-none hover:shadow-md cursor-pointer">
-                    <div className="w-12 h-12 rounded-full bg-emerald-50 dark:bg-emerald-500/10 flex items-center justify-center text-emerald-600 dark:text-emerald-400 group-hover:scale-110 transition-transform">
-                        <Plus className="w-6 h-6" />
-                    </div>
-                    <span className="font-bold text-[15px] text-slate-800 dark:text-white group-hover:text-emerald-600 dark:group-hover:text-emerald-400">Add New Room</span>
-                </Link>
-                <Link href="/admin/tenants" className="group bg-card border border-slate-200 dark:border-zinc-800 hover:border-emerald-500/50 dark:hover:border-emerald-500/50 rounded-2xl p-3 flex items-center gap-4 transition-transform shadow-[0_2px_8px_rgba(0,0,0,0.04)] dark:shadow-none hover:shadow-md cursor-pointer">
-                    <div className="w-12 h-12 rounded-full bg-emerald-50 dark:bg-emerald-500/10 flex items-center justify-center text-emerald-600 dark:text-emerald-400 group-hover:scale-110 transition-transform">
-                        <UserCheck className="w-6 h-6" />
-                    </div>
-                    <span className="font-bold text-[15px] text-slate-800 dark:text-white group-hover:text-emerald-600 dark:group-hover:text-emerald-400">Review Registrations</span>
-                </Link>
-                <Link href="/admin/billing" className="group bg-card border border-slate-200 dark:border-zinc-800 hover:border-emerald-500/50 dark:hover:border-emerald-500/50 rounded-2xl p-3 flex items-center gap-4 transition-transform shadow-[0_2px_8px_rgba(0,0,0,0.04)] dark:shadow-none hover:shadow-md cursor-pointer">
-                    <div className="w-12 h-12 rounded-full bg-emerald-50 dark:bg-emerald-500/10 flex items-center justify-center text-emerald-600 dark:text-emerald-400 group-hover:scale-110 transition-transform">
-                        <Wallet className="w-6 h-6" />
-                    </div>
-                    <span className="font-bold text-[15px] text-slate-800 dark:text-white group-hover:text-emerald-600 dark:group-hover:text-emerald-400">Process Payments</span>
-                </Link>
-                <Link href="/admin/requests" className="group bg-card border border-slate-200 dark:border-zinc-800 hover:border-emerald-500/50 dark:hover:border-emerald-500/50 rounded-2xl p-3 flex items-center gap-4 transition-transform shadow-[0_2px_8px_rgba(0,0,0,0.04)] dark:shadow-none hover:shadow-md cursor-pointer">
-                    <div className="w-12 h-12 rounded-full bg-emerald-50 dark:bg-emerald-500/10 flex items-center justify-center text-emerald-600 dark:text-emerald-400 group-hover:scale-110 transition-transform">
-                        <Wrench className="w-6 h-6" />
-                    </div>
-                    <span className="font-bold text-[15px] text-slate-800 dark:text-white group-hover:text-emerald-600 dark:group-hover:text-emerald-400">View Requests</span>
-                </Link>
-            </motion.div>
+
 
             {/* Stat Cards */}
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-5">
                 {/* Room Occupancy */}
-                <div className={cardClass}>
-                    <motion.div variants={itemVariants} initial="hidden" whileInView="show" viewport={{ once: true, amount: 0.2 }} className="h-full w-full flex flex-col">
-                    <div className="flex items-center justify-between mb-2">
+                <div className={statCardClass}>
+                    {/* Decorative Background Shapes */}
+                    <div className="absolute -top-6 -right-6 w-24 h-24 bg-emerald-500/10 dark:bg-emerald-500/10 rounded-full pointer-events-none"></div>
+                    
+                    <motion.div custom={0.0} variants={containerVariants} initial="hidden" whileInView="show" viewport={{ once: true, amount: 0.2 }} className="relative z-10 h-full w-full flex flex-col">
+                    <motion.div variants={slideLeftVariants} className="flex items-center justify-between mb-2">
                         <h3 className="text-sm font-medium text-slate-500 dark:text-zinc-400">Room Occupancy Rate</h3>
                         <div className="w-8 h-8 rounded-full bg-emerald-50 dark:bg-emerald-500/10 flex items-center justify-center text-emerald-600 dark:text-emerald-400">
                             <Users className="w-4 h-4" />
                         </div>
-                    </div>
-                    <div className="flex-1 flex gap-4 items-center mt-2">
+                    </motion.div>
+                    <motion.div variants={scaleUpVariants} className="flex-1 flex gap-4 items-center mt-2">
                         <div className="relative w-28 h-28 shrink-0">
                             <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
                                 <span className="text-sm font-bold text-slate-900 dark:text-white">
@@ -244,72 +231,87 @@ export default function AdminDashboard() {
                             <div className="flex justify-between items-center"><span className="flex items-center gap-1.5"><span className="w-1.5 h-1.5 rounded-full bg-slate-500 shrink-0"></span>Unavail.</span> <span className="font-bold text-slate-700 dark:text-zinc-300">{stats.rooms.unavailableRooms}</span></div>
                             <div className="flex justify-between items-center pt-1 mt-1 border-t border-slate-100 dark:border-zinc-800"><span>Total</span> <span className="font-bold text-slate-700 dark:text-zinc-300">{stats.rooms.totalRooms}</span></div>
                         </div>
-                    </div>
+                    </motion.div>
                 </motion.div>
                 </div>
 
                 {/* Pending Dues */}
-                <div className={cardClass}>
-                    <motion.div variants={itemVariants} initial="hidden" whileInView="show" viewport={{ once: true, amount: 0.2 }} className="h-full w-full flex flex-col">
-                    <div className="flex items-center justify-between mb-4">
+                <div className={statCardClass}>
+                    {/* Decorative Background Shapes */}
+                    <div className="absolute -top-6 -right-6 w-24 h-24 bg-orange-500/10 dark:bg-orange-500/10 rounded-full pointer-events-none"></div>
+                    
+                    <motion.div custom={0.5} variants={containerVariants} initial="hidden" whileInView="show" viewport={{ once: true, amount: 0.2 }} className="relative z-10 h-full w-full flex flex-col">
+                    <motion.div variants={slideLeftVariants} className="flex items-center justify-between mb-4">
                         <h3 className="text-sm font-medium text-slate-500 dark:text-zinc-400">Pending Dues</h3>
                         <div className="w-8 h-8 rounded-full bg-orange-50 dark:bg-orange-500/10 flex items-center justify-center text-orange-600 dark:text-orange-400">
                             <Receipt className="w-4 h-4" />
                         </div>
-                    </div>
+                    </motion.div>
                     <div className="flex-1 flex flex-col justify-between">
-                        <div>
+                        <motion.div variants={scaleUpVariants}>
                             <div className="text-3xl font-bold text-slate-900 dark:text-white">₱{stats.billing.pendingDues.toLocaleString()}</div>
                             <div className="mt-2 text-xs text-slate-500 dark:text-zinc-400 space-y-1">
                                 <div className="flex justify-between"><span className="text-orange-600 dark:text-orange-400 font-semibold">{stats.billing.overduePayments > 0 ? stats.billing.overduePayments : 0} unpaid bills</span></div>
                                 <div className="flex justify-between"><span className="text-rose-600 dark:text-rose-400 font-semibold">{stats.overdueAccounts.length} overdue</span></div>
                             </div>
-                        </div>
-                        <Link href="/admin/billing" className="mt-4 text-xs font-semibold text-emerald-600 dark:text-emerald-400 hover:underline flex items-center gap-1">View billing <ChevronRight className="w-3 h-3"/></Link>
+                        </motion.div>
+                        <motion.div variants={itemVariants}>
+                            <Link href="/admin/billing" className="mt-4 text-xs font-semibold text-emerald-600 dark:text-emerald-400 hover:underline flex items-center gap-1">View billing <ChevronRight className="w-3 h-3"/></Link>
+                        </motion.div>
                     </div>
                 </motion.div>
                 </div>
 
                 {/* Pending Maintenance */}
-                <div className={cardClass}>
-                    <motion.div variants={itemVariants} initial="hidden" whileInView="show" viewport={{ once: true, amount: 0.2 }} className="h-full w-full flex flex-col">
-                    <div className="flex items-center justify-between mb-4">
+                <div className={statCardClass}>
+                    {/* Decorative Background Shapes */}
+                    <div className="absolute -top-6 -right-6 w-24 h-24 bg-rose-500/10 dark:bg-rose-500/10 rounded-full pointer-events-none"></div>
+                    
+                    <motion.div custom={1.0} variants={containerVariants} initial="hidden" whileInView="show" viewport={{ once: true, amount: 0.2 }} className="relative z-10 h-full w-full flex flex-col">
+                    <motion.div variants={slideLeftVariants} className="flex items-center justify-between mb-4">
                         <h3 className="text-sm font-medium text-slate-500 dark:text-zinc-400">Pending Maintenance</h3>
                         <div className="w-8 h-8 rounded-full bg-rose-50 dark:bg-rose-500/10 flex items-center justify-center text-rose-600 dark:text-rose-400">
                             <Wrench className="w-4 h-4" />
                         </div>
-                    </div>
+                    </motion.div>
                     <div className="flex-1 flex flex-col justify-between">
-                        <div>
+                        <motion.div variants={scaleUpVariants}>
                             <div className="text-3xl font-bold text-slate-900 dark:text-white">{stats.maintenance.pendingRequests} Active</div>
                             <div className="mt-2 text-xs text-slate-500 dark:text-zinc-400 space-y-1">
                                 <div className="flex justify-between"><span className="text-cyan-600 dark:text-cyan-400 font-semibold">{stats.maintenance.inProgressRequests} in-progress</span></div>
                                 <div className="flex justify-between"><span className="text-rose-600 dark:text-rose-400 font-semibold">{Math.max(1, Math.floor(stats.maintenance.pendingRequests / 2))} high priority</span></div>
                             </div>
-                        </div>
-                        <Link href="/admin/requests" className="mt-4 text-xs font-semibold text-emerald-600 dark:text-emerald-400 hover:underline flex items-center gap-1">View requests <ChevronRight className="w-3 h-3"/></Link>
+                        </motion.div>
+                        <motion.div variants={itemVariants}>
+                            <Link href="/admin/requests" className="mt-4 text-xs font-semibold text-emerald-600 dark:text-emerald-400 hover:underline flex items-center gap-1">View requests <ChevronRight className="w-3 h-3"/></Link>
+                        </motion.div>
                     </div>
                 </motion.div>
                 </div>
 
                 {/* Total Revenue */}
-                <div className={cardClass}>
-                    <motion.div variants={itemVariants} initial="hidden" whileInView="show" viewport={{ once: true, amount: 0.2 }} className="h-full w-full flex flex-col">
-                    <div className="flex items-center justify-between mb-4">
+                <div className={statCardClass}>
+                    {/* Decorative Background Shapes */}
+                    <div className="absolute -top-6 -right-6 w-24 h-24 bg-emerald-500/10 dark:bg-emerald-500/10 rounded-full pointer-events-none"></div>
+                    
+                    <motion.div custom={1.5} variants={containerVariants} initial="hidden" whileInView="show" viewport={{ once: true, amount: 0.2 }} className="relative z-10 h-full w-full flex flex-col">
+                    <motion.div variants={slideLeftVariants} className="flex items-center justify-between mb-4">
                         <h3 className="text-sm font-medium text-slate-500 dark:text-zinc-400">Total Revenue</h3>
                         <div className="w-8 h-8 rounded-full bg-emerald-50 dark:bg-emerald-500/10 flex items-center justify-center text-emerald-600 dark:text-emerald-400">
                             <Wallet className="w-4 h-4" />
                         </div>
-                    </div>
+                    </motion.div>
                     <div className="flex-1 flex flex-col justify-between">
-                        <div>
+                        <motion.div variants={scaleUpVariants}>
                             <div className="text-3xl font-bold text-slate-900 dark:text-white">₱{Number(stats.billing.monthlyIncome).toLocaleString()}</div>
                             <div className="mt-2 text-xs text-slate-500 dark:text-zinc-400 space-y-1">
-                                <div className="flex justify-between items-center"><span className="text-emerald-600 dark:text-emerald-400 font-semibold flex items-center"><ArrowUpRight className="w-3 h-3 mr-1"/> 12.5% increase</span> <span>vs last month</span></div>
+                                <div className="flex items-center gap-1.5"><span className="text-emerald-600 dark:text-emerald-400 font-semibold flex items-center"><ArrowUpRight className="w-3 h-3 mr-1"/> 12.5% increase</span> <span>vs last month</span></div>
                                 <div className="flex justify-between"><span>Current month collection</span></div>
                             </div>
-                        </div>
-                        <Link href="/admin/billing" className="mt-4 text-xs font-semibold text-emerald-600 dark:text-emerald-400 hover:underline flex items-center gap-1">View financial reports <ChevronRight className="w-3 h-3"/></Link>
+                        </motion.div>
+                        <motion.div variants={itemVariants}>
+                            <Link href="/admin/billing" className="mt-4 text-xs font-semibold text-emerald-600 dark:text-emerald-400 hover:underline flex items-center gap-1">View financial reports <ChevronRight className="w-3 h-3"/></Link>
+                        </motion.div>
                     </div>
                 </motion.div>
                 </div>
