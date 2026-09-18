@@ -46,11 +46,8 @@ export default function PageTransition({ children }: PageTransitionProps) {
         }}
         
         transition={{ 
-            type: "spring",
-            stiffness: 180, 
-            damping: 18, 
-            mass: 0.9,
-            bounce: 0.2
+            duration: 0.5,
+            ease: [0.22, 1, 0.36, 1]
         }}
         
         className="w-full"
