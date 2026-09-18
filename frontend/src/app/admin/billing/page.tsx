@@ -3,6 +3,7 @@ import { useEffect, useState, useMemo } from 'react';
 import api from '@/lib/api';
 import { motion, AnimatePresence, Variants } from 'framer-motion';
 import CustomSelect from '@/components/CustomSelect';
+import { Bell, Calendar as CalendarIcon, FileText, Clock, Receipt, Check, X, Plus } from 'lucide-react';
 
 export interface Bill {
     id: number;
@@ -258,132 +259,164 @@ export default function AdminBilling() {
     };
 
     return (
-        <div className="max-w-[1600px] mx-auto pb-10 relative">
-
-            <motion.div initial={{opacity:0, y:-20}} animate={{opacity:1, y:0}} className="flex flex-col md:flex-row md:items-end justify-between gap-6 relative z-10 mb-8">
+        <div className="w-full h-full min-h-screen p-6 md:p-8 font-sans text-slate-900 dark:text-white">
+            {/* Header */}
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
                 <div>
-                    <h1 className="text-4xl sm:text-5xl font-black text-slate-900 dark:text-white tracking-tighter flex items-center gap-4">
-                        Billing
-                        {bills.filter(b => b.status === 'Unpaid' || b.status === 'Overdue').length > 0 && (
-                            <span className="inline-flex items-center px-4 py-1.5 rounded-2xl bg-rose-50 dark:bg-rose-500/10 border border-rose-200 dark:border-rose-500/20 text-rose-600 dark:text-rose-400 text-xs font-black uppercase tracking-widest animate-pulse">
-                                {bills.filter(b => b.status === 'Unpaid' || b.status === 'Overdue').length} Unpaid
-                            </span>
-                        )}
-                    </h1>
-                    <p className="text-slate-500 dark:text-zinc-400 font-bold text-sm uppercase tracking-[0.2em] mt-2">Manage Invoices & Payments</p>
+                    <h1 className="text-2xl font-black text-slate-900 dark:text-white tracking-tight">Billing & Financials</h1>
+                    <p className="text-sm text-slate-500 dark:text-zinc-400 mt-1">Issue bills, track utilities, submetering, and verify GCash receipts.</p>
                 </div>
-            </motion.div>
+                <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-2 px-4 py-2 bg-card border border-slate-200 dark:border-zinc-800 rounded-lg shadow-sm text-sm font-medium text-slate-600 dark:text-zinc-300">
+                        <CalendarIcon className="w-4 h-4 text-slate-400" />
+                        October 24, 2025
+                    </div>
+                    <button className="p-2.5 bg-card border border-slate-200 dark:border-zinc-800 rounded-lg shadow-sm text-slate-600 dark:text-zinc-300 hover:bg-slate-50 dark:hover:bg-zinc-800 transition-colors">
+                        <Bell className="w-4 h-4" />
+                    </button>
+                </div>
+            </div>
 
-            <motion.div initial={{opacity:0, y:20}} animate={{opacity:1, y:0}} transition={{delay: 0.1}} className="flex flex-col md:flex-row gap-4 relative z-10 mb-8 bg-card backdrop-blur-2xl p-4 rounded-[2rem] border border-slate-200/60 dark:border-zinc-800/60 shadow-xl dark:shadow-2xl">
-                <div className="relative flex-1 group">
-                    <div className="absolute inset-y-0 left-0 pl-5 flex items-center pointer-events-none text-slate-400 dark:text-zinc-500 group-focus-within:text-emerald-500 transition-colors">
-                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+            {/* Summary Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                {/* Total Billed */}
+                <div className="bg-card rounded-xl border border-slate-200 dark:border-zinc-800 p-6 shadow-sm">
+                    <div className="flex justify-between items-start mb-4">
+                        <p className="text-sm font-medium text-slate-500 dark:text-zinc-400">Total Billed (Oct)</p>
+                        <div className="w-8 h-8 rounded-lg bg-teal-50 dark:bg-teal-500/10 flex items-center justify-center text-teal-600 dark:text-teal-400">
+                            <Receipt className="w-4 h-4" />
+                        </div>
                     </div>
-                    <input 
-                        type="text" 
-                        placeholder="Search by Tenant Name..." 
-                        className="w-full pl-14 pr-6 py-4 rounded-2xl bg-card/50 border border-slate-200 dark:border-zinc-800 text-slate-900 dark:text-white placeholder-zinc-500 font-bold text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all shadow-inner"
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                    />
+                    <h3 className="text-3xl font-black text-slate-900 dark:text-white mb-1">
+                        ₱{filteredBills.reduce((sum, b) => sum + Number(b.total_amount), 0).toLocaleString()}
+                    </h3>
+                    <p className="text-xs font-bold text-emerald-600 dark:text-emerald-400">
+                        ₱{filteredBills.reduce((sum, b) => sum + Number(b.amount_paid), 0).toLocaleString()} collected
+                    </p>
                 </div>
-                <div className="relative w-full md:w-48 shrink-0">
-                    <CustomSelect 
-                        value={statusFilter}
-                        onChange={(val) => setStatusFilter(val)}
-                        options={[
-                            { value: "All", label: "All Statuses" },
-                            { value: "Paid", label: "Paid" },
-                            { value: "Unpaid", label: "Unpaid" },
-                            { value: "Partial", label: "Partial" },
-                            { value: "Overdue", label: "Overdue" }
-                        ]}
-                        className="w-full py-4 pl-5 pr-10 rounded-2xl bg-card/50 border border-slate-200 dark:border-zinc-800 text-slate-900 dark:text-white font-bold text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all"
-                    />
-                </div>
-            </motion.div>
 
-            {isLoading ? (
-                <div className="flex items-center justify-center min-h-[40vh]">
-                    <div className="relative flex flex-col items-center justify-center">
-                        <div className="w-16 h-16 border-4 border-slate-200 dark:border-zinc-800 border-t-emerald-500 dark:border-t-emerald-500 rounded-full animate-spin relative z-10 shadow-[0_0_30px_rgba(16,185,129,0.3)]"></div>
-                        <p className="text-slate-500 dark:text-zinc-400 font-bold text-xs uppercase tracking-[0.2em] mt-6 animate-pulse">Loading Bills...</p>
+                {/* GCash Receipts to Verify */}
+                <div className="bg-card rounded-xl border border-slate-200 dark:border-zinc-800 p-6 shadow-sm">
+                    <div className="flex justify-between items-start mb-4">
+                        <p className="text-sm font-medium text-slate-500 dark:text-zinc-400">GCash Receipts to Verify</p>
+                        <div className="w-8 h-8 rounded-lg bg-orange-50 dark:bg-orange-500/10 flex items-center justify-center text-orange-600 dark:text-orange-400">
+                            <Clock className="w-4 h-4" />
+                        </div>
+                    </div>
+                    <h3 className="text-3xl font-black text-slate-900 dark:text-white mb-1">2 Pending</h3>
+                    <p className="text-xs font-bold text-rose-500 dark:text-rose-400">Immediate action needed</p>
+                </div>
+
+                {/* Outstanding Arrears */}
+                <div className="bg-card rounded-xl border border-slate-200 dark:border-zinc-800 p-6 shadow-sm">
+                    <div className="flex justify-between items-start mb-4">
+                        <p className="text-sm font-medium text-slate-500 dark:text-zinc-400">Outstanding Arrears</p>
+                        <div className="w-8 h-8 rounded-lg bg-rose-50 dark:bg-rose-500/10 flex items-center justify-center text-rose-600 dark:text-rose-400">
+                            <FileText className="w-4 h-4" />
+                        </div>
+                    </div>
+                    <h3 className="text-3xl font-black text-slate-900 dark:text-white mb-1">
+                        ₱{filteredBills.reduce((sum, b) => sum + Number(b.balance), 0).toLocaleString()}
+                    </h3>
+                    <p className="text-xs font-bold text-rose-500 dark:text-rose-400">
+                        {filteredBills.filter(b => b.status === 'Unpaid' || b.status === 'Overdue').length} tenants unpaid
+                    </p>
+                </div>
+            </div>
+
+
+            {/* Table Controls */}
+            <div className="flex flex-col sm:flex-row justify-between items-center mb-4 gap-4">
+                <div className="flex gap-3 w-full sm:w-auto">
+                    <div className="w-40 relative">
+                        <CustomSelect 
+                            value={"October 2025"} // Visual mock for the month filter
+                            onChange={() => {}}
+                            options={[{ value: "October 2025", label: "October 2025" }]}
+                            className="w-full py-2.5 pl-4 pr-8 rounded-lg bg-card border border-slate-200 dark:border-zinc-800 text-slate-700 dark:text-zinc-300 font-medium text-sm focus:outline-none focus:ring-2 focus:ring-teal-500"
+                        />
+                    </div>
+                    <div className="w-40 relative">
+                        <CustomSelect 
+                            value={statusFilter}
+                            onChange={(val) => setStatusFilter(val)}
+                            options={[
+                                { value: "All", label: "All Statuses" },
+                                { value: "Paid", label: "Paid" },
+                                { value: "Unpaid", label: "Unpaid" },
+                                { value: "Pending Verification", label: "Pending Verification" }
+                            ]}
+                            className="w-full py-2.5 pl-4 pr-8 rounded-lg bg-card border border-slate-200 dark:border-zinc-800 text-slate-700 dark:text-zinc-300 font-medium text-sm focus:outline-none focus:ring-2 focus:ring-teal-500"
+                        />
                     </div>
                 </div>
-            ) : filteredBills.length === 0 ? (
-                <motion.div initial={{opacity:0}} animate={{opacity:1}} className="bg-card backdrop-blur-2xl rounded-[2.5rem] border border-slate-200 dark:border-zinc-800 p-16 text-center shadow-2xl">
-                    <div className="w-24 h-24 bg-secondary rounded-3xl flex items-center justify-center mx-auto mb-6 shadow-inner border border-slate-200 dark:border-zinc-800">
-                        <svg className="w-10 h-10 text-emerald-500 stroke-[2.5]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0z" /></svg>
-                    </div>
-                    <h3 className="text-xl font-black text-slate-900 dark:text-white mb-2">No billing records found</h3>
-                    <p className="text-sm font-bold text-slate-500 dark:text-zinc-500">{searchQuery ? "Try adjusting your filters." : "All tenants are caught up!"}</p>
-                </motion.div>
-            ) : (
-                <motion.div variants={containerVariants} initial="hidden" animate="show" className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                    {filteredBills.map((b) => {
-                        const sStyle = getStatusStyle(b.status);
-                        
-                        return (
-                            <motion.div key={b.id} variants={itemVariants} className="relative group rounded-3xl p-[1px] overflow-hidden bg-gradient-to-b from-slate-200 to-slate-100 dark:from-white/10 dark:to-transparent hover:shadow-[0_0_40px_rgba(0,0,0,0.1)] dark:hover:shadow-[0_0_40px_rgba(255,255,255,0.05)] transition-shadow duration-500">
-                                <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 blur-xl"></div>
-                                <div className="h-full w-full bg-card backdrop-blur-3xl rounded-[23px] p-6 flex flex-col relative overflow-hidden transition-transform duration-500 group-hover:scale-[0.99]">
-                                    
-                                    <div className="flex justify-between items-start mb-5">
-                                        <div className="w-12 h-12 rounded-full bg-gradient-to-br from-emerald-400 to-teal-500 flex items-center justify-center text-white font-black text-xl shadow-lg group-hover:scale-110 transition-transform duration-500">
-                                            {b.tenant_name.charAt(0)}
-                                        </div>
-                                        <div className="flex flex-col items-end gap-2">
-                                            <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full border bg-white/50 dark:bg-card/50 backdrop-blur-md ${sStyle.border}`}>
-                                                <div className={`w-1.5 h-1.5 rounded-full ${sStyle.dot}`}></div>
-                                                <span className={`text-[9px] font-black uppercase tracking-widest ${sStyle.text}`}>{b.status}</span>
+                <button className="w-full sm:w-auto px-4 py-2.5 bg-teal-600 hover:bg-teal-700 text-white text-sm font-bold rounded-lg transition-colors flex items-center justify-center gap-2">
+                    <Plus className="w-4 h-4" />
+                    Create Single Bill
+                </button>
+            </div>
+
+            {/* Data Table */}
+            <div className="bg-card rounded-xl border border-slate-200 dark:border-zinc-800 shadow-sm overflow-hidden mb-8">
+                <div className="overflow-x-auto">
+                    <table className="w-full text-left border-collapse">
+                        <thead>
+                            <tr className="border-b border-slate-200 dark:border-zinc-800">
+                                <th className="px-6 py-4 text-xs font-bold text-slate-500 dark:text-zinc-400 uppercase tracking-wider">Tenant</th>
+                                <th className="px-6 py-4 text-xs font-bold text-slate-500 dark:text-zinc-400 uppercase tracking-wider">Room</th>
+                                <th className="px-6 py-4 text-xs font-bold text-slate-500 dark:text-zinc-400 uppercase tracking-wider">Billing Period</th>
+                                <th className="px-6 py-4 text-xs font-bold text-slate-500 dark:text-zinc-400 uppercase tracking-wider text-right">Base Rent</th>
+                                <th className="px-6 py-4 text-xs font-bold text-slate-500 dark:text-zinc-400 uppercase tracking-wider text-right">Water (Fixed)</th>
+                                <th className="px-6 py-4 text-xs font-bold text-slate-500 dark:text-zinc-400 uppercase tracking-wider text-right leading-tight min-w-[120px]">Power (Submeter)</th>
+                                <th className="px-6 py-4 text-xs font-bold text-slate-500 dark:text-zinc-400 uppercase tracking-wider text-right">Total Due</th>
+                                <th className="px-6 py-4 text-xs font-bold text-slate-500 dark:text-zinc-400 uppercase tracking-wider text-right">Status</th>
+                                <th className="px-6 py-4 text-xs font-bold text-slate-500 dark:text-zinc-400 uppercase tracking-wider text-center">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-100 dark:divide-zinc-800/50">
+                            {isLoading ? (
+                                <tr>
+                                    <td colSpan={9} className="px-6 py-12 text-center text-slate-500 dark:text-zinc-400">Loading...</td>
+                                </tr>
+                            ) : filteredBills.length === 0 ? (
+                                <tr>
+                                    <td colSpan={9} className="px-6 py-12 text-center text-slate-500 dark:text-zinc-400">No billing records found.</td>
+                                </tr>
+                            ) : (
+                                filteredBills.map((b) => (
+                                    <tr key={b.id} className="hover:bg-slate-50 dark:hover:bg-zinc-800/50 transition-colors group">
+                                        <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-slate-900 dark:text-white">{b.tenant_name}</td>
+                                        <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-slate-600 dark:text-zinc-300">{b.room_number || '-'}</td>
+                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500 dark:text-zinc-400">{b.billing_month}</td>
+                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500 dark:text-zinc-400 text-right">₱{Number(b.rent_amount).toLocaleString()}</td>
+                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500 dark:text-zinc-400 text-right">₱{Number(b.water_charges).toLocaleString()}</td>
+                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500 dark:text-zinc-400 text-right">₱{Number(b.electricity_charges).toLocaleString()}</td>
+                                        <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-teal-600 dark:text-teal-400 text-right">₱{Number(b.total_amount).toLocaleString()}</td>
+                                        <td className="px-6 py-4 whitespace-nowrap text-right">
+                                            {b.status === 'Paid' ? (
+                                                <span className="inline-flex items-center px-2.5 py-1 rounded bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 text-[10px] font-bold uppercase tracking-wider">Paid</span>
+                                            ) : b.status === 'Pending Verification' ? (
+                                                <span className="inline-flex items-center px-2.5 py-1 rounded bg-amber-50 dark:bg-amber-500/10 text-amber-700 dark:text-amber-400 text-[10px] font-bold uppercase tracking-wider">Pending Verification</span>
+                                            ) : (
+                                                <span className="inline-flex items-center px-2.5 py-1 rounded bg-rose-50 dark:bg-rose-500/10 text-rose-700 dark:text-rose-400 text-[10px] font-bold uppercase tracking-wider">Unpaid</span>
+                                            )}
+                                        </td>
+                                        <td className="px-6 py-4 whitespace-nowrap text-center opacity-0 group-hover:opacity-100 transition-opacity">
+                                            <div className="flex items-center justify-center gap-2">
+                                                <button onClick={() => openViewModal(b)} className="text-slate-400 hover:text-blue-500 transition-colors" title="View"><FileText className="w-4 h-4" /></button>
+                                                <button onClick={() => openEditModal(b)} className="text-slate-400 hover:text-indigo-500 transition-colors" title="Edit"><svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg></button>
+                                                {b.status !== 'Paid' && (
+                                                    <button onClick={() => openPayModal(b)} className="text-slate-400 hover:text-teal-500 transition-colors" title="Pay"><svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg></button>
+                                                )}
                                             </div>
-                                        </div>
-                                    </div>
-
-                                    <div className="mb-5 flex-1">
-                                        <h3 className="font-black text-slate-900 dark:text-white text-xl leading-tight mb-1 truncate" title={b.tenant_name}>{b.tenant_name}</h3>
-                                        <div className="flex items-center gap-2">
-                                            <span className="text-[10px] font-black text-slate-400 dark:text-zinc-500 uppercase tracking-widest">Rm {b.room_number || 'N/A'}</span>
-                                            <span className="text-[10px] font-black text-slate-400 dark:text-zinc-500 uppercase tracking-widest">•</span>
-                                            <span className="text-[10px] font-black text-slate-400 dark:text-zinc-500 uppercase tracking-widest">{b.billing_month}</span>
-                                        </div>
-                                    </div>
-
-                                    <div className="bg-secondary/50 rounded-2xl p-4 border border-slate-200 dark:border-zinc-800 mb-4 flex flex-col gap-3">
-                                        <div className="flex justify-between items-center">
-                                            <span className="text-[10px] font-black text-slate-500 dark:text-zinc-500 uppercase tracking-widest">Total</span>
-                                            <span className="font-bold text-slate-900 dark:text-white text-sm">₱ {Number(b.total_amount).toLocaleString()}</span>
-                                        </div>
-                                        <div className="flex justify-between items-center border-t border-slate-200 dark:border-zinc-800/80 pt-3">
-                                            <span className="text-[10px] font-black text-slate-500 dark:text-zinc-500 uppercase tracking-widest">Balance</span>
-                                            <span className={`font-black text-lg ${Number(b.balance) > 0 ? 'text-rose-500 dark:text-rose-400' : 'text-emerald-500 dark:text-emerald-400'}`}>₱ {Number(b.balance).toLocaleString()}</span>
-                                        </div>
-                                    </div>
-                                    
-                                    <div className="text-center">
-                                        <span className="text-[10px] font-black text-slate-400 dark:text-zinc-500 uppercase tracking-widest">Due: {new Date(b.due_date).toLocaleDateString()}</span>
-                                    </div>
-
-                                    <div className="absolute inset-0 bg-white/60 dark:bg-card/80 backdrop-blur-sm opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center gap-2 px-4">
-                                        <button onClick={() => openViewModal(b)} className="flex-1 h-12 rounded-2xl bg-card border border-slate-200 dark:border-zinc-700 shadow-xl flex items-center justify-center text-slate-700 dark:text-zinc-300 hover:text-blue-500 hover:border-blue-500 transition-colors hover:scale-[1.02] active:scale-95 text-xs font-bold uppercase tracking-widest gap-2" title="View Details">
-                                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path></svg>
-                                        </button>
-                                        {b.status !== 'Paid' && (
-                                            <button onClick={() => openPayModal(b)} className="flex-1 h-12 rounded-2xl bg-emerald-500 border border-emerald-400 flex items-center justify-center text-white hover:bg-emerald-400 transition-colors hover:scale-[1.02] active:scale-95 text-xs font-bold uppercase tracking-widest gap-2" title="Record Payment">
-                                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-                                            </button>
-                                        )}
-                                    </div>
-                                    <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity z-10 flex flex-col gap-2">
-                                        <button onClick={() => openEditModal(b)} className="w-8 h-8 rounded-full bg-card shadow-md border border-slate-200 dark:border-zinc-700 flex items-center justify-center text-slate-500 hover:text-indigo-500 transition-colors"><svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg></button>
-                                        <button onClick={() => handleDeleteBill(b.id)} className="w-8 h-8 rounded-full bg-card shadow-md border border-slate-200 dark:border-zinc-700 flex items-center justify-center text-slate-500 hover:text-rose-500 transition-colors"><svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg></button>
-                                    </div>
-                                </div>
-                            </motion.div>
-                        );
-                    })}
-                </motion.div>
-            )}
+                                        </td>
+                                    </tr>
+                                ))
+                            )}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
 
             <AnimatePresence>
             {isViewOpen && selectedBill && (
