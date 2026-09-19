@@ -326,7 +326,7 @@ export default function AdminTenants() {
                                 <div className="text-2xl font-bold text-slate-900 dark:text-white flex items-baseline gap-2">
                                     {movedOutCount} <span className="text-lg">Tenants</span>
                                 </div>
-                                <p className="text-xs font-semibold text-slate-500 dark:text-zinc-400 mt-1">
+                                <p className="text-xs font-semibold text-slate-600 dark:text-zinc-300 mt-1">
                                     Historical departures
                                 </p>
                             </div>
