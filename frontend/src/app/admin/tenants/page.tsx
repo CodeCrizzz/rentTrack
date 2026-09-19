@@ -34,6 +34,7 @@ interface Room {
     id: number;
     room_number: string;
     status: string;
+    capacity: number;
 }
 
 const containerVariants: Variants = {
@@ -263,50 +264,77 @@ export default function AdminTenants() {
                 </div>
             </motion.div>
 
-            {/* Summary Cards */}
-            <motion.div initial={{opacity:0, y:20}} animate={{opacity:1, y:0}} transition={{delay: 0.1}} className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8 relative z-10">
-                <div className="bg-card rounded-2xl border border-slate-100 dark:border-zinc-800 p-6 flex flex-col justify-between shadow-sm">
-                    <div className="flex justify-between items-start mb-4">
-                        <h3 className="text-sm font-medium text-slate-500 dark:text-zinc-400">Active Tenants</h3>
-                        <div className="w-10 h-10 rounded-xl bg-emerald-50 dark:bg-emerald-500/10 flex items-center justify-center text-emerald-600 dark:text-emerald-400">
-                            <Users className="w-5 h-5" />
+            {/* Derived Metrics */}
+            {(() => {
+                const totalBeds = rooms.reduce((acc, r) => acc + (r.capacity || 0), 0);
+                const activeTenantsCount = tenants.filter(t => t.status === 'Active').length;
+                const capacityPercent = totalBeds > 0 ? Math.round((activeTenantsCount / totalBeds) * 100) : 0;
+                
+                const overdueTenants = tenants.filter(t => t.payment_status === 'Overdue');
+                const overdueCount = overdueTenants.length;
+                const totalUnpaid = overdueTenants.reduce((acc, t) => acc + (Number(t.balance) || 0), 0);
+
+                const movedOutCount = tenants.filter(t => t.status === 'Moved Out').length;
+
+                return (
+                    <motion.div initial={{opacity:0, y:20}} animate={{opacity:1, y:0}} transition={{delay: 0.1}} className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8 relative z-10">
+                        {/* 1. Active Tenants */}
+                        <div className="bg-card rounded-2xl border border-slate-100 dark:border-zinc-800 p-6 flex flex-col justify-between shadow-sm">
+                            <div className="flex justify-between items-start mb-4">
+                                <h3 className="text-sm font-medium text-slate-500 dark:text-zinc-400">Active Tenants</h3>
+                                <div className="w-10 h-10 rounded-xl bg-emerald-50 dark:bg-emerald-500/10 flex items-center justify-center text-emerald-600 dark:text-emerald-400">
+                                    <Users className="w-5 h-5" />
+                                </div>
+                            </div>
+                            <div>
+                                <div className="text-2xl font-bold text-slate-900 dark:text-white flex items-baseline gap-2">
+                                    {activeTenantsCount} <span className="text-lg">Active</span>
+                                </div>
+                                <p className="text-xs font-semibold text-emerald-600 mt-1">
+                                    Occupying {activeTenantsCount} of {totalBeds || '?'} total beds ({capacityPercent}% Capacity)
+                                </p>
+                            </div>
                         </div>
-                    </div>
-                    <div>
-                        <div className="text-2xl font-bold text-slate-900 dark:text-white flex items-baseline gap-2">
-                            {tenants.filter(t => t.status === 'Active').length} <span className="text-lg">Active</span>
+
+                        {/* 2. Overdue Payments */}
+                        <div className="bg-card rounded-2xl border border-slate-100 dark:border-zinc-800 p-6 flex flex-col justify-between shadow-sm">
+                            <div className="flex justify-between items-start mb-4">
+                                <h3 className="text-sm font-medium text-slate-500 dark:text-zinc-400">Overdue Payments</h3>
+                                <div className="w-10 h-10 rounded-xl bg-rose-50 dark:bg-rose-500/10 flex items-center justify-center text-rose-600 dark:text-rose-400">
+                                    <AlertCircle className="w-5 h-5" />
+                                </div>
+                            </div>
+                            <div>
+                                <div className="text-2xl font-bold text-slate-900 dark:text-white flex items-baseline gap-2">
+                                    {overdueCount} <span className="text-lg">Tenants Overdue</span>
+                                </div>
+                                <p className="text-xs font-semibold text-rose-600 mt-1">
+                                    ₱{totalUnpaid.toLocaleString()} Total Unpaid
+                                </p>
+                            </div>
                         </div>
-                    </div>
-                </div>
-                <div className="bg-card rounded-2xl border border-slate-100 dark:border-zinc-800 p-6 flex flex-col justify-between shadow-sm">
-                    <div className="flex justify-between items-start mb-4">
-                        <h3 className="text-sm font-medium text-slate-500 dark:text-zinc-400">Pending Registrations</h3>
-                        <div className="w-10 h-10 rounded-xl bg-amber-50 dark:bg-amber-500/10 flex items-center justify-center text-amber-600 dark:text-amber-400">
-                            <Clock className="w-5 h-5" />
+
+                        {/* 3. Moved Out */}
+                        <div className="bg-card rounded-2xl border border-slate-100 dark:border-zinc-800 p-6 flex flex-col justify-between shadow-sm">
+                            <div className="flex justify-between items-start mb-4">
+                                <h3 className="text-sm font-medium text-slate-500 dark:text-zinc-400">Moved Out</h3>
+                                <div className="w-10 h-10 rounded-xl bg-slate-100 dark:bg-zinc-800 flex items-center justify-center text-slate-600 dark:text-zinc-400">
+                                    <Users className="w-5 h-5" />
+                                </div>
+                            </div>
+                            <div>
+                                <div className="text-2xl font-bold text-slate-900 dark:text-white flex items-baseline gap-2">
+                                    {movedOutCount} <span className="text-lg">Tenants</span>
+                                </div>
+                                <p className="text-xs font-semibold text-slate-500 dark:text-zinc-400 mt-1">
+                                    Historical departures
+                                </p>
+                            </div>
                         </div>
-                    </div>
-                    <div>
-                        <div className="text-2xl font-bold text-slate-900 dark:text-white flex items-baseline gap-2">
-                            {tenants.filter(t => t.status === 'Pending').length} <span className="text-lg">Pending</span>
-                        </div>
-                        <p className="text-xs font-semibold text-amber-600 mt-1">Awaiting approval</p>
-                    </div>
-                </div>
-                <div className="bg-card rounded-2xl border border-slate-100 dark:border-zinc-800 p-6 flex flex-col justify-between shadow-sm">
-                    <div className="flex justify-between items-start mb-4">
-                        <h3 className="text-sm font-medium text-slate-500 dark:text-zinc-400">Move-out Notices</h3>
-                        <div className="w-10 h-10 rounded-xl bg-rose-50 dark:bg-rose-500/10 flex items-center justify-center text-rose-600 dark:text-rose-400">
-                            <AlertCircle className="w-5 h-5" />
-                        </div>
-                    </div>
-                    <div>
-                        <div className="text-2xl font-bold text-slate-900 dark:text-white flex items-baseline gap-2">
-                            {tenants.filter(t => t.status === 'Moved Out').length} <span className="text-lg">Notices</span>
-                        </div>
-                        <p className="text-xs font-semibold text-rose-600 mt-1">Total Moved Out</p>
-                    </div>
-                </div>
-            </motion.div>
+                    </motion.div>
+                );
+            })()}
+
 
             {/* Filters */}
             <motion.div initial={{opacity:0, y:20}} animate={{opacity:1, y:0}} transition={{delay: 0.2}} className="flex flex-col sm:flex-row gap-4 relative z-10 mb-8 bg-card p-3 rounded-2xl border border-slate-100 dark:border-zinc-800 shadow-sm">
