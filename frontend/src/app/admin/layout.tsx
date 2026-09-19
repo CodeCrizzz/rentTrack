@@ -13,7 +13,7 @@ import {
 } from "@/components/ui/sidebar";
 import { AppSidebar } from '@/components/app-sidebar';
 import { FullscreenToggle } from '@/components/fullscreen-toggle';
-import { LayoutDashboard, Building2, Users, CreditCard, Wrench, MessageSquare, Bell, Settings, User, RefreshCw } from 'lucide-react';
+import { LayoutDashboard, Building2, Users, CreditCard, Wrench, MessageSquare, Bell, Settings, User, RefreshCw, Calendar } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -30,6 +30,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     const [showAllNotifications, setShowAllNotifications] = useState(false);
     const [isAllRead, setIsAllRead] = useState(true);
     const [refreshKey, setRefreshKey] = useState(0);
+    const [currentDate, setCurrentDate] = useState("");
 
     const fetchUnreadCount = async () => {
         try {
@@ -57,6 +58,9 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     };
 
     useEffect(() => {
+        const options: Intl.DateTimeFormatOptions = { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long' };
+        setCurrentDate(new Date().toLocaleDateString(undefined, options));
+
         const userStr = localStorage.getItem('user');
         const token = localStorage.getItem('token');
         if (userStr) {
@@ -174,6 +178,12 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                         </div>
 
                         <div className="flex items-center gap-2">
+                            {currentDate && (
+                                <div className="hidden md:flex items-center gap-2 px-3 py-1.5 mr-2 bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-zinc-800 rounded-lg text-xs font-medium text-slate-600 dark:text-zinc-300">
+                                    <Calendar className="w-3.5 h-3.5 text-slate-400 dark:text-zinc-500" />
+                                    {currentDate}
+                                </div>
+                            )}
                             <button 
                                 onClick={() => {
                                     setRefreshKey(prev => prev + 1);
