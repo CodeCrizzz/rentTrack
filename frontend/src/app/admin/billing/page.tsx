@@ -67,6 +67,7 @@ export default function AdminBilling() {
     const [isLoading, setIsLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState("");
     const [statusFilter, setStatusFilter] = useState("All");
+    const [monthFilter, setMonthFilter] = useState("All");
 
     const [isViewOpen, setIsViewOpen] = useState(false);
     const [isPayOpen, setIsPayOpen] = useState(false);
@@ -119,13 +120,26 @@ export default function AdminBilling() {
         fetchData();
     }, []);
 
+    const uniqueMonths = useMemo(() => {
+        const months = Array.from(new Set(bills.map(b => b.billing_month))).filter(Boolean);
+        return months.sort((a, b) => new Date(b).getTime() - new Date(a).getTime());
+    }, [bills]);
+
+    const monthOptions = useMemo(() => {
+        return [
+            { value: "All", label: "All Months" },
+            ...uniqueMonths.map(m => ({ value: m, label: m }))
+        ];
+    }, [uniqueMonths]);
+
     const filteredBills = useMemo(() => {
         return bills.filter(bill => {
             const matchesSearch = bill.tenant_name.toLowerCase().includes(searchQuery.toLowerCase());
             const matchesStatus = statusFilter === "All" || bill.status === statusFilter;
-            return matchesSearch && matchesStatus;
+            const matchesMonth = monthFilter === "All" || bill.billing_month === monthFilter;
+            return matchesSearch && matchesStatus && matchesMonth;
         });
-    }, [bills, searchQuery, statusFilter]);
+    }, [bills, searchQuery, statusFilter, monthFilter]);
 
     const handleTenantChange = (tenantId: string) => {
         const tenant = tenants.find(t => t.id === Number(tenantId));
@@ -267,10 +281,6 @@ export default function AdminBilling() {
                     <p className="text-sm text-slate-500 dark:text-zinc-400 mt-1">Issue bills, track utilities, submetering, and verify GCash receipts.</p>
                 </div>
                 <div className="flex items-center gap-3">
-                    <div className="flex items-center gap-2 px-4 py-2 bg-card border border-slate-200 dark:border-zinc-800 rounded-lg shadow-sm text-sm font-medium text-slate-600 dark:text-zinc-300">
-                        <CalendarIcon className="w-4 h-4 text-slate-400" />
-                        October 24, 2025
-                    </div>
                     <button className="p-2.5 bg-card border border-slate-200 dark:border-zinc-800 rounded-lg shadow-sm text-slate-600 dark:text-zinc-300 hover:bg-slate-50 dark:hover:bg-zinc-800 transition-colors">
                         <Bell className="w-4 h-4" />
                     </button>
@@ -282,7 +292,7 @@ export default function AdminBilling() {
                 {/* Total Billed */}
                 <div className="bg-card rounded-xl border border-slate-200 dark:border-zinc-800 p-6 shadow-sm">
                     <div className="flex justify-between items-start mb-4">
-                        <p className="text-sm font-medium text-slate-500 dark:text-zinc-400">Total Billed (Oct)</p>
+                        <p className="text-sm font-medium text-slate-500 dark:text-zinc-400">Total Billed {monthFilter !== "All" ? `(${monthFilter.split(' ')[0]})` : ''}</p>
                         <div className="w-8 h-8 rounded-lg bg-teal-50 dark:bg-teal-500/10 flex items-center justify-center text-teal-600 dark:text-teal-400">
                             <Receipt className="w-4 h-4" />
                         </div>
@@ -328,15 +338,15 @@ export default function AdminBilling() {
             {/* Table Controls */}
             <div className="flex flex-col sm:flex-row justify-between items-center mb-4 gap-4">
                 <div className="flex gap-3 w-full sm:w-auto">
-                    <div className="w-40 relative">
+                    <div className="w-48 relative">
                         <CustomSelect 
-                            value={"October 2025"} // Visual mock for the month filter
-                            onChange={() => {}}
-                            options={[{ value: "October 2025", label: "October 2025" }]}
+                            value={monthFilter}
+                            onChange={(val) => setMonthFilter(val)}
+                            options={monthOptions}
                             className="w-full py-2.5 pl-4 pr-8 rounded-lg bg-card border border-slate-200 dark:border-zinc-800 text-slate-700 dark:text-zinc-300 font-medium text-sm focus:outline-none focus:ring-2 focus:ring-teal-500"
                         />
                     </div>
-                    <div className="w-40 relative">
+                    <div className="w-56 relative">
                         <CustomSelect 
                             value={statusFilter}
                             onChange={(val) => setStatusFilter(val)}
@@ -401,7 +411,7 @@ export default function AdminBilling() {
                                                 <span className="inline-flex items-center px-2.5 py-1 rounded bg-rose-50 dark:bg-rose-500/10 text-rose-700 dark:text-rose-400 text-[10px] font-bold uppercase tracking-wider">Unpaid</span>
                                             )}
                                         </td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-center opacity-0 group-hover:opacity-100 transition-opacity">
+                                        <td className="px-6 py-4 whitespace-nowrap text-center transition-opacity">
                                             <div className="flex items-center justify-center gap-2">
                                                 <button onClick={() => openViewModal(b)} className="text-slate-400 hover:text-blue-500 transition-colors" title="View"><FileText className="w-4 h-4" /></button>
                                                 <button onClick={() => openEditModal(b)} className="text-slate-400 hover:text-indigo-500 transition-colors" title="Edit"><svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg></button>
