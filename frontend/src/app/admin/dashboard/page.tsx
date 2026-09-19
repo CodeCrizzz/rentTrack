@@ -104,13 +104,9 @@ export default function AdminDashboard() {
     const [cashflowData, setCashflowData] = useState<any[]>([]);
     const [dateRange, setDateRange] = useState("last_6_months");
     const [isLoading, setIsLoading] = useState(true);
-    const [currentDate, setCurrentDate] = useState("");
     const [adminName, setAdminName] = useState('Admin');
 
     useEffect(() => {
-        const options: Intl.DateTimeFormatOptions = { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long' };
-        setCurrentDate(new Date().toLocaleDateString(undefined, options));
-
         const userStr = localStorage.getItem('user');
         if (userStr) {
             try {
@@ -174,10 +170,6 @@ export default function AdminDashboard() {
                     </div>
                 </div>
                 <div className="flex items-center gap-3">
-                    <div className="flex items-center gap-2 px-4 py-2.5 bg-card border border-slate-200 dark:border-zinc-800 rounded-xl text-sm font-medium text-slate-700 dark:text-zinc-300 shadow-sm">
-                        <Calendar className="w-4 h-4 text-slate-500 dark:text-zinc-400" />
-                        {currentDate}
-                    </div>
                 </div>
             </div>
 
@@ -190,7 +182,7 @@ export default function AdminDashboard() {
                     {/* Decorative Background Shapes */}
                     <div className="absolute -top-6 -right-6 w-24 h-24 bg-emerald-500/10 dark:bg-emerald-500/10 rounded-full pointer-events-none"></div>
                     
-                    <motion.div custom={0} variants={containerVariants} initial="hidden" whileInView="show" viewport={{ once: true, amount: 0.2 }} className="relative z-10 h-full w-full flex flex-col">
+                    <motion.div custom={0} variants={containerVariants} initial="hidden" whileInView="show" viewport={{ once: true, amount: 0.01 }} className="relative z-10 h-full w-full flex flex-col">
                     <motion.div variants={slideLeftVariants} className="flex items-center justify-between mb-2">
                         <h3 className="text-sm font-medium text-slate-500 dark:text-zinc-400">Room Occupancy Rate</h3>
                         <div className="w-8 h-8 rounded-full bg-emerald-50 dark:bg-emerald-500/10 flex items-center justify-center text-emerald-600 dark:text-emerald-400">
@@ -256,7 +248,7 @@ export default function AdminDashboard() {
                     {/* Decorative Background Shapes */}
                     <div className="absolute -top-6 -right-6 w-24 h-24 bg-orange-500/10 dark:bg-orange-500/10 rounded-full pointer-events-none"></div>
                     
-                    <motion.div custom={1} variants={containerVariants} initial="hidden" whileInView="show" viewport={{ once: true, amount: 0.2 }} className="relative z-10 h-full w-full flex flex-col">
+                    <motion.div custom={1} variants={containerVariants} initial="hidden" whileInView="show" viewport={{ once: true, amount: 0.01 }} className="relative z-10 h-full w-full flex flex-col">
                     <motion.div variants={slideLeftVariants} className="flex items-center justify-between mb-4">
                         <h3 className="text-sm font-medium text-slate-500 dark:text-zinc-400">Pending Dues</h3>
                         <div className="w-8 h-8 rounded-full bg-orange-50 dark:bg-orange-500/10 flex items-center justify-center text-orange-600 dark:text-orange-400">
@@ -283,7 +275,7 @@ export default function AdminDashboard() {
                     {/* Decorative Background Shapes */}
                     <div className="absolute -top-6 -right-6 w-24 h-24 bg-rose-500/10 dark:bg-rose-500/10 rounded-full pointer-events-none"></div>
                     
-                    <motion.div custom={2} variants={containerVariants} initial="hidden" whileInView="show" viewport={{ once: true, amount: 0.2 }} className="relative z-10 h-full w-full flex flex-col">
+                    <motion.div custom={2} variants={containerVariants} initial="hidden" whileInView="show" viewport={{ once: true, amount: 0.01 }} className="relative z-10 h-full w-full flex flex-col">
                     <motion.div variants={slideLeftVariants} className="flex items-center justify-between mb-4">
                         <h3 className="text-sm font-medium text-slate-500 dark:text-zinc-400">Pending Maintenance</h3>
                         <div className="w-8 h-8 rounded-full bg-rose-50 dark:bg-rose-500/10 flex items-center justify-center text-rose-600 dark:text-rose-400">
@@ -310,7 +302,7 @@ export default function AdminDashboard() {
                     {/* Decorative Background Shapes */}
                     <div className="absolute -top-6 -right-6 w-24 h-24 bg-emerald-500/10 dark:bg-emerald-500/10 rounded-full pointer-events-none"></div>
                     
-                    <motion.div custom={3} variants={containerVariants} initial="hidden" whileInView="show" viewport={{ once: true, amount: 0.2 }} className="relative z-10 h-full w-full flex flex-col">
+                    <motion.div custom={3} variants={containerVariants} initial="hidden" whileInView="show" viewport={{ once: true, amount: 0.01 }} className="relative z-10 h-full w-full flex flex-col">
                     <motion.div variants={slideLeftVariants} className="flex items-center justify-between mb-4">
                         <h3 className="text-sm font-medium text-slate-500 dark:text-zinc-400">Total Revenue</h3>
                         <div className="w-8 h-8 rounded-full bg-emerald-50 dark:bg-emerald-500/10 flex items-center justify-center text-emerald-600 dark:text-emerald-400">
@@ -337,7 +329,7 @@ export default function AdminDashboard() {
             <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
                 {/* Cash Flow Overview */}
                 <div className={`lg:col-span-3 ${cardClass}`}>
-                    <motion.div custom={4} variants={containerVariants} initial="hidden" whileInView="show" viewport={{ once: true, amount: 0.2 }} className="h-full w-full flex flex-col">
+                    <motion.div custom={0} variants={containerVariants} initial="hidden" whileInView="show" viewport={{ once: true, amount: 0.01 }} className="h-full w-full flex flex-col">
                         <motion.div variants={slideLeftVariants} className="flex flex-col sm:flex-row sm:items-center justify-between mb-6 gap-4">
                             <div>
                                 <h2 className="text-lg font-bold text-slate-800 dark:text-white">Cash Flow Overview</h2>
@@ -393,7 +385,7 @@ export default function AdminDashboard() {
 
                 {/* Recent Activity */}
                 <div className={`lg:col-span-1 ${cardClass}`}>
-                    <motion.div custom={5} variants={containerVariants} initial="hidden" whileInView="show" viewport={{ once: true, amount: 0.2 }} className="h-full w-full flex flex-col">
+                    <motion.div custom={1} variants={containerVariants} initial="hidden" whileInView="show" viewport={{ once: true, amount: 0.01 }} className="h-full w-full flex flex-col">
                         <motion.div variants={slideLeftVariants} className={headerClass}>
                             <h2>Recent Activity</h2>
                         </motion.div>
@@ -417,7 +409,7 @@ export default function AdminDashboard() {
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 {/* Pending Tenant Registrations */}
                 <div className={listCardClass}>
-                    <motion.div custom={6} variants={containerVariants} initial="hidden" whileInView="show" viewport={{ once: true, amount: 0.2 }} className="h-full w-full flex flex-col">
+                    <motion.div custom={0} variants={containerVariants} initial="hidden" whileInView="show" viewport={{ once: true, amount: 0.01 }} className="h-full w-full flex flex-col">
                     <motion.div variants={slideLeftVariants} className={headerClass}>
                         <h2>Pending Registrations <span className="ml-2 px-2 py-0.5 bg-amber-100 dark:bg-amber-500/20 text-amber-700 dark:text-amber-400 text-xs rounded-full">{stats.pendingTenantsList.length}</span></h2>
                         <Link href="/admin/tenants" className="text-sm font-semibold text-emerald-600 dark:text-emerald-400 hover:underline">View All</Link>
@@ -442,7 +434,7 @@ export default function AdminDashboard() {
                 </div>
                 {/* Pending Payment Verification */}
                 <div className={listCardClass}>
-                    <motion.div custom={7} variants={containerVariants} initial="hidden" whileInView="show" viewport={{ once: true, amount: 0.2 }} className="h-full w-full flex flex-col">
+                    <motion.div custom={1} variants={containerVariants} initial="hidden" whileInView="show" viewport={{ once: true, amount: 0.01 }} className="h-full w-full flex flex-col">
                     <motion.div variants={slideLeftVariants} className={headerClass}>
                         <h2>Payment Verifications <span className="ml-2 px-2 py-0.5 bg-amber-100 dark:bg-amber-500/20 text-amber-700 dark:text-amber-400 text-xs rounded-full">0</span></h2>
                     </motion.div>
@@ -458,7 +450,7 @@ export default function AdminDashboard() {
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 {/* Recent Payments */}
                 <div className={listCardClass}>
-                    <motion.div custom={8} variants={containerVariants} initial="hidden" whileInView="show" viewport={{ once: true, amount: 0.2 }} className="h-full w-full flex flex-col">
+                    <motion.div custom={0} variants={containerVariants} initial="hidden" whileInView="show" viewport={{ once: true, amount: 0.01 }} className="h-full w-full flex flex-col">
                     <motion.div variants={slideLeftVariants} className={headerClass}>
                         <h2>Recent Payments</h2>
                         <Link href="/admin/billing" className="text-sm font-semibold text-emerald-600 dark:text-emerald-400 hover:underline">View All</Link>
@@ -490,7 +482,7 @@ export default function AdminDashboard() {
 
                 {/* Overdue Bills */}
                 <div className={listCardClass}>
-                    <motion.div custom={9} variants={containerVariants} initial="hidden" whileInView="show" viewport={{ once: true, amount: 0.2 }} className="h-full w-full flex flex-col">
+                    <motion.div custom={1} variants={containerVariants} initial="hidden" whileInView="show" viewport={{ once: true, amount: 0.01 }} className="h-full w-full flex flex-col">
                     <motion.div variants={slideLeftVariants} className={headerClass}>
                         <h2>Overdue Bills <span className="ml-2 px-2 py-0.5 bg-rose-100 dark:bg-rose-500/20 text-rose-700 dark:text-rose-400 text-xs rounded-full">{stats.overdueAccounts.length}</span></h2>
                         <Link href="/admin/billing" className="text-sm font-semibold text-emerald-600 dark:text-emerald-400 hover:underline">View All</Link>
@@ -519,7 +511,7 @@ export default function AdminDashboard() {
             <div className="grid grid-cols-1 gap-6">
                 {/* Recent Maintenance Requests */}
                 <div className={listCardClass}>
-                    <motion.div custom={10} variants={containerVariants} initial="hidden" whileInView="show" viewport={{ once: true, amount: 0.2 }} className="h-full w-full flex flex-col">
+                    <motion.div custom={0} variants={containerVariants} initial="hidden" whileInView="show" viewport={{ once: true, amount: 0.01 }} className="h-full w-full flex flex-col">
                     <motion.div variants={slideLeftVariants} className={headerClass}>
                         <h2>Recent Maintenance</h2>
                         <Link href="/admin/requests" className="text-sm font-semibold text-emerald-600 dark:text-emerald-400 hover:underline">View All</Link>
