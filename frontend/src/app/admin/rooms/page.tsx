@@ -3,7 +3,7 @@ import { useEffect, useState, useMemo } from 'react';
 import api from '@/lib/api';
 import { Search, Plus, Building2, Users, Info, Wrench, Edit, Trash2, ChevronDown, X, CheckCircle } from 'lucide-react';
 import CustomSelect from '@/components/CustomSelect';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, Variants } from 'framer-motion';
 import { toast } from 'sonner';
 
 interface Tenant {
@@ -30,6 +30,44 @@ interface Room {
     status: string;
     occupants: Tenant[];
 }
+
+const gridVariants: Variants = {
+    hidden: { opacity: 1 },
+    show: {
+        opacity: 1,
+        transition: { staggerChildren: 0.15 }
+    }
+};
+
+const cardVariants: Variants = {
+    hidden: { opacity: 1 },
+    show: { 
+        opacity: 1, 
+        transition: { 
+            staggerChildren: 0.15,
+            delayChildren: 0.2
+        }
+    }
+};
+
+const itemVariants: Variants = {
+    hidden: { opacity: 0, x: -20 },
+    show: { opacity: 1, x: 0, transition: { duration: 0.4 } }
+};
+
+const tableRowVariants: Variants = {
+    hidden: { opacity: 0, x: -20 },
+    show: {
+        opacity: 1, 
+        x: 0, 
+        transition: { duration: 0.4 }
+    }
+};
+
+const scaleUpVariants: Variants = {
+    hidden: { opacity: 0 },
+    show: { opacity: 1, transition: { duration: 0.4 } }
+};
 
 export default function AdminRooms() {
     const [rooms, setRooms] = useState<Room[]>([]);
@@ -217,63 +255,71 @@ export default function AdminRooms() {
             </div>
 
             {/* Metric Cards Row */}
-            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6 shrink-0">
+            <motion.div variants={gridVariants} initial="hidden" animate="show" className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6 shrink-0">
                 {/* Total Rooms */}
-                <div className="bg-card border border-slate-200 dark:border-zinc-800 rounded-xl p-6 shadow-sm flex flex-col justify-between">
-                    <div className="flex justify-between items-start mb-4">
-                        <span className="text-sm font-semibold text-slate-500 dark:text-zinc-400">Total Rooms</span>
-                        <div className="w-8 h-8 rounded-lg bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 flex items-center justify-center"><Building2 className="w-4 h-4" /></div>
+                <motion.div variants={cardVariants} className="bg-card border border-slate-200 dark:border-zinc-800 rounded-xl p-6 shadow-sm flex flex-col justify-between relative overflow-hidden">
+                    <div className="relative z-10 h-full w-full flex flex-col justify-between">
+                        <motion.div variants={itemVariants} className="flex justify-between items-start mb-4">
+                            <span className="text-sm font-semibold text-slate-500 dark:text-zinc-400">Total Rooms</span>
+                            <div className="w-8 h-8 rounded-lg bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 flex items-center justify-center"><Building2 className="w-4 h-4" /></div>
+                        </motion.div>
+                        <motion.div variants={scaleUpVariants}>
+                            <div className="text-3xl font-bold text-slate-900 dark:text-white tracking-tight flex items-baseline gap-2">
+                                {totalRooms} <span className="text-xl">Rooms</span>
+                            </div>
+                            <p className="text-emerald-600 font-semibold text-xs mt-2">{totalBeds} Total Beds</p>
+                        </motion.div>
                     </div>
-                    <div>
-                        <div className="text-3xl font-bold text-slate-900 dark:text-white tracking-tight flex items-baseline gap-2">
-                            {totalRooms} <span className="text-xl">Rooms</span>
-                        </div>
-                        <p className="text-emerald-600 font-semibold text-xs mt-2">{totalBeds} Total Beds</p>
-                    </div>
-                </div>
+                </motion.div>
 
                 {/* Fully Occupied */}
-                <div className="bg-card border border-slate-200 dark:border-zinc-800 rounded-xl p-6 shadow-sm flex flex-col justify-between">
-                    <div className="flex justify-between items-start mb-4">
-                        <span className="text-sm font-semibold text-slate-500 dark:text-zinc-400">Fully Occupied</span>
-                        <div className="w-8 h-8 rounded-lg bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 flex items-center justify-center"><Users className="w-4 h-4" /></div>
+                <motion.div variants={cardVariants} className="bg-card border border-slate-200 dark:border-zinc-800 rounded-xl p-6 shadow-sm flex flex-col justify-between relative overflow-hidden">
+                    <div className="relative z-10 h-full w-full flex flex-col justify-between">
+                        <motion.div variants={itemVariants} className="flex justify-between items-start mb-4">
+                            <span className="text-sm font-semibold text-slate-500 dark:text-zinc-400">Fully Occupied</span>
+                            <div className="w-8 h-8 rounded-lg bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 flex items-center justify-center"><Users className="w-4 h-4" /></div>
+                        </motion.div>
+                        <motion.div variants={scaleUpVariants}>
+                            <div className="text-3xl font-bold text-slate-900 dark:text-white tracking-tight flex items-baseline gap-2">
+                                {fullyOccupied} <span className="text-xl">Rooms</span>
+                            </div>
+                            <p className="text-emerald-600 font-semibold text-xs mt-2">{capacityPercent}% capacity</p>
+                        </motion.div>
                     </div>
-                    <div>
-                        <div className="text-3xl font-bold text-slate-900 dark:text-white tracking-tight flex items-baseline gap-2">
-                            {fullyOccupied} <span className="text-xl">Rooms</span>
-                        </div>
-                        <p className="text-emerald-600 font-semibold text-xs mt-2">{capacityPercent}% capacity</p>
-                    </div>
-                </div>
+                </motion.div>
 
                 {/* Vacant Rooms */}
-                <div className="bg-card border border-slate-200 dark:border-zinc-800 rounded-xl p-6 shadow-sm flex flex-col justify-between">
-                    <div className="flex justify-between items-start mb-4">
-                        <span className="text-sm font-semibold text-slate-500 dark:text-zinc-400">Vacant Rooms</span>
-                        <div className="w-8 h-8 rounded-lg bg-orange-50 dark:bg-orange-500/10 text-orange-500 flex items-center justify-center"><Info className="w-4 h-4" /></div>
+                <motion.div variants={cardVariants} className="bg-card border border-slate-200 dark:border-zinc-800 rounded-xl p-6 shadow-sm flex flex-col justify-between relative overflow-hidden">
+                    <div className="relative z-10 h-full w-full flex flex-col justify-between">
+                        <motion.div variants={itemVariants} className="flex justify-between items-start mb-4">
+                            <span className="text-sm font-semibold text-slate-500 dark:text-zinc-400">Vacant Rooms</span>
+                            <div className="w-8 h-8 rounded-lg bg-orange-50 dark:bg-orange-500/10 text-orange-500 flex items-center justify-center"><Info className="w-4 h-4" /></div>
+                        </motion.div>
+                        <motion.div variants={scaleUpVariants}>
+                            <div className="text-3xl font-bold text-slate-900 dark:text-white tracking-tight flex items-baseline gap-2">
+                                {vacantRooms} <span className="text-xl">Rooms</span>
+                            </div>
+                            <p className="text-emerald-600 font-semibold text-xs mt-2">{availableBeds} Beds Available</p>
+                        </motion.div>
                     </div>
-                    <div>
-                        <div className="text-3xl font-bold text-slate-900 dark:text-white tracking-tight flex items-baseline gap-2">
-                            {vacantRooms} <span className="text-xl">Rooms</span>
-                        </div>
-                        <p className="text-emerald-600 font-semibold text-xs mt-2">{availableBeds} Beds Available</p>
-                    </div>
-                </div>
+                </motion.div>
 
                 {/* Under Maintenance */}
-                <div className="bg-card border border-slate-200 dark:border-zinc-800 rounded-xl p-6 shadow-sm flex flex-col justify-between">
-                    <div className="flex justify-between items-start mb-4">
-                        <span className="text-sm font-semibold text-slate-500 dark:text-zinc-400">Under Maintenance</span>
-                        <div className="w-8 h-8 rounded-lg bg-red-50 dark:bg-red-500/10 text-red-500 flex items-center justify-center"><Wrench className="w-4 h-4" /></div>
+                <motion.div variants={cardVariants} className="bg-card border border-slate-200 dark:border-zinc-800 rounded-xl p-6 shadow-sm flex flex-col justify-between relative overflow-hidden">
+                    <div className="relative z-10 h-full w-full flex flex-col justify-between">
+                        <motion.div variants={itemVariants} className="flex justify-between items-start mb-4">
+                            <span className="text-sm font-semibold text-slate-500 dark:text-zinc-400">Under Maintenance</span>
+                            <div className="w-8 h-8 rounded-lg bg-red-50 dark:bg-red-500/10 text-red-500 flex items-center justify-center"><Wrench className="w-4 h-4" /></div>
+                        </motion.div>
+                        <motion.div variants={scaleUpVariants}>
+                            <div className="text-3xl font-bold text-slate-900 dark:text-white tracking-tight flex items-baseline gap-2">
+                                {maintenanceRooms} <span className="text-xl">Rooms</span>
+                            </div>
+                            <p className="text-red-500 font-semibold text-xs mt-2">Offline for repairs</p>
+                        </motion.div>
                     </div>
-                    <div>
-                        <div className="text-3xl font-bold text-slate-900 dark:text-white tracking-tight flex items-baseline gap-2">
-                            {maintenanceRooms} <span className="text-xl">Rooms</span>
-                        </div>
-                        <p className="text-red-500 font-semibold text-xs mt-2">Offline for repairs</p>
-                    </div>
-                </div>
-            </div>
+                </motion.div>
+            </motion.div>
 
             {/* Controls Bar */}
             <div className="flex flex-col md:flex-row justify-between items-center gap-4 shrink-0">
@@ -352,8 +398,16 @@ export default function AdminRooms() {
                                     </td>
                                 </tr>
                             ) : (
-                                filteredRooms.map(room => (
-                                    <tr key={room.id} className="hover:bg-slate-50/50 dark:hover:bg-white/2 transition-colors">
+                                filteredRooms.map((room, index) => (
+                                    <motion.tr 
+                                        custom={index}
+                                        variants={tableRowVariants} 
+                                        initial="hidden"
+                                        whileInView="show"
+                                        viewport={{ once: true, amount: 0.01 }}
+                                        key={room.id} 
+                                        className="hover:bg-slate-50/50 dark:hover:bg-white/2 transition-colors"
+                                    >
                                         <td className="px-6 py-4 font-bold text-slate-900 dark:text-white">
                                             {room.room_number}
                                         </td>
@@ -408,7 +462,7 @@ export default function AdminRooms() {
                                                 </button>
                                             </div>
                                         </td>
-                                    </tr>
+                                    </motion.tr>
                                 ))
                             )}
                         </tbody>
