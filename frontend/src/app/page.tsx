@@ -1,19 +1,50 @@
 "use client";
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
+import api from '@/lib/api';
 
 export default function Home() {
   const router = useRouter();
+  const [progress, setProgress] = useState(0);
 
   useEffect(() => {
-    // Wait for the loading animation to play, then redirect
-    const timer = setTimeout(() => {
-      router.push('/login');
-    }, 8000); // 8 seconds delay
+    let interval: NodeJS.Timeout;
 
-    return () => clearTimeout(timer);
+    const pingBackend = async () => {
+      setProgress(10);
+      interval = setInterval(() => {
+        setProgress((prev) => {
+          if (prev >= 90) return 90;
+          return prev + Math.random() * 15;
+        });
+      }, 500);
+
+      try {
+        await api.get('/health');
+      } catch (error) {
+        console.error("Backend wakeup failed or delayed", error);
+      } finally {
+        clearInterval(interval);
+        setProgress(100);
+        
+        // Wait for the loading animation to play for a few seconds before redirecting
+        setTimeout(() => {
+          router.push('/login');
+        }, 500);
+      }
+    };
+
+    // Delay API call by 4.8 seconds
+    const initTimer = setTimeout(() => {
+      pingBackend();
+    }, 4800);
+
+    return () => {
+      clearTimeout(initTimer);
+      if (interval) clearInterval(interval);
+    };
   }, [router]);
 
   return (
@@ -40,17 +71,19 @@ export default function Home() {
                 transition={{ delay: 4, duration: 0.8 }}
                 className="absolute bottom-8 flex flex-col items-center gap-3 z-20"
             >
-                {/* Progress Bar */}
-                <div className="w-48 h-[2px] bg-white/10 rounded-full overflow-hidden flex justify-start">
+                {/* Loop Loading Bar */}
+                <div className="w-48 h-[2px] bg-white/10 rounded-full overflow-hidden relative">
                     <motion.div 
-                        initial={{ width: "0%" }}
-                        animate={{ width: "100%" }}
+                        initial={{ x: "0%" }}
+                        animate={{ x: "100%" }}
                         transition={{ 
-                            delay: 4,
-                            duration: 4, 
-                            ease: "linear" 
+                            repeat: Infinity, 
+                            repeatType: "reverse",
+                            ease: "easeInOut", 
+                            duration: 1,
+                            delay: 4
                         }}
-                        className="h-full bg-cyan-400 rounded-full"
+                        className="w-1/2 h-full bg-cyan-400 rounded-full absolute left-0"
                     />
                 </div>
                 
@@ -63,3 +96,4 @@ export default function Home() {
     </div>
   );
 }
+
