@@ -2,6 +2,7 @@
 import { useEffect, useState, useRef } from 'react';
 import api from '@/lib/api';
 import { motion, Variants } from 'framer-motion';
+import AdminLoader from '@/components/AdminLoader';
 
 interface Conversation {
     id: number;
@@ -49,6 +50,7 @@ export default function AdminChat() {
     const scrollRef = useRef<HTMLDivElement>(null);
 
     const fetchConversations = async () => {
+        setIsLoading(true);
         try {
             const { data } = await api.get('/admin/chat/conversations');
             setConversations(data);
@@ -60,8 +62,8 @@ export default function AdminChat() {
         } catch (error) {
             console.error("Failed to fetch conversations:", error);
         } finally {
-            setIsLoading(false);
-        }
+                setTimeout(() => setIsLoading(false), 500);
+            }
     };
 
     const fetchMessages = async (tenantId: number) => {
@@ -132,6 +134,10 @@ export default function AdminChat() {
         (c.room_number && c.room_number.toLowerCase().includes(searchFilter.toLowerCase()))
     );
 
+    if (isLoading) {
+        return <AdminLoader message="Loading Chats" />;
+    }
+
     return (
         <div className="max-w-[1600px] mx-auto h-[calc(100vh-6rem)] md:h-[calc(100vh-8rem)] flex flex-col relative pb-4 md:pb-8">
             {/* Ambient Background */}
@@ -160,12 +166,7 @@ export default function AdminChat() {
                         </div>
                     </div>
                     <div className="flex-1 overflow-y-auto custom-scrollbar p-3">
-                        {isLoading ? (
-                            <div className="p-10 text-center flex flex-col items-center gap-4">
-                                <div className="w-8 h-8 border-4 border-slate-200 dark:border-zinc-800 border-t-emerald-500 dark:border-t-emerald-500 rounded-full animate-spin"></div>
-                                <span className="font-bold text-slate-500 dark:text-zinc-500 text-xs uppercase tracking-widest animate-pulse">Loading Chats...</span>
-                            </div>
-                        ) : filteredConversations.length === 0 ? (
+                        {filteredConversations.length === 0 ? (
                             <div className="p-10 text-center font-bold text-slate-500 dark:text-zinc-500 text-xs uppercase tracking-widest">No conversations found.</div>
                         ) : (
                             <motion.div variants={listVariants} initial="hidden" animate="show" className="flex flex-col gap-2">
@@ -339,3 +340,7 @@ export default function AdminChat() {
         </div>
     );
 }
+
+
+
+
