@@ -4,6 +4,7 @@ import { motion, Variants, useMotionValue, useTransform, animate } from 'framer-
 import Link from 'next/link';
 import api from '@/lib/api';
 import CustomSelect from '@/components/CustomSelect';
+import AdminLoader from '@/components/AdminLoader';
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis, ResponsiveContainer, Tooltip, ComposedChart, Line, Legend, PieChart, Pie, Cell, Area } from "recharts";
 import { 
     Users, Receipt, Calendar, Plus, FileText, Wrench, Wallet,
@@ -122,7 +123,7 @@ export default function AdminDashboard() {
             } catch (error) {
                 console.error("Failed to fetch admin stats:", error);
             } finally {
-                setIsLoading(false);
+                setTimeout(() => setIsLoading(false), 500);
             }
         };
         fetchDashboardData();
@@ -142,9 +143,7 @@ export default function AdminDashboard() {
 
     if (isLoading || !stats || !stats.billing) {
         return (
-            <div className="flex items-center justify-center min-h-[70vh]">
-                <div className="w-10 h-10 border-4 border-slate-200 dark:border-zinc-800 border-t-[#059669] dark:border-t-[#10b981] rounded-full animate-spin"></div>
-            </div>
+            <AdminLoader message="Loading Dashboard" />
         );
     }
 
@@ -548,3 +547,8 @@ export default function AdminDashboard() {
         </motion.div>
     );
 }
+
+
+
+
+
