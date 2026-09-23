@@ -4,6 +4,7 @@ import api from '@/lib/api';
 import { motion, AnimatePresence, Variants } from 'framer-motion';
 import CustomSelect from '@/components/CustomSelect';
 import { Bell, Calendar as CalendarIcon, FileText, Clock, Receipt, Check, X, Plus } from 'lucide-react';
+import AdminLoader from '@/components/AdminLoader';
 
 export interface Bill {
     id: number;
@@ -112,8 +113,8 @@ export default function AdminBilling() {
         } catch (error) {
             console.error("Failed to fetch data:", error);
         } finally {
-            setIsLoading(false);
-        }
+                setTimeout(() => setIsLoading(false), 500);
+            }
     };
 
     useEffect(() => {
@@ -272,6 +273,10 @@ export default function AdminBilling() {
         }
     };
 
+    if (isLoading) {
+        return <AdminLoader message="Loading Billing" />;
+    }
+
     return (
         <div className="w-full h-full min-h-screen p-6 md:p-8 font-sans text-slate-900 dark:text-white">
             {/* Header */}
@@ -384,11 +389,7 @@ export default function AdminBilling() {
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-100 dark:divide-zinc-800/50">
-                            {isLoading ? (
-                                <tr>
-                                    <td colSpan={9} className="px-6 py-12 text-center text-slate-500 dark:text-zinc-400">Loading...</td>
-                                </tr>
-                            ) : filteredBills.length === 0 ? (
+                            {filteredBills.length === 0 ? (
                                 <tr>
                                     <td colSpan={9} className="px-6 py-12 text-center text-slate-500 dark:text-zinc-400">No billing records found.</td>
                                 </tr>
@@ -678,3 +679,7 @@ export default function AdminBilling() {
         </div>
     );
 }
+
+
+
+
