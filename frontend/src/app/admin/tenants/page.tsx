@@ -5,6 +5,7 @@ import { motion, AnimatePresence, Variants } from 'framer-motion';
 import { toast } from 'sonner';
 import { Bell, Calendar, Users, Clock, AlertCircle, Search } from 'lucide-react';
 import CustomSelect from '@/components/CustomSelect';
+import AdminLoader from '@/components/AdminLoader';
 
 //  Updated Interface matching all your required fields
 interface Tenant {
@@ -82,6 +83,7 @@ export default function AdminTenants() {
     });
 
     const fetchTenants = async () => {
+        setIsLoading(true);
         try {
             const { data } = await api.get('/admin/tenants');
             
@@ -104,6 +106,8 @@ export default function AdminTenants() {
         } catch (err: any) {
             console.error("Failed to fetch tenants:", err);
             setError("Failed to load residents list.");
+        } finally {
+            setTimeout(() => setIsLoading(false), 500);
         }
     };
 
@@ -117,12 +121,8 @@ export default function AdminTenants() {
     };
 
     useEffect(() => {
-        const init = async () => {
-            setIsLoading(true);
-            await Promise.all([fetchTenants(), fetchRooms()]);
-            setIsLoading(false);
-        };
-        init();
+        fetchTenants();
+        fetchRooms();
     }, []);
 
     const handleOpenModal = (tenant: Tenant, intention: 'approve' | 'edit' = 'edit') => {
@@ -250,6 +250,10 @@ export default function AdminTenants() {
         }
     };
 
+    if (isLoading) {
+        return <AdminLoader message="Loading Residents" />;
+    }
+
     return (
         <div className="max-w-400 mx-auto pb-10 relative">
             {/* Ambient Background */}
@@ -368,14 +372,6 @@ export default function AdminTenants() {
 
 
             {/* Data Table */}
-            {isLoading ? (
-                <div className="flex items-center justify-center min-h-[40vh]">
-                    <div className="relative flex flex-col items-center justify-center">
-                        <div className="w-16 h-16 border-4 border-slate-200 dark:border-zinc-800 border-t-indigo-500 dark:border-t-indigo-500 rounded-full animate-spin relative z-10 shadow-[0_0_30px_rgba(99,102,241,0.3)]"></div>
-                        <p className="text-slate-500 dark:text-zinc-400 font-bold text-xs uppercase tracking-[0.2em] mt-6 animate-pulse">Loading Residents...</p>
-                    </div>
-                </div>
-            ) : (
                 <motion.div initial={{opacity:0, y:20}} animate={{opacity:1, y:0}} transition={{delay: 0.4}} className="bg-card rounded-2xl border border-slate-100 dark:border-zinc-800 overflow-hidden shadow-sm">
                     <div className="overflow-x-auto">
                         <table className="w-full text-left text-sm text-slate-600 dark:text-zinc-400">
@@ -455,7 +451,6 @@ export default function AdminTenants() {
                         </table>
                     </div>
                 </motion.div>
-            )}
 
             {/* Modals */}
             <AnimatePresence>
@@ -667,3 +662,7 @@ export default function AdminTenants() {
         </div>
     );
 }
+
+
+
+
