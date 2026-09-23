@@ -5,6 +5,7 @@ import { Search, Plus, Building2, Users, Info, Wrench, Edit, Trash2, ChevronDown
 import CustomSelect from '@/components/CustomSelect';
 import { motion, AnimatePresence, Variants } from 'framer-motion';
 import { toast } from 'sonner';
+import AdminLoader from '@/components/AdminLoader';
 
 interface Tenant {
     id: number;
@@ -109,8 +110,8 @@ export default function AdminRooms() {
             console.error("Failed to fetch rooms:", error);
             setError("Failed to load rooms.");
         } finally {
-            setIsLoading(false);
-        }
+                setTimeout(() => setIsLoading(false), 500);
+            }
     };
 
     useEffect(() => {
@@ -239,9 +240,7 @@ export default function AdminRooms() {
 
     if (isLoading) {
         return (
-            <div className="flex items-center justify-center min-h-[70vh]">
-                <div className="w-10 h-10 border-4 border-slate-200 dark:border-zinc-800 border-t-emerald-600 rounded-full animate-spin"></div>
-            </div>
+            <AdminLoader message="Loading Rooms" />
         );
     }
 
@@ -656,3 +655,8 @@ export default function AdminRooms() {
         </div>
     );
 }
+
+
+
+
+
