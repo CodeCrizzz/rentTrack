@@ -4,6 +4,7 @@ import api from '@/lib/api';
 import { motion, AnimatePresence, Variants } from 'framer-motion';
 import { toast } from 'sonner';
 import CustomSelect from '@/components/CustomSelect';
+import AdminLoader from '@/components/AdminLoader';
 
 interface Request {
     id: number;
@@ -65,8 +66,8 @@ export default function AdminRequests() {
         } catch (error) {
             console.error("Failed to fetch requests:", error);
         } finally {
-            setIsLoading(false);
-        }
+                setTimeout(() => setIsLoading(false), 500);
+            }
     };
 
     useEffect(() => {
@@ -211,6 +212,10 @@ export default function AdminRequests() {
         }
     };
 
+    if (isLoading) {
+        return <AdminLoader message="Loading Requests" />;
+    }
+
     return (
         <div className="max-w-[1600px] mx-auto pb-10 relative">
             {/* Ambient Background */}
@@ -299,14 +304,7 @@ export default function AdminRequests() {
             </motion.div>
 
             {/* Request Cards Grid */}
-            {isLoading ? (
-                <div className="flex items-center justify-center min-h-[40vh]">
-                    <div className="relative flex flex-col items-center justify-center">
-                        <div className="w-16 h-16 border-4 border-slate-200 dark:border-zinc-800 border-t-blue-500 dark:border-t-blue-500 rounded-full animate-spin relative z-10 shadow-[0_0_30px_rgba(59,130,246,0.3)]"></div>
-                        <p className="text-slate-500 dark:text-zinc-400 font-bold text-xs uppercase tracking-[0.2em] mt-6 animate-pulse">Loading Requests...</p>
-                    </div>
-                </div>
-            ) : filteredRequests.length === 0 ? (
+            {filteredRequests.length === 0 ? (
                 <motion.div initial={{opacity:0}} animate={{opacity:1}} className="bg-card backdrop-blur-2xl rounded-[2.5rem] border border-slate-200 dark:border-zinc-800 p-16 text-center shadow-2xl">
                     <div className="w-24 h-24 bg-secondary rounded-3xl flex items-center justify-center mx-auto mb-6 shadow-inner border border-slate-200 dark:border-zinc-800">
                         <svg className="w-10 h-10 text-emerald-500 stroke-[2.5]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0z" /></svg>
@@ -567,3 +565,7 @@ export default function AdminRequests() {
         </div>
     );
 }
+
+
+
+
