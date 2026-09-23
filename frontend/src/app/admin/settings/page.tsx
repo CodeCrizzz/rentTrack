@@ -4,9 +4,12 @@ import { Shield, Bell, CreditCard, Wrench, Moon, Info, LogOut, Save, Smartphone,
 import { useRouter } from 'next/navigation';
 import { useTheme } from 'next-themes';
 import CustomSelect from '@/components/CustomSelect';
+import AdminLoader from '@/components/AdminLoader';
 
 export default function AdminSettingsPage() {
     const router = useRouter();
+    const [isLoading, setIsLoading] = useState(true);
+
     // Form states
     const [adminEmail, setAdminEmail] = useState('admin@renttrack.com');
     const [currentPassword, setCurrentPassword] = useState('');
@@ -45,6 +48,14 @@ export default function AdminSettingsPage() {
         }
     }, [theme]);
 
+    useEffect(() => {
+        // Simulate fetching settings
+        const timer = setTimeout(() => {
+            setIsLoading(false);
+        }, 3000);
+        return () => clearTimeout(timer);
+    }, []);
+
     const handleSaveChanges = () => {
         setTheme(localTheme);
         // Additional save logic can go here
@@ -65,6 +76,10 @@ export default function AdminSettingsPage() {
         localStorage.removeItem('user');
         router.push('/');
     };
+
+    if (isLoading) {
+        return <AdminLoader message="Loading Settings" />;
+    }
 
     return (
         <div className="w-full space-y-6 pb-12">
@@ -322,3 +337,4 @@ export default function AdminSettingsPage() {
         </div>
     );
 }
+
