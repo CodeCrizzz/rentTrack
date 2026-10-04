@@ -8,7 +8,6 @@ import AdminLoader from '@/components/AdminLoader';
 
 export default function AdminSettingsPage() {
     const router = useRouter();
-    const [isLoading, setIsLoading] = useState(true);
 
     // Form states
     const [adminEmail, setAdminEmail] = useState('admin@renttrack.com');
@@ -48,13 +47,6 @@ export default function AdminSettingsPage() {
         }
     }, [theme]);
 
-    useEffect(() => {
-        // Simulate fetching settings
-        const timer = setTimeout(() => {
-            setIsLoading(false);
-        }, 3000);
-        return () => clearTimeout(timer);
-    }, []);
 
     const handleSaveChanges = () => {
         setTheme(localTheme);
@@ -77,9 +69,6 @@ export default function AdminSettingsPage() {
         router.push('/');
     };
 
-    if (isLoading) {
-        return <AdminLoader message="Loading Settings" />;
-    }
 
     return (
         <div className="w-full space-y-6 pb-12">
