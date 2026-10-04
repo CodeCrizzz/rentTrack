@@ -5,6 +5,7 @@ import { toast } from 'sonner';
 import CustomSelect from '@/components/CustomSelect';
 import AdminLoader from '@/components/AdminLoader';
 import Image from 'next/image';
+import { motion, AnimatePresence } from 'framer-motion';
 
 interface Request {
     id: number;
@@ -95,7 +96,12 @@ export default function AdminRequests() {
         <div className="max-w-[1600px] mx-auto pb-10 flex flex-col md:flex-row gap-6">
             
             {/* Left Column: List */}
-            <div className="flex-1 flex flex-col gap-4">
+            <motion.div 
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ duration: 0.4 }}
+                className="flex-1 flex flex-col gap-4"
+            >
                 
                 {/* Filters */}
                 <div className="flex items-center gap-3">
@@ -142,8 +148,11 @@ export default function AdminRequests() {
                         </thead>
                         <tbody>
                             {filteredRequests.length > 0 ? (
-                                filteredRequests.map((req) => (
-                                    <tr 
+                                filteredRequests.map((req, i) => (
+                                    <motion.tr 
+                                        initial={{ opacity: 0, y: 10 }}
+                                        animate={{ opacity: 1, y: 0 }}
+                                        transition={{ delay: i * 0.05 }}
                                         key={req.id} 
                                         onClick={() => setSelectedReq(req)}
                                         className={`border-b border-slate-50 dark:border-zinc-800/50 cursor-pointer transition-colors ${selectedReq?.id === req.id ? 'bg-slate-50 dark:bg-zinc-800/50' : 'hover:bg-slate-50 dark:hover:bg-zinc-800/50'}`}
@@ -158,7 +167,7 @@ export default function AdminRequests() {
                                         <td className="py-4 px-6 text-slate-500 dark:text-zinc-400 font-medium">
                                             {new Date(req.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
                                         </td>
-                                    </tr>
+                                    </motion.tr>
                                 ))
                             ) : (
                                 <tr>
@@ -168,11 +177,19 @@ export default function AdminRequests() {
                         </tbody>
                     </table>
                 </div>
-            </div>
+            </motion.div>
 
             {/* Right Column: Details Pane */}
+            <AnimatePresence mode="wait">
             {selectedReq ? (
-                <div className="w-full md:w-[420px] shrink-0 bg-white dark:bg-card rounded-2xl border border-slate-100 dark:border-zinc-800 shadow-sm p-6 flex flex-col">
+                <motion.div 
+                    key={selectedReq.id}
+                    initial={{ opacity: 0, x: 20, scale: 0.95 }}
+                    animate={{ opacity: 1, x: 0, scale: 1 }}
+                    exit={{ opacity: 0, x: 20, scale: 0.95 }}
+                    transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                    className="w-full md:w-[420px] shrink-0 bg-white dark:bg-card rounded-2xl border border-slate-100 dark:border-zinc-800 shadow-sm p-6 flex flex-col"
+                >
                     <div className="flex items-center justify-between mb-6">
                         <h2 className="text-xl font-black text-slate-900 dark:text-white">Selected Job Details</h2>
                         <span className={`px-3 py-1 rounded-md text-xs font-bold ${getPriorityStyle(selectedReq.priority)}`}>
@@ -248,8 +265,9 @@ export default function AdminRequests() {
                             Mark as Resolved
                         </button>
                     </div>
-                </div>
+                </motion.div>
             ) : null}
+            </AnimatePresence>
         </div>
     );
 }
