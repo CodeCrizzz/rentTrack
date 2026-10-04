@@ -107,7 +107,7 @@ export default function AdminTenants() {
             console.error("Failed to fetch tenants:", err);
             setError("Failed to load residents list.");
         } finally {
-            setTimeout(() => setIsLoading(false), 500);
+            setIsLoading(false);
         }
     };
 
