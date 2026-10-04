@@ -62,7 +62,7 @@ export default function AdminChat() {
         } catch (error) {
             console.error("Failed to fetch conversations:", error);
         } finally {
-                setTimeout(() => setIsLoading(false), 500);
+                setIsLoading(false);
             }
     };
 
