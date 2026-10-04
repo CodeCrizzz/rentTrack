@@ -110,7 +110,7 @@ export default function AdminRooms() {
             console.error("Failed to fetch rooms:", error);
             setError("Failed to load rooms.");
         } finally {
-                setTimeout(() => setIsLoading(false), 500);
+                setIsLoading(false);
             }
     };
 
