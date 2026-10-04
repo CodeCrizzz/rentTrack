@@ -113,7 +113,7 @@ export default function AdminBilling() {
         } catch (error) {
             console.error("Failed to fetch data:", error);
         } finally {
-                setTimeout(() => setIsLoading(false), 500);
+                setIsLoading(false);
             }
     };
 
@@ -278,9 +278,9 @@ export default function AdminBilling() {
     }
 
     return (
-        <div className="w-full h-full min-h-screen p-6 md:p-8 font-sans text-slate-900 dark:text-white">
+        <motion.div variants={containerVariants} initial="hidden" animate="show" className="w-full h-[calc(100vh-6rem)] md:h-[calc(100vh-8rem)] flex flex-col font-sans text-slate-900 dark:text-white">
             {/* Header */}
-            <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
+            <motion.div variants={itemVariants} className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4 shrink-0">
                 <div>
                     <h1 className="text-2xl font-black text-slate-900 dark:text-white tracking-tight">Billing & Financials</h1>
                     <p className="text-sm text-slate-500 dark:text-zinc-400 mt-1">Issue bills, track utilities, submetering, and verify GCash receipts.</p>
@@ -290,10 +290,10 @@ export default function AdminBilling() {
                         <Bell className="w-4 h-4" />
                     </button>
                 </div>
-            </div>
+            </motion.div>
 
             {/* Summary Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+            <motion.div variants={itemVariants} className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6 shrink-0">
                 {/* Total Billed */}
                 <div className="bg-card rounded-xl border border-slate-200 dark:border-zinc-800 p-6 shadow-sm">
                     <div className="flex justify-between items-start mb-4">
@@ -337,11 +337,11 @@ export default function AdminBilling() {
                         {filteredBills.filter(b => b.status === 'Unpaid' || b.status === 'Overdue').length} tenants unpaid
                     </p>
                 </div>
-            </div>
+            </motion.div>
 
 
             {/* Table Controls */}
-            <div className="flex flex-col sm:flex-row justify-between items-center mb-4 gap-4">
+            <motion.div variants={itemVariants} className="flex flex-col sm:flex-row justify-between items-center mb-4 gap-4 shrink-0">
                 <div className="flex gap-3 w-full sm:w-auto">
                     <div className="w-48 relative">
                         <CustomSelect 
@@ -369,11 +369,11 @@ export default function AdminBilling() {
                     <Plus className="w-4 h-4" />
                     Create Single Bill
                 </button>
-            </div>
+            </motion.div>
 
             {/* Data Table */}
-            <div className="bg-card rounded-xl border border-slate-200 dark:border-zinc-800 shadow-sm overflow-hidden mb-8">
-                <div className="overflow-x-auto">
+            <motion.div variants={itemVariants} className="bg-card rounded-xl border border-slate-200 dark:border-zinc-800 shadow-sm overflow-hidden flex-1 flex flex-col min-h-0 mb-2">
+                <div className="overflow-auto flex-1 custom-scrollbar">
                     <table className="w-full text-left border-collapse">
                         <thead>
                             <tr className="border-b border-slate-200 dark:border-zinc-800">
@@ -427,7 +427,7 @@ export default function AdminBilling() {
                         </tbody>
                     </table>
                 </div>
-            </div>
+            </motion.div>
 
             <AnimatePresence>
             {isViewOpen && selectedBill && (
@@ -676,7 +676,7 @@ export default function AdminBilling() {
                 </motion.div>
             )}
             </AnimatePresence>
-        </div>
+        </motion.div>
     );
 }
 
