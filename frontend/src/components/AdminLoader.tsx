@@ -1,34 +1,43 @@
 "use client";
-import { motion } from 'framer-motion';
-import dynamic from 'next/dynamic';
+import { Skeleton } from "@/components/ui/skeleton";
 
-// Dynamically import the Lottie Player with SSR disabled
-const Player = dynamic(
-    () => import('@lottiefiles/react-lottie-player').then((mod) => mod.Player),
-    { 
-        ssr: false,
-        loading: () => <div className="w-10 h-10 border-4 border-slate-200 dark:border-zinc-800 border-t-emerald-500 rounded-full animate-spin"></div> 
-    }
-);
-
-export default function AdminLoader({ message = "Loading." }: { message?: string }) {
+export default function AdminLoader({ message = "Loading..." }: { message?: string }) {
     return (
-        <div className="flex items-center justify-center min-h-[70vh] w-full">
-            <motion.div 
-                initial={{ opacity: 0, scale: 0.9 }}
-                animate={{ opacity: 1, scale: 1 }}
-                className="relative flex flex-col items-center justify-center"
-            >
-                <Player
-                    src="/images/House Stats.json"
-                    className="w-48 h-48 sm:w-64 sm:h-64"
-                    loop
-                    autoplay
-                />
-                <p className="text-slate-500 dark:text-zinc-400 font-bold text-sm uppercase tracking-[0.2em] pl-[0.2em] -mt-16 animate-pulse text-center relative z-10">
-                    {message}
-                </p>
-            </motion.div>
+        <div className="max-w-[1600px] mx-auto w-full h-full min-h-[70vh] flex flex-col pt-4 space-y-8 animate-in fade-in duration-500">
+            {/* Header Skeleton */}
+            <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                    <div className="space-y-2">
+                        <Skeleton className="h-10 w-[200px] md:w-[300px] bg-slate-200 dark:bg-zinc-800" />
+                        <Skeleton className="h-4 w-[150px] md:w-[200px] bg-slate-200 dark:bg-zinc-800" />
+                    </div>
+                    <Skeleton className="h-10 w-[100px] md:w-[120px] rounded-full bg-slate-200 dark:bg-zinc-800" />
+                </div>
+            </div>
+
+            {/* Stats/Cards Skeleton Row */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
+                {[...Array(4)].map((_, i) => (
+                    <Skeleton key={i} className="h-[120px] md:h-[140px] w-full rounded-2xl bg-slate-200 dark:bg-zinc-800" />
+                ))}
+            </div>
+
+            {/* Main Content Area Skeleton */}
+            <div className="flex-1 w-full rounded-[2.5rem] bg-slate-200/50 dark:bg-zinc-800/50 border border-slate-200/60 dark:border-zinc-800/60 p-6 md:p-8 space-y-6">
+                <div className="flex items-center justify-between mb-8">
+                    <Skeleton className="h-8 w-[150px] bg-slate-200 dark:bg-zinc-800" />
+                    <Skeleton className="h-8 w-[200px] rounded-full bg-slate-200 dark:bg-zinc-800" />
+                </div>
+                
+                <div className="space-y-4">
+                    {[...Array(5)].map((_, i) => (
+                        <Skeleton key={i} className="h-16 w-full rounded-xl bg-slate-200 dark:bg-zinc-800" />
+                    ))}
+                </div>
+            </div>
+            
+            {/* Accessibility text */}
+            <span className="sr-only">{message}</span>
         </div>
     );
 }
