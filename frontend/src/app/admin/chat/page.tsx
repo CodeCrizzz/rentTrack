@@ -212,7 +212,7 @@ export default function AdminChat() {
                             placeholder="Search tenants..." 
                             value={searchFilter}
                             onChange={(e) => setSearchFilter(e.target.value)}
-                            className="w-full pl-9 pr-4 py-2 bg-teal-100 dark:bg-teal-900/40 border-none rounded-lg text-sm text-slate-800 dark:text-zinc-200 outline-none placeholder:text-teal-700/50 dark:placeholder:text-teal-400/50 focus:bg-teal-200 dark:focus:bg-teal-900/60 transition-colors"
+                            className="w-full pl-9 pr-4 py-2 bg-slate-100 dark:bg-zinc-800/50 border-none rounded-lg text-sm text-slate-800 dark:text-zinc-200 outline-none placeholder:text-slate-500 dark:placeholder:text-zinc-500 focus:bg-slate-200 dark:focus:bg-zinc-800/80 transition-colors"
                         />
                     </div>
                 </div>
@@ -231,7 +231,7 @@ export default function AdminChat() {
                                 <div 
                                     key={conv.id}
                                     onClick={() => setSelectedTenant(conv)}
-                                    className={`flex items-center gap-3 p-3 rounded-xl cursor-pointer transition-colors ${isSelected ? 'bg-teal-100 dark:bg-teal-900/40 border border-teal-200 dark:border-teal-800/50' : 'hover:bg-slate-50 dark:hover:bg-zinc-800/40 border border-transparent'}`}
+                                    className={`flex items-center gap-3 p-3 rounded-xl cursor-pointer transition-colors ${isSelected ? 'bg-slate-100 dark:bg-zinc-800/60 border border-slate-200 dark:border-zinc-700' : 'hover:bg-slate-50 dark:hover:bg-zinc-800/40 border border-transparent'}`}
                                 >
                                     <div className="relative w-11 h-11 shrink-0">
                                         <img src={avatarUrl} alt={conv.name} className="w-full h-full rounded-full object-cover shadow-sm" />
@@ -284,69 +284,72 @@ export default function AdminChat() {
 
                         {/* Messages Area */}
                         <div ref={scrollRef} className="flex-1 p-6 overflow-y-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] flex flex-col gap-5">
-                            <div className="text-center text-[10px] font-bold text-slate-400 dark:text-zinc-500 uppercase tracking-wider my-2">
-                                TODAY, {new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                            </div>
-                            
                             {messages.length === 0 ? (
                                 <div className="flex-1 flex flex-col items-center justify-center text-slate-400 dark:text-zinc-500 opacity-60">
                                     <div className="text-4xl mb-2">💬</div>
                                     <p className="text-sm font-medium">No messages yet.</p>
                                 </div>
                             ) : (
-                                messages.map((msg, index) => {
-                                    const isFromAdmin = msg.sender_type === 'admin' || msg.sender_id === 1;
-                                    const timeStr = new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-                                    const avatarUrl = isFromAdmin ? null : `https://ui-avatars.com/api/?name=${encodeURIComponent(selectedTenant.name)}&background=0F9D83&color=fff`;
-                                    
-                                    // Mocking an attachment for visual parity with the design screenshot
-                                    const isMockAttachment = msg.message.toLowerCase().includes('gcash') || msg.message.toLowerCase().includes('receipt');
+                                <>
+                                    <div className="flex-1 min-h-0"></div>
+                                    <div className="text-center text-[10px] font-bold text-slate-400 dark:text-zinc-500 uppercase tracking-wider my-2 shrink-0">
+                                        TODAY, {new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                    </div>
 
-                                    if (isFromAdmin) {
-                                        return (
-                                            <div key={index} className="flex flex-col items-end">
-                                                <div className="bg-[#0F9D83] text-white p-4 rounded-2xl rounded-tr-sm text-sm max-w-[75%] shadow-sm leading-relaxed">
-                                                    {msg.message}
+                                    {messages.map((msg, index) => {
+                                        const isFromAdmin = msg.sender_type === 'admin' || msg.sender_id === 1;
+                                        const timeStr = new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                                        const avatarUrl = isFromAdmin ? null : `https://ui-avatars.com/api/?name=${encodeURIComponent(selectedTenant.name)}&background=0F9D83&color=fff`;
+                                        
+                                        // Mocking an attachment for visual parity with the design screenshot
+                                        const isMockAttachment = msg.message.toLowerCase().includes('gcash') || msg.message.toLowerCase().includes('receipt');
+
+                                        if (isFromAdmin) {
+                                            return (
+                                                <div key={index} className="flex flex-col items-end">
+                                                    <div className="bg-[#0F9D83] text-white p-4 rounded-2xl rounded-tr-sm text-sm max-w-[75%] shadow-sm leading-relaxed">
+                                                        {msg.message}
+                                                    </div>
+                                                    <div className="flex items-center justify-end gap-2 mt-1 mr-1">
+                                                        <span className="text-[10px] text-slate-400 dark:text-zinc-500">{timeStr}</span>
+                                                        <span className="text-[10px] text-[#0F9D83] dark:text-teal-400 font-bold">{msg.status === 'read' ? 'Seen' : 'Sent'}</span>
+                                                    </div>
                                                 </div>
-                                                <div className="flex items-center justify-end gap-2 mt-1 mr-1">
-                                                    <span className="text-[10px] text-slate-400 dark:text-zinc-500">{timeStr}</span>
-                                                    <span className="text-[10px] text-[#0F9D83] dark:text-teal-400 font-bold">{msg.status === 'read' ? 'Seen' : 'Sent'}</span>
-                                                </div>
-                                            </div>
-                                        );
-                                    } else {
-                                        return (
-                                            <div key={index} className="flex items-start gap-3">
-                                                <img src={avatarUrl!} alt={selectedTenant.name} className="w-8 h-8 rounded-full object-cover shrink-0 mt-1" />
-                                                <div className="flex flex-col items-start">
-                                                    {isMockAttachment ? (
-                                                        <div className="bg-teal-100 dark:bg-teal-900/40 border border-teal-200 dark:border-teal-800/50 p-3 rounded-2xl rounded-tl-sm w-[280px] flex items-center gap-4 mb-1">
-                                                            <div className="w-14 h-14 bg-white dark:bg-zinc-900 rounded-lg overflow-hidden shrink-0">
-                                                                <img src="/images/leaking-pipe.jpg" alt="Attachment" className="w-full h-full object-cover opacity-80" />
+                                            );
+                                        } else {
+                                            return (
+                                                <div key={index} className="flex items-start gap-3">
+                                                    <img src={avatarUrl!} alt={selectedTenant.name} className="w-8 h-8 rounded-full object-cover shrink-0 mt-1" />
+                                                    <div className="flex flex-col items-start">
+                                                        {isMockAttachment ? (
+                                                            <div className="bg-slate-100 dark:bg-zinc-800/60 border border-slate-200 dark:border-zinc-700 p-3 rounded-2xl rounded-tl-sm w-[280px] flex items-center gap-4 mb-1">
+                                                                <div className="w-14 h-14 bg-white dark:bg-zinc-900 rounded-lg overflow-hidden shrink-0">
+                                                                    <img src="/images/leaking-pipe.jpg" alt="Attachment" className="w-full h-full object-cover opacity-80" />
+                                                                </div>
+                                                                <div className="flex flex-col overflow-hidden">
+                                                                    <span className="text-xs font-bold text-slate-800 dark:text-zinc-200 truncate">Gcash_Receipt_Oct.jpg</span>
+                                                                    <span className="text-[10px] text-slate-400 dark:text-zinc-500 mt-1">482 KB • Click to zoom</span>
+                                                                </div>
                                                             </div>
-                                                            <div className="flex flex-col overflow-hidden">
-                                                                <span className="text-xs font-bold text-slate-800 dark:text-zinc-200 truncate">Gcash_Receipt_Oct.jpg</span>
-                                                                <span className="text-[10px] text-slate-400 dark:text-zinc-500 mt-1">482 KB • Click to zoom</span>
+                                                        ) : (
+                                                            <div className="bg-slate-100 dark:bg-zinc-800/60 text-slate-800 dark:text-zinc-200 p-4 rounded-2xl rounded-tl-sm text-sm max-w-[75%] leading-relaxed">
+                                                                {msg.message}
                                                             </div>
-                                                        </div>
-                                                    ) : (
-                                                        <div className="bg-teal-100 dark:bg-teal-900/40 text-slate-800 dark:text-zinc-200 p-4 rounded-2xl rounded-tl-sm text-sm max-w-[75%] leading-relaxed">
-                                                            {msg.message}
-                                                        </div>
-                                                    )}
-                                                    <span className="text-[10px] text-slate-400 dark:text-zinc-500 mt-1 ml-1">{timeStr}</span>
+                                                        )}
+                                                        <span className="text-[10px] text-slate-400 dark:text-zinc-500 mt-1 ml-1">{timeStr}</span>
+                                                    </div>
                                                 </div>
-                                            </div>
-                                        );
-                                    }
-                                })
+                                            );
+                                        }
+                                    })}
+                                </>
                             )}
                         </div>
 
                         {/* Input Area */}
                         <div className="p-4 border-t border-slate-50 dark:border-zinc-800/50 shrink-0">
                             <form onSubmit={handleSend} className="flex gap-3 items-center">
-                                <button type="button" className="w-11 h-11 rounded-xl bg-teal-100 dark:bg-teal-900/40 hover:bg-teal-200 dark:hover:bg-teal-900/60 flex items-center justify-center text-teal-700 dark:text-teal-400 transition-colors shrink-0">
+                                <button type="button" className="w-11 h-11 rounded-xl bg-slate-100 dark:bg-zinc-800/50 hover:bg-slate-200 dark:hover:bg-zinc-800/80 flex items-center justify-center text-slate-600 dark:text-zinc-400 transition-colors shrink-0">
                                     <Paperclip className="w-5 h-5" />
                                 </button>
                                 <input 
@@ -354,7 +357,7 @@ export default function AdminChat() {
                                     value={newMessage}
                                     onChange={(e) => setNewMessage(e.target.value)}
                                     placeholder={`Type your message to ${selectedTenant.name} here...`} 
-                                    className="flex-1 bg-teal-100 dark:bg-teal-900/40 border-none rounded-xl py-3.5 px-4 text-sm text-slate-800 dark:text-white placeholder:text-teal-700/50 dark:placeholder:text-teal-400/50 outline-none focus:bg-teal-200 dark:focus:bg-teal-900/60 transition-colors"
+                                    className="flex-1 bg-slate-100 dark:bg-zinc-800/50 border-none rounded-xl py-3.5 px-4 text-sm text-slate-800 dark:text-white placeholder:text-slate-500 dark:placeholder:text-zinc-500 outline-none focus:bg-slate-200 dark:focus:bg-zinc-800/80 transition-colors"
                                 />
                                 <button 
                                     type="submit"
