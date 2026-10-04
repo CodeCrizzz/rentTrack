@@ -123,7 +123,7 @@ export default function AdminDashboard() {
             } catch (error) {
                 console.error("Failed to fetch admin stats:", error);
             } finally {
-                setTimeout(() => setIsLoading(false), 500);
+                setIsLoading(false);
             }
         };
         fetchDashboardData();
