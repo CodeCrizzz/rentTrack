@@ -4,7 +4,7 @@ import { useState } from "react"
 import { useRouter } from "next/navigation"
 import api from "@/lib/api"
 import { Loader2, Eye, EyeOff } from "lucide-react"
-import { motion } from "framer-motion"
+import { motion, AnimatePresence } from "framer-motion"
 
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
@@ -22,6 +22,7 @@ export default function LoginPage() {
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
+  const [showPendingModal, setShowPendingModal] = useState(false)
   const router = useRouter()
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -40,7 +41,11 @@ export default function LoginPage() {
             throw new Error("No token returned");
         }
     } catch (err: any) {
-        toast.error(err.response?.data?.message || err.message || "Login failed. Please check credentials.");
+        if (err.response?.status === 403 && err.response?.data?.message?.toLowerCase().includes('pending')) {
+            setShowPendingModal(true);
+        } else {
+            toast.error(err.response?.data?.message || err.message || "Login failed. Please check credentials.");
+        }
         setIsLoading(false);
     }
   };
@@ -157,6 +162,72 @@ export default function LoginPage() {
           </Card>
         </div>
       </motion.div>
+
+      {/* --- PENDING MODAL OVERLAY --- */}
+      <AnimatePresence>
+          {showPendingModal && (
+              <motion.div 
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/40 dark:bg-black/60 backdrop-blur-sm"
+              >
+                  <motion.div 
+                      initial={{ scale: 0.95, opacity: 0, y: 10 }}
+                      animate={{ scale: 1, opacity: 1, y: 0 }}
+                      transition={{ type: "spring", damping: 30, stiffness: 400 }}
+                      className="bg-zinc-950 border border-zinc-800/80 rounded-2xl p-6 sm:p-8 max-w-md w-full shadow-2xl relative flex flex-col overflow-hidden"
+                  >
+                      {/* Animated scanning line at top */}
+                      <motion.div 
+                          animate={{ left: ['-100%', '100%'] }}
+                          transition={{ duration: 2.5, repeat: Infinity, ease: "linear" }}
+                          className="absolute top-0 w-1/2 h-[2px] bg-gradient-to-r from-transparent via-cyan-500 to-transparent"
+                      />
+
+                      <button 
+                          onClick={() => setShowPendingModal(false)}
+                          className="absolute top-4 right-4 text-zinc-500 hover:text-white transition-colors p-1"
+                          aria-label="Close"
+                      >
+                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                      </button>
+
+                      <div className="flex flex-col mt-2">
+                          <div className="flex items-center gap-4 mb-5">
+                              {/* Icon */}
+                              <div className="shrink-0 relative">
+                                  <div className="w-12 h-12 bg-cyan-500/10 rounded-xl flex items-center justify-center border border-cyan-500/20 shadow-[0_0_15px_rgba(6,182,212,0.15)]">
+                                      <svg className="w-6 h-6 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
+                                      </svg>
+                                  </div>
+                              </div>
+
+                              {/* Status */}
+                              <div className="flex flex-col">
+                                  <h3 className="text-lg font-bold text-white uppercase tracking-wider mb-1.5">Access Restricted</h3>
+                                  <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-md bg-zinc-900 border border-zinc-800 self-start">
+                                      <span className="text-[10px] font-mono text-zinc-400 uppercase tracking-widest">Status: Pending Approval</span>
+                                  </div>
+                              </div>
+                          </div>
+                          
+                          <p className="text-zinc-400 text-sm leading-relaxed mb-6">
+                              Your tenant application is currently under review by the property administrator. You will be granted system access once your account is verified and approved.
+                          </p>
+
+                          <button 
+                              onClick={() => setShowPendingModal(false)}
+                              className="w-full py-3 bg-white hover:bg-zinc-200 text-zinc-950 rounded-xl font-bold transition-all shadow-md active:scale-[0.98] text-sm"
+                          >
+                              I Understand 
+                          </button>
+                      </div>
+                  </motion.div>
+              </motion.div>
+          )}
+      </AnimatePresence>
     </div>
   )
 }
