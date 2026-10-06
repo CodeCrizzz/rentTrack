@@ -32,6 +32,7 @@ interface DashboardStats {
     expiringContracts: ExpiringContract[];
     overdueAccounts: { tenant_id: number; tenant_name: string; room_number: string | null; total_overdue: number }[];
     upcomingRent: { id: number; tenant_name: string; room_number: string | null; balance: number; due_date: string }[];
+    pendingPaymentVerifications: { id: number; tenant_name: string; total_amount: number; created_at: string }[];
 }
 
 function AnimatedNumber({ value, prefix = "", suffix = "", duration = 0.3 }: { value: number, prefix?: string, suffix?: string, duration?: number }) {
@@ -435,10 +436,23 @@ export default function AdminDashboard() {
                 <div className={listCardClass}>
                     <motion.div custom={1} variants={containerVariants} initial="hidden" whileInView="show" viewport={{ once: true, amount: 0.01 }} className="h-full w-full flex flex-col">
                     <motion.div variants={slideLeftVariants} className={headerClass}>
-                        <h2>Payment Verifications <span className="ml-2 px-2 py-0.5 bg-amber-100 dark:bg-amber-500/20 text-amber-700 dark:text-amber-400 text-xs rounded-full">0</span></h2>
+                        <h2>Payment Verifications <span className="ml-2 px-2 py-0.5 bg-amber-100 dark:bg-amber-500/20 text-amber-700 dark:text-amber-400 text-xs rounded-full">{stats.pendingPaymentVerifications?.length || 0}</span></h2>
+                        <Link href="/admin/billing" className="text-sm font-semibold text-emerald-600 dark:text-emerald-400 hover:underline">View All</Link>
                     </motion.div>
                     <motion.div variants={scaleUpVariants} className="space-y-4 flex-1 overflow-y-auto pr-2 -mr-2 custom-scrollbar">
-                        <p className="text-sm text-slate-500 text-center py-4">No pending payment verifications.</p>
+                        {stats.pendingPaymentVerifications?.slice(0, 5).map((verification) => (
+                            <div key={verification.id} className="flex items-center justify-between p-3 border border-slate-100 dark:border-zinc-800 rounded-xl bg-slate-50/50 dark:bg-white/5">
+                                <div>
+                                    <p className="font-bold text-sm text-slate-800 dark:text-white">{verification.tenant_name}</p>
+                                    <p className="text-xs text-slate-500 dark:text-zinc-400 mt-0.5">Submitted: {new Date(verification.created_at).toLocaleDateString()}</p>
+                                    <span className="inline-block mt-1 text-[10px] uppercase tracking-wider font-bold text-amber-600 dark:text-amber-400">Needs Verification</span>
+                                </div>
+                                <div className="text-right">
+                                    <p className="font-bold text-emerald-600 dark:text-emerald-400 text-sm">₱{Number(verification.total_amount).toLocaleString()}</p>
+                                </div>
+                            </div>
+                        ))}
+                        {(!stats.pendingPaymentVerifications || stats.pendingPaymentVerifications.length === 0) && <p className="text-sm text-slate-500 text-center py-4">No pending payment verifications.</p>}
                     </motion.div>
                 </motion.div>
                 </div>
