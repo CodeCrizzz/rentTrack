@@ -5,6 +5,7 @@ import { motion, AnimatePresence, Variants } from 'framer-motion';
 import CustomSelect from '@/components/CustomSelect';
 import { Bell, Calendar as CalendarIcon, FileText, Clock, Receipt, Check, X, Plus } from 'lucide-react';
 import AdminLoader from '@/components/AdminLoader';
+import { toast } from 'sonner';
 
 export interface Bill {
     id: number;
@@ -73,6 +74,8 @@ export default function AdminBilling() {
     const [isViewOpen, setIsViewOpen] = useState(false);
     const [isPayOpen, setIsPayOpen] = useState(false);
     const [isEditOpen, setIsEditOpen] = useState(false);
+    const [isCreateOpen, setIsCreateOpen] = useState(false);
+    const [isBatchGenerating, setIsBatchGenerating] = useState(false);
 
     const [selectedBill, setSelectedBill] = useState<Bill | null>(null);
     const [billDetails, setBillDetails] = useState<Bill | null>(null);
@@ -159,12 +162,44 @@ export default function AdminBilling() {
             setIsSubmitting(true);
             await api.put(`/admin/bills/${selectedBill.id}`, billForm);
             setIsEditOpen(false);
+            toast.success("Invoice updated successfully!");
             fetchData();
         } catch (error) {
             console.error("Edit bill failed:", error);
-            alert("Failed to edit bill.");
+            toast.error("Failed to edit bill.");
         } finally {
             setIsSubmitting(false);
+        }
+    };
+
+    const handleCreateSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        try {
+            setIsSubmitting(true);
+            await api.post(`/admin/bills`, billForm);
+            setIsCreateOpen(false);
+            setBillForm(initialBillForm);
+            toast.success("Invoice created successfully!");
+            fetchData();
+        } catch (error) {
+            console.error("Create bill failed:", error);
+            toast.error("Failed to create bill.");
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
+
+    const handleBatchGenerate = async () => {
+        try {
+            setIsBatchGenerating(true);
+            const { data } = await api.post(`/admin/bills/generate`);
+            toast.success(data.message || "Monthly bills generated successfully.");
+            fetchData();
+        } catch (error) {
+            console.error("Batch generate failed:", error);
+            toast.error("Failed to generate monthly bills.");
+        } finally {
+            setIsBatchGenerating(false);
         }
     };
 
@@ -176,10 +211,11 @@ export default function AdminBilling() {
             await api.post(`/admin/bills/${selectedBill.id}/pay`, paymentForm);
             setIsPayOpen(false);
             setPaymentForm(initialPaymentForm);
+            toast.success("Payment recorded successfully!");
             fetchData();
         } catch (error) {
             console.error("Payment failed:", error);
-            alert("Failed to record payment.");
+            toast.error("Failed to record payment.");
         } finally {
             setIsSubmitting(false);
         }
@@ -194,6 +230,7 @@ export default function AdminBilling() {
             setBillDetails(data);
         } catch (error) {
             console.error("Fetch bill details failed");
+            toast.error("Failed to load invoice details.");
         }
     };
 
@@ -226,10 +263,11 @@ export default function AdminBilling() {
         if (!confirm("Are you sure you want to delete this bill? This action cannot be undone.")) return;
         try {
             await api.delete(`/admin/bills/${id}`);
+            toast.success("Invoice deleted successfully.");
             fetchData();
         } catch (error) {
             console.error("Delete failed");
-            alert("Failed to delete bill.");
+            toast.error("Failed to delete bill.");
         }
     };
 
@@ -365,10 +403,16 @@ export default function AdminBilling() {
                         />
                     </div>
                 </div>
-                <button className="w-full sm:w-auto px-4 py-2.5 bg-teal-600 hover:bg-teal-700 text-white text-sm font-bold rounded-lg transition-colors flex items-center justify-center gap-2">
-                    <Plus className="w-4 h-4" />
-                    Create Single Bill
-                </button>
+                <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
+                    <button onClick={handleBatchGenerate} disabled={isBatchGenerating} className="w-full sm:w-auto px-4 py-2.5 bg-secondary hover:bg-slate-200 dark:hover:bg-zinc-800 border border-slate-200 dark:border-zinc-800 text-slate-800 dark:text-white text-sm font-bold rounded-lg transition-colors flex items-center justify-center gap-2 disabled:opacity-50">
+                        {isBatchGenerating ? <div className="w-4 h-4 border-2 border-slate-500/20 border-t-slate-500 rounded-full animate-spin"></div> : <FileText className="w-4 h-4" />}
+                        Generate Monthly Bills
+                    </button>
+                    <button onClick={() => setIsCreateOpen(true)} className="w-full sm:w-auto px-4 py-2.5 bg-teal-600 hover:bg-teal-700 text-white text-sm font-bold rounded-lg transition-colors flex items-center justify-center gap-2">
+                        <Plus className="w-4 h-4" />
+                        Create Single Bill
+                    </button>
+                </div>
             </motion.div>
 
             {/* Data Table */}
@@ -669,6 +713,85 @@ export default function AdminBilling() {
                                 <button type="button" onClick={() => setIsEditOpen(false)} className="px-8 py-4 font-black text-slate-500 dark:text-zinc-400 bg-secondary hover:bg-slate-200 dark:hover:bg-zinc-700 rounded-2xl transition-all uppercase tracking-widest text-[10px]">Cancel</button>
                                 <button type="submit" disabled={isSubmitting} className="px-8 py-4 font-black bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white rounded-2xl transition-all shadow-[0_0_20px_rgba(79,70,229,0.3)] hover:shadow-[0_0_30px_rgba(79,70,229,0.5)] uppercase tracking-widest text-[10px] flex items-center justify-center gap-2 disabled:opacity-70">
                                     {isSubmitting ? <div className="w-4 h-4 border-2 border-white/20 border-t-white rounded-full animate-spin"></div> : 'Save Changes'}
+                                </button>
+                            </div>
+                        </form>
+                    </motion.div>
+                </motion.div>
+            )}
+            {isCreateOpen && (
+                <motion.div initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}} className="fixed inset-0 bg-black/60 backdrop-blur-md z-[100] flex items-center justify-center p-4">
+                    <motion.div initial={{scale:0.9, y:20, opacity:0}} animate={{scale:1, y:0, opacity:1}} exit={{scale:0.95, y:10, opacity:0}} transition={{type: "spring", damping: 25, stiffness: 300}} className="bg-linear-to-br from-white/80 to-slate-50/50 dark:from-background/80 dark:to-transparent backdrop-blur-3xl rounded-[2.5rem] w-full max-w-3xl overflow-hidden shadow-[0_0_50px_rgba(0,0,0,0.3)] border border-slate-200 dark:border-zinc-800 flex flex-col max-h-[90vh]">
+                        <div className="px-8 py-6 border-b border-slate-200 dark:border-zinc-800 flex justify-between items-center bg-card/50">
+                            <div>
+                                <h2 className="text-2xl font-black text-slate-900 dark:text-white tracking-tight">Create Invoice</h2>
+                            </div>
+                            <button onClick={() => setIsCreateOpen(false)} className="w-10 h-10 rounded-xl bg-secondary border border-slate-200 dark:border-zinc-700 hover:bg-slate-200 dark:hover:bg-zinc-700 flex items-center justify-center text-slate-500 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white transition-colors">
+                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M6 18L18 6M6 6l12 12"></path></svg>
+                            </button>
+                        </div>
+                        <form onSubmit={handleCreateSubmit} className="flex flex-col overflow-hidden">
+                            <div className="p-8 space-y-6 overflow-y-auto custom-scrollbar flex-1">
+                                
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                                    <div className="space-y-2">
+                                        <label className="text-[10px] font-black text-slate-500 dark:text-zinc-500 uppercase tracking-widest pl-1">Tenant</label>
+                                        <div className="relative">
+                                            <CustomSelect 
+                                                value={billForm.tenant_id?.toString() || ''} 
+                                                onChange={(val) => handleTenantChange(val)} 
+                                                options={[
+                                                    { value: "", label: "Select Tenant" },
+                                                    ...tenants.map(t => ({ value: t.id.toString(), label: `${t.name} (Rm ${rooms.find(r=>r.id===t.room_id)?.room_number})` }))
+                                                ]}
+                                                className="w-full px-5 py-4 rounded-2xl bg-secondary border border-slate-200 dark:border-zinc-800 text-slate-900 dark:text-white font-bold outline-none shadow-inner transition-all"
+                                            />
+                                        </div>
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div className="space-y-2">
+                                            <label className="text-[10px] font-black text-slate-500 dark:text-zinc-500 uppercase tracking-widest pl-1">Billing Month</label>
+                                            <input required type="text" placeholder="e.g. Mar 2026" value={billForm.billing_month} onChange={e => setBillForm({...billForm, billing_month: e.target.value})} className="w-full px-5 py-4 rounded-2xl bg-secondary border border-slate-200 dark:border-zinc-800 text-slate-900 dark:text-white font-bold focus:ring-2 focus:ring-teal-500 focus:border-transparent outline-none shadow-inner transition-all" />
+                                        </div>
+                                        <div className="space-y-2">
+                                            <label className="text-[10px] font-black text-slate-500 dark:text-zinc-500 uppercase tracking-widest pl-1">Due Date</label>
+                                            <input required type="date" value={billForm.due_date} onChange={e => setBillForm({...billForm, due_date: e.target.value})} className="w-full px-5 py-4 rounded-2xl bg-secondary border border-slate-200 dark:border-zinc-800 text-slate-900 dark:text-white font-bold focus:ring-2 focus:ring-teal-500 focus:border-transparent outline-none shadow-inner transition-all [color-scheme:light_dark]" />
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div className="border-t border-slate-200 dark:border-zinc-800 pt-6">
+                                    <h3 className="text-[10px] font-black text-slate-500 dark:text-zinc-500 uppercase tracking-widest mb-4">Charges (₱)</h3>
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                                        <div className="space-y-2">
+                                            <label className="text-[10px] font-bold text-slate-500 dark:text-zinc-500 uppercase tracking-widest pl-1">Rent</label>
+                                            <input required type="number" step="0.01" value={billForm.rent_amount} onChange={e => setBillForm({...billForm, rent_amount: parseFloat(e.target.value) || 0})} className="w-full px-4 py-3.5 rounded-xl bg-secondary border border-slate-200 dark:border-zinc-800 text-slate-900 dark:text-white font-bold focus:ring-2 focus:ring-teal-500 focus:border-transparent outline-none shadow-inner transition-all text-sm" />
+                                        </div>
+                                        <div className="space-y-2">
+                                            <label className="text-[10px] font-bold text-slate-500 dark:text-zinc-500 uppercase tracking-widest pl-1">Water</label>
+                                            <input required type="number" step="0.01" value={billForm.water_charges} onChange={e => setBillForm({...billForm, water_charges: parseFloat(e.target.value) || 0})} className="w-full px-4 py-3.5 rounded-xl bg-secondary border border-slate-200 dark:border-zinc-800 text-slate-900 dark:text-white font-bold focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none shadow-inner transition-all text-sm" />
+                                        </div>
+                                        <div className="space-y-2">
+                                            <label className="text-[10px] font-bold text-slate-500 dark:text-zinc-500 uppercase tracking-widest pl-1">Electricity</label>
+                                            <input required type="number" step="0.01" value={billForm.electricity_charges} onChange={e => setBillForm({...billForm, electricity_charges: parseFloat(e.target.value) || 0})} className="w-full px-4 py-3.5 rounded-xl bg-secondary border border-slate-200 dark:border-zinc-800 text-slate-900 dark:text-white font-bold focus:ring-2 focus:ring-amber-500 focus:border-transparent outline-none shadow-inner transition-all text-sm" />
+                                        </div>
+                                        <div className="space-y-2">
+                                            <label className="text-[10px] font-bold text-slate-500 dark:text-zinc-500 uppercase tracking-widest pl-1">Other Fees</label>
+                                            <input required type="number" step="0.01" value={billForm.other_fees} onChange={e => setBillForm({...billForm, other_fees: parseFloat(e.target.value) || 0})} className="w-full px-4 py-3.5 rounded-xl bg-secondary border border-slate-200 dark:border-zinc-800 text-slate-900 dark:text-white font-bold focus:ring-2 focus:ring-teal-500 focus:border-transparent outline-none shadow-inner transition-all text-sm" />
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div className="bg-teal-50/50 dark:bg-teal-500/10 p-6 rounded-2xl border border-teal-100 dark:border-teal-500/20 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                                    <span className="font-black text-teal-600 dark:text-teal-400 text-xs uppercase tracking-widest">Total Calculated Amount</span>
+                                    <span className="text-3xl font-black text-teal-700 dark:text-teal-300">₱ {Number((Number(billForm.rent_amount) || 0) + (Number(billForm.water_charges) || 0) + (Number(billForm.electricity_charges) || 0) + (Number(billForm.other_fees) || 0)).toLocaleString()}</span>
+                                </div>
+                            </div>
+
+                            <div className="p-6 sm:p-8 border-t border-slate-200 dark:border-zinc-800 bg-secondary/50 flex justify-end gap-3">
+                                <button type="button" onClick={() => setIsCreateOpen(false)} className="px-8 py-4 font-black text-slate-500 dark:text-zinc-400 bg-secondary hover:bg-slate-200 dark:hover:bg-zinc-700 rounded-2xl transition-all uppercase tracking-widest text-[10px]">Cancel</button>
+                                <button type="submit" disabled={isSubmitting} className="px-8 py-4 font-black bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-500 hover:to-emerald-500 text-white rounded-2xl transition-all shadow-[0_0_20px_rgba(16,185,129,0.3)] hover:shadow-[0_0_30px_rgba(16,185,129,0.5)] uppercase tracking-widest text-[10px] flex items-center justify-center gap-2 disabled:opacity-70">
+                                    {isSubmitting ? <div className="w-4 h-4 border-2 border-white/20 border-t-white rounded-full animate-spin"></div> : 'Create Invoice'}
                                 </button>
                             </div>
                         </form>
