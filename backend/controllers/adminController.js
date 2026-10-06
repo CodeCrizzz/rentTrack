@@ -9,7 +9,7 @@ const getDashboardStats = async (req, res) => {
             incomeResult, duesResult,
             requestsResult, recentPaymentsResult, recentRequestsResult,
             expiringContractsResult, totalBilledResult, historicalIncomeResult,
-            overdueAccountsResult, upcomingRentResult, recentMessagesResult, pendingTenantsListResult
+            overdueAccountsResult, upcomingRentResult, recentMessagesResult, pendingTenantsListResult, pendingPaymentVerificationsResult
         ] = await Promise.all([
             // Rooms Overview
             db.query('SELECT COUNT(*) FROM rooms'),
@@ -115,6 +115,15 @@ const getDashboardStats = async (req, res) => {
                 FROM users 
                 WHERE role = 'tenant' AND status = 'Pending'
                 ORDER BY created_at DESC LIMIT 5
+            `),
+
+            // Pending Payment Verifications
+            db.query(`
+                SELECT b.id, u.name as tenant_name, b.total_amount, b.created_at
+                FROM bills b
+                JOIN users u ON b.tenant_id = u.id
+                WHERE b.status = 'Pending Verification'
+                ORDER BY b.created_at ASC
             `),
         ]);
 
@@ -302,7 +311,8 @@ const getDashboardStats = async (req, res) => {
             recentRequests,
             expiringContracts,
             overdueAccounts,
-            upcomingRent
+            upcomingRent,
+            pendingPaymentVerifications: pendingPaymentVerificationsResult.rows
         });
 
     } catch (error) {
