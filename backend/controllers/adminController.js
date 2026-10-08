@@ -828,6 +828,61 @@ const getCashFlowOverview = async (req, res) => {
     }
 };
 
+// @desc    Get all announcements
+const getAnnouncements = async (req, res) => {
+    try {
+        const query = `
+            SELECT a.*, u.name as created_by_name 
+            FROM announcements a
+            LEFT JOIN users u ON a.created_by = u.id
+            ORDER BY a.created_at DESC
+        `;
+        const result = await db.query(query);
+        res.status(200).json(result.rows);
+    } catch (error) {
+        console.error('Get Announcements Error:', error);
+        res.status(500).json({ message: 'Server error fetching announcements' });
+    }
+};
+
+// @desc    Create a new announcement
+const createAnnouncement = async (req, res) => {
+    const { title, content, type } = req.body;
+    try {
+        const query = `
+            INSERT INTO announcements (title, content, type, created_by) 
+            VALUES ($1, $2, $3, $4) 
+            RETURNING *
+        `;
+        const result = await db.query(query, [title, content, type || 'Info', req.user.id]);
+        
+        // Fetch the created user's name to return full data
+        const newAnn = result.rows[0];
+        const userQuery = await db.query('SELECT name FROM users WHERE id = $1', [newAnn.created_by]);
+        newAnn.created_by_name = userQuery.rows[0]?.name || 'Admin';
+
+        res.status(201).json({ message: 'Announcement created', announcement: newAnn });
+    } catch (error) {
+        console.error('Create Announcement Error:', error);
+        res.status(500).json({ message: 'Server error creating announcement' });
+    }
+};
+
+// @desc    Delete an announcement
+const deleteAnnouncement = async (req, res) => {
+    const { id } = req.params;
+    try {
+        const result = await db.query('DELETE FROM announcements WHERE id = $1 RETURNING id', [id]);
+        if (result.rows.length === 0) {
+            return res.status(404).json({ message: 'Announcement not found' });
+        }
+        res.status(200).json({ message: 'Announcement deleted successfully' });
+    } catch (error) {
+        console.error('Delete Announcement Error:', error);
+        res.status(500).json({ message: 'Server error deleting announcement' });
+    }
+};
+
 module.exports = { 
     getDashboardStats, 
     getAllRooms, 
@@ -844,5 +899,8 @@ module.exports = {
     sendMessage,
     getUnreadCount,
     getPendingTenantsCount,
-    getCashFlowOverview
+    getCashFlowOverview,
+    getAnnouncements,
+    createAnnouncement,
+    deleteAnnouncement
 };
