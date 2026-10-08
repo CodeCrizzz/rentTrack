@@ -78,6 +78,7 @@ export default function TenantLayout({ children }: { children: React.ReactNode }
         { name: 'My Payments', path: '/tenant/payments', icon: CreditCard },
         { name: 'Maintenance', path: '/tenant/requests', icon: Wrench },
         { name: 'Chat', path: '/tenant/chat', icon: MessageSquare },
+        { name: 'Announcements', path: '/tenant/announcements', icon: Bell },
         { name: 'Settings', path: '/tenant/settings', icon: Settings },
     ];
 
