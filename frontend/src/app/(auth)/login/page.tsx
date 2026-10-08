@@ -185,6 +185,13 @@ export default function LoginPage() {
                           className="absolute top-0 w-1/2 h-[2px] bg-gradient-to-r from-transparent via-cyan-500 to-transparent"
                       />
 
+                      {/* Animated scanning line at top */}
+                      <motion.div
+                          animate={{y: [5, 15]}}
+                          transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
+                          className="absolute bottom-0 w-full h-[2px] bg-gradient-to-r from-transparent via-cyan-500 to-transparent"
+                      />
+
                       <button 
                           onClick={() => setShowPendingModal(false)}
                           className="absolute top-4 right-4 text-zinc-500 hover:text-white transition-colors p-1"
