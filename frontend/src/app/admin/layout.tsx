@@ -13,7 +13,7 @@ import {
 } from "@/components/ui/sidebar";
 import { AppSidebar } from '@/components/app-sidebar';
 import { FullscreenToggle } from '@/components/fullscreen-toggle';
-import { LayoutDashboard, Building2, Users, CreditCard, Wrench, MessageSquare, Bell, Settings, User, RefreshCw, Calendar } from 'lucide-react';
+import { LayoutDashboard, Building2, Users, CreditCard, Wrench, MessageSquare, Bell, Settings, User, RefreshCw, Calendar, Video } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -106,11 +106,13 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
     const rawNavItems = [
         { name: 'Dashboard', path: '/admin/dashboard', icon: LayoutDashboard },
-        { name: 'Rooms', path: '/admin/rooms', icon: Building2 },
+        { name: 'Manage Rooms', path: '/admin/rooms', icon: Building2 },
         { name: 'Manage Tenants', path: '/admin/tenants', icon: Users },
-        { name: 'Billing', path: '/admin/billing', icon: CreditCard },
-        { name: 'Requests', path: '/admin/requests', icon: Wrench },
-        { name: 'Chat', path: '/admin/chat', icon: MessageSquare },
+        { name: 'Bills and Payments', path: '/admin/billing', icon: CreditCard },
+        { name: 'Maintenance Request', path: '/admin/requests', icon: Wrench },
+        { name: 'Chat with Tenants', path: '/admin/chat', icon: MessageSquare },
+        { name: 'Announcements', path: '/admin/announcements', icon: Bell },
+        { name: 'Security CCTV', path: '/admin/cctv', icon: Video },
         { name: 'Settings', path: '/admin/settings', icon: Settings },
     ];
 
@@ -123,7 +125,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             badgeCount = pendingTenantsCount;
             badgeColor = "amber";
         }
-        if (item.name === 'Chat' && unreadCount > 0) {
+        if (item.name === 'Chat with Tenants' && unreadCount > 0) {
             badgeCount = unreadCount;
             badgeColor = "rose";
         }
