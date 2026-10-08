@@ -7,7 +7,10 @@ const {
     getConversations, getMessages, sendMessage, getUnreadCount,
     getPendingTenantsCount,
     createRoom, updateRoom, deleteRoom,
-    getCashFlowOverview
+    getCashFlowOverview,
+    getAnnouncements,
+    createAnnouncement,
+    deleteAnnouncement
 } = require('../controllers/adminController');
 
 const adminOnly = (req, res, next) => {
@@ -41,5 +44,9 @@ router.get('/chat/conversations', getConversations);
 router.get('/chat/unread', getUnreadCount);
 router.get('/chat', getMessages);
 router.post('/chat', sendMessage);
+
+router.get('/announcements', getAnnouncements);
+router.post('/announcements', createAnnouncement);
+router.delete('/announcements/:id', deleteAnnouncement);
 
 module.exports = router;
