@@ -444,9 +444,26 @@ const chooseRoom = async (req, res) => {
     }
 };
 
+// Get Announcements
+const getAnnouncements = async (req, res) => {
+    try {
+        const query = `
+            SELECT a.*, u.name as created_by_name 
+            FROM announcements a
+            LEFT JOIN users u ON a.created_by = u.id
+            ORDER BY a.created_at DESC
+        `;
+        const result = await db.query(query);
+        res.status(200).json(result.rows);
+    } catch (error) {
+        console.error('Get Announcements Error:', error);
+        res.status(500).json({ message: 'Server error fetching announcements' });
+    }
+};
+
 module.exports = { 
     getTenantDashboard, getTenantProfile, updateTenantProfile, updateTenantPassword, 
     getTenantPayments, getCurrentBill, submitTenantPayment,
     getTenantMessages, sendTenantMessage, getUnreadCount,
-    getTenantRooms, chooseRoom
+    getTenantRooms, chooseRoom, getAnnouncements
 };
