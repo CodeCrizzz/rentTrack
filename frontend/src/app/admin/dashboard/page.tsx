@@ -185,7 +185,7 @@ export default function AdminDashboard() {
                     <motion.div custom={0} variants={containerVariants} initial="hidden" whileInView="show" viewport={{ once: true, amount: 0.01 }} className="relative z-10 h-full w-full flex flex-col">
                     <motion.div variants={slideLeftVariants} className="flex items-center justify-between mb-2">
                         <h3 className="text-sm font-medium text-slate-500 dark:text-zinc-400">Room Occupancy Rate</h3>
-                        <div className="w-8 h-8 rounded-full bg-emerald-50 dark:bg-emerald-500/10 flex items-center justify-center text-emerald-600 dark:text-emerald-400">
+                        <div className="absolute top-2 right-2 w-8 h-8 rounded-full bg-emerald-50 dark:bg-emerald-500/10 flex items-center justify-center text-emerald-600 dark:text-emerald-400 z-20">
                             <Users className="w-4 h-4" />
                         </div>
                     </motion.div>
@@ -251,7 +251,7 @@ export default function AdminDashboard() {
                     <motion.div custom={1} variants={containerVariants} initial="hidden" whileInView="show" viewport={{ once: true, amount: 0.01 }} className="relative z-10 h-full w-full flex flex-col">
                     <motion.div variants={slideLeftVariants} className="flex items-center justify-between mb-4">
                         <h3 className="text-sm font-medium text-slate-500 dark:text-zinc-400">Pending Dues</h3>
-                        <div className="w-8 h-8 rounded-full bg-orange-50 dark:bg-orange-500/10 flex items-center justify-center text-orange-600 dark:text-orange-400">
+                        <div className="absolute top-2 right-2 w-8 h-8 rounded-full bg-orange-50 dark:bg-orange-500/10 flex items-center justify-center text-orange-600 dark:text-orange-400 z-20">
                             <Receipt className="w-4 h-4" />
                         </div>
                     </motion.div>
@@ -278,7 +278,7 @@ export default function AdminDashboard() {
                     <motion.div custom={2} variants={containerVariants} initial="hidden" whileInView="show" viewport={{ once: true, amount: 0.01 }} className="relative z-10 h-full w-full flex flex-col">
                     <motion.div variants={slideLeftVariants} className="flex items-center justify-between mb-4">
                         <h3 className="text-sm font-medium text-slate-500 dark:text-zinc-400">Pending Maintenance</h3>
-                        <div className="w-8 h-8 rounded-full bg-rose-50 dark:bg-rose-500/10 flex items-center justify-center text-rose-600 dark:text-rose-400">
+                        <div className="absolute top-2 right-2 w-8 h-8 rounded-full bg-rose-50 dark:bg-rose-500/10 flex items-center justify-center text-rose-600 dark:text-rose-400 z-20">
                             <Wrench className="w-4 h-4" />
                         </div>
                     </motion.div>
@@ -305,7 +305,7 @@ export default function AdminDashboard() {
                     <motion.div custom={3} variants={containerVariants} initial="hidden" whileInView="show" viewport={{ once: true, amount: 0.01 }} className="relative z-10 h-full w-full flex flex-col">
                     <motion.div variants={slideLeftVariants} className="flex items-center justify-between mb-4">
                         <h3 className="text-sm font-medium text-slate-500 dark:text-zinc-400">Total Revenue</h3>
-                        <div className="w-8 h-8 rounded-full bg-emerald-50 dark:bg-emerald-500/10 flex items-center justify-center text-emerald-600 dark:text-emerald-400">
+                        <div className="absolute top-2 right-2 w-8 h-8 rounded-full bg-emerald-50 dark:bg-emerald-500/10 flex items-center justify-center text-emerald-600 dark:text-emerald-400 z-20">
                             <Wallet className="w-4 h-4" />
                         </div>
                     </motion.div>
@@ -474,18 +474,20 @@ export default function AdminDashboard() {
                             const method = methods[i % methods.length];
                             return (
                                 <div key={payment.id} className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-zinc-800 last:border-0 last:pb-0">
-                                    <div>
+                                    <div className="flex-1">
                                         <p className="font-bold text-sm text-slate-800 dark:text-white flex items-center gap-2">
                                             {payment.tenant_name} 
                                             {i === 0 && <span className="w-2 h-2 rounded-full bg-amber-500" title="Pending Verification"></span>}
                                         </p>
                                         <p className="text-xs text-slate-500 dark:text-zinc-400 mt-0.5">Room 20{i + 1}-A • {method}</p>
                                     </div>
-                                    <div className="text-right">
-                                        <p className="font-bold text-emerald-600 dark:text-emerald-400 text-sm">₱{Number(payment.amount_paid).toLocaleString()}</p>
-                                        <p className="text-[10px] font-bold text-slate-400 dark:text-zinc-500 mt-0.5 uppercase tracking-wider">{new Date(payment.payment_date).toLocaleDateString()}</p>
+                                    <div className="flex items-center gap-4">
+                                        <div className="text-right">
+                                            <p className="font-bold text-emerald-600 dark:text-emerald-400 text-sm">₱{Number(payment.amount_paid).toLocaleString()}</p>
+                                            <p className="text-[10px] font-bold text-slate-400 dark:text-zinc-500 mt-0.5 uppercase tracking-wider">{new Date(payment.payment_date).toLocaleDateString()}</p>
+                                        </div>
+                                        <button className="p-1.5 text-slate-400 hover:text-emerald-600 dark:hover:text-emerald-400"><Eye className="w-4 h-4"/></button>
                                     </div>
-                                    <button className="ml-3 p-1.5 text-slate-400 hover:text-emerald-600 dark:hover:text-emerald-400"><Eye className="w-4 h-4"/></button>
                                 </div>
                             );
                         })}
@@ -503,15 +505,17 @@ export default function AdminDashboard() {
                     <motion.div variants={scaleUpVariants} className="space-y-4 flex-1 overflow-y-auto pr-2 -mr-2 custom-scrollbar">
                         {stats.overdueAccounts.slice(0, 5).map((acc, i) => (
                             <div key={acc.tenant_id} className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-zinc-800 last:border-0 last:pb-0">
-                                <div>
+                                <div className="flex-1">
                                     <p className="font-bold text-sm text-slate-800 dark:text-white">{acc.tenant_name}</p>
                                     <p className="text-xs text-slate-500 dark:text-zinc-400 mt-0.5">Room {acc.room_number || 'N/A'} • <span className="text-rose-500">{(i+1)*5} days overdue</span></p>
                                 </div>
-                                <div className="text-right">
-                                    <p className="font-bold text-rose-600 dark:text-rose-400 text-sm">₱{Number(acc.total_overdue).toLocaleString()}</p>
-                                    <span className="text-[10px] font-bold text-rose-500 mt-0.5 uppercase tracking-wider">Unpaid</span>
+                                <div className="flex items-center gap-4">
+                                    <div className="text-right">
+                                        <p className="font-bold text-rose-600 dark:text-rose-400 text-sm">₱{Number(acc.total_overdue).toLocaleString()}</p>
+                                        <span className="text-[10px] font-bold text-rose-500 mt-0.5 uppercase tracking-wider">Unpaid</span>
+                                    </div>
+                                    <button className="p-1.5 text-slate-400 hover:text-emerald-600 dark:hover:text-emerald-400"><Eye className="w-4 h-4"/></button>
                                 </div>
-                                <button className="ml-3 p-1.5 text-slate-400 hover:text-emerald-600 dark:hover:text-emerald-400"><Eye className="w-4 h-4"/></button>
                             </div>
                         ))}
                         {stats.overdueAccounts.length === 0 && <p className="text-sm text-slate-500 text-center py-4">No overdue bills.</p>}
