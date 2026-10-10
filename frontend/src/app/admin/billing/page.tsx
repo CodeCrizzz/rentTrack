@@ -1,10 +1,9 @@
 "use client";
 import { useEffect, useState, useMemo } from 'react';
 import api from '@/lib/api';
-import { motion, AnimatePresence, Variants } from 'framer-motion';
+import { motion, AnimatePresence, type Variants } from 'framer-motion';
 import CustomSelect from '@/components/CustomSelect';
-import { Bell, Calendar as CalendarIcon, FileText, Clock, Receipt, Check, X, Plus } from 'lucide-react';
-import AdminLoader from '@/components/AdminLoader';
+import { Bell, Calendar as CalendarIcon, FileText, Clock, Receipt, Check, X, Plus, CheckCircle, XCircle, Search } from 'lucide-react';
 import { toast } from 'sonner';
 
 export interface Bill {
@@ -62,6 +61,22 @@ const itemVariants: Variants = {
     show: { opacity: 1, y: 0, transition: { type: "spring", stiffness: 300, damping: 24 } }
 };
 
+interface PendingPayment {
+    id: number;
+    bill_id: number;
+    amount_paid: string;
+    payment_date: string;
+    payment_method: string;
+    notes: string;
+    receipt_url: string;
+    status: string;
+    billing_month: string;
+    bill_total: string;
+    bill_balance: string;
+    tenant_name: string;
+    room_number: string;
+}
+
 export default function AdminBilling() {
     const [bills, setBills] = useState<Bill[]>([]);
     const [tenants, setTenants] = useState<Tenant[]>([]);
@@ -70,17 +85,17 @@ export default function AdminBilling() {
     const [searchQuery, setSearchQuery] = useState("");
     const [statusFilter, setStatusFilter] = useState("All");
     const [monthFilter, setMonthFilter] = useState("All");
-
+    const [activeTab, setActiveTab] = useState<'invoices' | 'payments'>('invoices');
     const [isViewOpen, setIsViewOpen] = useState(false);
     const [isPayOpen, setIsPayOpen] = useState(false);
     const [isEditOpen, setIsEditOpen] = useState(false);
     const [isCreateOpen, setIsCreateOpen] = useState(false);
-    const [isBatchGenerating, setIsBatchGenerating] = useState(false);
-
+    const [isVerifyModalOpen, setIsVerifyModalOpen] = useState(false);
     const [selectedBill, setSelectedBill] = useState<Bill | null>(null);
+    const [pendingPayments, setPendingPayments] = useState<PendingPayment[]>([]);
+    const [allPayments, setAllPayments] = useState<any[]>([]);
     const [billDetails, setBillDetails] = useState<Bill | null>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
-
     const initialBillForm: BillFormData = {
         tenant_id: '',
         room_id: '',
@@ -105,14 +120,18 @@ export default function AdminBilling() {
     const fetchData = async () => {
         setIsLoading(true);
         try {
-            const [billsRes, tenantsRes, roomsRes] = await Promise.all([
+            const [billsRes, tenantsRes, roomsRes, pendingRes, paymentsRes] = await Promise.all([
                 api.get('/admin/bills'),
                 api.get('/admin/tenants'),
-                api.get('/admin/rooms')
+                api.get('/admin/rooms'),
+                api.get('/admin/bills/payments/pending'),
+                api.get('/admin/bills/payments')
             ]);
             setBills(billsRes.data);
             setTenants(tenantsRes.data);
             setRooms(roomsRes.data);
+            setPendingPayments(pendingRes.data);
+            setAllPayments(paymentsRes.data);
         } catch (error) {
             console.error("Failed to fetch data:", error);
         } finally {
@@ -138,12 +157,19 @@ export default function AdminBilling() {
 
     const filteredBills = useMemo(() => {
         return bills.filter(bill => {
-            const matchesSearch = bill.tenant_name.toLowerCase().includes(searchQuery.toLowerCase());
+            const matchesSearch = bill.tenant_name?.toLowerCase().includes(searchQuery.toLowerCase());
             const matchesStatus = statusFilter === "All" || bill.status === statusFilter;
             const matchesMonth = monthFilter === "All" || bill.billing_month === monthFilter;
             return matchesSearch && matchesStatus && matchesMonth;
         });
     }, [bills, searchQuery, statusFilter, monthFilter]);
+
+    const filteredPayments = useMemo(() => {
+        return allPayments.filter(payment => {
+            const matchesSearch = payment.tenant_name?.toLowerCase().includes(searchQuery.toLowerCase());
+            return matchesSearch;
+        });
+    }, [allPayments, searchQuery]);
 
     const handleTenantChange = (tenantId: string) => {
         const tenant = tenants.find(t => t.id === Number(tenantId));
@@ -153,6 +179,20 @@ export default function AdminBilling() {
             room_id: tenant?.room_id || '',
             rent_amount: rooms.find(r => r.id === tenant?.room_id)?.price || 0
         });
+    };
+
+    const handleVerifyPayment = async (paymentId: number, action: 'approve' | 'reject') => {
+        try {
+            await api.post(`/admin/bills/payments/${paymentId}/verify`, { action });
+            toast.success(`Payment ${action}d successfully`);
+            fetchData();
+            if (pendingPayments.length <= 1) {
+                setIsVerifyModalOpen(false);
+            }
+        } catch (error) {
+            console.error("Verification error:", error);
+            toast.error(`Failed to ${action} payment.`);
+        }
     };
 
     const handleEditSubmit = async (e: React.FormEvent) => {
@@ -186,20 +226,6 @@ export default function AdminBilling() {
             toast.error("Failed to create bill.");
         } finally {
             setIsSubmitting(false);
-        }
-    };
-
-    const handleBatchGenerate = async () => {
-        try {
-            setIsBatchGenerating(true);
-            const { data } = await api.post(`/admin/bills/generate`);
-            toast.success(data.message || "Monthly bills generated successfully.");
-            fetchData();
-        } catch (error) {
-            console.error("Batch generate failed:", error);
-            toast.error("Failed to generate monthly bills.");
-        } finally {
-            setIsBatchGenerating(false);
         }
     };
 
@@ -312,7 +338,73 @@ export default function AdminBilling() {
     };
 
     if (isLoading) {
-        return <AdminLoader message="Loading Billing" />;
+        return (
+            <div className="w-full h-[calc(100vh-6rem)] md:h-[calc(100vh-8rem)] flex flex-col font-sans p-2">
+                {/* Header Skeleton */}
+                <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4 shrink-0">
+                    <div>
+                        <div className="h-8 w-64 bg-slate-200 dark:bg-zinc-800 rounded-lg animate-pulse mb-2"></div>
+                        <div className="h-4 w-96 bg-slate-200 dark:bg-zinc-800 rounded-lg animate-pulse"></div>
+                    </div>
+                </div>
+
+                {/* Summary Cards Skeleton */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6 shrink-0">
+                    {[1, 2, 3].map(i => (
+                        <div key={i} className="bg-card rounded-xl border border-slate-200 dark:border-zinc-800 p-6 shadow-sm">
+                            <div className="flex justify-between items-start mb-4">
+                                <div className="h-4 w-32 bg-slate-200 dark:bg-zinc-800 rounded animate-pulse"></div>
+                                <div className="w-8 h-8 rounded-lg bg-slate-200 dark:bg-zinc-800 animate-pulse"></div>
+                            </div>
+                            <div className="h-8 w-40 bg-slate-200 dark:bg-zinc-800 rounded-lg animate-pulse mb-2"></div>
+                            <div className="h-3 w-24 bg-slate-200 dark:bg-zinc-800 rounded animate-pulse"></div>
+                        </div>
+                    ))}
+                </div>
+
+                {/* Table Controls & Tabs Skeleton */}
+                <div className="flex flex-col xl:flex-row justify-between items-center mb-4 gap-4 shrink-0">
+                    <div className="flex flex-col sm:flex-row gap-3 w-full xl:w-auto items-center">
+                        <div className="flex gap-1 bg-secondary/50 p-1 w-full sm:w-fit rounded-xl border border-slate-200 dark:border-zinc-800 shrink-0">
+                            <div className="h-9 w-24 bg-slate-200 dark:bg-zinc-800 rounded-lg animate-pulse"></div>
+                            <div className="h-9 w-32 bg-slate-200 dark:bg-zinc-800 rounded-lg animate-pulse"></div>
+                        </div>
+                        <div className="w-full sm:w-64 h-10 bg-slate-200 dark:bg-zinc-800 rounded-lg animate-pulse shrink-0"></div>
+                        <div className="w-full sm:w-48 h-10 bg-slate-200 dark:bg-zinc-800 rounded-lg animate-pulse shrink-0"></div>
+                        <div className="w-full sm:w-56 h-10 bg-slate-200 dark:bg-zinc-800 rounded-lg animate-pulse shrink-0"></div>
+                    </div>
+                    <div className="flex flex-col sm:flex-row gap-3 w-full xl:w-auto shrink-0">
+                        <div className="w-full sm:w-40 h-10 bg-slate-200 dark:bg-zinc-800 rounded-lg animate-pulse"></div>
+                    </div>
+                </div>
+
+                {/* Table Skeleton */}
+                <div className="bg-card rounded-xl border border-slate-200 dark:border-zinc-800 shadow-sm overflow-hidden flex-1 flex flex-col min-h-0 mb-2">
+                    <div className="overflow-auto flex-1 p-6">
+                        <div className="border-b border-slate-200 dark:border-zinc-800 pb-4 mb-4 flex gap-4">
+                            <div className="h-4 w-1/6 bg-slate-200 dark:bg-zinc-800 rounded animate-pulse"></div>
+                            <div className="h-4 w-1/6 bg-slate-200 dark:bg-zinc-800 rounded animate-pulse"></div>
+                            <div className="h-4 w-1/6 bg-slate-200 dark:bg-zinc-800 rounded animate-pulse"></div>
+                            <div className="h-4 w-1/6 bg-slate-200 dark:bg-zinc-800 rounded animate-pulse"></div>
+                            <div className="h-4 w-1/6 bg-slate-200 dark:bg-zinc-800 rounded animate-pulse"></div>
+                            <div className="h-4 w-1/6 bg-slate-200 dark:bg-zinc-800 rounded animate-pulse"></div>
+                        </div>
+                        <div className="space-y-6">
+                            {[1, 2, 3, 4, 5].map(i => (
+                                <div key={i} className="flex gap-4">
+                                    <div className="h-5 w-1/6 bg-slate-200 dark:bg-zinc-800 rounded animate-pulse"></div>
+                                    <div className="h-5 w-1/6 bg-slate-200 dark:bg-zinc-800 rounded animate-pulse"></div>
+                                    <div className="h-5 w-1/6 bg-slate-200 dark:bg-zinc-800 rounded animate-pulse"></div>
+                                    <div className="h-5 w-1/6 bg-slate-200 dark:bg-zinc-800 rounded animate-pulse"></div>
+                                    <div className="h-5 w-1/6 bg-slate-200 dark:bg-zinc-800 rounded animate-pulse"></div>
+                                    <div className="h-5 w-1/6 bg-slate-200 dark:bg-zinc-800 rounded animate-pulse"></div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        );
     }
 
     return (
@@ -320,13 +412,8 @@ export default function AdminBilling() {
             {/* Header */}
             <motion.div variants={itemVariants} className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4 shrink-0">
                 <div>
-                    <h1 className="text-2xl font-black text-slate-900 dark:text-white tracking-tight">Billing & Financials</h1>
-                    <p className="text-sm text-slate-500 dark:text-zinc-400 mt-1">Issue bills, track utilities, submetering, and verify GCash receipts.</p>
-                </div>
-                <div className="flex items-center gap-3">
-                    <button className="p-2.5 bg-card border border-slate-200 dark:border-zinc-800 rounded-lg shadow-sm text-slate-600 dark:text-zinc-300 hover:bg-slate-50 dark:hover:bg-zinc-800 transition-colors">
-                        <Bell className="w-4 h-4" />
-                    </button>
+                    <h1 className="text-2xl font-black text-slate-900 dark:text-white tracking-tight">Billing & payments</h1>
+                    <p className="text-sm text-slate-500 dark:text-zinc-400 mt-1">track payments, issue bills, and verify payments</p>
                 </div>
             </motion.div>
 
@@ -349,15 +436,15 @@ export default function AdminBilling() {
                 </div>
 
                 {/* GCash Receipts to Verify */}
-                <div className="bg-card rounded-xl border border-slate-200 dark:border-zinc-800 p-6 shadow-sm">
+                <div onClick={() => setIsVerifyModalOpen(true)} className="bg-card rounded-xl border border-slate-200 dark:border-zinc-800 p-6 shadow-sm cursor-pointer hover:border-orange-500 transition-colors group">
                     <div className="flex justify-between items-start mb-4">
-                        <p className="text-sm font-medium text-slate-500 dark:text-zinc-400">GCash Receipts to Verify</p>
+                        <p className="text-sm font-medium text-slate-500 dark:text-zinc-400 group-hover:text-orange-500 transition-colors">GCash Receipts to Verify</p>
                         <div className="w-8 h-8 rounded-lg bg-orange-50 dark:bg-orange-500/10 flex items-center justify-center text-orange-600 dark:text-orange-400">
                             <Clock className="w-4 h-4" />
                         </div>
                     </div>
-                    <h3 className="text-3xl font-black text-slate-900 dark:text-white mb-1">2 Pending</h3>
-                    <p className="text-xs font-bold text-rose-500 dark:text-rose-400">Immediate action needed</p>
+                    <h3 className="text-3xl font-black text-slate-900 dark:text-white mb-1">{pendingPayments.length} Pending</h3>
+                    <p className={`text-xs font-bold ${pendingPayments.length > 0 ? 'text-rose-500 dark:text-rose-400' : 'text-slate-500'}`}>{pendingPayments.length > 0 ? 'Click to verify' : 'All caught up'}</p>
                 </div>
 
                 {/* Outstanding Arrears */}
@@ -378,100 +465,204 @@ export default function AdminBilling() {
             </motion.div>
 
 
-            {/* Table Controls */}
-            <motion.div variants={itemVariants} className="flex flex-col sm:flex-row justify-between items-center mb-4 gap-4 shrink-0">
-                <div className="flex gap-3 w-full sm:w-auto">
-                    <div className="w-48 relative">
-                        <CustomSelect 
-                            value={monthFilter}
-                            onChange={(val) => setMonthFilter(val)}
-                            options={monthOptions}
-                            className="w-full py-2.5 pl-4 pr-8 rounded-lg bg-card border border-slate-200 dark:border-zinc-800 text-slate-700 dark:text-zinc-300 font-medium text-sm focus:outline-none focus:ring-2 focus:ring-teal-500"
+            {/* Table Controls & Tabs */}
+            <motion.div variants={itemVariants} className="flex flex-col xl:flex-row justify-between items-center mb-4 gap-4 shrink-0">
+                <div className="flex flex-col sm:flex-row gap-3 w-full xl:w-auto items-center">
+                    {/* Tabs */}
+                    <div className="flex gap-1 bg-secondary/50 p-1 w-full sm:w-fit rounded-xl border border-slate-200 dark:border-zinc-800 shrink-0 relative">
+                        <button onClick={() => setActiveTab('invoices')} className={`relative flex-1 sm:flex-none px-4 py-2 rounded-lg text-sm font-bold transition-colors z-10 ${activeTab === 'invoices' ? 'text-white' : 'text-slate-500 hover:text-slate-700 dark:text-zinc-400 dark:hover:text-zinc-300'}`}>
+                            {activeTab === 'invoices' && (
+                                <motion.div layoutId="billingTabIndicator" className="absolute inset-0 bg-teal-600 dark:bg-teal-500 rounded-lg shadow-md -z-10" transition={{ type: "spring", stiffness: 400, damping: 30 }} />
+                            )}
+                            Invoices
+                        </button>
+                        <button onClick={() => setActiveTab('payments')} className={`relative flex-1 sm:flex-none px-4 py-2 rounded-lg text-sm font-bold transition-colors z-10 ${activeTab === 'payments' ? 'text-white' : 'text-slate-500 hover:text-slate-700 dark:text-zinc-400 dark:hover:text-zinc-300'}`}>
+                            {activeTab === 'payments' && (
+                                <motion.div layoutId="billingTabIndicator" className="absolute inset-0 bg-teal-600 dark:bg-teal-500 rounded-lg shadow-md -z-10" transition={{ type: "spring", stiffness: 400, damping: 30 }} />
+                            )}
+                            Payment History
+                        </button>
+                    </div>
+
+                    {/* Search Bar */}
+                    <div className="w-full sm:w-64 relative shrink-0">
+                        <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                        <input
+                            type="text"
+                            placeholder="Search tenant names..."
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            className="w-full py-2 pl-9 pr-4 rounded-lg bg-card border border-slate-200 dark:border-zinc-800 text-slate-700 dark:text-zinc-300 font-medium text-sm focus:outline-none focus:ring-2 focus:ring-teal-500"
                         />
                     </div>
-                    <div className="w-56 relative">
-                        <CustomSelect 
-                            value={statusFilter}
-                            onChange={(val) => setStatusFilter(val)}
-                            options={[
-                                { value: "All", label: "All Statuses" },
-                                { value: "Paid", label: "Paid" },
-                                { value: "Unpaid", label: "Unpaid" },
-                                { value: "Pending Verification", label: "Pending Verification" }
-                            ]}
-                            className="w-full py-2.5 pl-4 pr-8 rounded-lg bg-card border border-slate-200 dark:border-zinc-800 text-slate-700 dark:text-zinc-300 font-medium text-sm focus:outline-none focus:ring-2 focus:ring-teal-500"
-                        />
+
+                    {activeTab === 'invoices' && (
+                        <>
+                            <div className="w-full sm:w-48 relative shrink-0">
+                                <CustomSelect 
+                                    value={monthFilter}
+                                    onChange={(val) => setMonthFilter(val)}
+                                    options={monthOptions}
+                                    className="w-full py-2.5 pl-4 pr-8 rounded-lg bg-card border border-slate-200 dark:border-zinc-800 text-slate-700 dark:text-zinc-300 font-medium text-sm focus:outline-none focus:ring-2 focus:ring-teal-500"
+                                />
+                            </div>
+                            <div className="w-full sm:w-56 relative shrink-0">
+                                <CustomSelect 
+                                    value={statusFilter}
+                                    onChange={(val) => setStatusFilter(val)}
+                                    options={[
+                                        { value: "All", label: "All Statuses" },
+                                        { value: "Paid", label: "Paid" },
+                                        { value: "Partial", label: "Partial" },
+                                        { value: "Unpaid", label: "Unpaid" },
+                                        { value: "Overdue", label: "Overdue" },
+                                        { value: "Pending Verification", label: "Pending Verification" }
+                                    ]}
+                                    className="w-full py-2.5 pl-4 pr-8 rounded-lg bg-card border border-slate-200 dark:border-zinc-800 text-slate-700 dark:text-zinc-300 font-medium text-sm focus:outline-none focus:ring-2 focus:ring-teal-500"
+                                />
+                            </div>
+                        </>
+                    )}
+                </div>
+                
+                {activeTab === 'invoices' && (
+                    <div className="flex flex-col sm:flex-row gap-3 w-full xl:w-auto shrink-0">
+                        <button onClick={() => setIsCreateOpen(true)} className="w-full sm:w-auto px-4 py-2.5 bg-teal-600 hover:bg-teal-700 text-white text-sm font-bold rounded-lg transition-colors flex items-center justify-center gap-2">
+                            <Plus className="w-4 h-4" />
+                            Create Single Bill
+                        </button>
                     </div>
-                </div>
-                <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
-                    <button onClick={handleBatchGenerate} disabled={isBatchGenerating} className="w-full sm:w-auto px-4 py-2.5 bg-secondary hover:bg-slate-200 dark:hover:bg-zinc-800 border border-slate-200 dark:border-zinc-800 text-slate-800 dark:text-white text-sm font-bold rounded-lg transition-colors flex items-center justify-center gap-2 disabled:opacity-50">
-                        {isBatchGenerating ? <div className="w-4 h-4 border-2 border-slate-500/20 border-t-slate-500 rounded-full animate-spin"></div> : <FileText className="w-4 h-4" />}
-                        Generate Monthly Bills
-                    </button>
-                    <button onClick={() => setIsCreateOpen(true)} className="w-full sm:w-auto px-4 py-2.5 bg-teal-600 hover:bg-teal-700 text-white text-sm font-bold rounded-lg transition-colors flex items-center justify-center gap-2">
-                        <Plus className="w-4 h-4" />
-                        Create Single Bill
-                    </button>
-                </div>
+                )}
             </motion.div>
 
-            {/* Data Table */}
-            <motion.div variants={itemVariants} className="bg-card rounded-xl border border-slate-200 dark:border-zinc-800 shadow-sm overflow-hidden flex-1 flex flex-col min-h-0 mb-2">
-                <div className="overflow-auto flex-1 custom-scrollbar">
-                    <table className="w-full text-left border-collapse">
-                        <thead>
-                            <tr className="border-b border-slate-200 dark:border-zinc-800">
-                                <th className="px-6 py-4 text-xs font-bold text-slate-500 dark:text-zinc-400 uppercase tracking-wider">Tenant</th>
-                                <th className="px-6 py-4 text-xs font-bold text-slate-500 dark:text-zinc-400 uppercase tracking-wider">Room</th>
-                                <th className="px-6 py-4 text-xs font-bold text-slate-500 dark:text-zinc-400 uppercase tracking-wider">Billing Period</th>
-                                <th className="px-6 py-4 text-xs font-bold text-slate-500 dark:text-zinc-400 uppercase tracking-wider text-right">Base Rent</th>
-                                <th className="px-6 py-4 text-xs font-bold text-slate-500 dark:text-zinc-400 uppercase tracking-wider text-right">Water (Fixed)</th>
-                                <th className="px-6 py-4 text-xs font-bold text-slate-500 dark:text-zinc-400 uppercase tracking-wider text-right leading-tight min-w-[120px]">Power (Submeter)</th>
-                                <th className="px-6 py-4 text-xs font-bold text-slate-500 dark:text-zinc-400 uppercase tracking-wider text-right">Total Due</th>
-                                <th className="px-6 py-4 text-xs font-bold text-slate-500 dark:text-zinc-400 uppercase tracking-wider text-right">Status</th>
-                                <th className="px-6 py-4 text-xs font-bold text-slate-500 dark:text-zinc-400 uppercase tracking-wider text-center">Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody className="divide-y divide-slate-100 dark:divide-zinc-800/50">
-                            {filteredBills.length === 0 ? (
-                                <tr>
-                                    <td colSpan={9} className="px-6 py-12 text-center text-slate-500 dark:text-zinc-400">No billing records found.</td>
-                                </tr>
-                            ) : (
-                                filteredBills.map((b) => (
-                                    <tr key={b.id} className="hover:bg-slate-50 dark:hover:bg-zinc-800/50 transition-colors group">
-                                        <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-slate-900 dark:text-white">{b.tenant_name}</td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-slate-600 dark:text-zinc-300">{b.room_number || '-'}</td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500 dark:text-zinc-400">{b.billing_month}</td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500 dark:text-zinc-400 text-right">₱{Number(b.rent_amount).toLocaleString()}</td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500 dark:text-zinc-400 text-right">₱{Number(b.water_charges).toLocaleString()}</td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500 dark:text-zinc-400 text-right">₱{Number(b.electricity_charges).toLocaleString()}</td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-teal-600 dark:text-teal-400 text-right">₱{Number(b.total_amount).toLocaleString()}</td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-right">
-                                            {b.status === 'Paid' ? (
-                                                <span className="inline-flex items-center px-2.5 py-1 rounded bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 text-[10px] font-bold uppercase tracking-wider">Paid</span>
-                                            ) : b.status === 'Pending Verification' ? (
-                                                <span className="inline-flex items-center px-2.5 py-1 rounded bg-amber-50 dark:bg-amber-500/10 text-amber-700 dark:text-amber-400 text-[10px] font-bold uppercase tracking-wider">Pending Verification</span>
-                                            ) : (
-                                                <span className="inline-flex items-center px-2.5 py-1 rounded bg-rose-50 dark:bg-rose-500/10 text-rose-700 dark:text-rose-400 text-[10px] font-bold uppercase tracking-wider">Unpaid</span>
-                                            )}
-                                        </td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-center transition-opacity">
-                                            <div className="flex items-center justify-center gap-2">
-                                                <button onClick={() => openViewModal(b)} className="text-slate-400 hover:text-blue-500 transition-colors" title="View"><FileText className="w-4 h-4" /></button>
-                                                <button onClick={() => openEditModal(b)} className="text-slate-400 hover:text-indigo-500 transition-colors" title="Edit"><svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg></button>
-                                                {b.status !== 'Paid' && (
-                                                    <button onClick={() => openPayModal(b)} className="text-slate-400 hover:text-teal-500 transition-colors" title="Pay"><svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg></button>
-                                                )}
-                                            </div>
-                                        </td>
+            {activeTab === 'invoices' ? (
+                <>
+
+                    {/* Data Table */}
+                    <motion.div variants={itemVariants} className="bg-card rounded-xl border border-slate-200 dark:border-zinc-800 shadow-sm overflow-hidden flex-1 flex flex-col min-h-0 mb-2">
+                        <div className="overflow-auto flex-1 custom-scrollbar">
+                            <table className="w-full text-left border-collapse">
+                                <thead>
+                                    <tr className="border-b border-slate-200 dark:border-zinc-800">
+                                        <th className="px-6 py-4 text-xs font-bold text-slate-500 dark:text-zinc-400 uppercase tracking-wider">Tenant</th>
+                                        <th className="px-6 py-4 text-xs font-bold text-slate-500 dark:text-zinc-400 uppercase tracking-wider">Room</th>
+                                        <th className="px-6 py-4 text-xs font-bold text-slate-500 dark:text-zinc-400 uppercase tracking-wider">Billing Period</th>
+                                        <th className="px-6 py-4 text-xs font-bold text-slate-500 dark:text-zinc-400 uppercase tracking-wider text-right">Base Rent</th>
+                                        <th className="px-6 py-4 text-xs font-bold text-slate-500 dark:text-zinc-400 uppercase tracking-wider text-right">Water (Fixed)</th>
+                                        <th className="px-6 py-4 text-xs font-bold text-slate-500 dark:text-zinc-400 uppercase tracking-wider text-right leading-tight min-w-[120px]">Power (Submeter)</th>
+                                        <th className="px-6 py-4 text-xs font-bold text-slate-500 dark:text-zinc-400 uppercase tracking-wider text-right">Total Due</th>
+                                        <th className="px-6 py-4 text-xs font-bold text-slate-500 dark:text-zinc-400 uppercase tracking-wider text-right">Status</th>
+                                        <th className="px-6 py-4 text-xs font-bold text-slate-500 dark:text-zinc-400 uppercase tracking-wider text-center">Actions</th>
                                     </tr>
-                                ))
-                            )}
-                        </tbody>
-                    </table>
-                </div>
-            </motion.div>
+                                </thead>
+                                <tbody className="divide-y divide-slate-100 dark:divide-zinc-800/50">
+                                    {filteredBills.length === 0 ? (
+                                        <tr>
+                                            <td colSpan={9} className="px-6 py-12 text-center text-slate-500 dark:text-zinc-400">No billing records found.</td>
+                                        </tr>
+                                    ) : (
+                                        filteredBills.map((b) => (
+                                            <tr key={b.id} className="hover:bg-slate-50 dark:hover:bg-zinc-800/50 transition-colors group">
+                                                <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-slate-900 dark:text-white">{b.tenant_name}</td>
+                                                <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-slate-600 dark:text-zinc-300">{b.room_number || '-'}</td>
+                                                <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500 dark:text-zinc-400">{b.billing_month}</td>
+                                                <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500 dark:text-zinc-400 text-right">₱{Number(b.rent_amount).toLocaleString()}</td>
+                                                <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500 dark:text-zinc-400 text-right">₱{Number(b.water_charges).toLocaleString()}</td>
+                                                <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500 dark:text-zinc-400 text-right">₱{Number(b.electricity_charges).toLocaleString()}</td>
+                                                <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-teal-600 dark:text-teal-400 text-right">₱{Number(b.balance).toLocaleString()}</td>
+                                                <td className="px-6 py-4 whitespace-nowrap text-right">
+                                                    {b.status === 'Paid' ? (
+                                                        <span className="inline-flex items-center px-2.5 py-1 rounded bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 text-[10px] font-bold uppercase tracking-wider">Paid</span>
+                                                    ) : b.status === 'Partial' ? (
+                                                        <span className="inline-flex items-center px-2.5 py-1 rounded bg-blue-50 dark:bg-blue-500/10 text-blue-700 dark:text-blue-400 text-[10px] font-bold uppercase tracking-wider">Partial</span>
+                                                    ) : b.status === 'Pending Verification' ? (
+                                                        <span className="inline-flex items-center px-2.5 py-1 rounded bg-amber-50 dark:bg-amber-500/10 text-amber-700 dark:text-amber-400 text-[10px] font-bold uppercase tracking-wider">Pending Verification</span>
+                                                    ) : b.status === 'Overdue' ? (
+                                                        <span className="inline-flex items-center px-2.5 py-1 rounded bg-rose-100 dark:bg-rose-500/20 text-rose-800 dark:text-rose-400 text-[10px] font-bold uppercase tracking-wider">Overdue</span>
+                                                    ) : (
+                                                        <span className="inline-flex items-center px-2.5 py-1 rounded bg-slate-100 dark:bg-zinc-500/10 text-slate-700 dark:text-zinc-400 text-[10px] font-bold uppercase tracking-wider">Unpaid</span>
+                                                    )}
+                                                </td>
+                                                <td className="px-6 py-4 whitespace-nowrap text-center transition-opacity">
+                                                    <div className="flex items-center justify-center gap-2">
+                                                        <button onClick={() => openViewModal(b)} className="text-slate-400 hover:text-blue-500 transition-colors" title="View"><FileText className="w-4 h-4" /></button>
+                                                        <button onClick={() => openEditModal(b)} className="text-slate-400 hover:text-indigo-500 transition-colors" title="Edit"><svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg></button>
+                                                        {b.status !== 'Paid' && (
+                                                            <button onClick={() => openPayModal(b)} className="text-slate-400 hover:text-teal-500 transition-colors" title="Pay"><svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg></button>
+                                                        )}
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        ))
+                                    )}
+                                </tbody>
+                            </table>
+                        </div>
+                    </motion.div>
+                </>
+            ) : (
+                <>
+                    {/* Payment History Table */}
+                    <motion.div variants={itemVariants} className="bg-card rounded-xl border border-slate-200 dark:border-zinc-800 shadow-sm overflow-hidden flex-1 flex flex-col min-h-0 mb-2 mt-4">
+                        <div className="overflow-auto flex-1 custom-scrollbar">
+                            <table className="w-full text-left border-collapse">
+                                <thead>
+                                    <tr className="border-b border-slate-200 dark:border-zinc-800">
+                                        <th className="px-6 py-4 text-xs font-bold text-slate-500 dark:text-zinc-400 uppercase tracking-wider">Date</th>
+                                        <th className="px-6 py-4 text-xs font-bold text-slate-500 dark:text-zinc-400 uppercase tracking-wider">Tenant</th>
+                                        <th className="px-6 py-4 text-xs font-bold text-slate-500 dark:text-zinc-400 uppercase tracking-wider">Room</th>
+                                        <th className="px-6 py-4 text-xs font-bold text-slate-500 dark:text-zinc-400 uppercase tracking-wider">Billing Month</th>
+                                        <th className="px-6 py-4 text-xs font-bold text-slate-500 dark:text-zinc-400 uppercase tracking-wider">Method</th>
+                                        <th className="px-6 py-4 text-xs font-bold text-slate-500 dark:text-zinc-400 uppercase tracking-wider text-right">Amount</th>
+                                        <th className="px-6 py-4 text-xs font-bold text-slate-500 dark:text-zinc-400 uppercase tracking-wider text-center">Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-slate-100 dark:divide-zinc-800/50">
+                                    {filteredPayments.length === 0 ? (
+                                        <tr>
+                                            <td colSpan={7} className="px-6 py-12 text-center text-slate-500 dark:text-zinc-400">No payments recorded yet.</td>
+                                        </tr>
+                                    ) : (
+                                        filteredPayments.map((payment) => (
+                                            <tr key={payment.id} className="hover:bg-slate-50 dark:hover:bg-zinc-800/50 transition-colors group">
+                                                <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-slate-900 dark:text-white">
+                                                    {new Date(payment.payment_date).toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' })}
+                                                </td>
+                                                <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-slate-600 dark:text-zinc-300">
+                                                    {payment.tenant_name}
+                                                </td>
+                                                <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500 dark:text-zinc-400">
+                                                    {payment.room_number || '-'}
+                                                </td>
+                                                <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500 dark:text-zinc-400">
+                                                    {payment.billing_month}
+                                                </td>
+                                                <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500 dark:text-zinc-400">
+                                                    {payment.payment_method}
+                                                </td>
+                                                <td className="px-6 py-4 whitespace-nowrap text-right">
+                                                    <span className="font-black text-emerald-600 dark:text-emerald-400">
+                                                        ₱{Number(payment.amount_paid).toLocaleString()}
+                                                    </span>
+                                                </td>
+                                                <td className="px-6 py-4 whitespace-nowrap text-center">
+                                                    <span className={`inline-flex items-center px-2.5 py-1 rounded text-[10px] font-bold uppercase tracking-wider ${
+                                                        payment.status === 'Approved' || payment.status === 'Success' || payment.status === null || payment.status === undefined ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400' :
+                                                        payment.status === 'Rejected' ? 'bg-rose-50 text-rose-700 dark:bg-rose-500/10 dark:text-rose-400' :
+                                                        'bg-amber-50 text-amber-700 dark:bg-amber-500/10 dark:text-amber-400'
+                                                    }`}>
+                                                        {payment.status || 'Approved'}
+                                                    </span>
+                                                </td>
+                                            </tr>
+                                        ))
+                                    )}
+                                </tbody>
+                            </table>
+                        </div>
+                    </motion.div>
+                </>
+            )}
 
             <AnimatePresence>
             {isViewOpen && selectedBill && (
@@ -795,6 +986,83 @@ export default function AdminBilling() {
                                 </button>
                             </div>
                         </form>
+                    </motion.div>
+                </motion.div>
+            )}
+            </AnimatePresence>
+            {/* Verify Modal */}
+            <AnimatePresence>
+            {isVerifyModalOpen && (
+                <motion.div initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}} className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
+                    <motion.div initial={{scale:0.95, opacity:0}} animate={{scale:1, opacity:1}} exit={{scale:0.95, opacity:0}} className="bg-card border border-slate-200 dark:border-zinc-800 rounded-3xl shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col overflow-hidden">
+                        <div className="p-6 border-b border-slate-200 dark:border-zinc-800 flex justify-between items-center bg-secondary/50">
+                            <h2 className="text-2xl font-black text-slate-900 dark:text-white flex items-center gap-3">
+                                <Clock className="w-6 h-6 text-orange-500" />
+                                Verify Payments
+                            </h2>
+                            <button onClick={() => setIsVerifyModalOpen(false)} className="w-10 h-10 flex items-center justify-center rounded-xl bg-slate-100 hover:bg-rose-100 text-slate-500 hover:text-rose-600 dark:bg-zinc-800 dark:hover:bg-rose-500/20 dark:text-zinc-400 transition-colors">
+                                <X className="w-5 h-5" />
+                            </button>
+                        </div>
+                        <div className="p-6 overflow-y-auto flex-1">
+                            {pendingPayments.length === 0 ? (
+                                <div className="text-center py-10 text-slate-500">No pending payments to verify.</div>
+                            ) : (
+                                <div className="space-y-6">
+                                    {pendingPayments.map(payment => (
+                                        <div key={payment.id} className="bg-secondary/30 border border-slate-200 dark:border-zinc-800 rounded-2xl p-6 flex flex-col lg:flex-row gap-6">
+                                            <div className="flex-1 space-y-4">
+                                                <div>
+                                                    <h3 className="font-bold text-lg">{payment.tenant_name}</h3>
+                                                    <p className="text-sm text-slate-500">Room {payment.room_number}</p>
+                                                </div>
+                                                <div className="grid grid-cols-2 gap-4">
+                                                    <div>
+                                                        <p className="text-[10px] uppercase font-bold text-slate-400">Payment Date</p>
+                                                        <p className="font-semibold">{new Date(payment.payment_date).toLocaleDateString()}</p>
+                                                    </div>
+                                                    <div>
+                                                        <p className="text-[10px] uppercase font-bold text-slate-400">Method</p>
+                                                        <p className="font-semibold">{payment.payment_method}</p>
+                                                    </div>
+                                                    <div>
+                                                        <p className="text-[10px] uppercase font-bold text-slate-400">Amount Paid</p>
+                                                        <p className="font-black text-emerald-600 text-xl">₱ {Number(payment.amount_paid).toLocaleString()}</p>
+                                                    </div>
+                                                    <div>
+                                                        <p className="text-[10px] uppercase font-bold text-slate-400">Bill Total</p>
+                                                        <p className="font-semibold">₱ {Number(payment.bill_total).toLocaleString()}</p>
+                                                    </div>
+                                                </div>
+                                                {payment.notes && (
+                                                    <div className="bg-card p-3 rounded-xl border border-slate-200 dark:border-zinc-800">
+                                                        <p className="text-[10px] uppercase font-bold text-slate-400 mb-1">Notes from tenant</p>
+                                                        <p className="text-sm italic">{payment.notes}</p>
+                                                    </div>
+                                                )}
+                                                <div className="flex gap-3 pt-2">
+                                                    <button onClick={() => handleVerifyPayment(payment.id, 'approve')} className="flex-1 py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl flex items-center justify-center gap-2 transition-all shadow-md shadow-emerald-500/20 text-sm">
+                                                        <CheckCircle className="w-4 h-4" /> Approve
+                                                    </button>
+                                                    <button onClick={() => handleVerifyPayment(payment.id, 'reject')} className="flex-1 py-3 bg-white border border-slate-200 hover:bg-rose-50 text-rose-600 font-bold rounded-xl flex items-center justify-center gap-2 transition-all text-sm">
+                                                        <XCircle className="w-4 h-4" /> Reject
+                                                    </button>
+                                                </div>
+                                            </div>
+                                            {payment.receipt_url ? (
+                                                <div className="lg:w-1/2 flex items-center justify-center bg-card rounded-xl border border-slate-200 dark:border-zinc-800 overflow-hidden min-h-[300px]">
+                                                    <img src={`http://localhost:5000${payment.receipt_url}`} alt="Receipt" className="max-w-full max-h-[400px] object-contain" />
+                                                </div>
+                                            ) : (
+                                                <div className="lg:w-1/2 flex items-center justify-center bg-card rounded-xl border border-slate-200 dark:border-zinc-800 min-h-[300px] text-slate-400">
+                                                    No receipt attached
+                                                </div>
+                                            )}
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
                     </motion.div>
                 </motion.div>
             )}
