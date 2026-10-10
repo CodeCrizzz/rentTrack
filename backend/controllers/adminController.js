@@ -9,7 +9,7 @@ const getDashboardStats = async (req, res) => {
             incomeResult, duesResult,
             requestsResult, recentPaymentsResult, recentRequestsResult,
             expiringContractsResult, totalBilledResult, historicalIncomeResult,
-            overdueAccountsResult, upcomingRentResult, recentMessagesResult, pendingTenantsListResult, pendingPaymentVerificationsResult
+            overdueAccountsResult, upcomingRentResult, recentMessagesResult, pendingTenantsListResult, pendingPaymentVerificationsResult, lastMonthIncomeResult
         ] = await Promise.all([
             // Rooms Overview
             db.query('SELECT COUNT(*) FROM rooms'),
@@ -29,7 +29,7 @@ const getDashboardStats = async (req, res) => {
             
             // Billing Overview
             db.query("SELECT SUM(amount_paid) FROM payments WHERE EXTRACT(MONTH FROM payment_date) = EXTRACT(MONTH FROM CURRENT_DATE) AND EXTRACT(YEAR FROM payment_date) = EXTRACT(YEAR FROM CURRENT_DATE)"),
-            db.query("SELECT status, SUM(balance) FROM bills WHERE status IN ('Unpaid', 'Partial', 'Overdue') GROUP BY status"),
+            db.query("SELECT status, SUM(balance) as sum, COUNT(*) as count FROM bills WHERE status IN ('Unpaid', 'Partial', 'Overdue') GROUP BY status"),
             
             // Maintenance Summary
             db.query("SELECT status, COUNT(*) FROM requests GROUP BY status"),
@@ -125,6 +125,9 @@ const getDashboardStats = async (req, res) => {
                 WHERE b.status = 'Pending Verification'
                 ORDER BY b.created_at ASC
             `),
+            
+            // Last Month Income
+            db.query("SELECT SUM(amount_paid) FROM payments WHERE EXTRACT(MONTH FROM payment_date) = EXTRACT(MONTH FROM CURRENT_DATE - INTERVAL '1 month') AND EXTRACT(YEAR FROM payment_date) = EXTRACT(YEAR FROM CURRENT_DATE - INTERVAL '1 month')")
         ]);
 
         // --- Process Room Stats ---
@@ -160,11 +163,20 @@ const getDashboardStats = async (req, res) => {
         const inactiveTenants = totalTenants - activeTenants - pendingTenants;
 
         // --- Process Billing Stats ---
-        const monthlyIncome = incomeResult.rows[0].sum || 0;
-        let pendingDues = 0, overduePayments = 0;
+        const monthlyIncome = parseFloat(incomeResult.rows[0].sum) || 0;
+        const lastMonthIncome = parseFloat(lastMonthIncomeResult.rows[0].sum) || 0;
+        let revenueIncrease = 0;
+        if (lastMonthIncome > 0) {
+            revenueIncrease = ((monthlyIncome - lastMonthIncome) / lastMonthIncome) * 100;
+        } else if (monthlyIncome > 0) {
+            revenueIncrease = 100; // If last month was 0 but this month has income
+        }
+        
+        let pendingDues = 0, overduePayments = 0, unpaidBillsCount = 0;
         duesResult.rows.forEach(r => {
             if (r.status.toLowerCase() === 'overdue') overduePayments += parseFloat(r.sum);
             pendingDues += parseFloat(r.sum); // Pending is the sum of Unpaid, Partial, Overdue
+            unpaidBillsCount += parseInt(r.count);
         });
 
         // --- Process Maintenance Stats ---
@@ -302,7 +314,7 @@ const getDashboardStats = async (req, res) => {
         res.status(200).json({
             rooms: { totalRooms, occupiedRooms, availableRooms, partiallyOccupiedRooms, maintenanceRooms, unavailableRooms },
             tenants: { totalTenants, activeTenants, pendingTenants, inactiveTenants },
-            billing: { monthlyIncome, pendingDues, overduePayments, totalBilled, collectionRate, historicalIncome },
+            billing: { monthlyIncome, pendingDues, overduePayments, unpaidBillsCount, revenueIncrease, totalBilled, collectionRate, historicalIncome },
             maintenance: { totalRequests, pendingRequests, inProgressRequests, resolvedRequests },
             recentActivities: activities,
             recentMessages,
