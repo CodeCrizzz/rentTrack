@@ -1,7 +1,6 @@
 "use client";
 import { useEffect, useState, useRef } from 'react';
 import api from '@/lib/api';
-import AdminLoader from '@/components/AdminLoader';
 import { Search, Paperclip } from 'lucide-react';
 
 interface Conversation {
