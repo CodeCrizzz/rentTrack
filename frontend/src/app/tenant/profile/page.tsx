@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState } from 'react';
 import api from '@/lib/api';
-import { motion, AnimatePresence, Variants } from 'framer-motion';
+import { motion, AnimatePresence, type Variants } from 'framer-motion';
 
 interface ProfileData {
     name: string;
