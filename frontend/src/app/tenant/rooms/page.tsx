@@ -91,80 +91,188 @@ export default function TenantRooms() {
     }
 
     if (isAssigned && assignedRoomData) {
-        const { room, roommates } = assignedRoomData;
+        const { room, roommates, maintenance_history = [] } = assignedRoomData;
+        
+        // Include all occupants, highlighting the current user
+        const actualRoommates = roommates || [];
+        
+        // Correct status logic for assigned room
+        const roomStatus = isAssigned ? 'Occupied' : (room.status === 'Available' ? 'Available' : room.status);
+
         return (
             <motion.div variants={containerVariants} initial="hidden" animate="show" className="w-full h-[calc(100vh-6.5rem)] md:h-[calc(100vh-7.5rem)] flex flex-col font-sans text-slate-900 dark:text-white overflow-hidden">
-                <motion.div variants={itemVariants} className="mb-6 shrink-0">
-                    <h1 className="text-2xl md:text-3xl font-black text-slate-900 dark:text-white tracking-tight">
-                        My Room
-                    </h1>
-                    <p className="text-sm text-slate-500 dark:text-zinc-400 mt-1">Details about your currently assigned room.</p>
-                </motion.div>
                 
-                <motion.div variants={itemVariants} className="flex-1 overflow-y-auto custom-scrollbar pr-2 pb-6 flex flex-col gap-6">
-                    {/* Room Details Card */}
-                    <div className="bg-card border border-slate-200 dark:border-zinc-800 rounded-2xl p-6 md:p-8 shadow-sm relative overflow-hidden flex-shrink-0">
-                        <div className="absolute top-0 left-0 w-full h-2 bg-emerald-500"></div>
-                        <div className="flex flex-col md:flex-row justify-between gap-6">
-                            <div>
-                                <h2 className="text-3xl md:text-4xl font-black text-slate-900 dark:text-white">Room {room.room_number}</h2>
-                                <p className="text-xs md:text-sm font-bold text-slate-500 dark:text-zinc-400 mt-2 uppercase tracking-widest">{room.type} • Floor {room.floor}</p>
-                                
-                                <div className="mt-6 md:mt-8">
-                                    <p className="text-sm text-slate-600 dark:text-zinc-300 max-w-xl leading-relaxed">
-                                        {room.description || 'A comfortable and modern living space tailored for your needs, equipped with essential amenities for a great stay.'}
-                                    </p>
-                                </div>
+                {/* Page Header */}
+                <motion.div variants={itemVariants} className="shrink-0 mb-6">
+                    <div className="flex flex-col md:flex-row md:items-center gap-4 justify-between">
+                        <div>
+                            <div className="flex items-center gap-3">
+                                <h1 className="text-2xl md:text-3xl font-bold tracking-tight text-slate-900 dark:text-white">Room {room.room_number}</h1>
+                                <span className={`px-2.5 py-1 rounded-md text-xs font-semibold uppercase tracking-wider ${
+                                    roomStatus === 'Occupied' ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-400' : 
+                                    roomStatus === 'Available' ? 'bg-indigo-100 text-indigo-700 dark:bg-indigo-500/20 dark:text-indigo-400' :
+                                    'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300'
+                                }`}>
+                                    {roomStatus}
+                                </span>
                             </div>
-                            
-                            <div className="flex flex-col gap-4 min-w-[200px] shrink-0">
-                                <div className="bg-slate-50 dark:bg-zinc-900/50 rounded-xl p-4 md:p-5 border border-slate-100 dark:border-zinc-800">
-                                    <p className="text-[10px] md:text-xs font-bold text-slate-400 dark:text-zinc-500 uppercase tracking-wider mb-1">Monthly Rent</p>
-                                    <p className="text-2xl md:text-3xl font-black text-slate-900 dark:text-white">₱{Number(room.price).toLocaleString()}</p>
-                                </div>
-                                <div className="bg-slate-50 dark:bg-zinc-900/50 rounded-xl p-4 md:p-5 border border-slate-100 dark:border-zinc-800">
-                                    <p className="text-[10px] md:text-xs font-bold text-slate-400 dark:text-zinc-500 uppercase tracking-wider mb-1">Capacity</p>
-                                    <p className="text-xl font-bold text-slate-900 dark:text-white">{room.current_occupants} <span className="text-sm text-slate-500">/ {room.capacity} Occupants</span></p>
-                                </div>
-                            </div>
+                            <p className="text-sm text-slate-500 dark:text-zinc-400 mt-1">View your room details, rental information, and roommates.</p>
                         </div>
                     </div>
+                </motion.div>
 
-                    {/* Roommates Section */}
-                    <div className="flex-shrink-0 mb-8">
-                        <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-4">Roommates</h3>
-                        {roommates && roommates.length > 0 ? (
-                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                                {roommates.map((mate: any) => (
-                                    <div key={mate.id} className={`bg-card border ${mate.is_me ? 'border-emerald-500 dark:border-emerald-500/50 bg-emerald-50/30 dark:bg-emerald-500/5' : 'border-slate-200 dark:border-zinc-800'} rounded-xl p-4 md:p-5 flex items-center gap-4 shadow-sm hover:shadow-md transition-shadow`}>
-                                        <div className={`w-12 h-12 md:w-14 md:h-14 rounded-full bg-slate-200 dark:bg-zinc-800 overflow-hidden shrink-0 border-2 ${mate.is_me ? 'border-emerald-500' : 'border-slate-100 dark:border-zinc-700'}`}>
-                                            <img src={`https://ui-avatars.com/api/?name=${encodeURIComponent(mate.name)}&background=random`} alt={mate.name} className="w-full h-full object-cover" />
+                {/* Main scrollable content */}
+                <div className="flex-1 flex flex-col overflow-y-auto lg:overflow-hidden pb-4 space-y-6">
+                    
+                    {/* Summary Cards */}
+                    <motion.div variants={itemVariants} className="shrink-0 grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {/* Monthly Rent */}
+                        <div className="bg-card border border-slate-200 dark:border-zinc-800 rounded-xl p-5 flex items-center gap-4 shadow-sm">
+                            <div className="w-12 h-12 rounded-lg bg-emerald-50 dark:bg-emerald-500/10 flex items-center justify-center shrink-0">
+                                <svg className="w-6 h-6 text-emerald-600 dark:text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"></path></svg>
+                            </div>
+                            <div>
+                                <p className="text-xs font-semibold text-slate-500 dark:text-zinc-400 uppercase tracking-wider mb-1">Monthly Rent</p>
+                                <p className="text-2xl font-bold text-slate-900 dark:text-white">₱{Number(room.price).toLocaleString()}</p>
+                            </div>
+                        </div>
+
+                        {/* Occupancy */}
+                        <div className="bg-card border border-slate-200 dark:border-zinc-800 rounded-xl p-5 flex items-center gap-4 shadow-sm">
+                            <div className="w-12 h-12 rounded-lg bg-indigo-50 dark:bg-indigo-500/10 flex items-center justify-center shrink-0">
+                                <svg className="w-6 h-6 text-indigo-600 dark:text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"></path></svg>
+                            </div>
+                            <div>
+                                <p className="text-xs font-semibold text-slate-500 dark:text-zinc-400 uppercase tracking-wider mb-1">Occupancy</p>
+                                <p className="text-2xl font-bold text-slate-900 dark:text-white">
+                                    {room.current_occupants} <span className="text-base font-medium text-slate-400 dark:text-zinc-500">of {room.capacity}</span>
+                                </p>
+                            </div>
+                        </div>
+                    </motion.div>
+
+                    <div className="flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-3 gap-6">
+                        
+                        {/* Main Content Area: Room Info + Maintenance (Col Span 2) */}
+                        <div className="lg:col-span-2 flex flex-col gap-6 min-h-0">
+                            
+                            {/* Room Information */}
+                            <motion.div variants={itemVariants} className="shrink-0 bg-card border border-slate-200 dark:border-zinc-800 rounded-xl shadow-sm overflow-hidden">
+                                <div className="px-6 py-4 border-b border-slate-100 dark:border-zinc-800/60">
+                                    <h2 className="text-base font-bold text-slate-900 dark:text-white">Room Information</h2>
+                                </div>
+                                <div className="p-6">
+                                    <p className="text-sm text-slate-600 dark:text-zinc-300 mb-6 leading-relaxed">
+                                        {room.description || 'Not specified'}
+                                    </p>
+                                    
+                                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-y-6 gap-x-4">
+                                        <div>
+                                            <p className="text-xs font-medium text-slate-500 dark:text-zinc-400 mb-1">Room Type</p>
+                                            <p className="text-sm font-semibold text-slate-900 dark:text-white">{room.type || 'Not specified'}</p>
                                         </div>
                                         <div>
-                                            <div className="flex items-center gap-2">
-                                                <p className="font-bold text-slate-900 dark:text-white text-sm md:text-base">
-                                                    {mate.is_me ? 'Me' : mate.name}
-                                                </p>
-                                                {mate.is_me && (
-                                                    <span className="px-1.5 py-0.5 rounded bg-emerald-100 dark:bg-emerald-500/20 text-[9px] font-bold text-emerald-700 dark:text-emerald-400 uppercase tracking-widest">You</span>
-                                                )}
-                                            </div>
-                                            <p className="text-[10px] md:text-xs font-medium text-slate-500 dark:text-zinc-400 mt-1">Moved in: {mate.date_moved_in ? new Date(mate.date_moved_in).toLocaleDateString() : 'Unknown'}</p>
+                                            <p className="text-xs font-medium text-slate-500 dark:text-zinc-400 mb-1">Floor Level</p>
+                                            <p className="text-sm font-semibold text-slate-900 dark:text-white">{room.floor || 'Not specified'}</p>
+                                        </div>
+                                        <div>
+                                            <p className="text-xs font-medium text-slate-500 dark:text-zinc-400 mb-1">Maximum Capacity</p>
+                                            <p className="text-sm font-semibold text-slate-900 dark:text-white">{room.capacity ? `${room.capacity} Occupants` : 'Not specified'}</p>
                                         </div>
                                     </div>
-                                ))}
-                            </div>
-                        ) : (
-                            <div className="bg-card border border-slate-200 dark:border-zinc-800 rounded-xl p-8 text-center shadow-sm">
-                                <div className="w-12 h-12 bg-secondary rounded-full flex items-center justify-center text-slate-400 mx-auto mb-3">
-                                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"></path></svg>
                                 </div>
-                                <p className="text-sm font-bold text-slate-900 dark:text-white">You currently have no roommates.</p>
-                                <p className="text-xs text-slate-500 dark:text-zinc-400 mt-1">Enjoy the peace and quiet!</p>
-                            </div>
-                        )}
+                            </motion.div>
+
+                            {/* Maintenance */}
+                            <motion.div variants={itemVariants} className="flex-1 min-h-0 bg-card border border-slate-200 dark:border-zinc-800 rounded-xl shadow-sm overflow-hidden flex flex-col">
+                                <div className="px-6 py-4 border-b border-slate-100 dark:border-zinc-800/60 flex items-center justify-between shrink-0">
+                                    <h2 className="text-base font-bold text-slate-900 dark:text-white">Maintenance</h2>
+                                    {maintenance_history && maintenance_history.length > 0 && (
+                                        <a href="/tenant/requests" className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 hover:underline">
+                                            View all
+                                        </a>
+                                    )}
+                                </div>
+                                <div className="p-0 flex-1 overflow-y-auto custom-scrollbar">
+                                    {maintenance_history && maintenance_history.length > 0 ? (
+                                        <div className="divide-y divide-slate-100 dark:divide-zinc-800/60">
+                                            {maintenance_history.map((req: any) => (
+                                                <div key={req.id} className="p-4 sm:px-6 flex items-start justify-between gap-4">
+                                                    <div>
+                                                        <h4 className="text-sm font-bold text-slate-900 dark:text-white">{req.title}</h4>
+                                                        <p className="text-xs text-slate-500 dark:text-zinc-400 mt-1">
+                                                            Submitted on {new Date(req.created_at).toLocaleDateString()}
+                                                        </p>
+                                                    </div>
+                                                    <span className={`px-2.5 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider shrink-0 ${
+                                                        req.status === 'Resolved' ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-400' :
+                                                        req.status === 'In Progress' ? 'bg-indigo-100 text-indigo-700 dark:bg-indigo-500/20 dark:text-indigo-400' :
+                                                        'bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-400'
+                                                    }`}>
+                                                        {req.status}
+                                                    </span>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    ) : (
+                                        <div className="p-8 flex flex-col items-center justify-center text-center h-full min-h-[250px]">
+                                            <div className="w-12 h-12 bg-slate-50 dark:bg-zinc-900/50 rounded-full flex items-center justify-center mb-4">
+                                                <svg className="w-6 h-6 text-slate-400 dark:text-zinc-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+                                            </div>
+                                            <h3 className="text-sm font-bold text-slate-900 dark:text-white mb-1">No maintenance requests yet</h3>
+                                            <p className="text-xs text-slate-500 dark:text-zinc-400 mb-6 max-w-[250px]">Need something fixed? Submit a maintenance request and track its progress here.</p>
+                                            <a href="/tenant/requests" className="px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-bold rounded-lg transition-colors">
+                                                Submit Maintenance Request
+                                            </a>
+                                        </div>
+                                    )}
+                                </div>
+                            </motion.div>
+                        </div>
+
+                        {/* Supporting Column: Roommates */}
+                        <div className="lg:col-span-1 min-h-0">
+                            <motion.div variants={itemVariants} className="h-full bg-card border border-slate-200 dark:border-zinc-800 rounded-xl shadow-sm overflow-hidden flex flex-col">
+                                <div className="px-6 py-4 border-b border-slate-100 dark:border-zinc-800/60 shrink-0">
+                                    <h2 className="text-base font-bold text-slate-900 dark:text-white">Your Roommates</h2>
+                                </div>
+                                <div className="p-0 flex-1 overflow-y-auto custom-scrollbar">
+                                    {actualRoommates.length > 0 ? (
+                                        <div className="divide-y divide-slate-100 dark:divide-zinc-800/60">
+                                            {actualRoommates.map((mate: any) => (
+                                                <div key={mate.id} className={`p-4 sm:px-6 flex items-center gap-4 ${mate.is_me ? 'bg-emerald-50/30 dark:bg-emerald-500/5' : ''}`}>
+                                                    <div className={`w-10 h-10 rounded-full bg-slate-200 dark:bg-zinc-800 overflow-hidden shrink-0 ${mate.is_me ? 'ring-2 ring-emerald-500 ring-offset-2 dark:ring-offset-zinc-950' : ''}`}>
+                                                        <img src={`https://ui-avatars.com/api/?name=${encodeURIComponent(mate.name)}&background=random&size=40`} alt={mate.name} className="w-full h-full object-cover" />
+                                                    </div>
+                                                    <div className="flex-1 min-w-0">
+                                                        <div className="flex items-center gap-2">
+                                                            <h4 className="text-sm font-bold text-slate-900 dark:text-white truncate">{mate.name}</h4>
+                                                            {mate.is_me && (
+                                                                <span className="px-1.5 py-0.5 rounded text-[9px] font-black bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-400 uppercase tracking-widest">You</span>
+                                                            )}
+                                                        </div>
+                                                        <p className="text-xs text-slate-500 dark:text-zinc-400 mt-0.5 truncate">
+                                                            Moved in: {mate.date_moved_in ? new Date(mate.date_moved_in).toLocaleDateString() : 'Not specified'}
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    ) : (
+                                        <div className="p-8 flex flex-col items-center justify-center text-center h-full min-h-[300px]">
+                                            <div className="w-12 h-12 bg-slate-50 dark:bg-zinc-900/50 rounded-full flex items-center justify-center mb-4">
+                                                <svg className="w-6 h-6 text-slate-400 dark:text-zinc-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"></path></svg>
+                                            </div>
+                                            <h3 className="text-sm font-bold text-slate-900 dark:text-white mb-1">No roommates</h3>
+                                            <p className="text-xs text-slate-500 dark:text-zinc-400 max-w-[200px]">You currently have the room to yourself.</p>
+                                        </div>
+                                    )}
+                                </div>
+                            </motion.div>
+                        </div>
+
                     </div>
-                </motion.div>
+                </div>
             </motion.div>
         );
     }
