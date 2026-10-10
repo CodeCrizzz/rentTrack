@@ -3,9 +3,8 @@ import { useEffect, useState, useMemo } from 'react';
 import api from '@/lib/api';
 import { Search, Plus, Building2, Users, Info, Wrench, Edit, Trash2, ChevronDown, X, CheckCircle } from 'lucide-react';
 import CustomSelect from '@/components/CustomSelect';
-import { motion, AnimatePresence, Variants } from 'framer-motion';
+import { motion, AnimatePresence, type Variants } from 'framer-motion';
 import { toast } from 'sonner';
-import AdminLoader from '@/components/AdminLoader';
 
 interface Tenant {
     id: number;
@@ -240,7 +239,60 @@ export default function AdminRooms() {
 
     if (isLoading) {
         return (
-            <AdminLoader message="Loading Rooms" />
+            <div className="w-full h-[calc(100vh-7rem)] flex flex-col gap-6 font-sans animate-pulse overflow-hidden">
+                {/* Header Skeleton */}
+                <div className="shrink-0">
+                    <div className="h-9 w-64 bg-slate-200 dark:bg-zinc-800 rounded-md mb-3"></div>
+                    <div className="h-4 w-80 bg-slate-200 dark:bg-zinc-800 rounded-md"></div>
+                </div>
+
+                {/* Metric Cards Skeleton */}
+                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6 shrink-0">
+                    {[...Array(4)].map((_, i) => (
+                        <div key={i} className="bg-card border border-slate-200 dark:border-zinc-800 rounded-xl p-6 shadow-sm flex flex-col justify-between h-[140px]">
+                            <div className="flex justify-between items-start mb-4">
+                                <div className="h-4 w-28 bg-slate-200 dark:bg-zinc-800 rounded-md"></div>
+                                <div className="w-8 h-8 rounded-lg bg-slate-200 dark:bg-zinc-800"></div>
+                            </div>
+                            <div>
+                                <div className="h-8 w-24 bg-slate-200 dark:bg-zinc-800 rounded-md mb-2"></div>
+                                <div className="h-3 w-32 bg-slate-200 dark:bg-zinc-800 rounded-md"></div>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+
+                {/* Controls Bar Skeleton */}
+                <div className="flex flex-col md:flex-row justify-between items-center gap-4 shrink-0">
+                    <div className="flex flex-col sm:flex-row items-center gap-4 w-full md:w-auto">
+                        <div className="w-full sm:w-64 h-[42px] bg-slate-200 dark:bg-zinc-800 rounded-lg"></div>
+                        <div className="w-full sm:w-40 h-[42px] bg-slate-200 dark:bg-zinc-800 rounded-lg"></div>
+                        <div className="w-full sm:w-48 h-[42px] bg-slate-200 dark:bg-zinc-800 rounded-lg"></div>
+                    </div>
+                    <div className="w-full md:w-36 h-[42px] bg-slate-200 dark:bg-zinc-800 rounded-lg"></div>
+                </div>
+
+                {/* Table Skeleton */}
+                <div className="bg-card border border-slate-200 dark:border-zinc-800 rounded-xl shadow-sm flex-1 flex flex-col min-h-0 overflow-hidden">
+                    <div className="h-12 bg-secondary border-b border-slate-200 dark:border-zinc-800 shrink-0"></div>
+                    <div className="flex-1 overflow-hidden p-6 space-y-4">
+                        {[...Array(6)].map((_, i) => (
+                            <div key={i} className="flex items-center justify-between py-2 border-b border-slate-100 dark:border-zinc-800/50 last:border-0">
+                                <div className="h-4 w-16 bg-slate-200 dark:bg-zinc-800 rounded-md"></div>
+                                <div className="h-4 w-24 bg-slate-200 dark:bg-zinc-800 rounded-md hidden sm:block"></div>
+                                <div className="h-4 w-32 bg-slate-200 dark:bg-zinc-800 rounded-md hidden md:block"></div>
+                                <div className="h-4 w-20 bg-slate-200 dark:bg-zinc-800 rounded-md hidden lg:block"></div>
+                                <div className="h-6 w-24 bg-slate-200 dark:bg-zinc-800 rounded-full"></div>
+                                <div className="flex gap-2">
+                                    <div className="w-7 h-7 bg-slate-200 dark:bg-zinc-800 rounded-md"></div>
+                                    <div className="w-7 h-7 bg-slate-200 dark:bg-zinc-800 rounded-md"></div>
+                                    <div className="w-7 h-7 bg-slate-200 dark:bg-zinc-800 rounded-md hidden sm:block"></div>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            </div>
         );
     }
 
