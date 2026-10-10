@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
     Video, Maximize2, Camera, ShieldAlert, 
@@ -24,11 +24,21 @@ const mockCameras = [
 export default function CCTVPage() {
     const [cameras] = useState(mockCameras)
     const [currentTime, setCurrentTime] = useState(new Date())
+    const [isMounted, setIsMounted] = useState(false)
     const [fullscreenCam, setFullscreenCam] = useState<string | null>(null)
     const [gridCols, setGridCols] = useState<number>(2)
+    const gridRef = useRef<HTMLDivElement>(null)
+
+    // Scroll to top when grid layout changes
+    useEffect(() => {
+        if (gridRef.current) {
+            gridRef.current.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+    }, [gridCols, fullscreenCam]);
 
     // update live timecode
     useEffect(() => {
+        setIsMounted(true);
         const timer = setInterval(() => setCurrentTime(new Date()), 1000);
         return () => clearInterval(timer);
     }, []);
@@ -40,7 +50,7 @@ export default function CCTVPage() {
     const activeCameras = fullscreenCam ? cameras.filter(c => c.id === fullscreenCam) : cameras;
 
     return (
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="w-full flex flex-col h-[calc(100vh-9rem)] text-slate-900 dark:text-white">
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="w-full flex flex-col h-[calc(100vh-7.5rem)] text-slate-900 dark:text-white">
             {/* Header */}
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 py-2 border-b border-slate-200 dark:border-white/5 pb-6 mb-6 shrink-0">
                 <div>
@@ -48,7 +58,7 @@ export default function CCTVPage() {
                         <Video className="w-8 h-8 text-rose-500" />
                         CCTV Live View
                     </h1>
-                    <p className="text-sm text-slate-500 dark:text-zinc-400 mt-1">Real-time CCTV monitoring. Note: Feeds are simulated for demonstration.</p>
+                    <p className="text-sm text-slate-500 dark:text-zinc-400 mt-1">Monitor your tenants and property for security purposes.</p>
                 </div>
                 
                 {!fullscreenCam && (
@@ -70,7 +80,7 @@ export default function CCTVPage() {
             </div>
 
             {/* Video Grid */}
-            <div className={`flex-1 overflow-y-auto custom-scrollbar pr-2 pb-6 grid gap-4 transition-all duration-500 ${
+            <div ref={gridRef} className={`flex-1 overflow-y-auto custom-scrollbar pr-2 pb-2 grid gap-2 ${
                 fullscreenCam ? 'grid-cols-1' : 
                 gridCols === 1 ? 'grid-cols-1' : 
                 gridCols === 2 ? 'grid-cols-1 lg:grid-cols-2' : 
@@ -83,9 +93,9 @@ export default function CCTVPage() {
                             initial={{ opacity: 0, scale: 0.95 }}
                             animate={{ opacity: 1, scale: 1 }}
                             exit={{ opacity: 0, scale: 0.9 }}
-                            transition={{ duration: 0.3 }}
+                            transition={{ layout: { type: 'spring', bounce: 0, duration: 0.6 }, opacity: { duration: 0.3 } }}
                             key={cam.id} 
-                            className={`bg-black rounded-2xl border ${cam.status === 'offline' ? 'border-rose-900/50' : 'border-slate-800'} relative overflow-hidden group shadow-xl flex flex-col ${fullscreenCam ? 'min-h-[600px]' : 'min-h-[300px]'}`}
+                            className={`bg-black rounded-2xl border ${cam.status === 'offline' ? 'border-rose-900/50' : 'border-slate-800'} relative overflow-hidden group shadow-xl flex flex-col ${fullscreenCam || gridCols === 1 ? 'min-h-[60vh] lg:min-h-[calc(100vh-17rem)]' : 'min-h-[350px] xl:min-h-[368px]'}`}
                         >
                             {/* Overlay UI */}
                             <div className="absolute top-0 left-0 right-0 p-4 bg-gradient-to-b from-black/80 to-transparent z-10 flex justify-between items-start pointer-events-none">
@@ -112,7 +122,7 @@ export default function CCTVPage() {
                                 </div>
                                 <div className="text-right">
                                     <div className="text-white font-mono text-xs font-bold drop-shadow-md bg-black/40 px-2 py-1 rounded-md backdrop-blur-sm border border-white/10">
-                                        {currentTime.toLocaleString('en-US', { hour12: false, year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+                                        {isMounted ? currentTime.toLocaleString('en-US', { hour12: false, year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit' }) : '--/--/----, --:--:--'}
                                     </div>
                                 </div>
                             </div>
@@ -138,7 +148,7 @@ export default function CCTVPage() {
                                         <ShieldAlert className="w-16 h-16 mb-2" />
                                         <p className="text-sm font-bold uppercase tracking-widest">No Signal</p>
                                         <p className="text-xs mt-1 text-slate-500">Attempting to reconnect...</p>
-                                    </div>
+                                    </div> 
                                 )}
                             </div>
 
