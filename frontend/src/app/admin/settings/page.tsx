@@ -4,7 +4,6 @@ import { Shield, Bell, CreditCard, Wrench, Moon, Info, LogOut, Save, Smartphone,
 import { useRouter } from 'next/navigation';
 import { useTheme } from 'next-themes';
 import CustomSelect from '@/components/CustomSelect';
-import AdminLoader from '@/components/AdminLoader';
 
 export default function AdminSettingsPage() {
     const router = useRouter();
