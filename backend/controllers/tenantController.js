@@ -20,7 +20,7 @@ const getTenantDashboard = async (req, res) => {
 
         // Get recent payment history
         const historyResult = await db.query(
-            "SELECT p.*, b.billing_month FROM payments p JOIN bills b ON p.bill_id = b.id WHERE b.tenant_id = $1 ORDER BY p.payment_date DESC LIMIT 5",
+            "SELECT p.*, b.billing_month FROM payments p JOIN bills b ON p.bill_id = b.id WHERE b.tenant_id = $1 ORDER BY p.payment_date DESC LIMIT 15",
             [tenantId]
         );
 
@@ -311,7 +311,7 @@ const getCurrentBill = async (req, res) => {
 const submitTenantPayment = async (req, res) => {
     const tenantId = req.user.id;
     const { bill_id, amount_paid, payment_method, notes } = req.body;
-    let proof_url = null;
+    let receipt_url = null;
 
     if (!bill_id || !amount_paid || !payment_method) {
         return res.status(400).json({ message: 'Missing required payment details' });
@@ -319,17 +319,17 @@ const submitTenantPayment = async (req, res) => {
 
     try {
         if (req.file && req.file.filename) {
-            proof_url = `/uploads/payments/${req.file.filename}`;
+            receipt_url = `/uploads/payments/${req.file.filename}`;
         }
 
         await db.query('BEGIN');
 
         const insertPaymentQuery = `
-            INSERT INTO payments (bill_id, amount_paid, payment_date, payment_method, notes, proof_url, status) 
+            INSERT INTO payments (bill_id, amount_paid, payment_date, payment_method, notes, receipt_url, status) 
             VALUES ($1, $2, CURRENT_TIMESTAMP, $3, $4, $5, 'Pending Verification') 
             RETURNING *
         `;
-        const paymentResult = await db.query(insertPaymentQuery, [bill_id, amount_paid, payment_method, notes, proof_url]);
+        const paymentResult = await db.query(insertPaymentQuery, [bill_id, amount_paid, payment_method, notes, receipt_url]);
         
         const updateBillQuery = `
             UPDATE bills
@@ -379,6 +379,47 @@ const submitTenantPayment = async (req, res) => {
 // Get Available Rooms for Tenant View
 const getTenantRooms = async (req, res) => {
     try {
+        const tenantId = req.user.id;
+        
+        // Check if tenant is already assigned to a room
+        const userResult = await db.query("SELECT room_id FROM users WHERE id = $1", [tenantId]);
+        const roomId = userResult.rows[0]?.room_id;
+
+        if (roomId) {
+            // Fetch their assigned room details
+            const roomQuery = `
+                SELECT 
+                    r.id, r.room_number, r.capacity, r.price, r.status,
+                    r.type, r.floor, r.description,
+                    CAST(COUNT(u.id) AS INTEGER) as current_occupants,
+                    CAST((r.capacity - COUNT(u.id)) AS INTEGER) as available_slots
+                FROM rooms r
+                LEFT JOIN users u ON r.id = u.room_id AND u.role = 'tenant' AND u.status != 'Moved Out'
+                WHERE r.id = $1
+                GROUP BY r.id
+            `;
+            const roomData = await db.query(roomQuery, [roomId]);
+            
+            // Fetch roommates
+            const roommatesQuery = `
+                SELECT id, name, phone, email, date_moved_in 
+                FROM users 
+                WHERE room_id = $1 AND role = 'tenant' AND status != 'Moved Out'
+            `;
+            const roommatesData = await db.query(roommatesQuery, [roomId]);
+            
+            const roommates = roommatesData.rows.map(mate => ({
+                ...mate,
+                is_me: mate.id === tenantId
+            }));
+
+            return res.status(200).json({
+                isAssigned: true,
+                room: roomData.rows[0],
+                roommates: roommates
+            });
+        }
+
         const query = `
             SELECT 
                 r.id, r.room_number, r.capacity, r.price, r.status,
@@ -391,7 +432,10 @@ const getTenantRooms = async (req, res) => {
             ORDER BY r.room_number ASC
         `;
         const rooms = await db.query(query);
-        res.status(200).json(rooms.rows);
+        res.status(200).json({
+            isAssigned: false,
+            rooms: rooms.rows
+        });
     } catch (error) {
         console.error("Get Tenant Rooms Error:", error); 
         res.status(500).json({ message: 'Server error fetching rooms' });
