@@ -2,7 +2,7 @@
 import { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import api from '@/lib/api';
-import AdminLoader from '@/components/AdminLoader';
+import { Skeleton } from "@/components/ui/skeleton";
 import { 
     Plus, Trash2, Megaphone, Info, AlertTriangle, CheckCircle, Bell
 } from 'lucide-react';
@@ -83,7 +83,38 @@ export default function AdminAnnouncements() {
         }
     };
 
-    if (isLoading) return <AdminLoader message="Loading Announcements" />;
+    if (isLoading) {
+        return (
+            <div className="max-w-[1600px] mx-auto w-full h-full min-h-[70vh] flex flex-col pt-4 space-y-8 animate-in fade-in duration-500">
+                <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                        <div className="space-y-2">
+                            <Skeleton className="h-10 w-[200px] md:w-[300px] bg-slate-200 dark:bg-zinc-800" />
+                            <Skeleton className="h-4 w-[150px] md:w-[200px] bg-slate-200 dark:bg-zinc-800" />
+                        </div>
+                        <Skeleton className="h-10 w-[100px] md:w-[120px] rounded-full bg-slate-200 dark:bg-zinc-800" />
+                    </div>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
+                    {[...Array(4)].map((_, i) => (
+                        <Skeleton key={i} className="h-[120px] md:h-[140px] w-full rounded-2xl bg-slate-200 dark:bg-zinc-800" />
+                    ))}
+                </div>
+                <div className="flex-1 w-full rounded-[2.5rem] bg-slate-200/50 dark:bg-zinc-800/50 border border-slate-200/60 dark:border-zinc-800/60 p-6 md:p-8 space-y-6">
+                    <div className="flex items-center justify-between mb-8">
+                        <Skeleton className="h-8 w-[150px] bg-slate-200 dark:bg-zinc-800" />
+                        <Skeleton className="h-8 w-[200px] rounded-full bg-slate-200 dark:bg-zinc-800" />
+                    </div>
+                    <div className="space-y-4">
+                        {[...Array(5)].map((_, i) => (
+                            <Skeleton key={i} className="h-16 w-full rounded-xl bg-slate-200 dark:bg-zinc-800" />
+                        ))}
+                    </div>
+                </div>
+                <span className="sr-only">Loading Announcements</span>
+            </div>
+        );
+    }
 
     return (
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="w-full flex flex-col h-[calc(100vh-9rem)] text-slate-900 dark:text-white">
@@ -106,7 +137,7 @@ export default function AdminAnnouncements() {
             </div>
 
             {/* List */}
-            <div className="flex-1 overflow-y-auto custom-scrollbar space-y-4 pr-2 pb-6">
+            <div className="flex-1 overflow-y-auto custom-scrollbar pr-2 pb-6">
                 {announcements.length === 0 ? (
                     <div className="text-center py-20 bg-card rounded-2xl border border-slate-100 dark:border-zinc-800">
                         <Megaphone className="w-12 h-12 text-slate-300 dark:text-zinc-600 mx-auto mb-4" />
@@ -114,41 +145,51 @@ export default function AdminAnnouncements() {
                         <p className="text-sm text-slate-500 dark:text-zinc-500 mt-1">Create one to notify your tenants about news or updates.</p>
                     </div>
                 ) : (
-                    announcements.map((ann) => (
-                        <motion.div 
-                            initial={{ opacity: 0, y: 10 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            key={ann.id} 
-                            className="bg-card rounded-2xl border border-slate-100 dark:border-zinc-800 p-6 shadow-sm relative group overflow-hidden shrink-0"
-                        >
-                            <div className="absolute right-6 top-6 opacity-0 group-hover:opacity-100 transition-opacity">
-                                <button onClick={() => handleDelete(ann.id)} className="p-2 text-slate-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-500/10 rounded-lg transition-colors">
-                                    <Trash2 className="w-4 h-4" />
-                                </button>
-                            </div>
-                            
-                            <div className="flex gap-4">
-                                <div className="mt-1">
-                                    {getTypeIcon(ann.type)}
+                    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 md:gap-6">
+                        {announcements.map((ann) => (
+                            <motion.div 
+                                initial={{ opacity: 0, y: 10 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                key={ann.id} 
+                                className="bg-card rounded-2xl border border-slate-100 dark:border-zinc-800 p-5 md:p-6 shadow-sm relative group overflow-hidden flex flex-col h-full"
+                            >
+                                <div className="absolute right-4 top-4 opacity-0 group-hover:opacity-100 transition-opacity z-10">
+                                    <button onClick={() => handleDelete(ann.id)} className="p-2 text-slate-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-500/10 rounded-lg transition-colors bg-card shadow-sm border border-slate-100 dark:border-zinc-800">
+                                        <Trash2 className="w-4 h-4" />
+                                    </button>
                                 </div>
-                                <div className="flex-1">
-                                    <h3 className="text-lg font-bold text-slate-800 dark:text-white pr-10">{ann.title}</h3>
-                                    <p className="text-xs font-semibold text-slate-500 dark:text-zinc-400 mt-1 flex items-center gap-2">
-                                        <span className="px-2 py-0.5 rounded-full bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 uppercase tracking-wider text-[10px]">
-                                            {ann.type}
-                                        </span>
-                                        •
-                                        <span>Posted by {ann.created_by_name || 'Admin'}</span>
-                                        •
-                                        <span>{new Date(ann.created_at).toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true })}</span>
-                                    </p>
-                                    <div className="mt-4 text-sm text-slate-600 dark:text-zinc-300 whitespace-pre-line leading-relaxed">
-                                        {ann.content}
+                                
+                                <div className="flex items-start gap-4 mb-4">
+                                    <div className="shrink-0 p-2.5 rounded-xl bg-slate-50 dark:bg-white/5 border border-slate-100 dark:border-white/5">
+                                        {getTypeIcon(ann.type)}
+                                    </div>
+                                    <div className="flex-1 min-w-0 pr-8">
+                                        <h3 className="text-lg font-bold text-slate-800 dark:text-white truncate">{ann.title}</h3>
+                                        <div className="flex items-center mt-1.5">
+                                            <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-widest bg-slate-100 dark:bg-white/10 text-slate-600 dark:text-zinc-300">
+                                                {ann.type}
+                                            </span>
+                                        </div>
                                     </div>
                                 </div>
-                            </div>
-                        </motion.div>
-                    ))
+                                
+                                <div className="flex-1 text-sm text-slate-600 dark:text-zinc-300 whitespace-pre-line leading-relaxed mb-6">
+                                    <p className="line-clamp-4">{ann.content}</p>
+                                </div>
+                                
+                                <div className="mt-auto pt-4 border-t border-slate-100 dark:border-white/5 flex flex-wrap items-center justify-between gap-2 text-[11px] font-bold text-slate-500 dark:text-zinc-400 uppercase tracking-wide">
+                                    <span className="flex items-center gap-1.5">
+                                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>
+                                        {ann.created_by_name || 'Admin'}
+                                    </span>
+                                    <span className="flex items-center gap-1.5">
+                                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                                        {new Date(ann.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                                    </span>
+                                </div>
+                            </motion.div>
+                        ))}
+                    </div>
                 )}
             </div>
 
