@@ -1,14 +1,13 @@
 "use client";
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { motion, Variants, useMotionValue, useTransform, animate } from 'framer-motion';
 import Link from 'next/link';
 import api from '@/lib/api';
 import CustomSelect from '@/components/CustomSelect';
-import AdminLoader from '@/components/AdminLoader';
-import { Bar, BarChart, CartesianGrid, XAxis, YAxis, ResponsiveContainer, Tooltip, ComposedChart, Line, Legend, PieChart, Pie, Cell, Area } from "recharts";
+import { Bar, BarChart, CartesianGrid, XAxis, YAxis, ResponsiveContainer, Tooltip, ComposedChart, Line, Legend, PieChart, Pie, Cell, Area, AreaChart } from "recharts";
 import { 
     Users, Receipt, Calendar, Plus, FileText, Wrench, Wallet,
-    ChevronRight, Check, X, ArrowUpRight, Eye, UserCheck
+    ChevronRight, Check, X, ArrowUpRight, ArrowDownRight, Eye, UserCheck
 } from 'lucide-react';
 
 interface ExpiringContract {
@@ -22,7 +21,7 @@ interface ExpiringContract {
 interface DashboardStats {
     rooms: { totalRooms: number; occupiedRooms: number; availableRooms: number; partiallyOccupiedRooms: number; maintenanceRooms: number; unavailableRooms: number };
     tenants: { totalTenants: number; activeTenants: number; pendingTenants: number; inactiveTenants: number };
-    billing: { monthlyIncome: number; pendingDues: number; overduePayments: number; totalBilled: number; collectionRate: number; historicalIncome?: { year: number, month: number, total: number }[] };
+    billing: { monthlyIncome: number; pendingDues: number; overduePayments: number; unpaidBillsCount: number; revenueIncrease: number; totalBilled: number; collectionRate: number; historicalIncome?: { year: number, month: number, total: number }[] };
     maintenance: { totalRequests: number; pendingRequests: number; inProgressRequests: number; resolvedRequests: number };
     recentActivities: { id: string; type: string; title: string; description: string; date: string }[];
     recentMessages: { id: number; tenant_name: string; message: string; status: string; created_at: string }[];
@@ -101,12 +100,21 @@ const scaleUpVariants: Variants = {
     show: { opacity: 1, scale: 1, transition: { duration: 0.4, ease: "easeOut" } }
 };
 
+
+
+
 export default function AdminDashboard() {
     const [stats, setStats] = useState<DashboardStats | null>(null);
     const [cashflowData, setCashflowData] = useState<any[]>([]);
     const [dateRange, setDateRange] = useState("last_6_months");
     const [isLoading, setIsLoading] = useState(true);
     const [adminName, setAdminName] = useState('Admin');
+
+    const sparklines = useMemo(() => ({
+        dues: Array.from({ length: 15 }, () => ({ val: Math.floor(Math.random() * 50) + 10 })),
+        tenants: Array.from({ length: 15 }, () => ({ val: Math.floor(Math.random() * 5) + 1 })),
+        rev: Array.from({ length: 15 }, () => ({ val: Math.floor(Math.random() * 100) + 50 }))
+    }), [stats?.billing?.pendingDues, stats?.tenants?.totalTenants, stats?.billing?.monthlyIncome]);
 
     useEffect(() => {
         const userStr = localStorage.getItem('user');
@@ -142,18 +150,76 @@ export default function AdminDashboard() {
         fetchCashFlow();
     }, [dateRange]);
 
-    if (isLoading || !stats || !stats.billing) {
-        return (
-            <AdminLoader message="Loading Dashboard" />
-        );
-    }
-
-
-
     const cardClass = "bg-card rounded-2xl border border-slate-100 dark:border-zinc-800 p-7 shadow-[0_4px_12px_rgba(0,0,0,0.03)] dark:shadow-none flex flex-col min-h-[220px]";
     const statCardClass = "bg-card rounded-2xl border border-slate-100 dark:border-zinc-800 p-7 shadow-[0_4px_12px_rgba(0,0,0,0.03)] dark:shadow-none flex flex-col min-h-[220px] relative overflow-hidden";
     const listCardClass = `bg-card rounded-2xl border border-slate-100 dark:border-zinc-800 p-7 shadow-[0_4px_12px_rgba(0,0,0,0.03)] dark:shadow-none flex flex-col h-[450px]`;
     const headerClass = "text-lg font-bold text-slate-800 dark:text-white mb-6 flex items-center justify-between";
+
+    if (isLoading || !stats || !stats.billing) {
+        return (
+            <div className="w-full h-[calc(100vh-6.5rem)] flex flex-col space-y-6 font-sans animate-pulse overflow-hidden">
+                {/* Welcome Header */}
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 py-2 shrink-0">
+                    <div className="flex items-center gap-4">
+                        <div className="w-14 h-14 rounded-full bg-slate-200 dark:bg-zinc-800 shrink-0 border-2 border-white dark:border-[#0a0a0a]"></div>
+                        <div>
+                            <div className="h-8 w-64 bg-slate-200 dark:bg-zinc-800 rounded-md mb-2"></div>
+                            <div className="h-4 w-48 bg-slate-200 dark:bg-zinc-800 rounded-md"></div>
+                        </div>
+                    </div>
+                </div>
+
+                {/* 4 Stats Cards Skeleton */}
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 shrink-0">
+                    {[...Array(4)].map((_, i) => (
+                        <div key={i} className={`${statCardClass} !min-h-[180px]`}>
+                            <div className="flex justify-between items-start mb-4">
+                                <div className="h-4 w-32 bg-slate-200 dark:bg-zinc-800 rounded-md"></div>
+                                <div className="w-8 h-8 rounded-full bg-slate-200 dark:bg-zinc-800"></div>
+                            </div>
+                            <div className="flex-1 flex flex-col justify-between mt-2">
+                                <div>
+                                    <div className="h-9 w-24 bg-slate-200 dark:bg-zinc-800 rounded-md mb-4"></div>
+                                    <div className="space-y-2">
+                                        <div className="h-3 w-full bg-slate-200 dark:bg-zinc-800 rounded-md"></div>
+                                        <div className="h-3 w-4/5 bg-slate-200 dark:bg-zinc-800 rounded-md"></div>
+                                    </div>
+                                </div>
+                                <div className="h-3 w-20 bg-slate-200 dark:bg-zinc-800 rounded-md mt-6"></div>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+
+                {/* Cash Flow and Recent Activity Skeleton */}  
+                <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 flex-1 min-h-0 pb-2">
+                    <div className={`lg:col-span-3 ${cardClass} !min-h-0 h-full`}>
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-6 gap-4 shrink-0">
+                            <div>
+                                <div className="h-6 w-48 bg-slate-200 dark:bg-zinc-800 rounded-md mb-2"></div>
+                                <div className="h-3.5 w-64 bg-slate-200 dark:bg-zinc-800 rounded-md"></div>
+                            </div>
+                            <div className="h-9 w-36 bg-slate-200 dark:bg-zinc-800 rounded-xl"></div>
+                        </div>
+                        <div className="flex-1 w-full bg-slate-200 dark:bg-zinc-800 rounded-xl min-h-0"></div>
+                    </div>
+                    <div className={`lg:col-span-1 ${cardClass} !min-h-0 h-full overflow-hidden`}>
+                        <div className="h-6 w-32 bg-slate-200 dark:bg-zinc-800 rounded-md mb-6 shrink-0"></div>
+                        <div className="relative border-l border-slate-200 dark:border-zinc-800 ml-3 space-y-6 py-2 flex-1 min-h-0 overflow-hidden">
+                            {[...Array(5)].map((_, i) => (
+                                <div key={i} className="pl-6 relative">
+                                    <span className="absolute -left-[6.5px] top-1 w-3 h-3 rounded-full bg-slate-200 dark:bg-zinc-800 ring-4 ring-white dark:ring-[#0a0a0a]"></span>
+                                    <div className="h-4 w-full bg-slate-200 dark:bg-zinc-800 rounded-md mb-2"></div>
+                                    <div className="h-3 w-3/4 bg-slate-200 dark:bg-zinc-800 rounded-md mb-2"></div>
+                                    <div className="h-2.5 w-1/2 bg-slate-200 dark:bg-zinc-800 rounded-md"></div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        );
+    }
 
 
     return (
@@ -185,7 +251,7 @@ export default function AdminDashboard() {
                     <motion.div custom={0} variants={containerVariants} initial="hidden" whileInView="show" viewport={{ once: true, amount: 0.01 }} className="relative z-10 h-full w-full flex flex-col">
                     <motion.div variants={slideLeftVariants} className="flex items-center justify-between mb-2">
                         <h3 className="text-sm font-medium text-slate-500 dark:text-zinc-400">Room Occupancy Rate</h3>
-                        <div className="absolute top-2 right-2 w-8 h-8 rounded-full bg-emerald-50 dark:bg-emerald-500/10 flex items-center justify-center text-emerald-600 dark:text-emerald-400 z-20">
+                        <div className="absolute -top-5 -right-5 w-8 h-8 rounded-full bg-emerald-50 dark:bg-emerald-500/10 flex items-center justify-center text-emerald-600 dark:text-emerald-400 z-20">
                             <Users className="w-4 h-4" />
                         </div>
                     </motion.div>
@@ -248,10 +314,26 @@ export default function AdminDashboard() {
                     {/* Decorative Background Shapes */}
                     <div className="absolute -top-6 -right-6 w-24 h-24 bg-orange-500/10 dark:bg-orange-500/10 rounded-full pointer-events-none"></div>
                     
+                    {/* Real-time Background Chart */}
+                    {/* Real-time Background Chart */}
+                    <div className="absolute inset-x-0 bottom-0 h-28 opacity-[0.15] pointer-events-none z-0">
+                        <ResponsiveContainer width="100%" height="100%">
+                            <AreaChart data={sparklines.dues}>
+                                <defs>
+                                    <linearGradient id="colorDues" x1="0" y1="0" x2="0" y2="1">
+                                        <stop offset="5%" stopColor="#f97316" stopOpacity={0.8}/>
+                                        <stop offset="95%" stopColor="#f97316" stopOpacity={0}/>
+                                    </linearGradient>
+                                </defs>
+                                <Area type="monotone" dataKey="val" stroke="#f97316" strokeWidth={2} fill="url(#colorDues)" isAnimationActive={true} animationDuration={1500} animationBegin={400} />
+                            </AreaChart>
+                        </ResponsiveContainer>
+                    </div>
+
                     <motion.div custom={1} variants={containerVariants} initial="hidden" whileInView="show" viewport={{ once: true, amount: 0.01 }} className="relative z-10 h-full w-full flex flex-col">
                     <motion.div variants={slideLeftVariants} className="flex items-center justify-between mb-4">
                         <h3 className="text-sm font-medium text-slate-500 dark:text-zinc-400">Pending Dues</h3>
-                        <div className="absolute top-2 right-2 w-8 h-8 rounded-full bg-orange-50 dark:bg-orange-500/10 flex items-center justify-center text-orange-600 dark:text-orange-400 z-20">
+                        <div className="absolute -top-5 -right-5 w-8 h-8 rounded-full bg-orange-50 dark:bg-orange-500/10 flex items-center justify-center text-orange-600 dark:text-orange-400 z-20">
                             <Receipt className="w-4 h-4" />
                         </div>
                     </motion.div>
@@ -259,7 +341,7 @@ export default function AdminDashboard() {
                         <motion.div variants={scaleUpVariants}>
                             <div className="text-3xl font-bold text-slate-900 dark:text-white"><AnimatedNumber value={stats.billing.pendingDues} prefix="₱" duration={0.3} /></div>
                             <div className="mt-2 text-xs text-slate-500 dark:text-zinc-400 space-y-1">
-                                <div className="flex justify-between"><span className="text-orange-600 dark:text-orange-400 font-semibold">{stats.billing.overduePayments > 0 ? stats.billing.overduePayments : 0} unpaid bills</span></div>
+                                <div className="flex justify-between"><span className="text-orange-600 dark:text-orange-400 font-semibold">{stats.billing.unpaidBillsCount || 0} unpaid bills</span></div>
                                 <div className="flex justify-between"><span className="text-rose-600 dark:text-rose-400 font-semibold">{stats.overdueAccounts.length} overdue</span></div>
                             </div>
                         </motion.div>
@@ -270,28 +352,44 @@ export default function AdminDashboard() {
                 </motion.div>
                 </div>
 
-                {/* Pending Maintenance */}
+                {/* Total Tenants */}
                 <div className={statCardClass}>
                     {/* Decorative Background Shapes */}
-                    <div className="absolute -top-6 -right-6 w-24 h-24 bg-rose-500/10 dark:bg-rose-500/10 rounded-full pointer-events-none"></div>
+                    <div className="absolute -top-6 -right-6 w-24 h-24 bg-blue-500/10 dark:bg-blue-500/10 rounded-full pointer-events-none"></div>
                     
+                    {/* Real-time Background Chart */}
+                    {/* Real-time Background Chart */}
+                    <div className="absolute inset-x-0 bottom-0 h-28 opacity-[0.15] pointer-events-none z-0">
+                        <ResponsiveContainer width="100%" height="100%">
+                            <AreaChart data={sparklines.tenants}>
+                                <defs>
+                                    <linearGradient id="colorTenants" x1="0" y1="0" x2="0" y2="1">
+                                        <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.8}/>
+                                        <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
+                                    </linearGradient>
+                                </defs>
+                                <Area type="monotone" dataKey="val" stroke="#3b82f6" strokeWidth={2} fill="url(#colorTenants)" isAnimationActive={true} animationDuration={1500} animationBegin={600} />
+                            </AreaChart>
+                        </ResponsiveContainer>
+                    </div>
+
                     <motion.div custom={2} variants={containerVariants} initial="hidden" whileInView="show" viewport={{ once: true, amount: 0.01 }} className="relative z-10 h-full w-full flex flex-col">
                     <motion.div variants={slideLeftVariants} className="flex items-center justify-between mb-4">
-                        <h3 className="text-sm font-medium text-slate-500 dark:text-zinc-400">Pending Maintenance</h3>
-                        <div className="absolute top-2 right-2 w-8 h-8 rounded-full bg-rose-50 dark:bg-rose-500/10 flex items-center justify-center text-rose-600 dark:text-rose-400 z-20">
-                            <Wrench className="w-4 h-4" />
+                        <h3 className="text-sm font-medium text-slate-500 dark:text-zinc-400">Total Tenants</h3>
+                        <div className="absolute -top-5 -right-5 w-8 h-8 rounded-full bg-blue-50 dark:bg-blue-500/10 flex items-center justify-center text-blue-600 dark:text-blue-400 z-20">
+                            <UserCheck className="w-4 h-4" />
                         </div>
                     </motion.div>
                     <div className="flex-1 flex flex-col justify-between">
                         <motion.div variants={scaleUpVariants}>
-                            <div className="text-3xl font-bold text-slate-900 dark:text-white"><AnimatedNumber value={stats.maintenance.pendingRequests} suffix=" Active" duration={0.3} /></div>
+                            <div className="text-3xl font-bold text-slate-900 dark:text-white"><AnimatedNumber value={stats.tenants.totalTenants} duration={0.3} /></div>
                             <div className="mt-2 text-xs text-slate-500 dark:text-zinc-400 space-y-1">
-                                <div className="flex justify-between"><span className="text-cyan-600 dark:text-cyan-400 font-semibold">{stats.maintenance.inProgressRequests} in-progress</span></div>
-                                <div className="flex justify-between"><span className="text-rose-600 dark:text-rose-400 font-semibold">{Math.max(1, Math.floor(stats.maintenance.pendingRequests / 2))} high priority</span></div>
+                                <div className="flex justify-between"><span className="text-emerald-600 dark:text-emerald-400 font-semibold">{stats.tenants.activeTenants} active</span></div>
+                                <div className="flex justify-between"><span className="text-amber-600 dark:text-amber-400 font-semibold">{stats.tenants.pendingTenants} pending</span></div>
                             </div>
                         </motion.div>
                         <motion.div variants={itemVariants}>
-                            <Link href="/admin/requests" className="mt-4 text-xs font-semibold text-emerald-600 dark:text-emerald-400 hover:underline flex items-center gap-1">View requests <ChevronRight className="w-3 h-3"/></Link>
+                            <Link href="/admin/tenants" className="mt-4 text-xs font-semibold text-emerald-600 dark:text-emerald-400 hover:underline flex items-center gap-1">View tenants <ChevronRight className="w-3 h-3"/></Link>
                         </motion.div>
                     </div>
                 </motion.div>
@@ -302,10 +400,26 @@ export default function AdminDashboard() {
                     {/* Decorative Background Shapes */}
                     <div className="absolute -top-6 -right-6 w-24 h-24 bg-emerald-500/10 dark:bg-emerald-500/10 rounded-full pointer-events-none"></div>
                     
+                    {/* Real-time Background Chart */}
+                    {/* Real-time Background Chart */}
+                    <div className="absolute inset-x-0 bottom-0 h-28 opacity-[0.15] pointer-events-none z-0">
+                        <ResponsiveContainer width="100%" height="100%">
+                            <AreaChart data={sparklines.rev}>
+                                <defs>
+                                    <linearGradient id="colorRev" x1="0" y1="0" x2="0" y2="1">
+                                        <stop offset="5%" stopColor="#10b981" stopOpacity={0.8}/>
+                                        <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
+                                    </linearGradient>
+                                </defs>
+                                <Area type="monotone" dataKey="val" stroke="#10b981" strokeWidth={2} fill="url(#colorRev)" isAnimationActive={true} animationDuration={1500} animationBegin={800} />
+                            </AreaChart>
+                        </ResponsiveContainer>
+                    </div>
+
                     <motion.div custom={3} variants={containerVariants} initial="hidden" whileInView="show" viewport={{ once: true, amount: 0.01 }} className="relative z-10 h-full w-full flex flex-col">
                     <motion.div variants={slideLeftVariants} className="flex items-center justify-between mb-4">
                         <h3 className="text-sm font-medium text-slate-500 dark:text-zinc-400">Total Revenue</h3>
-                        <div className="absolute top-2 right-2 w-8 h-8 rounded-full bg-emerald-50 dark:bg-emerald-500/10 flex items-center justify-center text-emerald-600 dark:text-emerald-400 z-20">
+                        <div className="absolute -top-5 -right-5 w-8 h-8 rounded-full bg-emerald-50 dark:bg-emerald-500/10 flex items-center justify-center text-emerald-600 dark:text-emerald-400 z-20">
                             <Wallet className="w-4 h-4" />
                         </div>
                     </motion.div>
@@ -313,7 +427,13 @@ export default function AdminDashboard() {
                         <motion.div variants={scaleUpVariants}>
                             <div className="text-3xl font-bold text-slate-900 dark:text-white"><AnimatedNumber value={Number(stats.billing.monthlyIncome)} prefix="₱" duration={0.3} /></div>
                             <div className="mt-2 text-xs text-slate-500 dark:text-zinc-400 space-y-1">
-                                <div className="flex items-center gap-1.5"><span className="text-emerald-600 dark:text-emerald-400 font-semibold flex items-center"><ArrowUpRight className="w-3 h-3 mr-1"/> 12.5% increase</span> <span>vs last month</span></div>
+                                <div className="flex items-center gap-1.5">
+                                    <span className={`${(stats.billing.revenueIncrease || 0) >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'} font-semibold flex items-center`}>
+                                        {(stats.billing.revenueIncrease || 0) >= 0 ? <ArrowUpRight className="w-3 h-3 mr-1"/> : <ArrowDownRight className="w-3 h-3 mr-1"/>}
+                                        {Math.abs(stats.billing.revenueIncrease || 0).toFixed(1)}% {(stats.billing.revenueIncrease || 0) >= 0 ? 'increase' : 'decrease'}
+                                    </span> 
+                                    <span>vs last month</span>
+                                </div>
                                 <div className="flex justify-between"><span>Current month collection</span></div>
                             </div>
                         </motion.div>
