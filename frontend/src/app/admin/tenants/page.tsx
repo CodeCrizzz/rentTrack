@@ -1,11 +1,10 @@
 "use client";
 import { useState, useEffect } from 'react';
 import api from '@/lib/api';
-import { motion, AnimatePresence, Variants } from 'framer-motion';
+import { motion, AnimatePresence, type Variants } from 'framer-motion';
 import { toast } from 'sonner';
 import { Bell, Calendar, Users, Clock, AlertCircle, Search } from 'lucide-react';
 import CustomSelect from '@/components/CustomSelect';
-import AdminLoader from '@/components/AdminLoader';
 
 //  Updated Interface matching all your required fields
 interface Tenant {
@@ -57,6 +56,7 @@ export default function AdminTenants() {
     const [isLoading, setIsLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState('');
     const [statusFilter, setStatusFilter] = useState('All');
+    const [sortFilter, setSortFilter] = useState('Newest First');
     const [error, setError] = useState('');
     
     // --- MODAL & FORM STATES ---
@@ -67,6 +67,7 @@ export default function AdminTenants() {
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [isDeleting, setIsDeleting] = useState<number | null>(null);
     const [isStatusUpdating, setIsStatusUpdating] = useState<number | null>(null);
+    const [confirmStatus, setConfirmStatus] = useState<{ id: number; name: string; action: 'Approve' | 'Reject' } | null>(null);
 
     const [formData, setFormData] = useState({
         name: '',
@@ -189,17 +190,25 @@ export default function AdminTenants() {
         }
     };
 
-    const handleUpdateStatus = async (id: number, status: string) => {
-        setIsStatusUpdating(id);
+    const handleUpdateStatusClick = (tenant: Tenant, action: 'Approve' | 'Reject') => {
+        setConfirmStatus({ id: tenant.id, name: tenant.name, action });
+    };
+
+    const executeStatusUpdate = async () => {
+        if (!confirmStatus) return;
+        setIsStatusUpdating(confirmStatus.id);
         setError('');
         try {
-            await api.put(`/admin/tenants/${id}`, { status });
+            const status = confirmStatus.action === 'Approve' ? 'Active' : 'Declined';
+            await api.put(`/admin/tenants/${confirmStatus.id}`, { status });
+            toast.success(`Tenant ${confirmStatus.action.toLowerCase()}d successfully!`);
             fetchTenants();
         } catch (err: any) {
-             console.error(`Failed to update status to ${status}:`, err);
-             setError(`Failed to set status to ${status}.`);
+             console.error(`Failed to update status:`, err);
+             toast.error(`Failed to ${confirmStatus.action.toLowerCase()} tenant.`);
         } finally {
              setIsStatusUpdating(null);
+             setConfirmStatus(null);
         }
     };
 
@@ -208,7 +217,22 @@ export default function AdminTenants() {
         (t.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
         t.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
         (t.room_number && t.room_number.toString().includes(searchQuery)))
-    );
+    ).sort((a, b) => {
+        if (sortFilter === 'Name (A-Z)') return a.name.localeCompare(b.name);
+        if (sortFilter === 'Name (Z-A)') return b.name.localeCompare(a.name);
+        if (sortFilter === 'Room (0-9)') {
+            if (!a.room_number) return 1;
+            if (!b.room_number) return -1;
+            return a.room_number.localeCompare(b.room_number, undefined, { numeric: true });
+        }
+        
+        // Handle sorting by date
+        const dateA = a.created_at ? new Date(a.created_at).getTime() : 0;
+        const dateB = b.created_at ? new Date(b.created_at).getTime() : 0;
+        
+        if (sortFilter === 'Oldest First') return dateA - dateB;
+        return dateB - dateA; // 'Newest First' default
+    });
 
     const getTenantStatusStyles = (status: string) => {
         switch (status) {
@@ -251,15 +275,70 @@ export default function AdminTenants() {
     };
 
     if (isLoading) {
-        return <AdminLoader message="Loading Residents" />;
+        return (
+            <div className="w-full h-[calc(100vh-7rem)] flex flex-col relative pb-2 font-sans animate-pulse overflow-hidden">
+                {/* Header Skeleton */}
+                <div className="shrink-0 mb-6">
+                    <div className="h-9 w-64 bg-slate-200 dark:bg-zinc-800 rounded-md mb-2"></div>
+                    <div className="h-4 w-96 bg-slate-200 dark:bg-zinc-800 rounded-md mt-1"></div>
+                </div>
+
+                {/* Metric Cards Skeleton */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6 shrink-0">
+                    {[...Array(3)].map((_, i) => (
+                        <div key={i} className="bg-card rounded-2xl border border-slate-100 dark:border-zinc-800 p-6 flex flex-col justify-between shadow-sm">
+                            <div className="flex justify-between items-start mb-4">
+                                <div className="h-5 w-32 bg-slate-200 dark:bg-zinc-800 rounded-md"></div>
+                                <div className="w-10 h-10 rounded-xl bg-slate-200 dark:bg-zinc-800 shrink-0"></div>
+                            </div>
+                            <div>
+                                <div className="flex items-baseline gap-2 mb-1">
+                                    <div className="h-8 w-12 bg-slate-200 dark:bg-zinc-800 rounded-md"></div>
+                                    <div className="h-6 w-24 bg-slate-200 dark:bg-zinc-800 rounded-md"></div>
+                                </div>
+                                <div className="h-4 w-48 bg-slate-200 dark:bg-zinc-800 rounded-md mt-2"></div>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+
+                {/* Filters Skeleton */}
+                <div className="flex flex-col sm:flex-row gap-4 mb-4 bg-card p-3 rounded-2xl border border-slate-100 dark:border-zinc-800 shadow-sm shrink-0">
+                    <div className="w-full max-w-sm h-10 bg-slate-200 dark:bg-zinc-800 rounded-xl"></div>
+                    <div className="w-full sm:w-40 h-10 bg-slate-200 dark:bg-zinc-800 rounded-xl"></div>
+                    <div className="w-full sm:w-64 h-10 bg-slate-200 dark:bg-zinc-800 rounded-xl"></div>
+                </div>
+
+                {/* Table Skeleton */}
+                <div className="bg-card rounded-2xl border border-slate-100 dark:border-zinc-800 shadow-sm flex-1 flex flex-col min-h-0 overflow-hidden relative z-10">
+                    <div className="h-12 bg-secondary border-b border-slate-100 dark:border-zinc-800 shrink-0"></div>
+                    <div className="flex-1 overflow-hidden p-6 space-y-4">
+                        {[...Array(6)].map((_, i) => (
+                            <div key={i} className="flex items-center justify-between py-2 border-b border-slate-100 dark:border-zinc-800/50 last:border-0">
+                                <div className="h-4 w-32 bg-slate-200 dark:bg-zinc-800 rounded-md"></div>
+                                <div className="h-4 w-20 bg-slate-200 dark:bg-zinc-800 rounded-md"></div>
+                                <div className="h-4 w-24 bg-slate-200 dark:bg-zinc-800 rounded-md hidden sm:block"></div>
+                                <div className="h-4 w-40 bg-slate-200 dark:bg-zinc-800 rounded-md hidden md:block"></div>
+                                <div className="h-4 w-20 bg-slate-200 dark:bg-zinc-800 rounded-md hidden lg:block"></div>
+                                <div className="h-6 w-24 bg-slate-200 dark:bg-zinc-800 rounded-full"></div>
+                                <div className="flex gap-2">
+                                    <div className="w-12 h-6 bg-slate-200 dark:bg-zinc-800 rounded-md hidden sm:block"></div>
+                                    <div className="w-12 h-6 bg-slate-200 dark:bg-zinc-800 rounded-md"></div>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            </div>
+        );
     }
 
     return (
-        <div className="max-w-400 mx-auto pb-10 relative">
+        <motion.div variants={containerVariants} initial="hidden" animate="show" className="w-full h-[calc(100vh-7rem)] flex flex-col relative pb-2 font-sans text-slate-900 dark:text-white">
             {/* Ambient Background */}
 
             {/* Header */}
-            <motion.div initial={{opacity:0, y:-20}} animate={{opacity:1, y:0}} className="flex flex-col md:flex-row md:items-start justify-between gap-6 relative z-10 mb-8">
+            <motion.div variants={itemVariants} className="flex flex-col md:flex-row md:items-start justify-between gap-6 relative z-10 mb-6 shrink-0">
                 <div>
                     <h1 className="text-3xl font-black text-slate-900 dark:text-white tracking-tight flex items-center gap-4">
                         Manage Tenants
@@ -273,15 +352,13 @@ export default function AdminTenants() {
                 const totalBeds = rooms.reduce((acc, r) => acc + (r.capacity || 0), 0);
                 const activeTenantsCount = tenants.filter(t => t.status === 'Active').length;
                 const capacityPercent = totalBeds > 0 ? Math.round((activeTenantsCount / totalBeds) * 100) : 0;
-                
                 const overdueTenants = tenants.filter(t => t.payment_status === 'Overdue');
                 const overdueCount = overdueTenants.length;
                 const totalUnpaid = overdueTenants.reduce((acc, t) => acc + (Number(t.balance) || 0), 0);
-
                 const movedOutCount = tenants.filter(t => t.status === 'Moved Out').length;
 
                 return (
-                    <motion.div initial={{opacity:0, y:20}} animate={{opacity:1, y:0}} transition={{delay: 0.1}} className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8 relative z-10">
+                    <motion.div variants={itemVariants} className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6 relative z-10 shrink-0">
                         {/* 1. Active Tenants */}
                         <div className="bg-card rounded-2xl border border-slate-100 dark:border-zinc-800 p-6 flex flex-col justify-between shadow-sm">
                             <div className="flex justify-between items-start mb-4">
@@ -341,7 +418,7 @@ export default function AdminTenants() {
 
 
             {/* Filters */}
-            <motion.div initial={{opacity:0, y:20}} animate={{opacity:1, y:0}} transition={{delay: 0.2}} className="flex flex-col sm:flex-row gap-4 relative z-10 mb-8 bg-card p-3 rounded-2xl border border-slate-100 dark:border-zinc-800 shadow-sm">
+            <motion.div variants={itemVariants} className="flex flex-col sm:flex-row gap-4 relative z-20 mb-4 bg-card p-3 rounded-2xl border border-slate-100 dark:border-zinc-800 shadow-sm shrink-0">
                 <div className="relative flex-1 max-w-sm">
                     <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-400">
                         <Search className="w-4 h-4" />
@@ -368,14 +445,28 @@ export default function AdminTenants() {
                         className="w-full sm:w-40 py-2.5 pl-4 pr-10 rounded-xl bg-card border border-slate-200 dark:border-zinc-800 text-slate-700 dark:text-zinc-300 text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500"
                     />
                 </div>
+                <div className="relative">
+                    <CustomSelect 
+                        value={sortFilter} 
+                        onChange={(val) => setSortFilter(val)} 
+                        options={[
+                            { value: "Newest First", label: "Newest registered tenant " },
+                            { value: "Oldest First", label: "Oldest registered tenant " },
+                            { value: "Name (A-Z)", label: "Name (A-Z)" },
+                            { value: "Name (Z-A)", label: "Name (Z-A)" },
+                            { value: "Room (0-9)", label: "Room #" }
+                        ]}
+                        className="w-full sm:w-64 py-2.5 pl-4 pr-10 rounded-xl bg-card border border-slate-200 dark:border-zinc-800 text-slate-700 dark:text-zinc-300 text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                    />
+                </div>
             </motion.div>
 
 
             {/* Data Table */}
-                <motion.div initial={{opacity:0, y:20}} animate={{opacity:1, y:0}} transition={{delay: 0.4}} className="bg-card rounded-2xl border border-slate-100 dark:border-zinc-800 overflow-hidden shadow-sm">
-                    <div className="overflow-x-auto">
-                        <table className="w-full text-left text-sm text-slate-600 dark:text-zinc-400">
-                            <thead className="bg-secondary/50 text-xs text-slate-500 dark:text-zinc-500 border-b border-slate-100 dark:border-zinc-800">
+                <motion.div variants={itemVariants} className="bg-card rounded-2xl border border-slate-100 dark:border-zinc-800 shadow-sm flex-1 flex flex-col min-h-0 overflow-hidden relative z-10">
+                    <div className="overflow-auto flex-1 custom-scrollbar">
+                        <table className="w-full text-left text-sm text-slate-600 dark:text-zinc-400 relative">
+                            <thead className="bg-secondary text-xs text-slate-500 dark:text-zinc-500 border-b border-slate-100 dark:border-zinc-800 sticky top-0 z-10 shadow-sm">
                                 <tr>
                                     <th className="px-6 py-4 font-semibold">Tenant Name</th>
                                     <th className="px-6 py-4 font-semibold">Assigned Room</th>
@@ -432,8 +523,8 @@ export default function AdminTenants() {
                                                 <td className="px-6 py-4 text-right">
                                                     {tenant.status === 'Pending' ? (
                                                         <div className="flex justify-end gap-2 items-center">
-                                                            <button onClick={() => handleUpdateStatus(tenant.id, 'Active')} className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold rounded-lg transition-colors">Approve</button>
-                                                            <button onClick={() => handleUpdateStatus(tenant.id, 'Declined')} className="px-3 py-1.5 bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 text-xs font-semibold rounded-lg transition-colors">Reject</button>
+                                                            <button onClick={() => handleUpdateStatusClick(tenant, 'Approve')} className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold rounded-lg transition-colors">Approve</button>
+                                                            <button onClick={() => handleUpdateStatusClick(tenant, 'Reject')} className="px-3 py-1.5 bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 text-xs font-semibold rounded-lg transition-colors">Reject</button>
                                                             <button onClick={() => handleViewTenant(tenant)} className="text-slate-500 hover:text-slate-700 font-semibold text-xs ml-2">View</button>
                                                         </div>
                                                     ) : (
@@ -659,7 +750,51 @@ export default function AdminTenants() {
                 </motion.div>
             )}
             </AnimatePresence>
-        </div>
+            
+            {/* Status Update Confirmation Modal */}
+            <AnimatePresence>
+                {confirmStatus && (
+                    <motion.div initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}} className="fixed inset-0 bg-black/40 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
+                        <motion.div initial={{scale:0.95, opacity:0}} animate={{scale:1, opacity:1}} exit={{scale:0.95, opacity:0}} transition={{type: "spring", damping: 20, stiffness: 300}} className="bg-card w-full max-w-sm rounded-xl overflow-hidden shadow-xl border border-slate-200 dark:border-zinc-800">
+                            <div className="p-6">
+                                <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-2">
+                                    {confirmStatus.action === 'Approve' ? 'Approve Tenant' : 'Reject Tenant'}
+                                </h3>
+                                <p className="text-sm text-slate-500 dark:text-zinc-400 leading-relaxed">
+                                    {confirmStatus.action === 'Approve' 
+                                        ? `Are you sure you want to approve ${confirmStatus.name}? They will be granted access to their account and the system.` 
+                                        : `Are you sure you want to reject ${confirmStatus.name}? This action will decline their application.`}
+                                </p>
+                                
+                                <div className="mt-6 flex justify-end gap-3">
+                                    <button 
+                                        onClick={() => setConfirmStatus(null)} 
+                                        className="px-4 py-2 rounded-lg border border-slate-200 dark:border-zinc-800 bg-secondary text-slate-700 dark:text-zinc-300 text-sm font-medium hover:bg-slate-200 dark:hover:bg-zinc-800 transition-colors"
+                                    >
+                                        Cancel
+                                    </button>
+                                    <button 
+                                        onClick={executeStatusUpdate} 
+                                        disabled={isStatusUpdating !== null} 
+                                        className={`px-4 py-2 rounded-lg text-white text-sm font-medium transition-colors flex items-center justify-center min-w-[80px] ${
+                                            confirmStatus.action === 'Approve' 
+                                                ? 'bg-emerald-600 hover:bg-emerald-700' 
+                                                : 'bg-rose-600 hover:bg-rose-700'
+                                        }`}
+                                    >
+                                        {isStatusUpdating === confirmStatus.id ? (
+                                            <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                                        ) : (
+                                            confirmStatus.action
+                                        )}
+                                    </button>
+                                </div>
+                            </div>
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+        </motion.div>
     );
 }
 
