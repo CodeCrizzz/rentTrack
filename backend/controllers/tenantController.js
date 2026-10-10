@@ -413,10 +413,24 @@ const getTenantRooms = async (req, res) => {
                 is_me: mate.id === tenantId
             }));
 
+            // Fetch room maintenance history
+            const maintenanceQuery = `
+                SELECT 
+                    r.id, r.title, r.description, r.category, r.status, r.priority, r.created_at,
+                    u.name as reported_by
+                FROM requests r
+                JOIN users u ON r.tenant_id = u.id
+                WHERE u.room_id = $1
+                ORDER BY r.created_at DESC
+                LIMIT 5
+            `;
+            const maintenanceData = await db.query(maintenanceQuery, [roomId]);
+
             return res.status(200).json({
                 isAssigned: true,
                 room: roomData.rows[0],
-                roommates: roommates
+                roommates: roommates,
+                maintenance_history: maintenanceData.rows
             });
         }
 
