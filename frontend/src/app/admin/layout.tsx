@@ -37,8 +37,10 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             const { data } = await api.get('/admin/chat/unread');
             setUnreadCount(data.unreadCount);
         } catch (error: any) {
-            if (error.response?.status !== 401) {
-                console.error('Failed to fetch unread count', error);
+            if (error.code === 'ERR_NETWORK') {
+                console.warn('Network error: Backend might be unreachable', error.message);
+            } else if (error.response?.status !== 401) {
+                console.warn('Failed to fetch unread count', error);
             }
         }
     };
@@ -50,7 +52,9 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                 setPendingTenantsCount(data.pendingCount);
             }
         } catch (error: any) {
-            if (error.response?.status !== 401) {
+            if (error.code === 'ERR_NETWORK') {
+                console.warn('Network error: Backend might be unreachable', error.message);
+            } else if (error.response?.status !== 401) {
                 console.warn('Pending tenant count endpoint not found. Defaulting to 0.');
             }
             setPendingTenantsCount(0); 
