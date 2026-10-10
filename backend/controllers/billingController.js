@@ -7,7 +7,7 @@ const getAllBills = async (req, res) => {
     try {
         // --- 1. AUTO-GENERATE BILLS FOR CURRENT MONTH ---
         const activeTenantsQuery = `
-            SELECT u.id as tenant_id, u.room_id, r.price as rent_amount
+            SELECT u.id as tenant_id, u.room_id, r.price as rent_amount, r.rental_type
             FROM users u
             JOIN rooms r ON u.room_id = r.id
             WHERE u.role = 'tenant' AND u.status = 'Active' AND u.room_id IS NOT NULL
@@ -22,7 +22,19 @@ const getAllBills = async (req, res) => {
             const billingMonthStr = `${currentMonthName} ${currentYear}`;
             const dueDate = new Date(currentDate.getFullYear(), currentDate.getMonth(), 5);
 
+            const tenantsToBill = [];
             for (const tenant of tenants) {
+                if (tenant.rental_type === 'Whole Room') {
+                    const isAlreadyAdded = tenantsToBill.find(t => t.room_id === tenant.room_id);
+                    if (!isAlreadyAdded) {
+                        tenantsToBill.push(tenant);
+                    }
+                } else {
+                    tenantsToBill.push(tenant);
+                }
+            }
+
+            for (const tenant of tenantsToBill) {
                 const checkBillQuery = `SELECT id FROM bills WHERE tenant_id = $1 AND billing_month = $2`;
                 const { rows: existingBills } = await db.query(checkBillQuery, [tenant.tenant_id, billingMonthStr]);
 
@@ -351,6 +363,131 @@ const generateMonthlyBills = async (req, res) => {
     }
 };
 
+// @desc    Get all pending payments for verification
+// @route   GET /api/admin/bills/payments/pending
+// @access  Private/Admin
+const getPendingPayments = async (req, res) => {
+    try {
+        const query = `
+            SELECT p.*, b.billing_month, b.total_amount as bill_total, b.balance as bill_balance, u.name as tenant_name, r.room_number 
+            FROM payments p
+            JOIN bills b ON p.bill_id = b.id
+            JOIN users u ON b.tenant_id = u.id
+            LEFT JOIN rooms r ON b.room_id = r.id
+            WHERE p.status = 'Pending Verification'
+            ORDER BY p.payment_date ASC
+        `;
+        const { rows } = await db.query(query);
+        res.json(rows);
+    } catch (error) {
+        console.error('Error fetching pending payments:', error);
+        res.status(500).json({ message: 'Server error fetching pending payments' });
+    }
+};
+
+// @desc    Verify (Approve/Reject) a pending payment
+// @route   POST /api/admin/bills/payments/:paymentId/verify
+// @access  Private/Admin
+const verifyPayment = async (req, res) => {
+    const paymentId = req.params.paymentId;
+    const { action } = req.body; // 'approve' or 'reject'
+
+    try {
+        await db.query('BEGIN');
+
+        // 1. Get payment and associated bill
+        const paymentQuery = `SELECT * FROM payments WHERE id = $1 AND status = 'Pending Verification'`;
+        const { rows: paymentRows } = await db.query(paymentQuery, [paymentId]);
+        
+        if (paymentRows.length === 0) {
+            await db.query('ROLLBACK');
+            return res.status(404).json({ message: 'Pending payment not found' });
+        }
+
+        const payment = paymentRows[0];
+        const billId = payment.bill_id;
+        const paymentAmount = parseFloat(payment.amount_paid);
+
+        const billQuery = `SELECT total_amount, amount_paid FROM bills WHERE id = $1`;
+        const { rows: billRows } = await db.query(billQuery, [billId]);
+        const bill = billRows[0];
+
+        if (action === 'approve') {
+            // Update payment status
+            await db.query(`UPDATE payments SET status = 'Approved' WHERE id = $1`, [paymentId]);
+
+            // Deduct balance and update bill status
+            const newTotalPaid = parseFloat(bill.amount_paid) + paymentAmount;
+            const newBalance = parseFloat(bill.total_amount) - newTotalPaid;
+            
+            let newStatus = 'Partial';
+            if (newBalance <= 0) {
+                newStatus = 'Paid';
+            }
+
+            await db.query(`
+                UPDATE bills
+                SET amount_paid = $1, balance = $2, status = $3
+                WHERE id = $4
+            `, [newTotalPaid, newBalance, newStatus, billId]);
+            
+            await db.query('COMMIT');
+            res.json({ message: 'Payment approved successfully', newStatus, newBalance });
+
+        } else if (action === 'reject') {
+            // Update payment status
+            await db.query(`UPDATE payments SET status = 'Rejected' WHERE id = $1`, [paymentId]);
+
+            // We must update the bill status back to Overdue or Unpaid, checking the original balance
+            const currentBalance = parseFloat(bill.total_amount) - parseFloat(bill.amount_paid);
+            
+            // Check if overdue
+            const { rows: dueDateRows } = await db.query(`SELECT due_date FROM bills WHERE id = $1`, [billId]);
+            const dueDate = new Date(dueDateRows[0].due_date);
+            const currentDate = new Date();
+            
+            let revertStatus = 'Unpaid';
+            if (currentBalance <= 0) revertStatus = 'Paid';
+            else if (parseFloat(bill.amount_paid) > 0) revertStatus = 'Partial';
+            else if (dueDate < currentDate) revertStatus = 'Overdue';
+
+            await db.query(`UPDATE bills SET status = $1 WHERE id = $2`, [revertStatus, billId]);
+
+            await db.query('COMMIT');
+            res.json({ message: 'Payment rejected successfully' });
+        } else {
+            await db.query('ROLLBACK');
+            res.status(400).json({ message: 'Invalid action' });
+        }
+
+    } catch (error) {
+        await db.query('ROLLBACK');
+        console.error('Error verifying payment:', error);
+        res.status(500).json({ message: 'Server error verifying payment' });
+    }
+};
+
+// @desc    Get all payments
+// @route   GET /api/admin/bills/payments
+// @access  Private/Admin
+const getAllPayments = async (req, res) => {
+    try {
+        const query = `
+            SELECT p.*, b.billing_month, u.name as tenant_name, r.room_number 
+            FROM payments p
+            JOIN bills b ON p.bill_id = b.id
+            JOIN users u ON b.tenant_id = u.id
+            LEFT JOIN rooms r ON b.room_id = r.id
+            ORDER BY p.payment_date DESC
+        `;
+        const { rows } = await db.query(query);
+        res.json(rows);
+    } catch (error) {
+        console.error('Error fetching all payments:', error);
+        res.status(500).json({ message: 'Server error fetching all payments' });
+    }
+};
+
 module.exports = {
     getAllBills,
     getBillById,
@@ -358,5 +495,8 @@ module.exports = {
     updateBill,
     deleteBill,
     payBill,
-    generateMonthlyBills
+    generateMonthlyBills,
+    getPendingPayments,
+    verifyPayment,
+    getAllPayments
 };
