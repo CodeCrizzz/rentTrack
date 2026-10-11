@@ -385,6 +385,27 @@ const getPendingPayments = async (req, res) => {
     }
 };
 
+// @desc    Get count of pending payments
+// @route   GET /api/admin/bills/payments/pending-count
+// @access  Private/Admin
+const getPendingPaymentsCount = async (req, res) => {
+    try {
+        const query = `
+            SELECT COUNT(*) as pending_count 
+            FROM payments p 
+            JOIN bills b ON p.bill_id = b.id
+            JOIN users u ON b.tenant_id = u.id
+            WHERE p.status = 'Pending Verification'
+        `;
+        const { rows } = await db.query(query);
+        res.json({ pendingCount: parseInt(rows[0].pending_count) });
+    } catch (error) {
+        console.error('Error fetching pending payments count:', error);
+        res.status(500).json({ message: 'Server error fetching pending payments count' });
+    }
+};
+
+
 // @desc    Verify (Approve/Reject) a pending payment
 // @route   POST /api/admin/bills/payments/:paymentId/verify
 // @access  Private/Admin
@@ -497,6 +518,7 @@ module.exports = {
     payBill,
     generateMonthlyBills,
     getPendingPayments,
+    getPendingPaymentsCount,
     verifyPayment,
     getAllPayments
 };

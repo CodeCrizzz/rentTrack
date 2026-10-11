@@ -10,6 +10,7 @@ const {
     payBill,
     generateMonthlyBills,
     getPendingPayments,
+    getPendingPaymentsCount,
     verifyPayment,
     getAllPayments
 } = require('../controllers/billingController');
@@ -29,6 +30,7 @@ router.post('/generate', generateMonthlyBills);
 
 router.get('/payments', getAllPayments);
 router.get('/payments/pending', getPendingPayments);
+router.get('/payments/pending-count', getPendingPaymentsCount);
 router.post('/payments/:paymentId/verify', verifyPayment);
 
 router.route('/')
