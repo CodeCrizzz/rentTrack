@@ -12,6 +12,7 @@ export default function TenantRooms() {
     
     // Modal states
     const [selectedRoom, setSelectedRoom] = useState<any>(null);
+    const [selectedMaintenance, setSelectedMaintenance] = useState<any>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [errorMsg, setErrorMsg] = useState("");
     const [successMsg, setSuccessMsg] = useState("");
@@ -186,12 +187,7 @@ export default function TenantRooms() {
                             {/* Maintenance */}
                             <motion.div variants={itemVariants} className="flex-1 min-h-0 bg-card border border-slate-200 dark:border-zinc-800 rounded-xl shadow-sm overflow-hidden flex flex-col">
                                 <div className="px-6 py-4 border-b border-slate-100 dark:border-zinc-800/60 flex items-center justify-between shrink-0">
-                                    <h2 className="text-base font-bold text-slate-900 dark:text-white">Maintenance</h2>
-                                    {maintenance_history && maintenance_history.length > 0 && (
-                                        <a href="/tenant/requests" className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 hover:underline">
-                                            View all
-                                        </a>
-                                    )}
+                                    <h2 className="text-base font-bold text-slate-900 dark:text-white">Maintenance log</h2>
                                 </div>
                                 <div className="p-0 flex-1 overflow-y-auto custom-scrollbar">
                                     {maintenance_history && maintenance_history.length > 0 ? (
@@ -203,6 +199,12 @@ export default function TenantRooms() {
                                                         <p className="text-xs text-slate-500 dark:text-zinc-400 mt-1">
                                                             Submitted on {new Date(req.created_at).toLocaleDateString()}
                                                         </p>
+                                                        <button 
+                                                            onClick={() => setSelectedMaintenance(req)}
+                                                            className="mt-2 text-xs font-bold text-indigo-600 dark:text-indigo-400 hover:underline"
+                                                        >
+                                                            View Details
+                                                        </button>
                                                     </div>
                                                     <span className={`px-2.5 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider shrink-0 ${
                                                         req.status === 'Resolved' ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-400' :
@@ -220,9 +222,9 @@ export default function TenantRooms() {
                                                 <svg className="w-6 h-6 text-slate-400 dark:text-zinc-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
                                             </div>
                                             <h3 className="text-sm font-bold text-slate-900 dark:text-white mb-1">No maintenance requests yet</h3>
-                                            <p className="text-xs text-slate-500 dark:text-zinc-400 mb-6 max-w-[250px]">Need something fixed? Submit a maintenance request and track its progress here.</p>
-                                            <a href="/tenant/requests" className="px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-bold rounded-lg transition-colors">
-                                                Submit Maintenance Request
+                                            <p className="text-xs text-slate-500 dark:text-zinc-400 mb-6 max-w-[250px]">Need something fixed? Submit a maintenance request through the chat.</p>
+                                            <a href="/tenant/chat" className="px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-bold rounded-lg transition-colors">
+                                                Go to Chat
                                             </a>
                                         </div>
                                     )}
@@ -273,6 +275,101 @@ export default function TenantRooms() {
 
                     </div>
                 </div>
+
+                {/* Maintenance Modal */}
+                <AnimatePresence>
+                    {selectedMaintenance && (
+                        <>
+                            <motion.div 
+                                initial={{ opacity: 0 }} 
+                                animate={{ opacity: 1 }} 
+                                exit={{ opacity: 0 }} 
+                                className="fixed inset-0 bg-slate-900/40 dark:bg-black/60 backdrop-blur-sm z-50 pointer-events-auto"
+                                onClick={() => setSelectedMaintenance(null)}
+                            />
+                            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 pointer-events-none">
+                                <motion.div 
+                                    initial={{ opacity: 0, scale: 0.95 }} 
+                                    animate={{ opacity: 1, scale: 1 }} 
+                                    exit={{ opacity: 0, scale: 0.95 }} 
+                                    className="w-full max-w-lg bg-card rounded-xl shadow-xl border border-slate-200 dark:border-zinc-800 overflow-hidden pointer-events-auto flex flex-col max-h-[90vh]"
+                                >
+                                    <div className="p-5 border-b border-slate-200 dark:border-zinc-800 flex justify-between items-center bg-secondary/50">
+                                        <h2 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                                            <svg className="w-5 h-5 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                                            Maintenance Details
+                                        </h2>
+                                        <button onClick={() => setSelectedMaintenance(null)} className="p-2 rounded-lg hover:bg-slate-200 dark:hover:bg-zinc-800 text-slate-500 transition-colors">
+                                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                                        </button>
+                                    </div>
+                                    <div className="p-6 overflow-y-auto custom-scrollbar flex flex-col gap-5">
+                                        <div className="flex justify-between items-start gap-4">
+                                            <div>
+                                                <h3 className="text-lg font-bold text-slate-900 dark:text-white">{selectedMaintenance.title}</h3>
+                                                <p className="text-sm text-slate-500 dark:text-zinc-400 mt-1">
+                                                    Submitted on {new Date(selectedMaintenance.created_at).toLocaleDateString()}
+                                                </p>
+                                            </div>
+                                            <span className={`px-3 py-1 rounded-md text-xs font-bold uppercase tracking-wider shrink-0 ${
+                                                selectedMaintenance.status === 'Resolved' ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-400' :
+                                                selectedMaintenance.status === 'In Progress' ? 'bg-indigo-100 text-indigo-700 dark:bg-indigo-500/20 dark:text-indigo-400' :
+                                                'bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-400'
+                                            }`}>
+                                                {selectedMaintenance.status}
+                                            </span>
+                                        </div>
+                                        
+                                        <div className="grid grid-cols-2 gap-4">
+                                            <div className="bg-slate-50 dark:bg-zinc-900/50 p-4 rounded-xl border border-slate-200 dark:border-zinc-800">
+                                                <p className="text-xs font-medium text-slate-500 dark:text-zinc-400 mb-1">Category</p>
+                                                <p className="text-sm font-semibold text-slate-900 dark:text-white">{selectedMaintenance.category || 'Not specified'}</p>
+                                            </div>
+                                            <div className="bg-slate-50 dark:bg-zinc-900/50 p-4 rounded-xl border border-slate-200 dark:border-zinc-800">
+                                                <p className="text-xs font-medium text-slate-500 dark:text-zinc-400 mb-1">Priority</p>
+                                                <p className="text-sm font-semibold text-slate-900 dark:text-white">{selectedMaintenance.priority || 'Not specified'}</p>
+                                            </div>
+                                        </div>
+
+                                        <div>
+                                            <p className="text-xs font-medium text-slate-500 dark:text-zinc-400 mb-2">Description</p>
+                                            <div className="bg-slate-50 dark:bg-zinc-900/50 p-4 rounded-xl border border-slate-200 dark:border-zinc-800">
+                                                <p className="text-sm text-slate-700 dark:text-zinc-300 leading-relaxed whitespace-pre-wrap">
+                                                    {selectedMaintenance.description || 'No description provided.'}
+                                                </p>
+                                            </div>
+                                        </div>
+
+                                        {selectedMaintenance.attachment_url && (
+                                            <div>
+                                                <p className="text-xs font-medium text-slate-500 dark:text-zinc-400 mb-2">Attached Image</p>
+                                                <div className="rounded-xl overflow-hidden border border-slate-200 dark:border-zinc-800">
+                                                    <img 
+                                                        src={selectedMaintenance.attachment_url.startsWith('http') ? selectedMaintenance.attachment_url : `${api.defaults.baseURL?.replace('/api', '') || 'http://localhost:5000'}${selectedMaintenance.attachment_url}`} 
+                                                        alt="Maintenance Attachment" 
+                                                        className="w-full h-auto object-cover max-h-64"
+                                                        onError={(e) => {
+                                                            const target = e.target as HTMLImageElement;
+                                                            target.style.display = 'none';
+                                                        }}
+                                                    />
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
+                                    <div className="p-5 border-t border-slate-200 dark:border-zinc-800 bg-secondary/50 flex justify-end">
+                                        <button 
+                                            onClick={() => setSelectedMaintenance(null)}
+                                            className="px-5 py-2.5 rounded-xl text-sm font-bold bg-slate-200 hover:bg-slate-300 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-slate-700 dark:text-zinc-300 transition-colors"
+                                        >
+                                            Close
+                                        </button>
+                                    </div>
+                                </motion.div>
+                            </div>
+                        </>
+                    )}
+                </AnimatePresence>
             </motion.div>
         );
     }
