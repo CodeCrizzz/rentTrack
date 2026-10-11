@@ -91,6 +91,7 @@ export default function AdminBilling() {
     const [isEditOpen, setIsEditOpen] = useState(false);
     const [isCreateOpen, setIsCreateOpen] = useState(false);
     const [isVerifyModalOpen, setIsVerifyModalOpen] = useState(false);
+    const [currentVerifyIndex, setCurrentVerifyIndex] = useState(0);
     const [selectedBill, setSelectedBill] = useState<Bill | null>(null);
     const [pendingPayments, setPendingPayments] = useState<PendingPayment[]>([]);
     const [allPayments, setAllPayments] = useState<any[]>([]);
@@ -436,9 +437,9 @@ export default function AdminBilling() {
                 </div>
 
                 {/* GCash Receipts to Verify */}
-                <div onClick={() => setIsVerifyModalOpen(true)} className="bg-card rounded-xl border border-slate-200 dark:border-zinc-800 p-6 shadow-sm cursor-pointer hover:border-orange-500 transition-colors group">
+                <div onClick={() => { setIsVerifyModalOpen(true); setCurrentVerifyIndex(0); }} className="bg-card rounded-xl border border-slate-200 dark:border-zinc-800 p-6 shadow-sm cursor-pointer hover:border-orange-500 transition-colors group">
                     <div className="flex justify-between items-start mb-4">
-                        <p className="text-sm font-medium text-slate-500 dark:text-zinc-400 group-hover:text-orange-500 transition-colors">GCash Receipts to Verify</p>
+                        <p className="text-sm font-medium text-slate-500 dark:text-zinc-400 group-hover:text-orange-500 transition-colors">GCash/Card Payment Verification</p>
                         <div className="w-8 h-8 rounded-lg bg-orange-50 dark:bg-orange-500/10 flex items-center justify-center text-orange-600 dark:text-orange-400">
                             <Clock className="w-4 h-4" />
                         </div>
@@ -1008,59 +1009,82 @@ export default function AdminBilling() {
                             {pendingPayments.length === 0 ? (
                                 <div className="text-center py-10 text-slate-500">No pending payments to verify.</div>
                             ) : (
-                                <div className="space-y-6">
-                                    {pendingPayments.map(payment => (
-                                        <div key={payment.id} className="bg-secondary/30 border border-slate-200 dark:border-zinc-800 rounded-2xl p-6 flex flex-col lg:flex-row gap-6">
-                                            <div className="flex-1 space-y-4">
-                                                <div>
-                                                    <h3 className="font-bold text-lg">{payment.tenant_name}</h3>
-                                                    <p className="text-sm text-slate-500">Room {payment.room_number}</p>
-                                                </div>
-                                                <div className="grid grid-cols-2 gap-4">
-                                                    <div>
-                                                        <p className="text-[10px] uppercase font-bold text-slate-400">Payment Date</p>
-                                                        <p className="font-semibold">{new Date(payment.payment_date).toLocaleDateString()}</p>
-                                                    </div>
-                                                    <div>
-                                                        <p className="text-[10px] uppercase font-bold text-slate-400">Method</p>
-                                                        <p className="font-semibold">{payment.payment_method}</p>
-                                                    </div>
-                                                    <div>
-                                                        <p className="text-[10px] uppercase font-bold text-slate-400">Amount Paid</p>
-                                                        <p className="font-black text-emerald-600 text-xl">₱ {Number(payment.amount_paid).toLocaleString()}</p>
-                                                    </div>
-                                                    <div>
-                                                        <p className="text-[10px] uppercase font-bold text-slate-400">Bill Total</p>
-                                                        <p className="font-semibold">₱ {Number(payment.bill_total).toLocaleString()}</p>
-                                                    </div>
-                                                </div>
-                                                {payment.notes && (
-                                                    <div className="bg-card p-3 rounded-xl border border-slate-200 dark:border-zinc-800">
-                                                        <p className="text-[10px] uppercase font-bold text-slate-400 mb-1">Notes from tenant</p>
-                                                        <p className="text-sm italic">{payment.notes}</p>
-                                                    </div>
-                                                )}
-                                                <div className="flex gap-3 pt-2">
-                                                    <button onClick={() => handleVerifyPayment(payment.id, 'approve')} className="flex-1 py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl flex items-center justify-center gap-2 transition-all shadow-md shadow-emerald-500/20 text-sm">
-                                                        <CheckCircle className="w-4 h-4" /> Approve
+                                (() => {
+                                    const safeIndex = Math.max(0, Math.min(currentVerifyIndex, pendingPayments.length - 1));
+                                    const payment = pendingPayments[safeIndex];
+                                    return (
+                                        <div className="space-y-6">
+                                            <div className="flex justify-between items-center text-sm font-bold text-slate-500 dark:text-zinc-400 px-2">
+                                                <span>Showing {safeIndex + 1} of {pendingPayments.length}</span>
+                                                <div className="flex gap-2">
+                                                    <button 
+                                                        disabled={safeIndex === 0} 
+                                                        onClick={() => setCurrentVerifyIndex(safeIndex - 1)}
+                                                        className="px-3 py-1 bg-secondary hover:bg-secondary/80 rounded-md disabled:opacity-50 transition-colors"
+                                                    >
+                                                        Previous
                                                     </button>
-                                                    <button onClick={() => handleVerifyPayment(payment.id, 'reject')} className="flex-1 py-3 bg-white border border-slate-200 hover:bg-rose-50 text-rose-600 font-bold rounded-xl flex items-center justify-center gap-2 transition-all text-sm">
-                                                        <XCircle className="w-4 h-4" /> Reject
+                                                    <button 
+                                                        disabled={safeIndex === pendingPayments.length - 1} 
+                                                        onClick={() => setCurrentVerifyIndex(safeIndex + 1)}
+                                                        className="px-3 py-1 bg-secondary hover:bg-secondary/80 rounded-md disabled:opacity-50 transition-colors"
+                                                    >
+                                                        Next
                                                     </button>
                                                 </div>
                                             </div>
-                                            {payment.receipt_url ? (
-                                                <div className="lg:w-1/2 flex items-center justify-center bg-card rounded-xl border border-slate-200 dark:border-zinc-800 overflow-hidden min-h-[300px]">
-                                                    <img src={`http://localhost:5000${payment.receipt_url}`} alt="Receipt" className="max-w-full max-h-[400px] object-contain" />
+                                            <div key={payment.id} className="bg-secondary/30 border border-slate-200 dark:border-zinc-800 rounded-2xl p-6 flex flex-col lg:flex-row gap-6">
+                                                <div className="flex-1 space-y-4">
+                                                    <div>
+                                                        <h3 className="font-bold text-lg">{payment.tenant_name}</h3>
+                                                        <p className="text-sm text-slate-500">Room {payment.room_number}</p>
+                                                    </div>
+                                                    <div className="grid grid-cols-2 gap-4">
+                                                        <div>
+                                                            <p className="text-[10px] uppercase font-bold text-slate-400">Payment Date</p>
+                                                            <p className="font-semibold">{new Date(payment.payment_date).toLocaleDateString()}</p>
+                                                        </div>
+                                                        <div>
+                                                            <p className="text-[10px] uppercase font-bold text-slate-400">Method</p>
+                                                            <p className="font-semibold">{payment.payment_method}</p>
+                                                        </div>
+                                                        <div>
+                                                            <p className="text-[10px] uppercase font-bold text-slate-400">Amount Paid</p>
+                                                            <p className="font-black text-emerald-600 text-xl">₱ {Number(payment.amount_paid).toLocaleString()}</p>
+                                                        </div>
+                                                        <div>
+                                                            <p className="text-[10px] uppercase font-bold text-slate-400">Bill Total</p>
+                                                            <p className="font-semibold">₱ {Number(payment.bill_total).toLocaleString()}</p>
+                                                        </div>
+                                                    </div>
+                                                    {payment.notes && (
+                                                        <div className="bg-card p-3 rounded-xl border border-slate-200 dark:border-zinc-800">
+                                                            <p className="text-[10px] uppercase font-bold text-slate-400 mb-1">Notes from tenant</p>
+                                                            <p className="text-sm italic">{payment.notes}</p>
+                                                        </div>
+                                                    )}
+                                                    <div className="flex gap-3 pt-2">
+                                                        <button onClick={() => { handleVerifyPayment(payment.id, 'approve'); if(safeIndex === pendingPayments.length - 1 && safeIndex > 0) setCurrentVerifyIndex(safeIndex - 1); }} className="flex-1 py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl flex items-center justify-center gap-2 transition-all shadow-md shadow-emerald-500/20 text-sm">
+                                                            <CheckCircle className="w-4 h-4" /> Approve
+                                                        </button>
+                                                        <button onClick={() => { handleVerifyPayment(payment.id, 'reject'); if(safeIndex === pendingPayments.length - 1 && safeIndex > 0) setCurrentVerifyIndex(safeIndex - 1); }} className="flex-1 py-3 bg-white border border-slate-200 hover:bg-rose-50 text-rose-600 font-bold rounded-xl flex items-center justify-center gap-2 transition-all text-sm">
+                                                            <XCircle className="w-4 h-4" /> Reject
+                                                        </button>
+                                                    </div>
                                                 </div>
-                                            ) : (
-                                                <div className="lg:w-1/2 flex items-center justify-center bg-card rounded-xl border border-slate-200 dark:border-zinc-800 min-h-[300px] text-slate-400">
-                                                    No receipt attached
-                                                </div>
-                                            )}
+                                                {payment.receipt_url ? (
+                                                    <div className="lg:w-1/2 flex items-center justify-center bg-card rounded-xl border border-slate-200 dark:border-zinc-800 overflow-hidden min-h-[300px]">
+                                                        <img src={`http://localhost:5000${payment.receipt_url}`} alt="Receipt" className="max-w-full max-h-[400px] object-contain" />
+                                                    </div>
+                                                ) : (
+                                                    <div className="lg:w-1/2 flex items-center justify-center bg-card rounded-xl border border-slate-200 dark:border-zinc-800 min-h-[300px] text-slate-400">
+                                                        No receipt attached
+                                                    </div>
+                                                )}
+                                            </div>
                                         </div>
-                                    ))}
-                                </div>
+                                    );
+                                })()
                             )}
                         </div>
                     </motion.div>
