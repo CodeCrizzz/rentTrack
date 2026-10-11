@@ -2,6 +2,7 @@
 import { useEffect, useState, useRef } from 'react';
 import api from '@/lib/api';
 import { motion, AnimatePresence, type Variants } from 'framer-motion';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 // --- MESSAGE DATA STRUCTURE ---
 interface ChatMessage {
@@ -20,6 +21,55 @@ export default function TenantChat() {
     const scrollRef = useRef<HTMLDivElement>(null);
     const isAtBottom = useRef(true);
 
+    // --- MAINTENANCE MODAL STATE ---
+    const [showMaintenanceModal, setShowMaintenanceModal] = useState(false);
+    const [maintenanceTitle, setMaintenanceTitle] = useState('');
+    const [maintenanceDesc, setMaintenanceDesc] = useState('');
+    const [maintenanceCategory, setMaintenanceCategory] = useState('Plumbing');
+    const [maintenancePriority, setMaintenancePriority] = useState('Medium');
+    const [maintenanceImage, setMaintenanceImage] = useState<File | null>(null);
+    const [isSubmittingMaintenance, setIsSubmittingMaintenance] = useState(false);
+
+    const closeMaintenanceModal = () => {
+        setShowMaintenanceModal(false);
+        setMaintenanceTitle('');
+        setMaintenanceDesc('');
+        setMaintenanceCategory('Plumbing');
+        setMaintenancePriority('Medium');
+        setMaintenanceImage(null);
+    };
+
+    const handleMaintenanceSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!maintenanceTitle.trim() || !maintenanceDesc.trim()) return;
+        try {
+            setIsSubmittingMaintenance(true);
+            const formData = new FormData();
+            formData.append('title', maintenanceTitle);
+            formData.append('description', maintenanceDesc);
+            formData.append('category', maintenanceCategory);
+            formData.append('priority', maintenancePriority);
+            if (maintenanceImage) formData.append('attachment', maintenanceImage);
+
+            await api.post('/requests', formData, {
+                headers: { 'Content-Type': 'multipart/form-data' }
+            });
+            
+            // Format special message
+            const specialMessage = `[MAINTENANCE_REQUEST] ${maintenanceTitle}`;
+            
+            // Send the message
+            await api.post('/tenant/chat', { message: specialMessage });
+            fetchMessages();
+
+            closeMaintenanceModal();
+        } catch (error) {
+            console.error("Failed to submit maintenance:", error);
+        } finally {
+            setIsSubmittingMaintenance(false);
+        }
+    };
+
     // --- HANDLE MANUAL SCROLL ---
     const handleScroll = () => {
         if (scrollRef.current) {
@@ -33,10 +83,16 @@ export default function TenantChat() {
         try {
             const { data } = await api.get('/tenant/chat');
             // Ensure status exists for UI purposes
-            const formattedData = data.map((msg: any) => ({
-                ...msg,
-                status: msg.status || 'Seen' // Defaulting to Seen for the UI mockup
-            }));
+            const formattedData = data.map((msg: any, index: number) => {
+                let mockStatus = 'Seen';
+                if (msg.sender_type === 'tenant' && index === data.length - 1) {
+                    mockStatus = 'Delivered'; // Admin is mocked as online
+                }
+                return {
+                    ...msg,
+                    status: msg.status || mockStatus
+                };
+            });
             setMessages(formattedData);
         } catch (error) {
             console.error("Failed to fetch messages:", error);
@@ -108,14 +164,23 @@ export default function TenantChat() {
     };
 
     return (
-        <motion.div variants={containerVariants} initial="hidden" animate="show" className="w-full h-[calc(100vh-6rem)] flex flex-col font-sans text-slate-900 dark:text-white">
+        <motion.div variants={containerVariants} initial="hidden" animate="show" className="w-full h-[calc(100vh-6.5rem)] md:h-[calc(100vh-7.5rem)] flex flex-col font-sans text-slate-900 dark:text-white overflow-hidden">
             
             {/* Header */}
-            <motion.div variants={itemVariants} className="mb-6 shrink-0">
-                <h1 className="text-2xl md:text-3xl font-black text-slate-900 dark:text-white tracking-tight">
-                    Chat Support
-                </h1>
-                <p className="text-sm text-slate-500 dark:text-zinc-400 mt-1">Message the admin for assistance.</p>
+            <motion.div variants={itemVariants} className="mb-6 shrink-0 flex items-center justify-between">
+                <div>
+                    <h1 className="text-2xl md:text-3xl font-black text-slate-900 dark:text-white tracking-tight">
+                        Chat Support
+                    </h1>
+                    <p className="text-sm text-slate-500 dark:text-zinc-400 mt-1">Message the admin for assistance.</p>
+                </div>
+                <button 
+                    onClick={() => setShowMaintenanceModal(true)}
+                    className="px-4 py-2 bg-teal-700 hover:bg-teal-800 text-white text-sm font-bold rounded-xl flex items-center gap-2 transition-colors shadow-sm"
+                >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
+                    Request Maintenance
+                </button>
             </motion.div>
 
             {/* Chat Container */}
@@ -146,8 +211,9 @@ export default function TenantChat() {
                 <div 
                     ref={scrollRef} 
                     onScroll={handleScroll}
-                    className="flex-1 overflow-y-auto p-6 space-y-6 custom-scrollbar"
+                    className="flex-1 overflow-y-auto p-6 space-y-6 custom-scrollbar flex flex-col"
                 >
+                    <div className="flex-1 min-h-0"></div>
                     <AnimatePresence mode="popLayout">
                         {isLoading ? (
                             <motion.div key="loading" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="h-full flex flex-col items-center justify-center gap-4">
@@ -180,10 +246,23 @@ export default function TenantChat() {
                                             )}
                                             <div className={`px-4 py-3 text-sm leading-relaxed ${
                                                 msg.sender_type === 'tenant' 
-                                                    ? 'bg-indigo-600 text-white rounded-2xl rounded-br-sm' 
+                                                    ? 'bg-teal-700 text-white rounded-2xl rounded-br-sm' 
                                                     : 'bg-secondary text-slate-900 dark:text-white rounded-2xl rounded-bl-sm border border-slate-200 dark:border-zinc-800'
                                             }`}>
-                                                {msg.message}
+                                                {msg.message.startsWith('[MAINTENANCE_REQUEST]') ? (
+                                                    <div className="flex flex-col gap-2 min-w-[200px]">
+                                                        <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider opacity-80 border-b border-white/20 pb-2 mb-1">
+                                                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+                                                            Maintenance Request
+                                                        </div>
+                                                        <span className="font-semibold text-base">{msg.message.replace('[MAINTENANCE_REQUEST] ', '')}</span>
+                                                        <a href="/tenant/rooms" className="inline-flex items-center gap-1 text-xs font-medium mt-1 hover:underline">
+                                                            View in Rooms <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7"></path></svg>
+                                                        </a>
+                                                    </div>
+                                                ) : (
+                                                    msg.message
+                                                )}
                                             </div>
                                         </div>
 
@@ -194,10 +273,10 @@ export default function TenantChat() {
                                             {/* Status Indicator (Only show for sent messages) */}
                                             {msg.sender_type === 'tenant' && (
                                                 <div className="flex items-center">
-                                                    <span className={`flex items-center ${msg.status === 'Seen' ? 'text-indigo-600 dark:text-indigo-400' : 'text-slate-400'}`}>
-                                                        {msg.status === 'Sent' && <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path></svg>}
-                                                        {msg.status === 'Delivered' && <div className="flex -space-x-2"><svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path></svg><svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path></svg></div>}
-                                                        {msg.status === 'Seen' && <div className="flex -space-x-2"><svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path></svg><svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path></svg></div>}
+                                                    <span className={`flex items-center gap-1.5 ${msg.status?.toLowerCase() === 'seen' ? 'text-teal-700 dark:text-teal-500' : 'text-slate-400'}`}>
+                                                        {msg.status?.toLowerCase() === 'sent' && <><span className="text-[10px] font-bold uppercase tracking-wide">Sent</span><svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path></svg></>}
+                                                        {msg.status?.toLowerCase() === 'delivered' && <><span className="text-[10px] font-bold uppercase tracking-wide">Delivered</span><div className="flex -space-x-2"><svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path></svg><svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path></svg></div></>}
+                                                        {msg.status?.toLowerCase() === 'seen' && <><span className="text-[10px] font-bold uppercase tracking-wide">Seen</span><div className="flex -space-x-2"><svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path></svg><svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path></svg></div></>}
                                                     </span>
                                                 </div>
                                             )}
@@ -233,13 +312,136 @@ export default function TenantChat() {
                         <button 
                             type="submit" 
                             disabled={!newMessage.trim() || isLoading}
-                            className="w-12 h-12 flex items-center justify-center bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 transition-colors disabled:opacity-50 shrink-0"
+                            className="w-12 h-12 flex items-center justify-center bg-teal-700 text-white rounded-xl hover:bg-teal-800 transition-colors disabled:opacity-50 shrink-0"
                         >
-                            <svg className="w-5 h-5 translate-x-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path></svg>
+                            <svg className="w-5 h-5 -ml-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"></path></svg>
                         </button>
                     </form>
                 </div>
             </motion.div>
+
+            {/* Maintenance Request Modal */}
+            <AnimatePresence>
+                {showMaintenanceModal && (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+                        <motion.div 
+                            initial={{ opacity: 0, scale: 0.95 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            exit={{ opacity: 0, scale: 0.95 }}
+                            className="bg-card border border-slate-200 dark:border-zinc-800 rounded-2xl shadow-xl w-full max-w-md overflow-hidden flex flex-col max-h-[90vh]"
+                        >
+                            <div className="p-5 border-b border-slate-200 dark:border-zinc-800 flex justify-between items-center bg-secondary/50">
+                                <h3 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                                    <svg className="w-5 h-5 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+                                    Request Maintenance
+                                </h3>
+                                <button onClick={closeMaintenanceModal} className="text-slate-400 hover:text-slate-600 dark:hover:text-zinc-200">
+                                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                                </button>
+                            </div>
+                            <div className="p-5 overflow-y-auto">
+                                <form id="maintenanceForm" onSubmit={handleMaintenanceSubmit} className="space-y-4">
+                                    <div>
+                                        <label className="block text-sm font-semibold text-slate-700 dark:text-zinc-300 mb-1">Issue Title</label>
+                                        <input 
+                                            type="text" 
+                                            value={maintenanceTitle}
+                                            onChange={e => setMaintenanceTitle(e.target.value)}
+                                            placeholder="e.g. Leaking Faucet"
+                                            className="w-full px-4 py-2.5 bg-slate-50 dark:bg-zinc-900/50 border border-slate-200 dark:border-zinc-800 rounded-xl text-sm outline-none focus:border-emerald-500"
+                                            required
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-semibold text-slate-700 dark:text-zinc-300 mb-1">Description</label>
+                                        <textarea 
+                                            value={maintenanceDesc}
+                                            onChange={e => setMaintenanceDesc(e.target.value)}
+                                            placeholder="Describe the issue in detail..."
+                                            rows={3}
+                                            className="w-full px-4 py-2.5 bg-slate-50 dark:bg-zinc-900/50 border border-slate-200 dark:border-zinc-800 rounded-xl text-sm outline-none focus:border-emerald-500 resize-none"
+                                            required
+                                        ></textarea>
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div>
+                                            <label className="block text-sm font-semibold text-slate-700 dark:text-zinc-300 mb-1">Category</label>
+                                            <Select value={maintenanceCategory} onValueChange={val => setMaintenanceCategory(val || 'Plumbing')}>
+                                                <SelectTrigger className="w-full px-4 bg-slate-50 dark:bg-zinc-900/50 border border-slate-200 dark:border-zinc-800 rounded-xl text-sm focus:ring-emerald-500 focus:border-emerald-500 h-[42px] outline-none transition-colors hover:bg-slate-100 dark:hover:bg-zinc-800/80">
+                                                    <SelectValue placeholder="Select Category" />
+                                                </SelectTrigger>
+                                                <SelectContent alignItemWithTrigger={false} className="bg-white dark:bg-zinc-900 border-slate-200 dark:border-zinc-800 rounded-xl shadow-lg">
+                                                    <SelectItem value="Plumbing" className="rounded-lg cursor-pointer hover:bg-slate-100 dark:hover:bg-zinc-800 text-sm">Plumbing</SelectItem>
+                                                    <SelectItem value="Electrical" className="rounded-lg cursor-pointer hover:bg-slate-100 dark:hover:bg-zinc-800 text-sm">Electrical</SelectItem>
+                                                    <SelectItem value="Appliance" className="rounded-lg cursor-pointer hover:bg-slate-100 dark:hover:bg-zinc-800 text-sm">Appliance</SelectItem>
+                                                    <SelectItem value="Structural" className="rounded-lg cursor-pointer hover:bg-slate-100 dark:hover:bg-zinc-800 text-sm">Structural</SelectItem>
+                                                    <SelectItem value="Other" className="rounded-lg cursor-pointer hover:bg-slate-100 dark:hover:bg-zinc-800 text-sm">Other</SelectItem>
+                                                </SelectContent>
+                                            </Select>
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-semibold text-slate-700 dark:text-zinc-300 mb-1">Priority</label>
+                                            <Select value={maintenancePriority} onValueChange={val => setMaintenancePriority(val || 'Medium')}>
+                                                <SelectTrigger className="w-full px-4 bg-slate-50 dark:bg-zinc-900/50 border border-slate-200 dark:border-zinc-800 rounded-xl text-sm focus:ring-emerald-500 focus:border-emerald-500 h-[42px] outline-none transition-colors hover:bg-slate-100 dark:hover:bg-zinc-800/80">
+                                                    <SelectValue placeholder="Select Priority" />
+                                                </SelectTrigger>
+                                                <SelectContent alignItemWithTrigger={false} className="bg-white dark:bg-zinc-900 border-slate-200 dark:border-zinc-800 rounded-xl shadow-lg">
+                                                    <SelectItem value="Low" className="rounded-lg cursor-pointer hover:bg-slate-100 dark:hover:bg-zinc-800 text-sm">Low</SelectItem>
+                                                    <SelectItem value="Medium" className="rounded-lg cursor-pointer hover:bg-slate-100 dark:hover:bg-zinc-800 text-sm">Medium</SelectItem>
+                                                    <SelectItem value="High" className="rounded-lg cursor-pointer hover:bg-slate-100 dark:hover:bg-zinc-800 text-sm">High</SelectItem>
+                                                    <SelectItem value="Urgent" className="rounded-lg cursor-pointer hover:bg-slate-100 dark:hover:bg-zinc-800 text-sm">Urgent</SelectItem>
+                                                </SelectContent>
+                                            </Select>
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-semibold text-slate-700 dark:text-zinc-300 mb-1">Upload Image (Optional)</label>
+                                        <input 
+                                            type="file" 
+                                            accept="image/*"
+                                            onChange={e => setMaintenanceImage(e.target.files?.[0] || null)}
+                                            className="w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-sm file:font-semibold file:bg-emerald-50 file:text-emerald-700 hover:file:bg-emerald-100 dark:file:bg-emerald-500/10 dark:file:text-emerald-400 cursor-pointer border border-slate-200 dark:border-zinc-800 rounded-xl p-1 bg-slate-50 dark:bg-zinc-900/50"
+                                        />
+                                        {maintenanceImage && (
+                                            <div className="mt-3 relative rounded-xl overflow-hidden border border-slate-200 dark:border-zinc-800 w-full h-32 bg-slate-100 dark:bg-zinc-900">
+                                                <img 
+                                                    src={URL.createObjectURL(maintenanceImage)} 
+                                                    alt="Preview" 
+                                                    className="w-full h-full object-cover"
+                                                />
+                                                <button 
+                                                    type="button"
+                                                    onClick={() => setMaintenanceImage(null)}
+                                                    className="absolute top-2 right-2 p-1 bg-black/50 hover:bg-black/70 text-white rounded-full backdrop-blur-sm transition-colors"
+                                                >
+                                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                                                </button>
+                                            </div>
+                                        )}
+                                    </div>
+                                </form>
+                            </div>
+                            <div className="p-5 border-t border-slate-200 dark:border-zinc-800 bg-secondary/50 flex justify-end gap-3">
+                                <button 
+                                    onClick={closeMaintenanceModal}
+                                    className="px-5 py-2.5 rounded-xl text-sm font-bold text-slate-600 dark:text-zinc-400 hover:bg-slate-100 dark:hover:bg-zinc-800 transition-colors"
+                                    disabled={isSubmittingMaintenance}
+                                >
+                                    Cancel
+                                </button>
+                                <button 
+                                    form="maintenanceForm"
+                                    type="submit"
+                                    className="px-5 py-2.5 bg-teal-700 hover:bg-teal-800 text-white rounded-xl text-sm font-bold flex items-center gap-2 transition-colors shadow-sm disabled:opacity-50"
+                                    disabled={isSubmittingMaintenance}
+                                >
+                                    {isSubmittingMaintenance ? 'Submitting...' : 'Submit Request'}
+                                </button>
+                            </div>
+                        </motion.div>
+                    </div>
+                )}
+            </AnimatePresence>
         </motion.div>
     );
 }
