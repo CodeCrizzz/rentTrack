@@ -189,15 +189,15 @@ export default function TenantDashboard() {
             <motion.div variants={itemVariants} className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6 mb-6 shrink-0">
                 {/* Balance Card */}
                 <div 
-                    className="bg-teal-50 dark:bg-teal-500/10 border border-teal-100 dark:border-teal-500/20 rounded-xl p-5 md:p-6 shadow-sm flex flex-col justify-between relative overflow-hidden group hover:shadow-md transition-all h-full"
+                    className="bg-indigo-50 dark:bg-indigo-500/10 border border-indigo-100 dark:border-indigo-500/20 rounded-xl p-5 md:p-6 shadow-sm flex flex-col justify-between relative overflow-hidden group hover:shadow-md transition-all h-full"
                 >
                     <div className="absolute top-1/2 left-1/2 opacity-[0.07] transform -translate-x-1/2 -translate-y-1/2 group-hover:scale-110 group-hover:-rotate-6 transition-all duration-500 pointer-events-none">
-                        <svg className="w-48 h-48 text-teal-600 dark:text-teal-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                        <svg className="w-48 h-48 text-indigo-600 dark:text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
                     </div>
                     <div className="z-10">
                         <div className="flex justify-between items-start mb-3">
-                            <p className="text-sm font-medium text-teal-600 dark:text-teal-400">Total Outstanding</p>
-                            <div className="w-8 h-8 rounded-lg bg-teal-100 dark:bg-teal-500/20 flex items-center justify-center text-teal-600 dark:text-teal-400 shrink-0">
+                            <p className="text-sm font-medium text-indigo-600 dark:text-indigo-400">Total Outstanding</p>
+                            <div className="w-8 h-8 rounded-lg bg-indigo-100 dark:bg-indigo-500/20 flex items-center justify-center text-indigo-600 dark:text-indigo-400 shrink-0">
                                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
                             </div>
                         </div>
@@ -212,8 +212,8 @@ export default function TenantDashboard() {
                         disabled={tenantData.balanceDue === 0}
                         className={`mt-4 w-full py-2 px-4 font-bold rounded-lg transition-colors text-xs md:text-sm flex items-center justify-center gap-2 z-10 relative ${
                             tenantData.balanceDue === 0 
-                            ? 'bg-teal-100/50 dark:bg-teal-900/20 text-teal-500 dark:text-teal-600 cursor-not-allowed border border-teal-200 dark:border-teal-800/50' 
-                            : 'bg-teal-600 hover:bg-teal-700 text-white shadow-sm'
+                            ? 'bg-indigo-100/50 dark:bg-indigo-900/20 text-indigo-500 dark:text-indigo-600 cursor-not-allowed border border-indigo-200 dark:border-indigo-800/50' 
+                            : 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm'
                         }`}
                     >
                         {tenantData.balanceDue === 0 ? 'Account Settled' : 'Make Payment'}
@@ -222,67 +222,76 @@ export default function TenantDashboard() {
 
                 {/* Total Paid Card */}
                 <div 
-                    className="bg-teal-50 dark:bg-teal-500/10 border border-teal-100 dark:border-teal-500/20 rounded-xl p-5 md:p-6 shadow-sm flex flex-col justify-between relative overflow-hidden group cursor-pointer hover:shadow-md transition-all h-full" 
+                    className="bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-100 dark:border-emerald-500/20 rounded-xl p-5 md:p-6 shadow-sm flex flex-col justify-between relative overflow-hidden group cursor-pointer hover:shadow-md transition-all h-full" 
                     onClick={() => router.push('/tenant/payments')}
                 >
                     <div className="absolute top-1/2 left-1/2 opacity-[0.07] transform -translate-x-1/2 -translate-y-1/2 group-hover:scale-110 group-hover:-rotate-6 transition-all duration-500 pointer-events-none">
-                        <svg className="w-48 h-48 text-teal-600 dark:text-teal-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path></svg>
+                        <svg className="w-48 h-48 text-emerald-600 dark:text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path></svg>
                     </div>
                     <div className="z-10">
                         <div className="flex justify-between items-start mb-3">
-                            <p className="text-sm font-medium text-teal-600 dark:text-teal-400">Total Paid</p>
-                            <div className="w-8 h-8 rounded-lg bg-teal-100 dark:bg-teal-500/20 flex items-center justify-center text-teal-600 dark:text-teal-400 shrink-0">
+                            <p className="text-sm font-medium text-emerald-600 dark:text-emerald-400">Total Paid</p>
+                            <div className="w-8 h-8 rounded-lg bg-emerald-100 dark:bg-emerald-500/20 flex items-center justify-center text-emerald-600 dark:text-emerald-400 shrink-0">
                                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path></svg>
                             </div>
                         </div>
                         <div className="flex items-end gap-1 mb-2">
                             <h3 className="text-3xl lg:text-4xl font-black text-slate-900 dark:text-white leading-none">
-                                <span className="text-xl lg:text-2xl mr-1 text-teal-600/50 dark:text-teal-400/50">₱</span>
+                                <span className="text-xl lg:text-2xl mr-1 text-emerald-600/50 dark:text-emerald-400/50">₱</span>
                                 {totalPaid.toLocaleString()}
                             </h3>
                         </div>
                         <p className="text-[10px] md:text-xs font-bold text-slate-600 dark:text-zinc-300">
-                            Sum of recent completed payments
+                            total paid of your rent this year
                         </p>
                     </div>
-                    <div className="text-xs font-bold text-teal-600 dark:text-teal-400 flex items-center gap-1 mt-4 group-hover:translate-x-1 transition-transform z-10 relative">
+                    <div className="text-xs font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-1 mt-4 group-hover:translate-x-1 transition-transform z-10 relative">
                         View Receipts <span aria-hidden="true">&rarr;</span>
                     </div>
                 </div>
 
                 {/* Announcement Card */}
                 <div 
-                    className="bg-teal-50 dark:bg-teal-500/10 border border-teal-100 dark:border-teal-500/20 rounded-xl p-5 md:p-6 shadow-sm flex flex-col justify-between relative overflow-hidden group cursor-pointer hover:shadow-md transition-all h-full" 
+                    className="bg-violet-50 dark:bg-violet-500/10 border border-violet-100 dark:border-violet-500/20 rounded-xl p-5 md:p-6 shadow-sm flex flex-col justify-between relative overflow-hidden group cursor-pointer hover:shadow-md transition-all h-full" 
                     onClick={() => router.push('/tenant/announcements')}
                 >
                     <div className="absolute top-1/2 left-1/2 opacity-[0.07] transform -translate-x-1/2 -translate-y-1/2 group-hover:scale-110 group-hover:-rotate-6 transition-all duration-500 pointer-events-none">
-                        <svg className="w-48 h-48 text-teal-600 dark:text-teal-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <svg className="w-48 h-48 text-violet-600 dark:text-violet-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z" />
                         </svg>
                     </div>
                     <div className="z-10">
                         <div className="flex justify-between items-start mb-3">
-                            <p className="text-sm font-medium text-teal-600 dark:text-teal-400">Announcement</p>
-                            <div className="w-8 h-8 rounded-lg bg-teal-100 dark:bg-teal-500/20 flex items-center justify-center text-teal-600 dark:text-teal-400 shrink-0">
-                                <svg className="w-4 h-4 text-teal-600 dark:text-teal-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <div className="flex items-center gap-2">
+                                <p className="text-sm font-medium text-violet-600 dark:text-violet-400">Announcement</p>
+                                {tenantData.announcements && tenantData.announcements.length > 0 && (
+                                    <span className="px-2 py-0.5 rounded text-xs font-black uppercase bg-emerald-500 text-white shadow-sm tracking-widest leading-none">New</span>
+                                )}
+                            </div>
+                            <div className="w-8 h-8 rounded-lg bg-violet-100 dark:bg-violet-500/20 flex items-center justify-center text-violet-600 dark:text-violet-400 shrink-0">
+                                <svg className="w-4 h-4 text-violet-600 dark:text-violet-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z" />
                                 </svg>
                             </div>
                         </div>
-                        <div className="flex items-center gap-1.5 mb-1">
-                            {tenantData.announcements && tenantData.announcements.length > 0 && (
-                                <span className="px-1.5 py-0.5 rounded text-[9px] font-bold uppercase bg-teal-600 text-white shadow-sm leading-none">New</span>
-                            )}
-                            <h3 className="text-xl md:text-2xl font-black text-slate-900 dark:text-white line-clamp-1">
+                        <div className="flex flex-col gap-1 mb-1">
+                            <h3 className="text-2xl md:text-3xl font-black text-slate-900 dark:text-white line-clamp-1 leading-tight">
                                 {tenantData.announcements && tenantData.announcements.length > 0 ? tenantData.announcements[0].title : 'No Announcements'}
                             </h3>
                         </div>
-                        <p className="text-sm text-slate-600 dark:text-zinc-300 line-clamp-2 mt-1">
+                        <p className="text-base font-medium text-slate-600 dark:text-zinc-300 line-clamp-3 mt-1 leading-relaxed">
                             {tenantData.announcements && tenantData.announcements.length > 0 ? tenantData.announcements[0].content : 'You are all caught up on the latest news.'}
                         </p>
                     </div>
-                    <div className="text-xs font-bold text-teal-600 dark:text-teal-400 flex items-center gap-1 group-hover:translate-x-1 transition-transform mt-4 z-10 relative">
-                        View Announcements <span aria-hidden="true">&rarr;</span>
+                    <div className="flex items-center justify-between mt-4 z-10 relative w-full">
+                        <div className="text-xs font-bold text-violet-600 dark:text-violet-400 flex items-center gap-1 group-hover:translate-x-1 transition-transform">
+                            View Announcements <span aria-hidden="true">&rarr;</span>
+                        </div>
+                        {tenantData.announcements && tenantData.announcements.length > 0 && (
+                            <div className="text-sm font-bold text-slate-500 dark:text-zinc-400 bg-white/50 dark:bg-black/20 px-2 py-1 rounded-md backdrop-blur-sm">
+                                {new Date(tenantData.announcements[0].created_at).toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true })}
+                            </div>
+                        )}
                     </div>
                 </div>
             </motion.div>
