@@ -1,0 +1,225 @@
+================================================================================
+                           RENTTRACK SYSTEM SCOPE
+              Comprehensive Functional & Technical Scope Document
+================================================================================
+
+PROJECT NAME       : RentTrack (RentFlow)
+SYSTEM TYPE        : Full-Stack Boarding House & Rental Property Management System
+VERSION            : 1.0.0
+LAST UPDATED       : October 2026
+TARGET PLATFORMS   : Web (Desktop & Mobile Responsive), Progressive Web App (PWA)
+
+================================================================================
+1. EXECUTIVE SUMMARY & SYSTEM OBJECTIVE
+================================================================================
+RentTrack is an all-in-one property management web platform built specifically 
+for boarding houses, dormitories, and multi-unit residential properties. 
+The system bridges the operational gap between property administrators (landlords/
+property managers) and residents (tenants/boarders) by digitizing and automating:
+  - Room inventory and occupancy tracking
+  - Recurring monthly billing cycles and utility breakdown
+  - Payment collection, proof-of-payment review, and financial reconciliation
+  - Tenant maintenance and repair ticketing
+  - Property-wide announcements and direct messaging
+  - Simulated CCTV / premises security monitoring
+  - Rich real-time analytical dashboards for business health
+
+================================================================================
+2. STAKEHOLDERS & USER ROLES
+================================================================================
+The system enforces strict Role-Based Access Control (RBAC):
+
+[1] PROPERTY ADMINISTRATOR (Landlord / Manager)
+    - Full operational authority over property data, financial records, tenant
+      directory, room inventory, maintenance requests, and notice broadcasts.
+    - Access to advanced analytical KPIs, revenue metrics, and cash flow reports.
+
+[2] RESIDENT / TENANT (Boarder / Renter)
+    - Self-service portal to view tenancy details, select/apply for rooms, view
+      itemized monthly invoices, submit proof of payments, log maintenance tickets,
+      chat with the landlord, and read property announcements.
+
+================================================================================
+3. FUNCTIONAL SCOPE BY MODULE
+================================================================================
+
+--- 3.1 AUTHENTICATION & ACCESS CONTROL ---
+- User Registration & Account Creation (Sign up with personal and contact details).
+- Secure JWT-based Authentication (Token authorization with expiration).
+- Password Hashing & Encryption (bcryptjs).
+- Role verification middleware separating Admin routes (/admin/*) from 
+  Tenant routes (/tenant/*).
+- Dynamic session persistence and route protection.
+
+--- 3.2 ADMIN DASHBOARD & BUSINESS INTELLIGENCE ---
+- Real-time KPI Metric Cards:
+  * Total Rooms, Occupied Units, Available Units, Units under Maintenance.
+  * Total Tenants, Active Tenants, Pending Assignment, Inactive Tenants.
+  * Monthly Income, Pending Dues, Overdue Receivables, Revenue Trends.
+- Financial Analytics & Charts (Powered by Recharts):
+  * Cash flow trends comparing billed vs. collected revenue.
+  * Historical revenue tracking and monthly revenue breakdown.
+  * Collection efficiency and delinquency rates.
+- Operational Watchlists:
+  * Pending tenant approvals and room allocations.
+  * Expiring lease contracts with days-left countdown.
+  * Overdue accounts requiring collection follow-up.
+  * Pending payment verifications awaiting review.
+  * Live feed of recent activities, new messages, and open repair requests.
+
+--- 3.3 ROOM & INVENTORY MANAGEMENT ---
+- Unit Inventory Overview:
+  * Room numbers, unit types, capacity, current occupants, and floor levels.
+  * Pricing configuration: Monthly base rental rates per room.
+  * Amenity tagging (e.g., Air conditioning, private bath, Wi-Fi, balcony).
+- Status Lifecycle Management:
+  * "Available" (Vacant)
+  * "Partially Occupied" (Dormitory/bedspace sharing mode)
+  * "Occupied" (At full capacity)
+  * "Maintenance" (Temporarily offline for repairs)
+- CRUD Operations: Create new rooms, update unit specs/pricing, delete units.
+- Direct tenant assignment to specific rooms.
+
+--- 3.4 TENANT LIFECYCLE MANAGEMENT ---
+- Directory of all registered tenants with detailed profiles:
+  * Full name, email address, phone number, and emergency contact details.
+  * Assigned room number and occupancy status.
+  * Lease contract start and end dates.
+- Status Lifecycle:
+  * "Pending Room Assignment" (New signups awaiting placement or approval)
+  * "Active" (Currently residing in an assigned room)
+  * "Inactive" (Moved out or suspended)
+- Tenant profile modification, room reassignment, and account termination.
+
+--- 3.5 AUTOMATED BILLING & INVOICING ENGINE ---
+- Automated Recurring Billing:
+  * Scheduled background cron engine (node-cron) executing monthly generation.
+  * Automatic generation of itemized bills for all active residents.
+- Itemized Cost Breakdown:
+  * Base Rent amount
+  * Water charges
+  * Electricity charges
+  * Ancillary / miscellaneous fees
+  * Total amount calculated dynamically
+- Billing Lifecycle & Status Tracking:
+  * "Unpaid" (New invoice generated, awaiting payment)
+  * "Partial" (Partial payment verified, remaining balance tracked)
+  * "Paid" (Balance cleared)
+  * "Overdue" (Due date lapsed without settlement)
+- Administrative manual bill creation, modification, balance recalculation, and deletion.
+
+--- 3.6 PAYMENTS & FINANCIAL RECONCILIATION ---
+- Tenant Payment Submission:
+  * Support for modern payment channels (GCash, Maya, Bank Transfer, Cash).
+  * Transaction reference number submission.
+  * Proof-of-payment receipt upload (JPEG/PNG/PDF via Multer).
+- Payment Verification Workflow:
+  * "Pending Verification": Uploaded receipts queued for admin validation.
+  * Admin Receipt Inspector: Image preview, verification of amount & reference.
+  * Approval Action: Automatically updates bill balance and marks as Paid/Partial.
+  * Rejection Action: Leaves bill unpaid and notifies tenant.
+- Payment History & Audit Ledger:
+  * Comprehensive payment logs with timestamps, methods, and receipt records.
+
+--- 3.7 MAINTENANCE & REPAIR TICKETING ---
+- Tenant Request Submission:
+  * Category classification (Plumbing, Electrical, Carpentry, Appliance, Internet, General).
+  * Priority rating (Low, Medium, High, Emergency).
+  * Issue description and photo/attachment upload.
+- Request Status Lifecycle:
+  * "Pending" -> "In Progress" -> "Completed" -> "Cancelled"
+- Admin Resolution Desk:
+  * Update ticket progress, assign technician status, mark resolved.
+  * Tenant cancellation ability for pending tickets.
+
+--- 3.8 PREMISES CCTV & SECURITY MONITORING ---
+- Multi-channel Virtual Video Monitoring Matrix:
+  * 12 distinct surveillance feeds (Main Gate, Lobby, Parking, Hallways, Rooftop,
+    Basement, Elevators, Cafeteria, Emergency Exits, Loading Dock).
+- Interactive Grid View Switcher (2-column, 3-column, or 4-column layout).
+- Fullscreen Camera Inspection modal with simulated live timecode, FPS, and resolution.
+- Live camera status indicators (Online, Offline, Signal Degradation).
+
+--- 3.9 INTERNAL MESSAGING & CHAT ---
+- Secure one-to-one messaging channel between Tenants and Administrators.
+- Conversation indexing, message timestamps, and unread notification badges.
+- Tenant quick-inquiry and issue clarification platform.
+
+--- 3.10 ANNOUNCEMENTS & DIGITAL BULLETIN BOARD ---
+- Administrative notice broadcasting:
+  * Priority flags (Standard, Important, Urgent).
+  * Target audience segmentation (All Tenants, Specific Blocks/Floors).
+- Real-time display on Tenant Dashboard and dedicated Announcement feed.
+
+--- 3.11 TENANT SELF-SERVICE PORTAL ---
+- Tenant Dashboard:
+  * Live animated balance counter with currency formatting.
+  * Current room details and occupancy summary.
+  * Recent payment transactions and upcoming due date alert.
+  * Quick links to Pay Rent, Submit Request, and Message Admin.
+- Room Selection Module:
+  * Browse available rooms with photos, amenities, and rate details.
+  * Request/claim an available room upon initial registration.
+- Profile & Security:
+  * Manage contact info, phone, and emergency contact details.
+  * Change password with secure validation.
+
+================================================================================
+4. TECHNICAL ARCHITECTURE & STACK
+================================================================================
+
+--- 4.1 FRONTEND ---
+- Framework        : Next.js 15 (React 19, TypeScript, App Router architecture)
+- Styling          : Tailwind CSS v4, Custom CSS Design System
+- Animations       : Framer Motion (page transitions, micro-animations, counters)
+- Visualizations   : Recharts (Composed charts, bar charts, area charts)
+- Theme Engine     : next-themes (Seamless Dark Mode and Light Mode support)
+- Icons            : Lucide React
+- Networking       : Axios with centralized API client and bearer token interception
+- PWA Readiness    : Service Worker (sw.ts) and Web App Manifest (manifest.ts)
+
+--- 4.2 BACKEND API ---
+- Runtime & Server : Node.js with Express.js v5 RESTful API
+- Database Driver  : pg (node-postgres connection pool with explicit schema)
+- Database         : PostgreSQL (rentTrack_db, rentTrack_schema)
+- Authentication   : jsonwebtoken (JWT) + bcryptjs
+- File Uploads     : Multer disk storage (/uploads/payments, /uploads/requests)
+- Scheduled Tasks  : node-cron (Automated monthly billing job)
+- Security         : CORS, Route protection middleware, role guard middleware
+
+--- 4.3 DATABASE SCHEMA ENTITIES ---
+- users         : Tenant and admin credentials, profiles, status, assigned room_id
+- rooms         : Room inventory, occupancy numbers, rate, amenities, status
+- bills         : Invoices, breakdown (rent/utilities/fees), balance, due date, status
+- payments      : Payment records, proof image paths, reference IDs, verification status
+- requests      : Maintenance requests, issue category, priority, attachments, status
+- messages      : Direct communications between tenants and admins, read status
+- announcements : Broadcast announcements, priority, creation timestamp
+
+================================================================================
+5. NON-FUNCTIONAL REQUIREMENTS & QUALITY ATTRIBUTES
+================================================================================
+- Visual Excellence & Aesthetics: High-end UI design with glassmorphic cards,
+  dark-mode optimization, fluid transitions, and clear data typography.
+- Mobile Responsiveness: Adaptable layouts optimized across smartphones, tablets,
+  and desktop displays.
+- Data Consistency & Security: Passwords stored as irreversible hashes; all
+  financial transactions linked to explicit bill IDs and audit timestamps.
+- Resilience & Offline Capability: PWA manifest allows app installation on mobile 
+  homescreens; graceful error handling on API endpoints.
+
+================================================================================
+6. CURRENT BOUNDARIES & OUT-OF-SCOPE ITEMS
+================================================================================
+The following items are outside the current release scope but serve as candidates
+for future roadmap iterations:
+- Direct Automated Payment Gateway Webhooks (e.g., Stripe, PayMongo, Xendit API);
+  current scope uses user-submitted receipt verification.
+- SMS / Twilio Gateway Notifications (current notifications are in-app).
+- Physical Smart Lock / IoT Hardware Integration for keyless room entry.
+- Multi-property / Multi-landlord SaaS Tenancy (current deployment is single-property).
+- Automated Utility Meter OCR or IoT Sub-metering for automatic water/electric reading.
+
+================================================================================
+                             END OF SCOPE DOCUMENT
+================================================================================
