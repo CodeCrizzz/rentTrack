@@ -86,7 +86,7 @@ export default function AdminChat() {
         if (scrollRef.current) {
             scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
         }
-    }, [messages]);
+    }, [messages.length]);
 
     const handleSend = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -129,7 +129,7 @@ export default function AdminChat() {
 
     if (isLoading) {
         return (
-            <div className="w-full h-[calc(100vh-6rem)] md:h-[calc(100vh-8rem)] flex border border-slate-200 dark:border-zinc-800 rounded-2xl overflow-hidden bg-transparent mb-6">
+            <div className="w-full h-[calc(100vh-6rem)] md:h-[calc(100vh-8rem)] flex border border-slate-200 dark:border-zinc-800 rounded-2xl overflow-hidden bg-transparent">
                 {/* Left Pane Skeleton */}
                 <div className="w-full md:w-[340px] bg-transparent border-r border-slate-200 dark:border-zinc-800 flex flex-col shrink-0">
                     <div className="flex justify-between items-center p-6">
@@ -188,7 +188,7 @@ export default function AdminChat() {
     }
 
     return (
-        <div className="w-full h-[calc(100vh-6rem)] md:h-[calc(100vh-8rem)] flex border border-slate-200 dark:border-zinc-800 rounded-2xl overflow-hidden bg-transparent mb-6">
+        <div className="w-full h-[calc(100vh-6.5rem)] md:h-[calc(100vh-7.5rem)] flex border border-slate-200 dark:border-zinc-800 rounded-2xl overflow-hidden bg-transparent">
             
             {/* Left Pane: Chat List */}
             <div className="w-full md:w-[340px] bg-transparent border-r border-slate-200 dark:border-zinc-800 flex flex-col shrink-0">
@@ -248,7 +248,7 @@ export default function AdminChat() {
                                                 {conv.last_message || 'No messages'}
                                             </p>
                                             {unread > 0 && (
-                                                <span className="w-4 h-4 bg-[#0F9D83] rounded-full flex items-center justify-center text-[9px] text-white font-bold shrink-0">
+                                                <span className="w-4 h-4 bg-teal-700 rounded-full flex items-center justify-center text-[9px] text-white font-bold shrink-0">
                                                     {unread}
                                                 </span>
                                             )}
@@ -268,10 +268,10 @@ export default function AdminChat() {
                         {/* Chat Header */}
                         <div className="flex justify-between items-center p-6 border-b border-slate-50 dark:border-zinc-800/50 shrink-0">
                             <div className="flex items-center gap-3">
-                                <img src={`https://ui-avatars.com/api/?name=${encodeURIComponent(selectedTenant.name)}&background=0F9D83&color=fff`} alt={selectedTenant.name} className="w-10 h-10 rounded-full object-cover shadow-sm" />
+                                <img src={`https://ui-avatars.com/api/?name=${encodeURIComponent(selectedTenant.name)}&background=0F766E&color=fff`} alt={selectedTenant.name} className="w-10 h-10 rounded-full object-cover shadow-sm" />
                                 <div className="flex flex-col">
                                     <h3 className="font-bold text-slate-900 dark:text-white text-base leading-tight">{selectedTenant.name}</h3>
-                                    <span className="text-xs text-[#0F9D83] dark:text-teal-400 font-medium mt-0.5">
+                                    <span className="text-xs text-teal-700 dark:text-teal-500 font-medium mt-0.5">
                                         Room {selectedTenant.room_number || 'N/A'} • {selectedTenant.is_active ? 'Active Now' : 'Offline'}
                                     </span>
                                 </div>
@@ -298,7 +298,7 @@ export default function AdminChat() {
                                     {messages.map((msg, index) => {
                                         const isFromAdmin = msg.sender_type === 'admin' || msg.sender_id === 1;
                                         const timeStr = new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-                                        const avatarUrl = isFromAdmin ? null : `https://ui-avatars.com/api/?name=${encodeURIComponent(selectedTenant.name)}&background=0F9D83&color=fff`;
+                                        const avatarUrl = isFromAdmin ? null : `https://ui-avatars.com/api/?name=${encodeURIComponent(selectedTenant.name)}&background=0F766E&color=fff`;
                                         
                                         // Mocking an attachment for visual parity with the design screenshot
                                         const isMockAttachment = msg.message.toLowerCase().includes('gcash') || msg.message.toLowerCase().includes('receipt');
@@ -306,36 +306,53 @@ export default function AdminChat() {
                                         if (isFromAdmin) {
                                             return (
                                                 <div key={index} className="flex flex-col items-end">
-                                                    <div className="bg-[#0F9D83] text-white p-4 rounded-2xl rounded-tr-sm text-sm max-w-[75%] shadow-sm leading-relaxed">
+                                                    <div className="bg-teal-700 text-white p-4 rounded-2xl rounded-tr-sm text-sm max-w-[75%] shadow-sm leading-relaxed">
                                                         {msg.message}
                                                     </div>
                                                     <div className="flex items-center justify-end gap-2 mt-1 mr-1">
                                                         <span className="text-[10px] text-slate-400 dark:text-zinc-500">{timeStr}</span>
-                                                        <span className="text-[10px] text-[#0F9D83] dark:text-teal-400 font-bold">{msg.status === 'read' ? 'Seen' : 'Sent'}</span>
+                                                        <span className="text-[10px] text-teal-700 dark:text-teal-500 font-bold">{msg.status === 'read' ? 'Seen' : 'Sent'}</span>
                                                     </div>
                                                 </div>
                                             );
                                         } else {
                                             return (
-                                                <div key={index} className="flex items-start gap-3">
-                                                    <img src={avatarUrl!} alt={selectedTenant.name} className="w-8 h-8 rounded-full object-cover shrink-0 mt-1" />
-                                                    <div className="flex flex-col items-start">
-                                                        {isMockAttachment ? (
-                                                            <div className="bg-slate-100 dark:bg-zinc-800/60 border border-slate-200 dark:border-zinc-700 p-3 rounded-2xl rounded-tl-sm w-[280px] flex items-center gap-4 mb-1">
-                                                                <div className="w-14 h-14 bg-white dark:bg-zinc-900 rounded-lg overflow-hidden shrink-0">
-                                                                    <img src="/images/leaking-pipe.jpg" alt="Attachment" className="w-full h-full object-cover opacity-80" />
+                                                <div key={index} className="flex w-full justify-start">
+                                                    <div className="flex flex-col max-w-[85%] sm:max-w-[70%] lg:max-w-[60%] items-start group">
+                                                        <div className="relative flex items-end gap-2">
+                                                            <img src={avatarUrl!} alt={selectedTenant.name} className="w-8 h-8 rounded-full object-cover shrink-0" />
+                                                            {isMockAttachment ? (
+                                                                <div className="px-3 py-3 text-sm leading-relaxed bg-slate-100 dark:bg-zinc-800 text-slate-800 dark:text-zinc-200 rounded-2xl rounded-bl-sm border border-slate-200 dark:border-zinc-700 w-[280px] flex items-center gap-4">
+                                                                    <div className="w-14 h-14 bg-white dark:bg-zinc-900 rounded-lg overflow-hidden shrink-0">
+                                                                        <img src="/images/leaking-pipe.jpg" alt="Attachment" className="w-full h-full object-cover opacity-80" />
+                                                                    </div>
+                                                                    <div className="flex flex-col overflow-hidden">
+                                                                        <span className="text-xs font-bold text-slate-800 dark:text-zinc-200 truncate">Gcash_Receipt_Oct.jpg</span>
+                                                                        <span className="text-[10px] text-slate-400 dark:text-zinc-500 mt-1">482 KB • Click to zoom</span>
+                                                                    </div>
                                                                 </div>
-                                                                <div className="flex flex-col overflow-hidden">
-                                                                    <span className="text-xs font-bold text-slate-800 dark:text-zinc-200 truncate">Gcash_Receipt_Oct.jpg</span>
-                                                                    <span className="text-[10px] text-slate-400 dark:text-zinc-500 mt-1">482 KB • Click to zoom</span>
+                                                            ) : (
+                                                                <div className="px-4 py-3 text-sm leading-relaxed bg-slate-100 dark:bg-zinc-800 text-slate-800 dark:text-zinc-200 rounded-2xl rounded-bl-sm border border-slate-200 dark:border-zinc-700">
+                                                                    {msg.message.startsWith('[MAINTENANCE_REQUEST]') ? (
+                                                                        <div className="flex flex-col gap-2 min-w-[200px]">
+                                                                            <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400 border-b border-slate-200 dark:border-zinc-700 pb-2 mb-1">
+                                                                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+                                                                                Maintenance Request
+                                                                            </div>
+                                                                            <span className="font-semibold text-base">{msg.message.replace('[MAINTENANCE_REQUEST] ', '')}</span>
+                                                                            <a href="/admin/requests" className="inline-flex items-center gap-1 text-xs font-medium mt-1 text-slate-500 hover:text-slate-900 dark:hover:text-white transition-colors">
+                                                                                View in Maintenance <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7"></path></svg>
+                                                                            </a>
+                                                                        </div>
+                                                                    ) : (
+                                                                        msg.message
+                                                                    )}
                                                                 </div>
-                                                            </div>
-                                                        ) : (
-                                                            <div className="bg-slate-100 dark:bg-zinc-800/60 text-slate-800 dark:text-zinc-200 p-4 rounded-2xl rounded-tl-sm text-sm max-w-[75%] leading-relaxed">
-                                                                {msg.message}
-                                                            </div>
-                                                        )}
-                                                        <span className="text-[10px] text-slate-400 dark:text-zinc-500 mt-1 ml-1">{timeStr}</span>
+                                                            )}
+                                                        </div>
+                                                        <div className="flex items-center gap-1.5 mt-1.5 text-xs text-slate-500 dark:text-zinc-400 justify-start pl-11">
+                                                            <span>{timeStr}</span>
+                                                        </div>
                                                     </div>
                                                 </div>
                                             );
