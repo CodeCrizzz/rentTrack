@@ -27,6 +27,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     const [adminEmail, setAdminEmail] = useState('admin@renttrack.com');
     const [unreadCount, setUnreadCount] = useState(0);
     const [pendingTenantsCount, setPendingTenantsCount] = useState(0);
+    const [pendingPaymentsCount, setPendingPaymentsCount] = useState(0);
     const [showAllNotifications, setShowAllNotifications] = useState(false);
     const [isAllRead, setIsAllRead] = useState(true);
     const [refreshKey, setRefreshKey] = useState(0);
@@ -61,6 +62,22 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         }
     };
 
+    const fetchPendingPaymentsCount = async () => {
+        try {
+            const { data } = await api.get('/admin/bills/payments/pending-count');
+            if (data && typeof data.pendingCount !== 'undefined') {
+                setPendingPaymentsCount(data.pendingCount);
+            }
+        } catch (error: any) {
+            if (error.code === 'ERR_NETWORK') {
+                console.warn('Network error: Backend might be unreachable', error.message);
+            } else if (error.response?.status !== 401) {
+                console.warn('Failed to fetch pending payments count', error);
+            }
+            setPendingPaymentsCount(0);
+        }
+    };
+
     useEffect(() => {
         const options: Intl.DateTimeFormatOptions = { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long' };
         setCurrentDate(new Date().toLocaleDateString(undefined, options));
@@ -78,6 +95,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         const fetchData = () => {
             fetchUnreadCount();
             fetchPendingTenantCount();
+            fetchPendingPaymentsCount();
         };
 
         fetchData();
@@ -88,18 +106,20 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     useEffect(() => {
         const readUnread = parseInt(localStorage.getItem('admin_read_unreadCount') || '0');
         const readPending = parseInt(localStorage.getItem('admin_read_pendingCount') || '0');
+        const readPayments = parseInt(localStorage.getItem('admin_read_paymentsCount') || '0');
         
-        if (unreadCount > readUnread || pendingTenantsCount > readPending) {
+        if (unreadCount > readUnread || pendingTenantsCount > readPending || pendingPaymentsCount > readPayments) {
             setIsAllRead(false);
         } else {
             setIsAllRead(true);
         }
-    }, [unreadCount, pendingTenantsCount]);
+    }, [unreadCount, pendingTenantsCount, pendingPaymentsCount]);
 
     const handleMarkAllRead = () => {
         setIsAllRead(true);
         localStorage.setItem('admin_read_unreadCount', unreadCount.toString());
         localStorage.setItem('admin_read_pendingCount', pendingTenantsCount.toString());
+        localStorage.setItem('admin_read_paymentsCount', pendingPaymentsCount.toString());
     };
 
     const handleLogout = () => {
@@ -132,6 +152,10 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         if (item.name === 'Chat with Tenants' && unreadCount > 0) {
             badgeCount = unreadCount;
             badgeColor = "rose";
+        }
+        if (item.name === 'Bills and Payments' && pendingPaymentsCount > 0) {
+            badgeCount = pendingPaymentsCount;
+            badgeColor = "blue";
         }
 
         return {
@@ -195,6 +219,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                                     setRefreshKey(prev => prev + 1);
                                     fetchUnreadCount();
                                     fetchPendingTenantCount();
+                                    fetchPendingPaymentsCount();
                                 }} 
                                 className="group p-2 text-slate-500 hover:text-slate-900 dark:text-zinc-400 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/5 rounded-full transition-colors outline-none"
                                 title="Refresh Page"
@@ -205,11 +230,14 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                             <DropdownMenu>
                                 <DropdownMenuTrigger className="group relative p-2 text-slate-500 hover:text-slate-900 dark:text-zinc-400 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/5 rounded-full transition-colors outline-none">
                                     <Bell className="w-5 h-5 group-hover:rotate-12 group-active:-rotate-12 group-active:scale-90 transition-all duration-200 origin-top" strokeWidth={2} />
-                                    {(!isAllRead && (unreadCount > 0 || pendingTenantsCount > 0)) && (
-                                        <span className="absolute -top-1 -right-1 bg-rose-500 text-white text-[10px] font-bold px-1 min-w-[20px] h-[20px] flex items-center justify-center rounded-full border-2 border-white dark:border-[#0a0a0a]">
-                                            {(unreadCount + pendingTenantsCount) > 99 ? '99+' : (unreadCount + pendingTenantsCount)}
-                                        </span>
-                                    )}
+                                    {(!isAllRead && (unreadCount > 0 || pendingTenantsCount > 0 || pendingPaymentsCount > 0)) && (() => {
+                                        const categoriesCount = (unreadCount > 0 ? 1 : 0) + (pendingTenantsCount > 0 ? 1 : 0) + (pendingPaymentsCount > 0 ? 1 : 0);
+                                        return (
+                                            <span className="absolute -top-1 -right-1 bg-rose-500 text-white text-[10px] font-bold px-1 min-w-[20px] h-[20px] flex items-center justify-center rounded-full border-2 border-white dark:border-[#0a0a0a]">
+                                                {categoriesCount}
+                                            </span>
+                                        );
+                                    })()}
                                 </DropdownMenuTrigger>
                                 <DropdownMenuContent align="end" className="w-80 p-0 border border-slate-200 dark:border-zinc-800 rounded-xl overflow-hidden shadow-xl bg-card">
                                     <div className="flex items-center justify-between p-4 border-b border-slate-100 dark:border-zinc-800">
@@ -223,9 +251,15 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                                             </button>
                                         </div>
                                     </div>
-                                    <div className={`overflow-y-auto transition-all duration-300 ease-in-out ${showAllNotifications ? 'max-h-[60vh]' : 'max-h-[150px]'}`}>
-                                        {(!isAllRead && (unreadCount > 0 || pendingTenantsCount > 0)) ? (
+                                    <div className={`transition-all duration-300 ease-in-out ${showAllNotifications ? 'max-h-[800px] overflow-y-auto' : 'max-h-[400px] overflow-hidden'}`}>
+                                        {(!isAllRead && (unreadCount > 0 || pendingTenantsCount > 0 || pendingPaymentsCount > 0)) ? (
                                             <div className="flex flex-col">
+                                                {pendingPaymentsCount > 0 && (
+                                                    <div className="p-4 border-b border-slate-100 dark:border-zinc-800 hover:bg-slate-50 dark:hover:bg-white/[0.02] transition-colors cursor-pointer" onClick={() => router.push('/admin/billing')}>
+                                                        <p className="text-sm font-semibold text-slate-800 dark:text-white">New Payments</p>
+                                                        <p className="text-xs text-slate-500 dark:text-zinc-400 mt-1">You have {pendingPaymentsCount} new payment transaction{pendingPaymentsCount > 1 ? 's' : ''} to verify.</p>
+                                                    </div>
+                                                )}
                                                 {pendingTenantsCount > 0 && (
                                                     <div className="p-4 border-b border-slate-100 dark:border-zinc-800 hover:bg-slate-50 dark:hover:bg-white/[0.02] transition-colors cursor-pointer" onClick={() => router.push('/admin/tenants')}>
                                                         <p className="text-sm font-semibold text-slate-800 dark:text-white">Pending Registrations</p>
