@@ -50,7 +50,7 @@ const getAllRequests = async (req, res) => {
     try {
         const requests = await db.query(`
             SELECT 
-                r.id, r.title, r.description, r.category, r.priority, r.status, r.created_at, r.assigned_to, r.admin_notes, r.scheduled_date, r.date_resolved,
+                r.id, r.title, r.description, r.category, r.priority, r.status, r.created_at, r.assigned_to, r.admin_notes, r.scheduled_date, r.date_resolved, r.attachment_url,
                 u.name as tenant_name,
                 rm.room_number
             FROM requests r
@@ -141,10 +141,29 @@ const cancelRequest = async (req, res) => {
     }
 };
 
+// @desc    Delete a maintenance request
+// @route   DELETE /api/requests/:id
+// @access  Admin
+const deleteRequest = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const result = await db.query('DELETE FROM requests WHERE id = $1 RETURNING *', [id]);
+        if (result.rowCount === 0) {
+            return res.status(404).json({ message: 'Request not found' });
+        }
+        res.status(200).json({ message: 'Request deleted successfully' });
+    } catch (error) {
+        console.error('Error deleting request:', error);
+        res.status(500).json({ message: 'Server error while deleting request' });
+    }
+};
+
 module.exports = {
     createRequest,
     getMyRequests,
     getAllRequests,
     updateRequest,
-    cancelRequest
+    cancelRequest,
+    deleteRequest
 };
+
