@@ -12,6 +12,7 @@ const {
     createAnnouncement,
     deleteAnnouncement
 } = require('../controllers/adminController');
+const { updateRequest, deleteRequest } = require('../controllers/requestController');
 
 const adminOnly = (req, res, next) => {
     if (req.user && req.user.role === 'admin') {
@@ -39,6 +40,8 @@ router.delete('/rooms/:id', deleteRoom);
 
 router.get('/payments', getAllPayments);
 router.get('/requests', getAllRequests);
+router.put('/requests/:id', updateRequest);
+router.delete('/requests/:id', deleteRequest);
 
 router.get('/chat/conversations', getConversations);
 router.get('/chat/unread', getUnreadCount);
