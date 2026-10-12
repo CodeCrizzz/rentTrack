@@ -6,7 +6,8 @@ const {
     getMyRequests, 
     getAllRequests, 
     updateRequest,
-    cancelRequest
+    cancelRequest,
+    deleteRequest
 } = require('../controllers/requestController');
 
 const multer = require('multer');
@@ -40,5 +41,6 @@ router.put('/:id/cancel', cancelRequest);
 // Admin Routes
 router.get('/', getAllRequests);
 router.put('/:id', updateRequest);
+router.delete('/:id', deleteRequest);
 
 module.exports = router;
