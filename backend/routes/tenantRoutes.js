@@ -5,7 +5,8 @@ const {
     getTenantDashboard, getTenantProfile, updateTenantProfile, updateTenantPassword,
     getTenantPayments, getCurrentBill, submitTenantPayment,
     getTenantMessages, sendTenantMessage, getUnreadCount,
-    getTenantRooms, chooseRoom, getAnnouncements
+    getTenantRooms, chooseRoom, getAnnouncements,
+    getTenantNotifications, markNotificationRead, markAllNotificationsRead
 } = require('../controllers/tenantController');
 
 const multer = require('multer');
@@ -45,6 +46,10 @@ router.post('/rooms/choose', chooseRoom);
 router.get('/chat/unread', getUnreadCount);
 router.get('/chat', getTenantMessages);
 router.post('/chat', sendTenantMessage);
+
+router.get('/notifications', getTenantNotifications);
+router.post('/notifications/read-all', markAllNotificationsRead);
+router.patch('/notifications/:id/read', markNotificationRead);
 
 router.get('/announcements', getAnnouncements);
 
