@@ -12,7 +12,8 @@ const {
     getPendingPayments,
     getPendingPaymentsCount,
     verifyPayment,
-    getAllPayments
+    getAllPayments,
+    triggerPaymentReminders
 } = require('../controllers/billingController');
 
 const adminOnly = (req, res, next) => {
@@ -27,6 +28,7 @@ router.use(protect);
 router.use(adminOnly);
 
 router.post('/generate', generateMonthlyBills);
+router.post('/reminders', triggerPaymentReminders);
 
 router.get('/payments', getAllPayments);
 router.get('/payments/pending', getPendingPayments);
