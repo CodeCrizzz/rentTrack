@@ -31,9 +31,11 @@ export function NavMain({
       </SidebarGroupLabel>
       <SidebarMenu className="gap-1.5">
         {items.map((item) => {
-          let badgeClasses = "bg-slate-500 text-white"
+          let badgeClasses = "bg-rose-500 text-white"
           if (item.badgeColor === "rose") badgeClasses = "bg-rose-500 text-white"
           if (item.badgeColor === "amber") badgeClasses = "bg-amber-500 text-amber-950 dark:text-amber-50"
+          if (item.badgeColor === "blue") badgeClasses = "bg-blue-500 text-white"
+          if (item.badgeColor === "indigo") badgeClasses = "bg-indigo-500 text-white"
           
           return (
             <SidebarMenuItem key={item.title}>
