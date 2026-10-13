@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import { User, Mail, Phone, MapPin, Edit3, Save, Camera } from 'lucide-react';
 
 export default function AdminProfilePage() {
+    const [isLoading, setIsLoading] = useState(true);
     const [isEditing, setIsEditing] = useState(false);
     const [profile, setProfile] = useState({
         name: 'Admin',
@@ -13,6 +14,7 @@ export default function AdminProfilePage() {
     });
     
     useEffect(() => {
+        const timer = setTimeout(() => setIsLoading(false), 200);
         const userStr = localStorage.getItem('user');
         if (userStr) {
             const user = JSON.parse(userStr);
@@ -24,6 +26,7 @@ export default function AdminProfilePage() {
                 address: user.address || prev.address
             }));
         }
+        return () => clearTimeout(timer);
     }, []);
 
     const [editForm, setEditForm] = useState(profile);
@@ -38,6 +41,54 @@ export default function AdminProfilePage() {
             localStorage.setItem('user', JSON.stringify({ ...user, ...editForm }));
         }
     };
+
+    if (isLoading) {
+        return (
+            <div className="max-w-4xl mx-auto space-y-6 pb-12 animate-pulse">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <div>
+                        <div className="h-8 w-44 bg-slate-200 dark:bg-zinc-800 rounded-lg"></div>
+                        <div className="h-4 w-72 bg-slate-200 dark:bg-zinc-800 rounded mt-2"></div>
+                    </div>
+                    <div className="h-9 w-28 bg-slate-200 dark:bg-zinc-800 rounded-xl"></div>
+                </div>
+
+                <div className="bg-card rounded-3xl border border-slate-200 dark:border-zinc-800 p-8 shadow-sm relative overflow-hidden">
+                    <div className="absolute top-0 left-0 w-full h-32 bg-slate-100 dark:bg-zinc-800/40 z-0"></div>
+                    <div className="relative z-10 flex flex-col sm:flex-row items-center sm:items-end gap-6 mt-12 mb-8">
+                        <div className="w-24 h-24 sm:w-32 sm:h-32 rounded-full border-4 border-white dark:border-[#0a0a0a] bg-slate-200 dark:bg-zinc-800 shrink-0"></div>
+                        <div className="text-center sm:text-left flex-1 space-y-2">
+                            <div className="h-7 w-48 bg-slate-200 dark:bg-zinc-800 rounded-md mx-auto sm:mx-0"></div>
+                            <div className="h-4 w-28 bg-slate-200 dark:bg-zinc-800 rounded mx-auto sm:mx-0"></div>
+                        </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8 relative z-10 pt-4">
+                        <div className="space-y-6">
+                            <div className="space-y-2">
+                                <div className="h-3 w-24 bg-slate-200 dark:bg-zinc-800 rounded"></div>
+                                <div className="h-10 w-full bg-slate-50 dark:bg-zinc-900 rounded-xl border border-slate-200 dark:border-zinc-800"></div>
+                            </div>
+                            <div className="space-y-2">
+                                <div className="h-3 w-28 bg-slate-200 dark:bg-zinc-800 rounded"></div>
+                                <div className="h-10 w-full bg-slate-50 dark:bg-zinc-900 rounded-xl border border-slate-200 dark:border-zinc-800"></div>
+                            </div>
+                        </div>
+                        <div className="space-y-6">
+                            <div className="space-y-2">
+                                <div className="h-3 w-32 bg-slate-200 dark:bg-zinc-800 rounded"></div>
+                                <div className="h-10 w-full bg-slate-50 dark:bg-zinc-900 rounded-xl border border-slate-200 dark:border-zinc-800"></div>
+                            </div>
+                            <div className="space-y-2">
+                                <div className="h-3 w-20 bg-slate-200 dark:bg-zinc-800 rounded"></div>
+                                <div className="h-20 w-full bg-slate-50 dark:bg-zinc-900 rounded-xl border border-slate-200 dark:border-zinc-800"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div className="max-w-4xl mx-auto space-y-6 pb-12">
