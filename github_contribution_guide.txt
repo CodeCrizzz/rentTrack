@@ -1,0 +1,110 @@
+================================================================================
+HOW TO GET PERCENTAGES IN CODE REVIEW, ISSUES, AND PULL REQUESTS ON GITHUB
+================================================================================
+
+1. HOW THE GITHUB CONTRIBUTION CHART WORKS
+--------------------------------------------------------------------------------
+The 4-axis radar chart on your GitHub profile shows the percentage distribution 
+of your total contributions across 4 categories:
+
+   - Commits       (Left axis)
+   - Code Review   (Top axis)
+   - Issues        (Right axis)
+   - Pull Requests (Bottom axis)
+
+Formula used by GitHub:
+  Percentage = (Category Count / Total Contributions) * 100%
+
+Right now, your chart shows "100% Commits" because all your work was committed 
+and pushed directly to the main branch without using branches, Pull Requests, 
+Issues, or Code Reviews.
+
+
+================================================================================
+2. HOW TO INCREASE EACH CATEGORY
+================================================================================
+
+--------------------------------------------------------------------------------
+A. HOW TO GET PULL REQUESTS (PRs) PERCENTAGE:
+--------------------------------------------------------------------------------
+Instead of pushing directly to "main", adopt a branch-and-PR workflow:
+
+Step 1: Create and switch to a new feature branch locally:
+        git checkout -b feature/room-amenities-update
+
+Step 2: Make your changes and commit them:
+        git add .
+        git commit -m "feat: update room inclusions"
+
+Step 3: Push the feature branch to GitHub:
+        git push -u origin feature/room-amenities-update
+
+Step 4: Go to your repository on GitHub (https://github.com/CodeCrizzz/rentTrack).
+        Click "Compare & pull request", add a title/description, and click 
+        "Create pull request".
+
+Step 5: Merge the pull request into "main" on GitHub.
+
+Result: Every opened Pull Request adds to your "Pull requests" percentage.
+
+
+--------------------------------------------------------------------------------
+B. HOW TO GET ISSUES PERCENTAGE:
+--------------------------------------------------------------------------------
+Step 1: Go to your repository on GitHub (or any open-source repository).
+Step 2: Click the "Issues" tab at the top.
+Step 3: Click the green "New issue" button.
+Step 4: Title the issue (e.g., "Add SMS notification service for rent reminders") 
+        and provide details, labels, or milestones.
+Step 5: Click "Submit new issue".
+
+Result: Each new issue you create counts toward your "Issues" percentage.
+Tip: You can use issues to track bugs, roadmap features, or improvements.
+
+
+--------------------------------------------------------------------------------
+C. HOW TO GET CODE REVIEW PERCENTAGE:
+--------------------------------------------------------------------------------
+To earn Code Review points, you must formally submit a review on a Pull Request.
+
+Step 1: Open any Pull Request (e.g., in a collaborative project, organization, 
+        or an open-source repository).
+        * Note: GitHub does NOT let you review your own Pull Requests created 
+          by your exact same account. You can review:
+          - Teammate/collaborator Pull Requests
+          - Open-source repository Pull Requests
+          - An organization repository with multiple members
+
+Step 2: Click the "Files changed" tab inside the Pull Request.
+Step 3: Hover over a line of code and click the blue "+" icon to add a comment.
+Step 4: At the top right of the diff, click the green "Review changes" button.
+Step 5: Select one of the review types:
+        - "Comment" (General feedback)
+        - "Approve" (Approve changes for merge)
+        - "Request changes" (Feedback that must be addressed)
+Step 6: Click "Submit review".
+
+Result: Every submitted formal review adds to your "Code review" percentage.
+
+
+================================================================================
+3. EXAMPLE BALANCED PROFILE SCENARIO
+================================================================================
+If in a given period you have:
+  - 30 Commits
+  - 10 Pull Requests
+  - 5 Issues
+  - 5 Code Reviews
+  -----------------------------
+  Total = 50 Contributions
+
+Your chart will display:
+  - Commits:       60%  (30 / 50)
+  - Pull requests: 20%  (10 / 50)
+  - Issues:        10%  (5 / 50)
+  - Code review:   10%  (5 / 50)
+
+This creates a balanced diamond shape on your GitHub profile, demonstrating 
+experience in the full software development lifecycle (planning, coding, 
+PR review, and issue tracking).
+================================================================================
