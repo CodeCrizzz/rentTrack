@@ -91,4 +91,30 @@ cron.schedule('0 0 1 * *', async () => {
     }
 });
 
-console.log('Billing cron job initialized.');
+// 2. Daily Payment Due & Overdue Reminders: Runs daily at 08:00 AM
+const { checkAndSendPaymentReminders } = require('../services/reminderService');
+
+cron.schedule('0 8 * * *', async () => {
+    console.log('[CRON] Running daily payment due & overdue reminder check (08:00 AM)...');
+    try {
+        await checkAndSendPaymentReminders();
+    } catch (err) {
+        console.error('[CRON ERROR] Payment reminder cron failed:', err);
+    }
+});
+
+// Initial startup check after 3 seconds
+setTimeout(async () => {
+    console.log('[STARTUP] Checking for due and overdue bills on server startup...');
+    try {
+        await checkAndSendPaymentReminders();
+    } catch (err) {
+        console.error('[STARTUP ERROR] Initial payment reminder check failed:', err);
+    }
+}, 3000);
+
+console.log('Billing and payment reminder cron jobs initialized.');
+
+module.exports = {
+    checkAndSendPaymentReminders
+};
