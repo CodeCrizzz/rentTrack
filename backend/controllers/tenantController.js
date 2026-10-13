@@ -390,7 +390,7 @@ const getTenantRooms = async (req, res) => {
             const roomQuery = `
                 SELECT 
                     r.id, r.room_number, r.capacity, r.price, r.status,
-                    r.type, r.floor, r.description,
+                    r.type, r.floor, r.description, r.amenities,
                     CAST(COUNT(u.id) AS INTEGER) as current_occupants,
                     CAST((r.capacity - COUNT(u.id)) AS INTEGER) as available_slots
                 FROM rooms r
@@ -422,7 +422,7 @@ const getTenantRooms = async (req, res) => {
                 JOIN users u ON r.tenant_id = u.id
                 WHERE u.room_id = $1
                 ORDER BY r.created_at DESC
-                LIMIT 5
+                LIMIT 50
             `;
             const maintenanceData = await db.query(maintenanceQuery, [roomId]);
 
@@ -437,7 +437,7 @@ const getTenantRooms = async (req, res) => {
         const query = `
             SELECT 
                 r.id, r.room_number, r.capacity, r.price, r.status,
-                r.type, r.floor, r.description,
+                r.type, r.floor, r.description, r.amenities,
                 CAST(COUNT(u.id) AS INTEGER) as current_occupants,
                 CAST((r.capacity - COUNT(u.id)) AS INTEGER) as available_slots
             FROM rooms r
@@ -519,9 +519,65 @@ const getAnnouncements = async (req, res) => {
     }
 };
 
+// Get Tenant Notifications
+const getTenantNotifications = async (req, res) => {
+    const tenantId = req.user.id;
+    try {
+        const query = `
+            SELECT id, title, message, type, bill_id, is_read, created_at
+            FROM "rentTrack_schema".notifications
+            WHERE user_id = $1
+            ORDER BY created_at DESC
+            LIMIT 50
+        `;
+        const { rows } = await db.query(query, [tenantId]);
+        const unreadCount = rows.filter(n => !n.is_read).length;
+
+        res.status(200).json({
+            unreadCount,
+            notifications: rows
+        });
+    } catch (error) {
+        console.error('Get Notifications Error:', error);
+        res.status(500).json({ message: 'Server error fetching notifications' });
+    }
+};
+
+// Mark Single Notification as Read
+const markNotificationRead = async (req, res) => {
+    const tenantId = req.user.id;
+    const { id } = req.params;
+    try {
+        await db.query(
+            `UPDATE "rentTrack_schema".notifications SET is_read = TRUE WHERE id = $1 AND user_id = $2`,
+            [id, tenantId]
+        );
+        res.status(200).json({ message: 'Notification marked as read' });
+    } catch (error) {
+        console.error('Mark Notification Read Error:', error);
+        res.status(500).json({ message: 'Server error marking notification as read' });
+    }
+};
+
+// Mark All Notifications as Read
+const markAllNotificationsRead = async (req, res) => {
+    const tenantId = req.user.id;
+    try {
+        await db.query(
+            `UPDATE "rentTrack_schema".notifications SET is_read = TRUE WHERE user_id = $1`,
+            [tenantId]
+        );
+        res.status(200).json({ message: 'All notifications marked as read' });
+    } catch (error) {
+        console.error('Mark All Notifications Read Error:', error);
+        res.status(500).json({ message: 'Server error marking notifications as read' });
+    }
+};
+
 module.exports = { 
     getTenantDashboard, getTenantProfile, updateTenantProfile, updateTenantPassword, 
     getTenantPayments, getCurrentBill, submitTenantPayment,
     getTenantMessages, sendTenantMessage, getUnreadCount,
-    getTenantRooms, chooseRoom, getAnnouncements
+    getTenantRooms, chooseRoom, getAnnouncements,
+    getTenantNotifications, markNotificationRead, markAllNotificationsRead
 };

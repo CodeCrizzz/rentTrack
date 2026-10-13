@@ -509,6 +509,24 @@ const getAllPayments = async (req, res) => {
     }
 };
 
+const { checkAndSendPaymentReminders } = require('../services/reminderService');
+
+// @desc    Trigger payment due and overdue reminders manually from Admin
+// @route   POST /api/admin/bills/reminders
+// @access  Private/Admin
+const triggerPaymentReminders = async (req, res) => {
+    try {
+        const summary = await checkAndSendPaymentReminders();
+        res.status(200).json({
+            message: 'Payment reminders processed successfully',
+            summary
+        });
+    } catch (error) {
+        console.error('Error triggering payment reminders:', error);
+        res.status(500).json({ message: 'Error triggering payment reminders', error: error.message });
+    }
+};
+
 module.exports = {
     getAllBills,
     getBillById,
@@ -520,5 +538,6 @@ module.exports = {
     getPendingPayments,
     getPendingPaymentsCount,
     verifyPayment,
-    getAllPayments
+    getAllPayments,
+    triggerPaymentReminders
 };

@@ -25,7 +25,7 @@ const getDashboardStats = async (req, res) => {
             // Tenants Overview (Total & Status)
             db.query("SELECT COUNT(*) FROM users WHERE role = 'tenant'"),
             db.query("SELECT status, COUNT(*) FROM users WHERE role = 'tenant' GROUP BY status"),
-            db.query("SELECT id, name, created_at FROM users WHERE role = 'tenant' ORDER BY created_at DESC LIMIT 5"),
+            db.query("SELECT id, name, created_at FROM users WHERE role = 'tenant' ORDER BY created_at DESC LIMIT 25"),
             
             // Billing Overview
             db.query("SELECT SUM(amount_paid) FROM payments WHERE EXTRACT(MONTH FROM payment_date) = EXTRACT(MONTH FROM CURRENT_DATE) AND EXTRACT(YEAR FROM payment_date) = EXTRACT(YEAR FROM CURRENT_DATE)"),
@@ -40,13 +40,13 @@ const getDashboardStats = async (req, res) => {
                 FROM payments p 
                 JOIN bills b ON p.bill_id = b.id 
                 JOIN users u ON b.tenant_id = u.id 
-                ORDER BY p.payment_date DESC LIMIT 5
+                ORDER BY p.payment_date DESC LIMIT 50
             `),
             db.query(`
                 SELECT r.id, u.name as tenant_name, r.title, r.created_at 
                 FROM requests r 
                 JOIN users u ON r.tenant_id = u.id 
-                ORDER BY r.created_at DESC LIMIT 5
+                ORDER BY r.created_at DESC LIMIT 50
             `),
 
             // Expiring Contracts (within next 30 days)
@@ -77,7 +77,7 @@ const getDashboardStats = async (req, res) => {
                 ORDER BY year DESC, month DESC
             `),
 
-            // Overdue Accounts (Top 5 tenants with highest unpaid balances)
+            // Overdue Accounts (tenants with unpaid balances)
             db.query(`
                 SELECT u.id as tenant_id, u.name as tenant_name, r.room_number, SUM(b.balance) as total_overdue
                 FROM bills b
@@ -86,7 +86,7 @@ const getDashboardStats = async (req, res) => {
                 WHERE b.status IN ('Unpaid', 'Partial', 'Overdue') AND b.due_date < CURRENT_DATE
                 GROUP BY u.id, u.name, r.room_number
                 ORDER BY total_overdue DESC
-                LIMIT 5
+                LIMIT 50
             `),
 
             // Upcoming Rent Due (bills due in next 7 days)
@@ -106,7 +106,7 @@ const getDashboardStats = async (req, res) => {
                 FROM messages m 
                 JOIN users u ON m.sender_id = u.id 
                 WHERE m.sender_type = 'tenant'
-                ORDER BY m.created_at DESC LIMIT 5
+                ORDER BY m.created_at DESC LIMIT 25
             `),
 
             // Pending Tenants
@@ -114,7 +114,7 @@ const getDashboardStats = async (req, res) => {
                 SELECT id, name, email, created_at 
                 FROM users 
                 WHERE role = 'tenant' AND status = 'Pending'
-                ORDER BY created_at DESC LIMIT 5
+                ORDER BY created_at DESC LIMIT 25
             `),
 
             // Pending Payment Verifications
@@ -236,9 +236,9 @@ const getDashboardStats = async (req, res) => {
             });
         });
 
-        // Sort activities by date DESC and keep top 10
+        // Sort activities by date DESC and keep top 50
         activities.sort((a, b) => new Date(b.date) - new Date(a.date));
-        activities = activities.slice(0, 10);
+        activities = activities.slice(0, 50);
         
         // Detailed recent messages array
         const recentMessages = recentMessagesResult.rows.map(m => ({
@@ -526,7 +526,21 @@ const getAllRequests = async (req, res) => {
 const getAllTenants = async (req, res) => {
     try {
         const query = `
-            SELECT u.*, r.room_number 
+            SELECT 
+                u.*, 
+                r.room_number,
+                COALESCE(r.price, 0) as monthly_rent,
+                COALESCE((
+                    SELECT SUM(b.balance) 
+                    FROM bills b 
+                    WHERE b.tenant_id = u.id AND b.status IN ('Unpaid', 'Partial', 'Overdue')
+                ), 0) as balance,
+                (
+                    SELECT MAX(p.payment_date)
+                    FROM payments p
+                    JOIN bills b ON p.bill_id = b.id
+                    WHERE b.tenant_id = u.id
+                ) as last_payment_date
             FROM users u 
             LEFT JOIN rooms r ON u.room_id = r.id 
             WHERE u.role = 'tenant' 
@@ -744,18 +758,18 @@ const getCashFlowOverview = async (req, res) => {
         let start, end;
         const now = new Date();
         
-        if (range === 'last_6_months' || !range) {
-            start = new Date(now.getFullYear(), now.getMonth() - 5, 1);
-            end = new Date(now.getFullYear(), now.getMonth() + 1, 0);
-        } else if (range === 'last_12_months') {
-            start = new Date(now.getFullYear(), now.getMonth() - 11, 1);
-            end = new Date(now.getFullYear(), now.getMonth() + 1, 0);
-        } else if (range === 'this_year') {
+        if (range === 'this_year' || !range) {
             start = new Date(now.getFullYear(), 0, 1);
             end = new Date(now.getFullYear(), 11, 31);
         } else if (range === 'last_year') {
             start = new Date(now.getFullYear() - 1, 0, 1);
             end = new Date(now.getFullYear() - 1, 11, 31);
+        } else if (range === 'last_6_months') {
+            start = new Date(now.getFullYear(), now.getMonth() - 5, 1);
+            end = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+        } else if (range === 'last_12_months') {
+            start = new Date(now.getFullYear(), now.getMonth() - 11, 1);
+            end = new Date(now.getFullYear(), now.getMonth() + 1, 0);
         } else if (range === 'custom') {
             if (!startDate || !endDate) {
                 return res.status(400).json({ message: 'startDate and endDate required for custom range' });
