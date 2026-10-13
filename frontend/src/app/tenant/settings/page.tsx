@@ -305,7 +305,7 @@ export default function TenantSettingsPage() {
             <div className="bg-card border border-slate-200 dark:border-zinc-800 rounded-xl p-5 md:p-6 shadow-xs space-y-4">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 dark:border-zinc-800/80 pb-3.5">
                     <div>
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2">   
                             <span className="text-[10px] font-mono font-bold tracking-wider uppercase px-2 py-0.5 rounded bg-teal-50 dark:bg-teal-500/10 text-teal-700 dark:text-teal-400 border border-teal-200 dark:border-teal-500/20">
                                 Category 1
                             </span>
