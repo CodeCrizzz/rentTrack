@@ -5,6 +5,7 @@ import { AnimatePresence } from 'framer-motion';
 import PageTransition from '@/components/PageTransition';
 import api from '@/lib/api';
 import { Moon } from "lucide-react";
+import { toast } from 'sonner';
 
 import {
   SidebarProvider,
@@ -120,6 +121,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         localStorage.setItem('admin_read_unreadCount', unreadCount.toString());
         localStorage.setItem('admin_read_pendingCount', pendingTenantsCount.toString());
         localStorage.setItem('admin_read_paymentsCount', pendingPaymentsCount.toString());
+        toast.success("All notifications marked as read");
     };
 
     const handleLogout = () => {
@@ -143,19 +145,15 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     const mappedNavItems = rawNavItems.map(item => {
         const isActive = pathname === item.path;
         let badgeCount = 0;
-        let badgeColor: "rose" | "amber" | "indigo" | "blue" = "indigo";
 
         if (item.name === 'Manage Tenants' && pendingTenantsCount > 0) {
             badgeCount = pendingTenantsCount;
-            badgeColor = "amber";
         }
         if (item.name === 'Chat with Tenants' && unreadCount > 0) {
             badgeCount = unreadCount;
-            badgeColor = "rose";
         }
         if (item.name === 'Bills and Payments' && pendingPaymentsCount > 0) {
             badgeCount = pendingPaymentsCount;
-            badgeColor = "blue";
         }
 
         return {
@@ -163,7 +161,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             url: item.path,
             isActive,
             badgeCount,
-            badgeColor,
+            badgeColor: "rose" as const,
             icon: (
                 <item.icon className={`w-5 h-5 shrink-0 ${isActive ? 'text-cyan-600 dark:text-cyan-400' : 'text-slate-400 dark:text-zinc-500'}`} strokeWidth={isActive ? 2.5 : 2} />
             )
