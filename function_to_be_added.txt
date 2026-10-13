@@ -1,0 +1,8 @@
+- if the tenants payment is due or overdue then the system must automatically send a notification of reminder to 
+the tenant through the system and email
+- only the admin can put the electricity and water fees, the electricity and water fees is based on the tenant consumption 
+- the admin can put the room type, room number, room price, room description, room image
+- the admin should be able to add a new room, edit a room, delete a room 
+- the admin can also put a male or female indicator for the added or to be added room, and it must show in the tenants room page 
+when choosing a room so that the tenant knows what gender is in that rooms
+- the room inclusion must also be shown when the tenant is choosing a room to rent

@@ -62,15 +62,14 @@ The system enforces strict Role-Based Access Control (RBAC):
   * Collection efficiency and delinquency rates.
 - Operational Watchlists:
   * Pending tenant approvals and room allocations.
-  * Expiring lease contracts with days-left countdown.
-  * Overdue accounts requiring collection follow-up.
+  * Overdue accounts requiring collection follow-up (high priority for flexible stays).
   * Pending payment verifications awaiting review.
   * Live feed of recent activities, new messages, and open repair requests.
 
 --- 3.3 ROOM & INVENTORY MANAGEMENT ---
 - Unit Inventory Overview:
   * Room numbers, unit types, capacity, current occupants, and floor levels.
-  * Pricing configuration: Monthly base rental rates per room.
+  * Pricing configuration: Monthly base rental rates per room or per bedspace.
   * Amenity tagging (e.g., Air conditioning, private bath, Wi-Fi, balcony).
 - Status Lifecycle Management:
   * "Available" (Vacant)
@@ -84,7 +83,7 @@ The system enforces strict Role-Based Access Control (RBAC):
 - Directory of all registered tenants with detailed profiles:
   * Full name, email address, phone number, and emergency contact details.
   * Assigned room number and occupancy status.
-  * Lease contract start and end dates.
+  * Flexible tenancy model: Open-ended stay, tenants can leave anytime (no fixed lease contracts). Move-in date and optional expected departure.
 - Status Lifecycle:
   * "Pending Room Assignment" (New signups awaiting placement or approval)
   * "Active" (Currently residing in an assigned room)
