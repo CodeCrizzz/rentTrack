@@ -2,6 +2,11 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 require('./config/db'); 
+const initDb = require('./config/initDb');
+initDb();
+
+// Initialize automated billing & payment reminder cron jobs
+require('./cron/billingCron');
 
 const app = express();
 
