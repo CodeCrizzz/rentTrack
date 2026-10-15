@@ -124,16 +124,23 @@ const getTenantPayments = async (req, res) => {
     const tenantId = req.user.id;
     try {
         const result = await db.query(
-            `SELECT p.id, TO_CHAR(p.payment_date, 'YYYY-MM-DD') AS date, 
-                    'Payment for ' || b.billing_month AS description, 
+            `SELECT p.id, 
+                    TO_CHAR(p.payment_date, 'YYYY-MM-DD') AS date, 
+                    COALESCE(p.notes, 'Payment for ' || b.billing_month) AS description, 
                     p.amount_paid AS amount, 
-                    p.status, 
+                    COALESCE(p.status, 'Paid') AS status, 
+                    p.payment_method,
                     p.payment_method AS method, 
-                    p.id::text AS "referenceNumber"
+                    p.receipt_url AS proof_url,
+                    p.receipt_url AS proof_image,
+                    p.receipt_url AS "proofOfPayment",
+                    p.notes,
+                    p.id::text AS "referenceNumber",
+                    p.created_at
              FROM payments p
              JOIN bills b ON p.bill_id = b.id
              WHERE b.tenant_id = $1
-             ORDER BY p.payment_date DESC`,
+             ORDER BY p.payment_date DESC, p.id DESC`,
             [tenantId]
         );
         res.status(200).json(result.rows);
@@ -310,10 +317,11 @@ const getCurrentBill = async (req, res) => {
 // Submit Proof of Payment
 const submitTenantPayment = async (req, res) => {
     const tenantId = req.user.id;
-    const { bill_id, amount_paid, payment_method, notes } = req.body;
+    const { bill_id, amount_paid, notes } = req.body;
+    const payment_method = 'GCash';
     let receipt_url = null;
 
-    if (!bill_id || !amount_paid || !payment_method) {
+    if (!bill_id || !amount_paid) {
         return res.status(400).json({ message: 'Missing required payment details' });
     }
 
@@ -350,8 +358,14 @@ const submitTenantPayment = async (req, res) => {
             description: `Payment for ${updatedBillRaw ? updatedBillRaw.billing_month : 'Bill'}`,
             amount: newPaymentRaw.amount_paid,
             status: newPaymentRaw.status,
+            payment_method: newPaymentRaw.payment_method,
             method: newPaymentRaw.payment_method,
-            referenceNumber: newPaymentRaw.id.toString()
+            proof_image: newPaymentRaw.receipt_url,
+            proof_url: newPaymentRaw.receipt_url,
+            proofOfPayment: newPaymentRaw.receipt_url,
+            notes: newPaymentRaw.notes,
+            referenceNumber: newPaymentRaw.id.toString(),
+            created_at: newPaymentRaw.created_at
         };
 
         const updatedBill = updatedBillRaw ? {
