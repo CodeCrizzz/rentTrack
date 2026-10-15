@@ -250,7 +250,7 @@ export default function TenantProfile() {
                                 <div className="flex flex-col xl:flex-row xl:justify-between items-start xl:items-center pb-2 border-b border-black/5 dark:border-white/5"><span className="text-xs font-bold text-neutral-500 mb-0.5 xl:mb-0">Username</span><span className="text-xs font-bold truncate max-w-full xl:max-w-[150px]">{profile.account?.username || profile.email}</span></div>
                                 <div className="flex flex-col xl:flex-row xl:justify-between items-start xl:items-center pb-2 border-b border-black/5 dark:border-white/5">
                                     <span className="text-xs font-bold text-neutral-500 mb-1 xl:mb-0">Status</span>
-                                    <span className={`px-2 sm:px-2.5 py-0.5 sm:py-1 rounded text-xs font-black uppercase tracking-wider ${profile.account?.status === 'Active' ? 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20' : 'bg-amber-500/10 text-amber-500 border border-amber-500/20'}`}>
+                                    <span className={`text-xs font-black uppercase tracking-wider ${profile.account?.status === 'Active' ? 'text-emerald-500' : 'text-amber-500'}`}>
                                         {profile.account?.status || 'Pending'}
                                     </span>
                                 </div>
