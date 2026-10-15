@@ -245,25 +245,25 @@ export default function AdminMaintenanceRequests() {
             case 'Pending':
                 return {
                     label: 'Pending Review',
-                    className: 'bg-amber-50 dark:bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-200/50 dark:border-amber-500/20',
+                    className: 'text-amber-600 dark:text-amber-400',
                     dot: 'bg-amber-500 animate-pulse'
                 };
             case 'In Progress':
                 return {
                     label: 'In Progress',
-                    className: 'bg-blue-50 dark:bg-blue-500/10 text-blue-700 dark:text-blue-400 border border-blue-200/50 dark:border-blue-500/20',
+                    className: 'text-blue-600 dark:text-blue-400',
                     dot: 'bg-blue-500'
                 };
             case 'Resolved':
                 return {
                     label: 'Resolved',
-                    className: 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-200/50 dark:border-emerald-500/20',
+                    className: 'text-emerald-600 dark:text-emerald-400',
                     dot: 'bg-emerald-500'
                 };
             default:
                 return {
                     label: status,
-                    className: 'bg-slate-100 dark:bg-zinc-800 text-slate-700 dark:text-zinc-300 border border-slate-200 dark:border-zinc-700',
+                    className: 'text-slate-600 dark:text-zinc-400',
                     dot: 'bg-slate-400'
                 };
         }
@@ -676,7 +676,7 @@ export default function AdminMaintenanceRequests() {
 
                                                 {/* Status Badge */}
                                                 <td className="py-2 px-3 text-center whitespace-nowrap">
-                                                    <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${status.className}`}>
+                                                    <span className={`inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider ${status.className}`}>
                                                         <span className={`w-1.5 h-1.5 rounded-full ${status.dot}`}></span>
                                                         {status.label}
                                                     </span>
@@ -826,7 +826,7 @@ export default function AdminMaintenanceRequests() {
                                             </div>
 
                                             <div className="flex items-center justify-between pt-2 border-t border-slate-100 dark:border-zinc-800/80">
-                                                <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${status.className}`}>
+                                                <span className={`inline-flex items-center gap-1.5 text-[10px] font-bold uppercase ${status.className}`}>
                                                     <span className={`w-1.5 h-1.5 rounded-full ${status.dot}`}></span>
                                                     {status.label}
                                                 </span>
