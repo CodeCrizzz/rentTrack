@@ -85,13 +85,25 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
         const userStr = localStorage.getItem('user');
         const token = localStorage.getItem('token');
-        if (userStr) {
+
+        if (!token || !userStr) {
+            router.replace('/login');
+            return;
+        }
+
+        try {
             const user = JSON.parse(userStr);
+            if (user.role !== 'admin') {
+                toast.error("Access restricted: Administrator privileges required.");
+                router.replace('/tenant/dashboard');
+                return;
+            }
             setAdminName(user.name);
             if (user.email) setAdminEmail(user.email);
+        } catch (e) {
+            router.replace('/login');
+            return;
         }
-        
-        if (!token) return;
 
         const fetchData = () => {
             fetchUnreadCount();
@@ -102,7 +114,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         fetchData();
         const interval = setInterval(fetchData, 15000);
         return () => clearInterval(interval);
-    }, [pathname]);
+    }, [pathname, router]);
 
     useEffect(() => {
         const readUnread = parseInt(localStorage.getItem('admin_read_unreadCount') || '0');

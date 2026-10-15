@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useMemo } from 'react';
+import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence, type Variants } from 'framer-motion';
 import Link from 'next/link';
 import api from '@/lib/api';
@@ -103,6 +104,7 @@ const CustomChartTooltip = ({ active, payload, label }: any) => {
 };
 
 export default function AdminDashboard() {
+    const router = useRouter();
     const [stats, setStats] = useState<DashboardStats | null>(null);
     const [cashflowData, setCashflowData] = useState<any[]>([]);
     const [dateRange, setDateRange] = useState("this_year");
@@ -115,6 +117,25 @@ export default function AdminDashboard() {
     const [activeLedgerTab, setActiveLedgerTab] = useState<'payments' | 'overdue' | 'maintenance' | 'audit'>('payments');
 
     const fetchDashboardData = async (silent = false) => {
+        // Early exit if user is not admin
+        if (typeof window !== 'undefined') {
+            const userStr = localStorage.getItem('user');
+            const token = localStorage.getItem('token');
+            if (!token) {
+                router.replace('/login');
+                return;
+            }
+            if (userStr) {
+                try {
+                    const user = JSON.parse(userStr);
+                    if (user.role !== 'admin') {
+                        router.replace('/tenant/dashboard');
+                        return;
+                    }
+                } catch (e) {}
+            }
+        }
+
         if (!silent) setIsLoading(true);
         else setIsRefreshing(true);
 
@@ -122,7 +143,17 @@ export default function AdminDashboard() {
             const { data } = await api.get('/admin/dashboard');
             setStats(data);
             if (silent) toast.success("Dashboard metrics synchronized");
-        } catch (error) {
+        } catch (error: any) {
+            if (error.response?.status === 403) {
+                toast.error("Access denied: Administrator privileges required.");
+                router.replace('/tenant/dashboard');
+                return;
+            }
+            if (error.response?.status === 401) {
+                toast.error("Session expired. Please log in again.");
+                router.replace('/login');
+                return;
+            }
             console.error("Failed to fetch admin stats:", error);
             toast.error("Could not load dashboard statistics");
         } finally {
@@ -135,8 +166,10 @@ export default function AdminDashboard() {
         try {
             const { data } = await api.get(`/admin/cashflow?range=${dateRange}`);
             setCashflowData(data || []);
-        } catch (error) {
-            console.error("Failed to fetch cash flow data:", error);
+        } catch (error: any) {
+            if (error.response?.status !== 403 && error.response?.status !== 401) {
+                console.error("Failed to fetch cash flow data:", error);
+            }
         }
     };
 
@@ -858,7 +891,7 @@ export default function AdminDashboard() {
                                                 {new Date(payment.payment_date).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
                                             </td>
                                             <td className="py-2.5 px-4">
-                                                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-200/50 dark:border-emerald-500/20">
+                                                <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-600 dark:text-emerald-400">
                                                     <CheckCircle2 className="w-3 h-3" /> Recorded
                                                 </span>
                                             </td>
@@ -907,7 +940,7 @@ export default function AdminDashboard() {
                                                 ₱{Number(account.total_overdue).toLocaleString()}
                                             </td>
                                             <td className="py-2.5 px-4">
-                                                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-rose-50 dark:bg-rose-500/10 text-rose-700 dark:text-rose-400 border border-rose-200/50 dark:border-rose-500/20">
+                                                <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-rose-600 dark:text-rose-400">
                                                     <AlertTriangle className="w-3 h-3" /> Past Due Date
                                                 </span>
                                             </td>
@@ -959,7 +992,7 @@ export default function AdminDashboard() {
                                                 {new Date(req.created_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
                                             </td>
                                             <td className="py-2.5 px-4">
-                                                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-amber-50 dark:bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-200/50 dark:border-amber-500/20">
+                                                <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-amber-600 dark:text-amber-400">
                                                     <Clock className="w-3 h-3" /> Active Ticket
                                                 </span>
                                             </td>

@@ -332,31 +332,31 @@ export default function AdminTenants() {
             case 'Active':
                 return {
                     label: 'Active Resident',
-                    className: 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-200/50 dark:border-emerald-500/20',
+                    className: 'text-emerald-600 dark:text-emerald-400',
                     dot: 'bg-emerald-500'
                 };
             case 'Pending':
                 return {
                     label: 'Pending Approval',
-                    className: 'bg-amber-50 dark:bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-200/50 dark:border-amber-500/20',
+                    className: 'text-amber-600 dark:text-amber-400',
                     dot: 'bg-amber-500 animate-pulse'
                 };
             case 'Declined':
                 return {
                     label: 'Application Declined',
-                    className: 'bg-rose-50 dark:bg-rose-500/10 text-rose-700 dark:text-rose-400 border border-rose-200/50 dark:border-rose-500/20',
+                    className: 'text-rose-600 dark:text-rose-400',
                     dot: 'bg-rose-500'
                 };
             case 'Moved Out':
                 return {
                     label: 'Moved Out',
-                    className: 'bg-slate-100 dark:bg-zinc-800 text-slate-600 dark:text-zinc-400 border border-slate-200/60 dark:border-zinc-700',
+                    className: 'text-slate-600 dark:text-zinc-400',
                     dot: 'bg-slate-400'
                 };
             default:
                 return {
                     label: status,
-                    className: 'bg-slate-100 dark:bg-zinc-800 text-slate-600 dark:text-zinc-400 border border-slate-200 dark:border-zinc-700',
+                    className: 'text-slate-600 dark:text-zinc-400',
                     dot: 'bg-slate-400'
                 };
         }
@@ -816,7 +816,7 @@ export default function AdminTenants() {
 
                                             {/* Status Badge */}
                                             <td className="py-2 px-4">
-                                                <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold ${badge.className}`}>
+                                                <span className={`inline-flex items-center gap-1.5 text-[11px] font-bold ${badge.className}`}>
                                                     <span className={`w-1.5 h-1.5 rounded-full ${badge.dot}`} />
                                                     {badge.label}
                                                 </span>
@@ -929,7 +929,7 @@ export default function AdminTenants() {
                                                     </p>
                                                 </div>
                                             </div>
-                                            <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold shrink-0 ${badge.className}`}>
+                                            <span className={`inline-flex items-center gap-1 text-[10px] font-bold shrink-0 ${badge.className}`}>
                                                 <span className={`w-1 h-1 rounded-full ${badge.dot}`} />
                                                 {tenant.status}
                                             </span>
@@ -1045,7 +1045,7 @@ export default function AdminTenants() {
                                             {(() => {
                                                 const badge = getStatusBadge(viewingTenant.status);
                                                 return (
-                                                    <span className={`inline-flex items-center gap-1 px-2 py-0.2 rounded-full text-[10px] font-bold ${badge.className}`}>
+                                                    <span className={`inline-flex items-center gap-1 text-[10px] font-bold ${badge.className}`}>
                                                         <span className={`w-1 h-1 rounded-full ${badge.dot}`} />
                                                         {viewingTenant.status}
                                                     </span>

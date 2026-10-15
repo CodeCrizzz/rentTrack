@@ -59,16 +59,30 @@ export default function TenantLayout({ children }: { children: React.ReactNode }
 
     useEffect(() => {
         const userStr = localStorage.getItem('user');
-        if (userStr) {
+        const token = localStorage.getItem('token');
+
+        if (!token || !userStr) {
+            router.replace('/login');
+            return;
+        }
+
+        try {
             const user = JSON.parse(userStr);
+            if (user.role !== 'tenant') {
+                router.replace('/admin/dashboard');
+                return;
+            }
             setTenantName(user.name);
             if (user.email) setTenantEmail(user.email);
+        } catch (e) {
+            router.replace('/login');
+            return;
         }
 
         fetchNotificationsAndUnread();
         const interval = setInterval(fetchNotificationsAndUnread, 15000);
         return () => clearInterval(interval);
-    }, [pathname]);
+    }, [pathname, router]);
 
     const handleMarkAllRead = async () => {
         try {
