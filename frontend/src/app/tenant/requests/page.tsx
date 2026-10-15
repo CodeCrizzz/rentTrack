@@ -204,11 +204,11 @@ export default function TenantMaintenance() {
     // --- UI Helpers ---
     const getStatusColor = (status: string) => {
         switch (status) {
-            case 'Pending': return 'bg-amber-50 text-amber-700 dark:bg-amber-500/10 dark:text-amber-400 border border-amber-200 dark:border-amber-500/20';
-            case 'In Progress': return 'bg-blue-50 text-blue-700 dark:bg-blue-500/10 dark:text-blue-400 border border-blue-200 dark:border-blue-500/20';
-            case 'Resolved': return 'bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-500/20';
-            case 'Cancelled': return 'bg-rose-50 text-rose-700 dark:bg-rose-500/10 dark:text-rose-400 border border-rose-200 dark:border-rose-500/20';
-            default: return 'bg-slate-100 text-slate-700 dark:bg-zinc-500/10 dark:text-zinc-400 border border-slate-200 dark:border-zinc-700';
+            case 'Pending': return 'text-amber-600 dark:text-amber-400';
+            case 'In Progress': return 'text-blue-600 dark:text-blue-400';
+            case 'Resolved': return 'text-emerald-600 dark:text-emerald-400';
+            case 'Cancelled': return 'text-rose-600 dark:text-rose-400';
+            default: return 'text-slate-600 dark:text-zinc-400';
         }
     };
 
@@ -480,7 +480,7 @@ export default function TenantMaintenance() {
                                                 <span className={`text-xs ${getPriorityColor(r.priority)}`}>{r.priority}</span>
                                             </td>
                                             <td className="px-5 py-3.5 text-center">
-                                                <span className={`inline-flex items-center px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider rounded ${getStatusColor(r.status)}`}>
+                                                <span className={`inline-block text-[10px] font-bold uppercase tracking-wider ${getStatusColor(r.status)}`}>
                                                     {r.status}
                                                 </span>
                                             </td>
@@ -552,7 +552,7 @@ export default function TenantMaintenance() {
                                     <div>
                                         <div className="flex justify-between items-start mb-2 gap-2">
                                             <h3 className="text-lg font-bold text-slate-900 dark:text-white">{selectedRequest.title}</h3>
-                                            <span className={`px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider rounded shrink-0 ${getStatusColor(selectedRequest.status)}`}>
+                                            <span className={`text-[10px] font-bold uppercase tracking-wider shrink-0 ${getStatusColor(selectedRequest.status)}`}>
                                                 {selectedRequest.status}
                                             </span>
                                         </div>
