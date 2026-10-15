@@ -467,31 +467,31 @@ export default function AdminBilling() {
             case 'Paid':
                 return {
                     label: 'Paid',
-                    className: 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-200/50 dark:border-emerald-500/20',
+                    className: 'text-emerald-600 dark:text-emerald-400',
                     dot: 'bg-emerald-500'
                 };
             case 'Partial':
                 return {
                     label: 'Partial',
-                    className: 'bg-blue-50 dark:bg-blue-500/10 text-blue-700 dark:text-blue-400 border border-blue-200/50 dark:border-blue-500/20',
+                    className: 'text-blue-600 dark:text-blue-400',
                     dot: 'bg-blue-500'
                 };
             case 'Pending Verification':
                 return {
                     label: 'Pending Verification',
-                    className: 'bg-amber-50 dark:bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-200/50 dark:border-amber-500/20',
+                    className: 'text-amber-600 dark:text-amber-400',
                     dot: 'bg-amber-500 animate-pulse'
                 };
             case 'Overdue':
                 return {
                     label: 'Overdue',
-                    className: 'bg-rose-50 dark:bg-rose-500/10 text-rose-700 dark:text-rose-400 border border-rose-200/50 dark:border-rose-500/20',
+                    className: 'text-rose-600 dark:text-rose-400',
                     dot: 'bg-rose-500 animate-pulse'
                 };
             default:
                 return {
                     label: 'Unpaid',
-                    className: 'bg-slate-100 dark:bg-zinc-800 text-slate-700 dark:text-zinc-300 border border-slate-200 dark:border-zinc-700',
+                    className: 'text-slate-600 dark:text-zinc-400',
                     dot: 'bg-slate-400'
                 };
         }
@@ -992,7 +992,7 @@ export default function AdminBilling() {
 
                                                     {/* Status Badge */}
                                                     <td className="py-2 px-3 text-center whitespace-nowrap">
-                                                        <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${status.className}`}>
+                                                        <span className={`inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider ${status.className}`}>
                                                             <span className={`w-1.5 h-1.5 rounded-full ${status.dot}`}></span>
                                                             {status.label}
                                                         </span>
@@ -1075,7 +1075,7 @@ export default function AdminBilling() {
                                                                 {bill.room_number ? `Room ${bill.room_number}` : 'No Room'} · {bill.billing_month}
                                                             </div>
                                                         </div>
-                                                        <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${status.className}`}>
+                                                        <span className={`inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider ${status.className}`}>
                                                             <span className={`w-1.5 h-1.5 rounded-full ${status.dot}`}></span>
                                                             {status.label}
                                                         </span>
@@ -1196,12 +1196,12 @@ export default function AdminBilling() {
 
                                             {/* Status */}
                                             <td className="py-2 px-3 text-center whitespace-nowrap">
-                                                <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${
+                                                <span className={`inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider ${
                                                     payment.status === 'Approved' || payment.status === 'Verified' || !payment.status
-                                                        ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400 border border-emerald-200/50 dark:border-emerald-500/20'
+                                                        ? 'text-emerald-600 dark:text-emerald-400'
                                                         : payment.status === 'Rejected'
-                                                            ? 'bg-rose-50 text-rose-700 dark:bg-rose-500/10 dark:text-rose-400 border border-rose-200/50 dark:border-rose-500/20'
-                                                            : 'bg-amber-50 text-amber-700 dark:bg-amber-500/10 dark:text-amber-400 border border-amber-200/50 dark:border-amber-500/20'
+                                                            ? 'text-rose-600 dark:text-rose-400'
+                                                            : 'text-amber-600 dark:text-amber-400'
                                                 }`}>
                                                     <span className={`w-1.5 h-1.5 rounded-full ${
                                                         payment.status === 'Approved' || payment.status === 'Verified' || !payment.status ? 'bg-emerald-500' : payment.status === 'Rejected' ? 'bg-rose-500' : 'bg-amber-500'
@@ -1442,7 +1442,7 @@ export default function AdminBilling() {
                                         <CustomSelect
                                             value={paymentForm.payment_method}
                                             onChange={(val) => setPaymentForm({ ...paymentForm, payment_method: val })}
-                                            options={["Cash", "GCash", "Maya", "Bank Transfer", "Other"]}
+                                            options={["Cash", "GCash"]}
                                             className="py-2 px-3 text-xs rounded-lg bg-slate-50 dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 font-semibold"
                                         />
                                     </div>
