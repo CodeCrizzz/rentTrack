@@ -272,10 +272,10 @@ export default function TenantDashboard() {
                         <h1 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white tracking-tight">
                             Welcome back, {userName.split(' ')[0] || 'Resident'}
                         </h1>
-                        <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-mono font-bold ${
+                        <span className={`inline-flex items-center gap-1.5 text-[11px] font-mono font-bold ${
                             tenantData.status === 'Active'
-                                ? 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-200/60 dark:border-emerald-500/20'
-                                : 'bg-amber-50 dark:bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-200/60 dark:border-amber-500/20'
+                                ? 'text-emerald-600 dark:text-emerald-400'
+                                : 'text-amber-600 dark:text-amber-400'
                         }`}>
                             <span className={`w-2 h-2 rounded-full ${tenantData.status === 'Active' ? 'bg-emerald-500 animate-pulse' : 'bg-amber-500'}`}></span>
                             <span>{tenantData.status === 'Active' ? `Unit ${tenantData.roomNumber || 'Assigned'}` : 'Application Pending'}</span>
