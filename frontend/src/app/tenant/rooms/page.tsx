@@ -356,10 +356,10 @@ export default function TenantRooms() {
                                                         {ticket.category || 'General'} · Submitted {new Date(ticket.created_at).toLocaleDateString()}
                                                     </p>
                                                 </div>
-                                                <span className={`px-2.5 py-1 rounded-full text-xs font-bold uppercase shrink-0 ${
-                                                    ticket.status === 'Resolved' ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400' :
-                                                    ticket.status === 'In Progress' ? 'bg-indigo-50 text-indigo-700 dark:bg-indigo-500/10 dark:text-indigo-400' :
-                                                    'bg-amber-50 text-amber-700 dark:bg-amber-500/10 dark:text-amber-400'
+                                                <span className={`text-xs font-bold uppercase shrink-0 ${
+                                                    ticket.status === 'Resolved' ? 'text-emerald-600 dark:text-emerald-400' :
+                                                    ticket.status === 'In Progress' ? 'text-indigo-600 dark:text-indigo-400' :
+                                                    'text-amber-600 dark:text-amber-400'
                                                 }`}>
                                                     {ticket.status}
                                                 </span>
@@ -476,7 +476,11 @@ export default function TenantRooms() {
                                         <div>
                                             <div className="flex items-center justify-between gap-2">
                                                 <h3 className="text-lg font-bold text-slate-900 dark:text-white">{selectedMaintenance.title}</h3>
-                                                <span className="px-2.5 py-1 rounded-full text-xs font-bold uppercase bg-slate-100 dark:bg-zinc-800">
+                                                <span className={`text-xs font-bold uppercase ${
+                                                    selectedMaintenance.status === 'Resolved' ? 'text-emerald-600 dark:text-emerald-400' :
+                                                    selectedMaintenance.status === 'In Progress' ? 'text-indigo-600 dark:text-indigo-400' :
+                                                    'text-amber-600 dark:text-amber-400'
+                                                }`}>
                                                     {selectedMaintenance.status}
                                                 </span>
                                             </div>
