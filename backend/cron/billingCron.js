@@ -1,9 +1,9 @@
 const cron = require('node-cron');
 const db = require('../config/db');
 
-// Run on the 1st of every month at 00:00 (midnight)
-cron.schedule('0 0 1 * *', async () => {
-    console.log('Running automatic billing cron job...');
+// 1. Automatic Monthly Bill Generation
+const runAutoBilling = async () => {
+    console.log('[AUTO-BILLING] Running automatic monthly billing generation...');
     try {
         // Find all active tenants with an assigned room
         const activeTenantsQuery = `
@@ -16,7 +16,7 @@ cron.schedule('0 0 1 * *', async () => {
         const { rows: allTenants } = await db.query(activeTenantsQuery);
 
         if (allTenants.length === 0) {
-            console.log('No active tenants found for automatic billing.');
+            console.log('[AUTO-BILLING] No active tenants found for automatic billing.');
             return;
         }
 
@@ -40,18 +40,16 @@ cron.schedule('0 0 1 * *', async () => {
         const currentYear = currentDate.getFullYear();
         const billingMonthStr = `${currentMonthName} ${currentYear}`;
 
-        // Due date usually 5th of the month
+        // Due date: 5th of the current month
         const dueDate = new Date(currentDate.getFullYear(), currentDate.getMonth(), 5);
 
         for (const tenant of tenantsToBill) {
-            // Check if a bill already exists for this tenant and this billing month
             const checkBillQuery = `
                 SELECT id FROM bills WHERE tenant_id = $1 AND billing_month = $2
             `;
             const { rows: existingBills } = await db.query(checkBillQuery, [tenant.tenant_id, billingMonthStr]);
 
             if (existingBills.length === 0) {
-                // Default amounts
                 const waterCharges = 0;
                 const electricityCharges = 0;
                 const otherFees = 0;
@@ -80,16 +78,17 @@ cron.schedule('0 0 1 * *', async () => {
                 ];
 
                 await db.query(insertBillQuery, values);
-                console.log(`Auto-generated bill for tenant ${tenant.tenant_id} for ${billingMonthStr}.`);
-            } else {
-                console.log(`Bill already exists for tenant ${tenant.tenant_id} for ${billingMonthStr}. Skipping.`);
+                console.log(`[AUTO-BILLING] Auto-generated bill for tenant ${tenant.tenant_id} (${billingMonthStr}).`);
             }
         }
-        console.log('Automatic billing cron job completed successfully.');
+        console.log('[AUTO-BILLING] Monthly billing check completed successfully.');
     } catch (error) {
-        console.error('Error running automatic billing cron job:', error);
+        console.error('[AUTO-BILLING ERROR] Error running automatic billing:', error);
     }
-});
+};
+
+// Run on the 1st of every month at 00:00 (midnight)
+cron.schedule('0 0 1 * *', runAutoBilling);
 
 // 2. Daily Payment Due & Overdue Reminders: Runs daily at 08:00 AM
 const { checkAndSendPaymentReminders } = require('../services/reminderService');
@@ -103,8 +102,15 @@ cron.schedule('0 8 * * *', async () => {
     }
 });
 
-// Initial startup check after 3 seconds
+// Initial startup checks after 3 seconds
 setTimeout(async () => {
+    console.log('[STARTUP] Checking for auto-generation of current month bills...');
+    try {
+        await runAutoBilling();
+    } catch (err) {
+        console.error('[STARTUP ERROR] Auto billing check failed:', err);
+    }
+
     console.log('[STARTUP] Checking for due and overdue bills on server startup...');
     try {
         await checkAndSendPaymentReminders();
@@ -116,5 +122,6 @@ setTimeout(async () => {
 console.log('Billing and payment reminder cron jobs initialized.');
 
 module.exports = {
+    runAutoBilling,
     checkAndSendPaymentReminders
 };
