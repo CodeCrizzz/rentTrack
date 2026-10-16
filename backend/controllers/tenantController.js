@@ -136,10 +136,21 @@ const getTenantPayments = async (req, res) => {
                     p.receipt_url AS "proofOfPayment",
                     p.notes,
                     p.id::text AS "referenceNumber",
-                    p.created_at
+                    p.created_at,
+                    b.billing_month,
+                    b.rent_amount,
+                    b.water_charges,
+                    b.electricity_charges,
+                    b.other_fees,
+                    b.total_amount AS bill_total,
+                    b.balance AS bill_balance,
+                    b.status AS bill_status,
+                    TO_CHAR(b.due_date, 'YYYY-MM-DD') AS bill_due_date
              FROM payments p
              JOIN bills b ON p.bill_id = b.id
              WHERE b.tenant_id = $1
+               AND (p.status IN ('Approved', 'Verified', 'Paid') OR p.status IS NULL)
+               AND (p.status NOT IN ('Pending Verification', 'Pending', 'Rejected') OR p.status IS NULL)
              ORDER BY p.payment_date DESC, p.id DESC`,
             [tenantId]
         );
@@ -268,6 +279,62 @@ const getCurrentBill = async (req, res) => {
         );
 
         if (result.rows.length === 0) {
+            // Check if tenant is active with an assigned room and needs current month bill auto-generated
+            const activeTenantRoomQuery = `
+                SELECT u.room_id, r.price as rent_amount, r.rental_type
+                FROM users u
+                JOIN rooms r ON u.room_id = r.id
+                WHERE u.id = $1 AND u.role = 'tenant' AND u.status = 'Active' AND u.room_id IS NOT NULL
+            `;
+            const { rows: roomRows } = await db.query(activeTenantRoomQuery, [tenantId]);
+
+            if (roomRows.length > 0) {
+                const tenantInfo = roomRows[0];
+                const now = new Date();
+                const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+                const currentMonthName = monthNames[now.getMonth()];
+                const currentYear = now.getFullYear();
+                const billingMonthStr = `${currentMonthName} ${currentYear}`;
+                const dueDate = new Date(now.getFullYear(), now.getMonth(), 5);
+
+                const existingCheck = await db.query(
+                    "SELECT id FROM bills WHERE tenant_id = $1 AND billing_month = $2",
+                    [tenantId, billingMonthStr]
+                );
+
+                if (existingCheck.rows.length === 0) {
+                    const totalAmount = tenantInfo.rent_amount;
+                    const insertBillQuery = `
+                        INSERT INTO bills (tenant_id, room_id, billing_month, due_date, rent_amount, water_charges, electricity_charges, other_fees, total_amount, balance, status, notes)
+                        VALUES ($1, $2, $3, $4, $5, 0, 0, 0, $6, $7, 'Unpaid', 'Auto-generated bill')
+                        RETURNING id, billing_month, total_amount, amount_paid, balance, rent_amount, water_charges, electricity_charges, other_fees, TO_CHAR(due_date, 'YYYY-MM-DD') AS due_date, status
+                    `;
+                    const newBillRes = await db.query(insertBillQuery, [
+                        tenantId, tenantInfo.room_id, billingMonthStr, dueDate,
+                        tenantInfo.rent_amount, totalAmount, totalAmount
+                    ]);
+                    const newBill = newBillRes.rows[0];
+                    return res.status(200).json({
+                        id: newBill.id,
+                        month: newBill.billing_month,
+                        totalAmount: parseFloat(newBill.total_amount),
+                        amountPaid: parseFloat(newBill.amount_paid),
+                        remainingBalance: parseFloat(newBill.balance),
+                        dueDate: newBill.due_date,
+                        status: newBill.status,
+                        createdAt,
+                        creationDay,
+                        breakdown: {
+                            rent: parseFloat(newBill.rent_amount || 0),
+                            water: 0,
+                            electricity: 0,
+                            other: 0,
+                            penalty: 0
+                        }
+                    });
+                }
+            }
+
             const now = new Date();
             const currentMonthName = now.toLocaleString('default', { month: 'long', year: 'numeric' });
             return res.status(200).json({
@@ -283,8 +350,8 @@ const getCurrentBill = async (req, res) => {
                     rent: 0, 
                     water: 0, 
                     electricity: 0, 
-                    other: 0,
-                    penalty: 0
+                    other: 0, 
+                    penalty: 0 
                 }
             });
         }
@@ -365,7 +432,16 @@ const submitTenantPayment = async (req, res) => {
             proofOfPayment: newPaymentRaw.receipt_url,
             notes: newPaymentRaw.notes,
             referenceNumber: newPaymentRaw.id.toString(),
-            created_at: newPaymentRaw.created_at
+            created_at: newPaymentRaw.created_at,
+            billing_month: updatedBillRaw ? updatedBillRaw.billing_month : null,
+            rent_amount: updatedBillRaw ? updatedBillRaw.rent_amount : null,
+            water_charges: updatedBillRaw ? updatedBillRaw.water_charges : null,
+            electricity_charges: updatedBillRaw ? updatedBillRaw.electricity_charges : null,
+            other_fees: updatedBillRaw ? updatedBillRaw.other_fees : null,
+            bill_total: updatedBillRaw ? updatedBillRaw.total_amount : null,
+            bill_balance: updatedBillRaw ? updatedBillRaw.balance : null,
+            bill_status: updatedBillRaw ? updatedBillRaw.status : null,
+            bill_due_date: updatedBillRaw ? updatedBillRaw.due_date : null
         };
 
         const updatedBill = updatedBillRaw ? {
