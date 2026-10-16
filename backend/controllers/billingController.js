@@ -252,8 +252,8 @@ const payBill = async (req, res) => {
 
         // 1. Insert Payment
         const paymentQuery = `
-            INSERT INTO payments (bill_id, amount_paid, payment_date, payment_method, notes)
-            VALUES ($1, $2, $3, $4, $5)
+            INSERT INTO payments (bill_id, amount_paid, payment_date, payment_method, notes, status)
+            VALUES ($1, $2, $3, $4, $5, 'Approved')
             RETURNING *
         `;
         const paymentValues = [billId, paymentAmount, payment_date || new Date(), payment_method, notes];
@@ -499,6 +499,8 @@ const getAllPayments = async (req, res) => {
             JOIN bills b ON p.bill_id = b.id
             JOIN users u ON b.tenant_id = u.id
             LEFT JOIN rooms r ON b.room_id = r.id
+            WHERE (p.status IN ('Approved', 'Verified', 'Paid') OR p.status IS NULL)
+              AND (p.status NOT IN ('Pending Verification', 'Pending', 'Rejected') OR p.status IS NULL)
             ORDER BY p.payment_date DESC
         `;
         const { rows } = await db.query(query);

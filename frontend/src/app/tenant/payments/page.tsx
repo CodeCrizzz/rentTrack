@@ -41,7 +41,7 @@ export default function TenantPayments() {
     const [sortBy, setSortBy] = useState("date_desc");
 
     const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
-    const [viewReceiptUrl, setViewReceiptUrl] = useState<string | null>(null);
+    const [viewingPayment, setViewingPayment] = useState<any | null>(null);
 
     const [payAmount, setPayAmount] = useState("");
     const [payMethod] = useState<'GCash'>('GCash');
@@ -51,6 +51,7 @@ export default function TenantPayments() {
     const [proofPreview, setProofPreview] = useState<string | null>(null);
     const [fileError, setFileError] = useState("");
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [isDragging, setIsDragging] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     const fetchPaymentData = async (showToast = false) => {
@@ -100,6 +101,10 @@ export default function TenantPayments() {
 
     const filteredPayments = useMemo(() => {
         return payments.filter(p => {
+            const isApproved = p.status === 'Paid' || p.status === 'Approved' || p.status === 'Verified' || !p.status;
+            const isPendingOrRejected = p.status === 'Pending' || p.status === 'Pending Verification' || p.status === 'Rejected';
+            if (!isApproved || isPendingOrRejected) return false;
+
             const refNum = p.referenceNumber || p.id?.toString() || "";
             const desc = p.description || p.notes || "";
             const method = p.payment_method || p.method || "";
@@ -108,17 +113,7 @@ export default function TenantPayments() {
                 desc.toLowerCase().includes(searchQuery.toLowerCase()) ||
                 method.toLowerCase().includes(searchQuery.toLowerCase());
 
-            const isApproved = p.status === 'Paid' || p.status === 'Approved' || p.status === 'Verified';
-            const isPending = p.status === 'Pending' || p.status === 'Pending Verification';
-            const isRejected = p.status === 'Rejected';
-
-            const matchesStatus = filterStatus === "All" || 
-                (filterStatus === "Paid" && isApproved) ||
-                (filterStatus === "Pending" && isPending) ||
-                (filterStatus === "Rejected" && isRejected) ||
-                p.status === filterStatus;
-
-            return matchesSearch && matchesStatus;
+            return matchesSearch;
         }).sort((a, b) => {
             const dateA = new Date(a.date || a.created_at).getTime();
             const dateB = new Date(b.date || b.created_at).getTime();
@@ -128,19 +123,57 @@ export default function TenantPayments() {
             if (sortBy === 'amount_asc') return Number(a.amount || 0) - Number(b.amount || 0);
             return 0;
         });
-    }, [payments, searchQuery, filterStatus, sortBy]);
+    }, [payments, searchQuery, sortBy]);
+
+    const handleFileSelect = (file: File) => {
+        setFileError("");
+        if (!file.type.startsWith('image/')) {
+            setFileError("Please upload an image file (PNG, JPG, JPEG, WEBP).");
+            return;
+        }
+        if (file.size > 5 * 1024 * 1024) {
+            setFileError("File exceeds 5MB size limit.");
+            return;
+        }
+        setProofFile(file);
+        const objectUrl = URL.createObjectURL(file);
+        setProofPreview(objectUrl);
+    };
 
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        setFileError("");
         if (e.target.files && e.target.files.length > 0) {
-            const file = e.target.files[0];
-            if (file.size > 5 * 1024 * 1024) {
-                setFileError("File exceeds 5MB size limit.");
-                return;
-            }
-            setProofFile(file);
-            const objectUrl = URL.createObjectURL(file);
-            setProofPreview(objectUrl);
+            handleFileSelect(e.target.files[0]);
+        }
+    };
+
+    const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
+        e.preventDefault();
+        setIsDragging(false);
+        if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+            handleFileSelect(e.dataTransfer.files[0]);
+        }
+    };
+
+    const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
+        e.preventDefault();
+        setIsDragging(true);
+    };
+
+    const handleDragLeave = (e: React.DragEvent<HTMLDivElement>) => {
+        e.preventDefault();
+        setIsDragging(false);
+    };
+
+    const handleRemoveProof = (e?: React.MouseEvent) => {
+        if (e) e.stopPropagation();
+        setProofFile(null);
+        if (proofPreview) {
+            URL.revokeObjectURL(proofPreview);
+        }
+        setProofPreview(null);
+        setFileError("");
+        if (fileInputRef.current) {
+            fileInputRef.current.value = "";
         }
     };
 
@@ -191,6 +224,8 @@ export default function TenantPayments() {
             setPayAmount("");
             setPayRefNumber("");
             setPayNotes("");
+            setIsDragging(false);
+            if (fileInputRef.current) fileInputRef.current.value = "";
             setIsPaymentModalOpen(false);
         } catch (error: any) {
             console.error("Payment submission failed:", error);
@@ -412,31 +447,8 @@ export default function TenantPayments() {
                             </span>
                         </div>
 
-                        {/* Pay Button */}
-                        <button
-                            onClick={() => {
-                                setPayAmount(currentBill.remainingBalance > 0 ? String(currentBill.remainingBalance) : "");
-                                setPayRefNumber("");
-                                setPayNotes("");
-                                setProofFile(null);
-                                setProofPreview(null);
-                                setFileError("");
-                                if (fileInputRef.current) fileInputRef.current.value = "";
-                                setIsPaymentModalOpen(true);
-                            }}
-                            disabled={currentBill.remainingBalance <= 0}
-                            className={`w-full py-3 rounded-xl text-sm font-bold transition-all flex items-center justify-center gap-2 shadow-xs ${
-                                currentBill.remainingBalance <= 0
-                                    ? 'bg-slate-100 dark:bg-zinc-800 text-slate-400 cursor-not-allowed'
-                                    : 'bg-teal-600 hover:bg-teal-700 text-white'
-                            }`}
-                        >
-                            <CreditCard className="w-4.5 h-4.5" />
-                            <span>{currentBill.remainingBalance <= 0 ? 'Statement Settled' : 'Pay Online with GCash'}</span>
-                        </button>
-
                         {/* In-Person Cash Payment Advisory */}
-                        <div className="mt-3 p-3 rounded-xl border border-slate-200/80 dark:border-zinc-800 bg-slate-50/70 dark:bg-zinc-900/40 flex items-start gap-2.5">
+                        <div className="mb-3 p-3 rounded-xl border border-slate-200/80 dark:border-zinc-800 bg-slate-50/70 dark:bg-zinc-900/40 flex items-start gap-2.5">
                             <div className="w-7 h-7 rounded-lg bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0 mt-0.5">
                                 <Building2 className="w-3.5 h-3.5" />
                             </div>
@@ -447,6 +459,30 @@ export default function TenantPayments() {
                                 </p>
                             </div>
                         </div>
+
+                        {/* Pay Button */}
+                        <button
+                            onClick={() => {
+                                setPayAmount(currentBill.remainingBalance > 0 ? String(currentBill.remainingBalance) : "");
+                                setPayRefNumber("");
+                                setPayNotes("");
+                                setProofFile(null);
+                                setProofPreview(null);
+                                setFileError("");
+                                setIsDragging(false);
+                                if (fileInputRef.current) fileInputRef.current.value = "";
+                                setIsPaymentModalOpen(true);
+                            }}
+                            disabled={currentBill.remainingBalance <= 0}
+                            className={`w-full py-3 rounded-xl text-sm font-bold transition-all flex items-center justify-center gap-2 shadow-xs cursor-pointer ${
+                                currentBill.remainingBalance <= 0
+                                    ? 'bg-slate-100 dark:bg-zinc-800 text-slate-400 cursor-not-allowed'
+                                    : 'bg-teal-600 hover:bg-teal-700 text-white'
+                            }`}
+                        >
+                            <CreditCard className="w-4.5 h-4.5" />
+                            <span>{currentBill.remainingBalance <= 0 ? 'Statement Settled' : 'Pay Online with GCash'}</span>
+                        </button>
                     </div>
                 </div>
 
@@ -457,9 +493,9 @@ export default function TenantPayments() {
                             <div>
                                 <h2 className="text-base sm:text-lg font-extrabold text-slate-900 dark:text-white flex items-center gap-2">
                                     <Clock className="w-4.5 h-4.5 text-slate-500" />
-                                    <span>Payment History & Verification</span>
+                                    <span>Payment History</span>
                                 </h2>
-                                <p className="text-xs sm:text-sm text-slate-500 dark:text-zinc-400 mt-0.5">Track your payments, upload receipts, and view verification status</p>
+                                <p className="text-xs sm:text-sm text-slate-500 dark:text-zinc-400 mt-0.5">Track and view your settled payments</p>
                             </div>
 
                             <div className="flex items-center gap-2">
@@ -474,16 +510,10 @@ export default function TenantPayments() {
                                     />
                                 </div>
 
-                                <select
-                                    value={filterStatus}
-                                    onChange={(e) => setFilterStatus(e.target.value)}
-                                    className="py-2 px-3 text-xs sm:text-sm font-medium rounded-lg bg-slate-50 dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 text-slate-700 dark:text-zinc-300 outline-none"
-                                >
-                                    <option value="All">All Status</option>
-                                    <option value="Paid">Paid / Approved</option>
-                                    <option value="Pending">Pending Verification</option>
-                                    <option value="Rejected">Rejected</option>
-                                </select>
+                                <span className="px-2.5 py-1 text-xs font-semibold rounded-lg bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-400 border border-emerald-200/60 dark:border-emerald-800/40 flex items-center gap-1.5 shrink-0">
+                                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                                    Status: Paid
+                                </span>
                             </div>
                         </div>
 
@@ -533,32 +563,19 @@ export default function TenantPayments() {
                                                         ₱{Number(p.amount || 0).toLocaleString()}
                                                     </td>
                                                     <td className="py-1.5 px-3.5 text-center whitespace-nowrap">
-                                                        <span className={`inline-block text-xs font-bold uppercase tracking-wide ${
-                                                            isApproved ? 'text-emerald-600 dark:text-emerald-400' :
-                                                            isPending ? 'text-amber-600 dark:text-amber-400' :
-                                                            'text-rose-600 dark:text-rose-400'
-                                                        }`}>
-                                                            {p.status}
+                                                        <span className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide text-emerald-600 dark:text-emerald-400">
+                                                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                                                            Paid
                                                         </span>
                                                     </td>
                                                     <td className="py-1.5 px-3.5 text-right whitespace-nowrap">
-                                                        {proofImg ? (
-                                                            <button
-                                                                onClick={() => setViewReceiptUrl(proofImg.startsWith('http') ? proofImg : `http://localhost:5000${proofImg.startsWith('/') ? proofImg : `/${proofImg}`}`)}
-                                                                className="text-xs sm:text-sm font-bold text-teal-600 dark:text-teal-400 hover:underline flex items-center gap-1.5 ml-auto"
-                                                            >
-                                                                <ImageIcon className="w-4 h-4" />
-                                                                <span>View</span>
-                                                            </button>
-                                                        ) : (
-                                                            <span className={`text-xs font-mono ${
-                                                                isCash
-                                                                    ? 'text-emerald-600 dark:text-emerald-400 font-semibold'
-                                                                    : 'text-slate-400 dark:text-zinc-500'
-                                                            }`}>
-                                                                {isCash ? 'Office Receipt' : 'No Receipt'}
-                                                            </span>
-                                                        )}
+                                                        <button
+                                                            onClick={() => setViewingPayment(p)}
+                                                            className="text-xs sm:text-sm font-bold text-teal-600 dark:text-teal-400 hover:underline flex items-center gap-1.5 ml-auto cursor-pointer"
+                                                        >
+                                                            {isCash ? <FileText className="w-4 h-4" /> : <ImageIcon className="w-4 h-4" />}
+                                                            <span>View</span>
+                                                        </button>
                                                     </td>
                                                 </tr>
                                             );
@@ -590,6 +607,7 @@ export default function TenantPayments() {
                                     setProofFile(null);
                                     setProofPreview(null);
                                     setFileError("");
+                                    setIsDragging(false);
                                     if (fileInputRef.current) fileInputRef.current.value = "";
                                     setIsPaymentModalOpen(false);
                                 }
@@ -610,6 +628,7 @@ export default function TenantPayments() {
                                                 setProofFile(null);
                                                 setProofPreview(null);
                                                 setFileError("");
+                                                setIsDragging(false);
                                                 if (fileInputRef.current) fileInputRef.current.value = "";
                                                 setIsPaymentModalOpen(false);
                                             }
@@ -674,11 +693,10 @@ export default function TenantPayments() {
                                         </div>
                                     </div>
 
-                                    {/* Payment Channel: GCash Online Only */}
+                                    {/* Payment Method */}
                                     <div className="space-y-1.5">
                                         <div className="flex items-center justify-between">
-                                            <label className="text-xs font-bold text-slate-700 dark:text-zinc-300">Payment Channel</label>
-                                            <span className="text-[10px] font-semibold text-slate-400 dark:text-zinc-500">Portal: GCash Only</span>
+                                            <label className="text-xs font-bold text-slate-700 dark:text-zinc-300">Payment Method</label>
                                         </div>
                                         <div className="flex items-center justify-between p-2.5 rounded-xl border border-blue-200/80 dark:border-blue-900/50 bg-blue-50/50 dark:bg-blue-950/20">
                                             <div className="flex items-center gap-2.5">
@@ -688,23 +706,9 @@ export default function TenantPayments() {
                                                 <div>
                                                     <div className="flex items-center gap-2">
                                                         <span className="text-xs font-extrabold text-slate-900 dark:text-white">GCash</span>
-                                                        <span className="px-1.5 py-0.5 rounded text-[10px] font-bold uppercase bg-blue-100 dark:bg-blue-900/60 text-blue-800 dark:text-blue-300 border border-blue-200 dark:border-blue-800">
-                                                            Online Method
-                                                        </span>
                                                     </div>
-                                                    <p className="text-[10px] text-slate-500 dark:text-zinc-400">Upload your GCash transaction screenshot and reference number below.</p>
+                                                    <p className="text-[10px] text-slate-500 dark:text-zinc-400">Upload your GCash payment screenshot below.</p>
                                                 </div>
-                                            </div>
-                                        </div>
-
-                                        {/* In-Person Cash Notice */}
-                                        <div className="p-2.5 rounded-xl border border-amber-200/80 dark:border-amber-900/40 bg-amber-50/70 dark:bg-amber-950/20 flex items-start gap-2.5">
-                                            <Building2 className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
-                                            <div className="text-[11px] text-amber-800 dark:text-amber-300 leading-snug">
-                                                <span className="font-bold">Paying via Cash?</span>
-                                                <p className="text-amber-700/90 dark:text-amber-400/90 mt-0.5 text-[10.5px]">
-                                                    Visit the <strong>Admin / Owner Office</strong> to hand over cash in person. Only authorized administrators can accept cash payments and record them to your account.
-                                                </p>
                                             </div>
                                         </div>
                                     </div>
@@ -729,11 +733,11 @@ export default function TenantPayments() {
                                             placeholder="Enter amount (e.g. 3500)"
                                             value={payAmount}
                                             onChange={(e) => setPayAmount(e.target.value)}
-                                            className="w-full py-2 px-3 text-xs font-mono font-bold rounded-lg bg-slate-50 dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 text-slate-900 dark:text-white outline-none focus:border-teal-500"
+                                            className="w-full py-2 px-3 text-xs font-mono font-bold rounded-lg bg-slate-50 dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 text-slate-900 dark:text-white outline-none focus:border-teal-500 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                                         />
                                     </div>
 
-                                    {/* GCash: Reference Number */}
+                                    {/* Reference Number input */}
                                     <div className="space-y-1">
                                         <div className="flex items-center justify-between">
                                             <label className="text-xs font-bold text-slate-700 dark:text-zinc-300">
@@ -750,7 +754,7 @@ export default function TenantPayments() {
                                                 placeholder="e.g. 90812348123"
                                                 value={payRefNumber}
                                                 onKeyDown={(e) => {
-                                                    // Allow functional/navigational keys (backspace, delete, tab, arrows)
+                                                    // Allow functional/navigational keys 
                                                     if (
                                                         ['Backspace', 'Delete', 'Tab', 'Escape', 'Enter', 'ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(e.key) ||
                                                         ((e.ctrlKey || e.metaKey) && ['a', 'c', 'v', 'x'].includes(e.key.toLowerCase()))
@@ -763,7 +767,7 @@ export default function TenantPayments() {
                                                     }
                                                 }}
                                                 onChange={(e) => {
-                                                    // Strictly strip any non-digit character (handles pasting and autofill)
+                                                    // Strictly strip any non-digit character
                                                     const numericValue = e.target.value.replace(/\D/g, '');
                                                     setPayRefNumber(numericValue);
                                                 }}
@@ -775,21 +779,94 @@ export default function TenantPayments() {
                                         </p>
                                     </div>
 
-                                    {/* GCash: Proof of Payment Screenshot */}
-                                    <div className="space-y-1">
-                                        <label className="text-xs font-bold text-slate-700 dark:text-zinc-300">
-                                            Proof of Payment Screenshot (Max 5MB)
-                                        </label>
+                                    {/* Card: Upload GCash Receipt Here */}
+                                    <div className="space-y-1.5">
+                                        <div className="flex items-center justify-between">
+                                            <label className="text-xs font-bold text-slate-700 dark:text-zinc-300">
+                                                Upload GCash Receipt
+                                            </label>
+                                            <span className="text-[10px] text-slate-400 dark:text-zinc-500 font-medium">Max 5MB (PNG, JPG, WEBP)</span>
+                                        </div>
+
+                                        {/* Hidden Native File Input */}
                                         <input
                                             type="file"
                                             accept="image/*"
                                             ref={fileInputRef}
                                             onChange={handleFileChange}
-                                            className="w-full text-xs text-slate-500 file:mr-2 file:py-1.5 file:px-3 file:rounded-md file:border-0 file:text-xs file:font-bold file:bg-teal-50 file:text-teal-700 hover:file:bg-teal-100"
+                                            className="hidden"
                                         />
-                                        {proofPreview && (
-                                            <div className="mt-2 rounded-lg overflow-hidden border border-slate-200 dark:border-zinc-800 max-h-36">
-                                                <img src={proofPreview} alt="Receipt preview" className="w-full h-auto object-cover" />
+
+                                        {!proofPreview ? (
+                                            /* Empty Upload Card */
+                                            <div
+                                                onClick={() => fileInputRef.current?.click()}
+                                                onDragOver={handleDragOver}
+                                                onDragLeave={handleDragLeave}
+                                                onDrop={handleDrop}
+                                                className={`group relative flex flex-col items-center justify-center p-5 rounded-xl border-2 border-dashed transition-all cursor-pointer ${
+                                                    isDragging
+                                                        ? 'border-teal-500 bg-teal-50/60 dark:bg-teal-950/30 ring-2 ring-teal-500/20'
+                                                        : 'border-slate-200 dark:border-zinc-800 bg-slate-50/60 dark:bg-zinc-900/40 hover:border-teal-500 dark:hover:border-teal-500/80 hover:bg-teal-50/20 dark:hover:bg-teal-950/10'
+                                                }`}
+                                            >
+                                                <div className="w-10 h-10 rounded-full bg-teal-50 dark:bg-teal-500/10 text-teal-600 dark:text-teal-400 flex items-center justify-center mb-2.5 transition-transform group-hover:scale-110 shadow-xs">
+                                                    <Upload className="w-5 h-5" />
+                                                </div>
+                                                <p className="text-xs font-bold text-slate-800 dark:text-zinc-200 text-center">
+                                                    Upload GCash Receipt Here
+                                                </p>
+                                                <p className="text-[11px] text-slate-500 dark:text-zinc-400 text-center mt-0.5">
+                                                    Drag and drop your screenshot, or <span className="text-teal-600 dark:text-teal-400 font-bold underline underline-offset-2">browse files</span>
+                                                </p>
+                                                <span className="text-[10px] text-slate-400 dark:text-zinc-500 mt-2 font-mono">
+                                                    PNG, JPG, JPEG, or WEBP
+                                                </span>
+                                            </div>
+                                        ) : (
+                                            /* Attached Receipt Card */
+                                            <div className="p-3 rounded-xl border border-teal-200 dark:border-teal-900/50 bg-teal-50/30 dark:bg-teal-950/20 flex flex-col gap-2.5">
+                                                <div className="flex items-center justify-between">
+                                                    <div className="flex items-center gap-2 min-w-0">
+                                                        <div className="w-5 h-5 rounded-full bg-teal-600 text-white flex items-center justify-center shrink-0">
+                                                            <CheckCircle2 className="w-3.5 h-3.5" />
+                                                        </div>
+                                                        <span className="text-xs font-bold text-slate-800 dark:text-zinc-200 truncate">
+                                                            GCash Receipt Attached
+                                                        </span>
+                                                    </div>
+                                                    <div className="flex items-center gap-1.5 shrink-0">
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => fileInputRef.current?.click()}
+                                                            className="text-[11px] font-bold text-teal-600 dark:text-teal-400 hover:underline px-1.5 py-0.5 rounded cursor-pointer"
+                                                        >
+                                                            Change
+                                                        </button>
+                                                        <button
+                                                            type="button"
+                                                            onClick={handleRemoveProof}
+                                                            className="text-[11px] font-bold text-rose-500 hover:text-rose-600 hover:underline px-1.5 py-0.5 rounded cursor-pointer"
+                                                        >
+                                                            Remove
+                                                        </button>
+                                                    </div>
+                                                </div>
+
+                                                <div className="relative rounded-lg overflow-hidden border border-slate-200 dark:border-zinc-800 bg-black/5 dark:bg-black/30 max-h-40 flex items-center justify-center">
+                                                    <img
+                                                        src={proofPreview}
+                                                        alt="GCash Receipt Preview"
+                                                        className="w-full h-auto max-h-40 object-contain"
+                                                    />
+                                                </div>
+
+                                                {proofFile && (
+                                                    <div className="flex items-center justify-between text-[10px] text-slate-500 dark:text-zinc-400 font-mono pt-1 border-t border-slate-200/60 dark:border-zinc-800">
+                                                        <span className="truncate max-w-[200px]">{proofFile.name}</span>
+                                                        <span>{(proofFile.size / 1024).toFixed(0)} KB</span>
+                                                    </div>
+                                                )}
                                             </div>
                                         )}
                                     </div>
@@ -797,9 +874,16 @@ export default function TenantPayments() {
                                     <button
                                         type="submit"
                                         disabled={isSubmitting}
-                                        className="w-full py-2.5 rounded-lg text-xs font-bold bg-teal-600 hover:bg-teal-700 text-white transition-all shadow-xs disabled:opacity-50"
+                                        className="w-full py-2.5 rounded-lg text-xs font-bold bg-teal-600 hover:bg-teal-700 text-white transition-all shadow-xs disabled:opacity-50 flex items-center justify-center gap-2 cursor-pointer"
                                     >
-                                        {isSubmitting ? 'Submitting...' : 'Upload & Submit for Verification'}
+                                        {isSubmitting ? (
+                                            <>
+                                                <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                                                <span>Confirming...</span>
+                                            </>
+                                        ) : (
+                                            <span>Confirm</span>
+                                        )}
                                     </button>
                                 </form>
                             </div>
@@ -808,32 +892,173 @@ export default function TenantPayments() {
                 )}
             </AnimatePresence>
 
-            {/* Modal 2: View Receipt Modal */}
+            {/* View Payment Statement & Receipt Modal */}
             <AnimatePresence>
-                {viewReceiptUrl && (
-                    <>
-                        <div 
-                            className="fixed inset-0 bg-slate-900/60 dark:bg-black/80 backdrop-blur-xs z-50"
-                            onClick={() => setViewReceiptUrl(null)}
-                        />
-                        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 pointer-events-none">
-                            <div className="w-full max-w-lg bg-card rounded-2xl shadow-xl border border-slate-200 dark:border-zinc-800 overflow-hidden pointer-events-auto flex flex-col">
-                                <div className="p-3.5 border-b border-slate-100 dark:border-zinc-800 flex justify-between items-center bg-slate-50/50 dark:bg-zinc-900/40">
-                                    <span className="text-xs font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
-                                        <ImageIcon className="w-4 h-4 text-teal-600" />
-                                        <span>Payment Proof Screenshot</span>
-                                    </span>
-                                    <button onClick={() => setViewReceiptUrl(null)} className="p-1 rounded-lg hover:bg-slate-200 dark:hover:bg-zinc-800 text-slate-500">
-                                        <X className="w-4 h-4" />
-                                    </button>
-                                </div>
-                                <div className="p-4 flex items-center justify-center bg-black/10 max-h-[75vh] overflow-auto">
-                                    <img src={viewReceiptUrl} alt="E-Receipt Proof" className="max-w-full max-h-full object-contain rounded-lg" />
+                {viewingPayment && (() => {
+                    const proofImg = viewingPayment.proof_image || viewingPayment.proof_url || viewingPayment.proofOfPayment;
+                    const rawMethod = viewingPayment.payment_method || viewingPayment.method || 'GCash';
+                    const isCash = String(rawMethod).toLowerCase() === 'cash';
+                    const isApproved = viewingPayment.status === 'Paid' || viewingPayment.status === 'Approved' || viewingPayment.status === 'Verified';
+                    const isPending = viewingPayment.status === 'Pending' || viewingPayment.status === 'Pending Verification';
+                    
+                    const statementMonth = viewingPayment.billing_month || viewingPayment.description?.replace(/^Payment for /i, '') || "Statement Overview";
+                    const rentVal = Number(viewingPayment.rent_amount ?? currentBill.breakdown?.rent ?? 0);
+                    const waterVal = Number(viewingPayment.water_charges ?? currentBill.breakdown?.water ?? 0);
+                    const electricityVal = Number(viewingPayment.electricity_charges ?? currentBill.breakdown?.electricity ?? 0);
+                    const otherVal = Number(viewingPayment.other_fees ?? 0);
+                    const statementTotal = Number(viewingPayment.bill_total ?? currentBill.totalAmount ?? viewingPayment.amount);
+
+                    return (
+                        <>
+                            <div 
+                                className="fixed inset-0 bg-slate-900/60 dark:bg-black/80 backdrop-blur-xs z-50"
+                                onClick={() => setViewingPayment(null)}
+                            />
+                            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 pointer-events-none">
+                                <div className="w-full max-w-lg bg-card rounded-2xl shadow-xl border border-slate-200 dark:border-zinc-800 overflow-hidden pointer-events-auto flex flex-col max-h-[90vh]">
+                                    {/* Modal Header */}
+                                    <div className="p-4 border-b border-slate-100 dark:border-zinc-800 flex justify-between items-center bg-slate-50/50 dark:bg-zinc-900/40 shrink-0">
+                                        <div className="flex items-center gap-2.5">
+                                            <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-white shrink-0 ${
+                                                isCash ? 'bg-emerald-600' : 'bg-blue-600'
+                                            }`}>
+                                                {isCash ? <Building2 className="w-4.5 h-4.5" /> : <QrCode className="w-4.5 h-4.5" />}
+                                            </div>
+                                            <div>
+                                                <h2 className="text-sm font-extrabold text-slate-900 dark:text-white">
+                                                    {isCash ? 'Cash Payment Statement' : 'GCash Payment & Receipt'}
+                                                </h2>
+                                                <p className="text-[11px] text-slate-400 dark:text-zinc-500 font-mono">
+                                                    Ref #{viewingPayment.referenceNumber || viewingPayment.id || 'N/A'} • {formatDate(viewingPayment.date || viewingPayment.created_at)}
+                                                </p>
+                                            </div>
+                                        </div>
+                                        <button 
+                                            onClick={() => setViewingPayment(null)} 
+                                            className="p-1.5 rounded-lg hover:bg-slate-200 dark:hover:bg-zinc-800 text-slate-500 transition-colors cursor-pointer"
+                                        >
+                                            <X className="w-4 h-4" />
+                                        </button>
+                                    </div>
+
+                                    {/* Modal Content */}
+                                    <div className="p-5 space-y-4 overflow-y-auto">
+                                        {/* Tenants Statement Overview */}
+                                        <div className="p-4 rounded-xl bg-slate-50 dark:bg-zinc-900/60 border border-slate-200 dark:border-zinc-800 space-y-3">
+                                            <div className="flex justify-between items-start pb-2.5 border-b border-slate-200/80 dark:border-zinc-800">
+                                                <div>
+                                                    <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-500">Statement Overview</span>
+                                                    <h3 className="text-sm font-extrabold text-slate-900 dark:text-white mt-0.5">{statementMonth}</h3>
+                                                </div>
+                                                <span className={`text-[11px] font-bold uppercase ${
+                                                    isApproved ? 'text-emerald-600 dark:text-emerald-400' :
+                                                    isPending ? 'text-amber-600 dark:text-amber-400' :
+                                                    'text-rose-600 dark:text-rose-400'
+                                                }`}>
+                                                    {viewingPayment.status}
+                                                </span>
+                                            </div>
+
+                                            {/* Breakdown items */}
+                                            <div className="space-y-1.5 text-xs">
+                                                <div className="flex justify-between items-center text-slate-600 dark:text-zinc-400">
+                                                    <span>Room rent</span>
+                                                    <span className="font-mono font-bold text-slate-900 dark:text-zinc-100">₱{rentVal.toLocaleString()}</span>
+                                                </div>
+                                                <div className="flex justify-between items-center text-slate-600 dark:text-zinc-400">
+                                                    <span>Water bill</span>
+                                                    <span className="font-mono font-bold text-slate-900 dark:text-zinc-100">₱{waterVal.toLocaleString()}</span>
+                                                </div>
+                                                <div className="flex justify-between items-center text-slate-600 dark:text-zinc-400">
+                                                    <span>Electricity bill</span>
+                                                    <span className="font-mono font-bold text-slate-900 dark:text-zinc-100">₱{electricityVal.toLocaleString()}</span>
+                                                </div>
+                                                {otherVal > 0 && (
+                                                    <div className="flex justify-between items-center text-rose-600 dark:text-rose-400 font-semibold">
+                                                        <span>Other / Surcharges</span>
+                                                        <span className="font-mono font-bold">+₱{otherVal.toLocaleString()}</span>
+                                                    </div>
+                                                )}
+                                            </div>
+
+                                            {/* Statement Total & Amount Paid in this Record */}
+                                            <div className="pt-2.5 border-t border-slate-200/80 dark:border-zinc-800 space-y-1.5">
+                                                {statementTotal > 0 && (
+                                                    <div className="flex justify-between items-center text-xs text-slate-500 dark:text-zinc-400">
+                                                        <span>Total Statement Amount</span>
+                                                        <span className="font-mono font-bold text-slate-700 dark:text-zinc-300">₱{statementTotal.toLocaleString()}</span>
+                                                    </div>
+                                                )}
+                                                <div className="flex justify-between items-baseline pt-1">
+                                                    <span className="text-xs font-bold text-slate-800 dark:text-zinc-200">Amount Paid</span>
+                                                    <span className="text-xl font-black font-mono text-teal-600 dark:text-teal-400">
+                                                        ₱{Number(viewingPayment.amount || 0).toLocaleString()}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        {/* Method & Verification / Receipt */}
+                                        {isCash ? (
+                                            /* Cash Payment Info - NO UPLOADED IMAGE */
+                                            <div className="p-3.5 rounded-xl border border-emerald-200 dark:border-emerald-900/50 bg-emerald-50/50 dark:bg-emerald-950/20 flex items-start gap-3">
+                                                <div className="w-8 h-8 rounded-lg bg-emerald-600 text-white flex items-center justify-center shrink-0 mt-0.5">
+                                                    <ShieldCheck className="w-4.5 h-4.5" />
+                                                </div>
+                                                <div className="space-y-0.5 text-xs">
+                                                    <span className="font-bold text-emerald-900 dark:text-emerald-200">Official In-Person Cash Payment</span>
+                                                    <p className="text-[11px] text-emerald-700 dark:text-emerald-400 leading-relaxed">
+                                                        Handed in directly at the <strong>Admin / Owner Office</strong>. Official physical receipt was verified and recorded into your account ledger.
+                                                    </p>
+                                                    {viewingPayment.notes && (
+                                                        <p className="text-[10px] text-emerald-800 dark:text-emerald-300 font-mono mt-1">
+                                                            Notes: {viewingPayment.notes}
+                                                        </p>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        ) : (
+                                            /* GCash Payment Info & Uploaded Receipt Image */
+                                            <div className="space-y-2">
+                                                <div className="flex items-center justify-between">
+                                                    <span className="text-xs font-bold text-slate-700 dark:text-zinc-300 flex items-center gap-1.5">
+                                                        <ImageIcon className="w-3.5 h-3.5 text-teal-600" />
+                                                        <span>Uploaded GCash Receipt</span>
+                                                    </span>
+                                                    {proofImg && (
+                                                        <a
+                                                            href={proofImg.startsWith('http') ? proofImg : `http://localhost:5000${proofImg.startsWith('/') ? proofImg : `/${proofImg}`}`}
+                                                            target="_blank"
+                                                            rel="noopener noreferrer"
+                                                            className="text-[11px] font-bold text-teal-600 dark:text-teal-400 hover:underline flex items-center gap-1"
+                                                        >
+                                                            <ArrowUpRight className="w-3 h-3" />
+                                                            <span>Open Full Size</span>
+                                                        </a>
+                                                    )}
+                                                </div>
+
+                                                {proofImg ? (
+                                                    <div className="rounded-xl overflow-hidden border border-slate-200 dark:border-zinc-800 bg-black/5 dark:bg-black/30 flex items-center justify-center max-h-64 p-2">
+                                                        <img 
+                                                            src={proofImg.startsWith('http') ? proofImg : `http://localhost:5000${proofImg.startsWith('/') ? proofImg : `/${proofImg}`}`} 
+                                                            alt="GCash Payment Receipt" 
+                                                            className="max-w-full max-h-60 object-contain rounded-lg" 
+                                                        />
+                                                    </div>
+                                                ) : (
+                                                    <div className="p-4 rounded-xl border border-dashed border-slate-200 dark:border-zinc-800 text-center text-xs text-slate-400 dark:text-zinc-500">
+                                                        No uploaded receipt screenshot was attached with this GCash payment.
+                                                    </div>
+                                                )}
+                                            </div>
+                                        )}
+                                    </div>
                                 </div>
                             </div>
-                        </div>
-                    </>
-                )}
+                        </>
+                    );
+                })()}
             </AnimatePresence>
 
         </div>

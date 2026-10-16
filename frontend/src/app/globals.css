@@ -172,6 +172,17 @@
   pointer-events: none;
 }
 
+/* Remove number input spin buttons (up/down arrow icons) */
+input[type="number"]::-webkit-outer-spin-button,
+input[type="number"]::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+input[type="number"] {
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;
@@ -181,5 +192,30 @@
   }
   html {
     @apply font-sans;
+  }
+}
+
+@media print {
+  body * {
+    visibility: hidden;
+  }
+  #statement-modal-printable,
+  #statement-modal-printable * {
+    visibility: visible;
+  }
+  #statement-modal-printable {
+    position: fixed;
+    left: 0;
+    top: 0;
+    width: 100vw;
+    height: auto;
+    max-height: none !important;
+    overflow: visible !important;
+    background: #ffffff !important;
+    color: #0f172a !important;
+    border: none !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
   }
 }
