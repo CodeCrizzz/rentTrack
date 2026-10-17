@@ -105,7 +105,7 @@ export default function TenantPayments() {
             const isPendingOrRejected = p.status === 'Pending' || p.status === 'Pending Verification' || p.status === 'Rejected';
             if (!isApproved || isPendingOrRejected) return false;
 
-            const refNum = p.referenceNumber || p.id?.toString() || "";
+            const refNum = p.reference_number || p.referenceNumber || p.id?.toString() || "";
             const desc = p.description || p.notes || "";
             const method = p.payment_method || p.method || "";
             const matchesSearch = !searchQuery || 
@@ -201,7 +201,8 @@ export default function TenantPayments() {
             formData.append('bill_id', currentBill?.id?.toString() || "");
             formData.append('amount_paid', payAmount);
             formData.append('payment_method', 'GCash');
-            formData.append('notes', `Ref #${cleanRef}`);
+            formData.append('reference_number', cleanRef);
+            formData.append('notes', cleanRef);
 
             if (proofFile) {
                 formData.append('proofOfPayment', proofFile);
@@ -522,7 +523,8 @@ export default function TenantPayments() {
                                 <table className="w-full text-left text-sm border-collapse">
                                     <thead>
                                         <tr className="h-[40px] border-b border-slate-100 dark:border-zinc-800 text-xs sm:text-sm font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-500 sticky top-0 bg-card z-10">
-                                            <th className="py-2 px-3.5 bg-card">Date & Ref #</th>
+                                            <th className="py-2 px-3.5 bg-card">Date</th>
+                                            <th className="py-2 px-3.5 bg-card">Reference</th>
                                             <th className="py-2 px-3.5 bg-card">Method</th>
                                             <th className="py-2 px-3.5 text-right bg-card">Amount</th>
                                             <th className="py-2 px-3.5 text-center bg-card">Status</th>
@@ -536,13 +538,23 @@ export default function TenantPayments() {
                                             const isCash = String(rawMethod).toLowerCase() === 'cash';
                                             const isApproved = p.status === 'Paid' || p.status === 'Approved' || p.status === 'Verified';
                                             const isPending = p.status === 'Pending' || p.status === 'Pending Verification';
+                                            const refNumber = p.reference_number || p.referenceNumber || (p.notes ? p.notes.replace(/^Ref[:#]?\s*/i, '') : `REF-${p.id}`);
                                             return (
                                                 <tr key={i} className="h-[53px] hover:bg-slate-50/50 dark:hover:bg-zinc-900/40 transition-colors">
-                                                    <td className="py-1.5 px-3.5 whitespace-nowrap">
-                                                        <p className="font-bold text-slate-900 dark:text-white text-sm sm:text-base leading-snug">{formatDate(p.date || p.created_at)}</p>
-                                                        <p className="text-xs text-slate-400 dark:text-zinc-500 font-mono mt-0.5">#{p.referenceNumber || p.id || 'TX-AUTO'}</p>
+                                                    {/* Date */}
+                                                    <td className="py-1.5 px-3.5 whitespace-nowrap font-medium text-slate-900 dark:text-white text-xs sm:text-sm">
+                                                        {formatDate(p.date || p.created_at)}
                                                     </td>
-                                                    <td className="py-1.5 px-3.5">
+
+                                                    {/* Reference */}
+                                                    <td className="py-1.5 px-3.5 whitespace-nowrap">
+                                                        <span className="font-mono text-xs font-bold text-slate-800 dark:text-zinc-200 bg-slate-100 dark:bg-zinc-800/80 px-2 py-0.5 rounded border border-slate-200 dark:border-zinc-700">
+                                                            {refNumber}
+                                                        </span>
+                                                    </td>
+
+                                                    {/* Method */}
+                                                    <td className="py-1.5 px-3.5 whitespace-nowrap">
                                                         <div className="flex items-center gap-2">
                                                             <span className={`p-1.5 rounded-lg text-xs font-bold shrink-0 ${
                                                                 isCash
@@ -551,13 +563,10 @@ export default function TenantPayments() {
                                                             }`}>
                                                                 {isCash ? <Building2 className="w-4 h-4" /> : <QrCode className="w-4 h-4" />}
                                                             </span>
-                                                            <span className="font-bold text-slate-800 dark:text-zinc-200 text-sm sm:text-base">
+                                                            <span className="font-bold text-slate-800 dark:text-zinc-200 text-xs sm:text-sm">
                                                                 {isCash ? 'Cash (Admin Office)' : 'GCash'}
                                                             </span>
                                                         </div>
-                                                        <p className="text-xs text-slate-400 dark:text-zinc-500 truncate max-w-[160px] mt-0.5">
-                                                            {p.description || p.notes || (isCash ? 'Handed in at Admin Office' : 'GCash Online Payment')}
-                                                        </p>
                                                     </td>
                                                     <td className="py-1.5 px-3.5 text-right font-mono font-black text-slate-900 dark:text-white text-base sm:text-lg whitespace-nowrap">
                                                         ₱{Number(p.amount || 0).toLocaleString()}
@@ -929,7 +938,7 @@ export default function TenantPayments() {
                                                     {isCash ? 'Cash Payment Statement' : 'GCash Payment & Receipt'}
                                                 </h2>
                                                 <p className="text-[11px] text-slate-400 dark:text-zinc-500 font-mono">
-                                                    Ref #{viewingPayment.referenceNumber || viewingPayment.id || 'N/A'} • {formatDate(viewingPayment.date || viewingPayment.created_at)}
+                                                    Ref #{viewingPayment.reference_number || viewingPayment.referenceNumber || viewingPayment.id || 'N/A'} • {formatDate(viewingPayment.date || viewingPayment.created_at)}
                                                 </p>
                                             </div>
                                         </div>
@@ -1010,9 +1019,9 @@ export default function TenantPayments() {
                                                     <p className="text-[11px] text-emerald-700 dark:text-emerald-400 leading-relaxed">
                                                         Handed in directly at the <strong>Admin / Owner Office</strong>. Official physical receipt was verified and recorded into your account ledger.
                                                     </p>
-                                                    {viewingPayment.notes && (
+                                                    {(viewingPayment.reference_number || viewingPayment.referenceNumber) && (
                                                         <p className="text-[10px] text-emerald-800 dark:text-emerald-300 font-mono mt-1">
-                                                            Notes: {viewingPayment.notes}
+                                                            Ref #: <span className="font-bold">{viewingPayment.reference_number || viewingPayment.referenceNumber}</span>
                                                         </p>
                                                     )}
                                                 </div>

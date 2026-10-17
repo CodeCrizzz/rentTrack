@@ -247,16 +247,26 @@ const payBill = async (req, res) => {
             newStatus = 'Paid';
         }
 
+        // Auto-generate reference number for cash settlements if not provided
+        let refNumber = req.body.reference_number || req.body.referenceNumber;
+        if (!refNumber) {
+            const now = new Date(payment_date || Date.now());
+            const dateStr = now.toISOString().slice(0, 10).replace(/-/g, '');
+            const randomCode = Math.floor(1000 + Math.random() * 9000);
+            const prefix = (payment_method && payment_method.toLowerCase() === 'cash') ? 'CSH' : 'TX';
+            refNumber = `${prefix}-${dateStr}-${randomCode}`;
+        }
+
         // Must run in transaction or sequentially
         await db.query('BEGIN');
 
         // 1. Insert Payment
         const paymentQuery = `
-            INSERT INTO payments (bill_id, amount_paid, payment_date, payment_method, notes, status)
-            VALUES ($1, $2, $3, $4, $5, 'Approved')
+            INSERT INTO payments (bill_id, amount_paid, payment_date, payment_method, notes, status, reference_number)
+            VALUES ($1, $2, $3, $4, $5, 'Approved', $6)
             RETURNING *
         `;
-        const paymentValues = [billId, paymentAmount, payment_date || new Date(), payment_method, notes];
+        const paymentValues = [billId, paymentAmount, payment_date || new Date(), payment_method || 'Cash', notes || null, refNumber];
         const { rows: paymentResult } = await db.query(paymentQuery, paymentValues);
 
         // 2. Update Bill Status

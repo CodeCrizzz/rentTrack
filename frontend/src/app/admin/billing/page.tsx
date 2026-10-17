@@ -96,6 +96,8 @@ interface PendingPayment {
     payment_date: string;
     payment_method: string;
     notes: string;
+    reference_number?: string;
+    referenceNumber?: string;
     receipt_url: string;
     status: string;
     billing_month: string;
@@ -130,7 +132,7 @@ export default function AdminBilling() {
 
     // Filters
     const [searchQuery, setSearchQuery] = useState("");
-    const [statusFilter, setStatusFilter] = useState<'All' | 'Pending Verification' | 'Overdue' | 'Partial' | 'Unpaid' | 'Paid'>('All');
+    const [statusFilter, setStatusFilter] = useState<'All' | 'Pending Verification' | 'Overdue' | 'Partial' | 'Unpaid'>('All');
     const [monthFilter, setMonthFilter] = useState("All");
     const [roomFilter, setRoomFilter] = useState("All Rooms");
     const [sortFilter, setSortFilter] = useState("Newest First");
@@ -249,9 +251,14 @@ export default function AdminBilling() {
         };
     }, [bills, pendingPayments]);
 
+    // --- DUE INVOICES (PAID BILLS EXCLUDED AS THEY ARE DISPLAYED IN PAYMENT JOURNAL) ---
+    const dueBills = useMemo(() => {
+        return bills.filter(b => b.status !== 'Paid');
+    }, [bills]);
+
     // --- FILTERED INVOICES ---
     const filteredBills = useMemo(() => {
-        return bills.filter(bill => {
+        return dueBills.filter(bill => {
             // Status Category
             if (statusFilter !== 'All' && bill.status !== statusFilter) return false;
 
@@ -288,7 +295,7 @@ export default function AdminBilling() {
             const dateB = b.created_at ? new Date(b.created_at).getTime() : 0;
             return dateB - dateA;
         });
-    }, [bills, statusFilter, monthFilter, roomFilter, searchQuery, sortFilter]);
+    }, [dueBills, statusFilter, monthFilter, roomFilter, searchQuery, sortFilter]);
 
     // --- FILTERED PAYMENTS (ONLY PAID STATUS) ---
     const filteredPayments = useMemo(() => {
@@ -303,7 +310,8 @@ export default function AdminBilling() {
                 const matchRoom = payment.room_number?.toString().toLowerCase().includes(q);
                 const matchMethod = payment.payment_method?.toLowerCase().includes(q);
                 const matchMonth = payment.billing_month?.toLowerCase().includes(q);
-                if (!matchTenant && !matchRoom && !matchMethod && !matchMonth) return false;
+                const matchRef = (payment.reference_number || payment.referenceNumber || payment.notes)?.toLowerCase().includes(q);
+                if (!matchTenant && !matchRoom && !matchMethod && !matchMonth && !matchRef) return false;
             }
             return true;
         });
@@ -773,7 +781,7 @@ export default function AdminBilling() {
                             <Receipt className="w-3.5 h-3.5" />
                             <span>Invoices & Dues</span>
                             <span className="text-[10px] px-1.5 py-0.2 bg-teal-50 dark:bg-teal-500/20 text-teal-700 dark:text-teal-300 rounded-full font-mono">
-                                {bills.length}
+                                {dueBills.length}
                             </span>
                         </button>
                         <button
@@ -796,12 +804,11 @@ export default function AdminBilling() {
                     {activeTab === 'invoices' && (
                         <div className="flex items-center gap-1 overflow-x-auto custom-scrollbar text-xs">
                             {[
-                                { key: 'All', label: 'All Invoices', count: bills.length },
+                                { key: 'All', label: 'All Invoices', count: dueBills.length },
                                 { key: 'Pending Verification', label: 'Verification', count: metrics.pendingVerificationCount, alert: metrics.pendingVerificationCount > 0 },
                                 { key: 'Overdue', label: 'Overdue', count: metrics.overdueCount, alert: metrics.overdueCount > 0 },
                                 { key: 'Partial', label: 'Partial', count: metrics.partialCount },
-                                { key: 'Unpaid', label: 'Unpaid', count: metrics.unpaidCount },
-                                { key: 'Paid', label: 'Paid', count: metrics.paidCount }
+                                { key: 'Unpaid', label: 'Unpaid', count: metrics.unpaidCount }
                             ].map(tab => (
                                 <button
                                     key={tab.key}
@@ -1138,7 +1145,7 @@ export default function AdminBilling() {
                                     <th className="py-2.5 px-3 bg-slate-100 dark:bg-zinc-800 border-b border-slate-200 dark:border-zinc-700">Payment Method</th>
                                     <th className="py-2.5 px-4 text-right bg-slate-100 dark:bg-zinc-800 border-b border-slate-200 dark:border-zinc-700">Amount Paid</th>
                                     <th className="py-2.5 px-3 text-center bg-slate-100 dark:bg-zinc-800 border-b border-slate-200 dark:border-zinc-700">Payment Status</th>
-                                    <th className="py-2.5 px-4 bg-slate-100 dark:bg-zinc-800 border-b border-slate-200 dark:border-zinc-700">Reference / Notes</th>
+                                    <th className="py-2.5 px-4 bg-slate-100 dark:bg-zinc-800 border-b border-slate-200 dark:border-zinc-700">Reference</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-slate-100 dark:divide-zinc-800/60 font-sans">
@@ -1195,9 +1202,11 @@ export default function AdminBilling() {
                                                 </span>
                                             </td>
 
-                                            {/* Notes / Receipt */}
-                                            <td className="py-2 px-4 text-slate-500 dark:text-zinc-400 text-xs truncate max-w-xs">
-                                                {payment.notes || '-'}
+                                            {/* Reference */}
+                                            <td className="py-2 px-4 whitespace-nowrap">
+                                                <span className="font-mono text-xs font-bold text-slate-800 dark:text-zinc-200 bg-slate-100 dark:bg-zinc-800/80 px-2 py-0.5 rounded border border-slate-200 dark:border-zinc-700">
+                                                    {payment.reference_number || payment.referenceNumber || (payment.notes ? payment.notes.replace(/^Ref[:#]?\s*/i, '') : `REF-${payment.id}`)}
+                                                </span>
                                             </td>
                                         </tr>
                                     ))
@@ -2064,10 +2073,12 @@ export default function AdminBilling() {
                                                                 <div className="text-[11px] text-slate-500">Bill Total: ₱{Number(payment.bill_total).toLocaleString()}</div>
                                                             </div>
 
-                                                            {payment.notes && (
+                                                            {(payment.reference_number || payment.notes) && (
                                                                 <div className="pt-2 border-t border-slate-100 dark:border-zinc-800">
-                                                                    <span className="text-[10px] uppercase font-bold text-slate-400">Tenant Note / Reference</span>
-                                                                    <div className="italic text-slate-700 dark:text-zinc-300 mt-0.5">{payment.notes}</div>
+                                                                    <span className="text-[10px] uppercase font-bold text-slate-400">GCash Reference Number</span>
+                                                                    <div className="font-mono font-bold text-slate-900 dark:text-white mt-0.5">
+                                                                        {payment.reference_number || (payment.notes ? payment.notes.replace(/^Ref[:#]?\s*/i, '') : 'N/A')}
+                                                                    </div>
                                                                 </div>
                                                             )}
                                                         </div>

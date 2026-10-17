@@ -135,7 +135,8 @@ const getTenantPayments = async (req, res) => {
                     p.receipt_url AS proof_image,
                     p.receipt_url AS "proofOfPayment",
                     p.notes,
-                    p.id::text AS "referenceNumber",
+                    COALESCE(p.reference_number, p.id::text) AS "referenceNumber",
+                    COALESCE(p.reference_number, p.id::text) AS reference_number,
                     p.created_at,
                     b.billing_month,
                     b.rent_amount,
@@ -384,7 +385,13 @@ const getCurrentBill = async (req, res) => {
 // Submit Proof of Payment
 const submitTenantPayment = async (req, res) => {
     const tenantId = req.user.id;
-    const { bill_id, amount_paid, notes } = req.body;
+    const { bill_id, amount_paid } = req.body;
+    let notes = req.body.notes || '';
+    let refNumber = req.body.reference_number || req.body.referenceNumber;
+    if (!refNumber && notes) {
+        const match = notes.match(/Ref[:#]?\s*(\S+)/i);
+        refNumber = match ? match[1] : notes;
+    }
     const payment_method = 'GCash';
     let receipt_url = null;
 
@@ -400,11 +407,11 @@ const submitTenantPayment = async (req, res) => {
         await db.query('BEGIN');
 
         const insertPaymentQuery = `
-            INSERT INTO payments (bill_id, amount_paid, payment_date, payment_method, notes, receipt_url, status) 
-            VALUES ($1, $2, CURRENT_TIMESTAMP, $3, $4, $5, 'Pending Verification') 
+            INSERT INTO payments (bill_id, amount_paid, payment_date, payment_method, notes, receipt_url, status, reference_number) 
+            VALUES ($1, $2, CURRENT_TIMESTAMP, $3, $4, $5, 'Pending Verification', $6) 
             RETURNING *
         `;
-        const paymentResult = await db.query(insertPaymentQuery, [bill_id, amount_paid, payment_method, notes, receipt_url]);
+        const paymentResult = await db.query(insertPaymentQuery, [bill_id, amount_paid, payment_method, notes, receipt_url, refNumber]);
         
         const updateBillQuery = `
             UPDATE bills
@@ -431,7 +438,8 @@ const submitTenantPayment = async (req, res) => {
             proof_url: newPaymentRaw.receipt_url,
             proofOfPayment: newPaymentRaw.receipt_url,
             notes: newPaymentRaw.notes,
-            referenceNumber: newPaymentRaw.id.toString(),
+            referenceNumber: newPaymentRaw.reference_number || newPaymentRaw.id.toString(),
+            reference_number: newPaymentRaw.reference_number || newPaymentRaw.id.toString(),
             created_at: newPaymentRaw.created_at,
             billing_month: updatedBillRaw ? updatedBillRaw.billing_month : null,
             rent_amount: updatedBillRaw ? updatedBillRaw.rent_amount : null,
