@@ -1,5 +1,5 @@
 const db = require('../config/db');
-const { sendPaymentDueEmail, sendPaymentOverdueEmail } = require('./emailService');
+const { sendPaymentDueEmail } = require('./emailService');
 
 /**
  * Format currency to PHP
@@ -88,18 +88,9 @@ const checkAndSendPaymentReminders = async () => {
             const diffTime = dueDayMidnight.getTime() - startOfToday.getTime();
             const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24));
 
-            let reminderType = null; // 'billing_due' | 'billing_overdue'
-            let notificationTitle = '';
-            let notificationMessage = '';
-
             if (diffDays < 0) {
                 // Due date has passed -> OVERDUE
-                reminderType = 'billing_overdue';
-                const daysPast = Math.abs(diffDays);
-                notificationTitle = `URGENT: Payment Overdue - ${bill.billing_month}`;
-                notificationMessage = `Your rent payment for ${bill.billing_month} was due on ${formatDate(bill.due_date)} (${daysPast} day${daysPast > 1 ? 's' : ''} ago). Outstanding balance: ${formatCurrency(bill.balance)}. Please pay immediately to prevent penalties.`;
-
-                // Update bill status to Overdue if not already marked
+                // 1. Update bill status to Overdue if not already marked
                 if (bill.status !== 'Overdue' && bill.status !== 'Pending Verification') {
                     await db.query(
                         `UPDATE "rentTrack_schema".bills SET status = 'Overdue' WHERE id = $1`,
@@ -107,67 +98,75 @@ const checkAndSendPaymentReminders = async () => {
                     );
                     bill.status = 'Overdue';
                 }
-            } else if (diffDays <= 3) {
-                // Due today or within next 3 days -> DUE SOON
-                reminderType = 'billing_due';
-                const dueText = diffDays === 0 ? 'today' : `in ${diffDays} day${diffDays > 1 ? 's' : ''} (${formatDate(bill.due_date)})`;
-                notificationTitle = `Payment Due Reminder - ${bill.billing_month}`;
-                notificationMessage = `Friendly reminder: Your rent payment for ${bill.billing_month} is due ${dueText}. Outstanding balance: ${formatCurrency(bill.balance)}. Please settle on time.`;
-            }
 
-            if (!reminderType) {
-                // Not due yet (more than 3 days in the future)
+                // 2. In-system notification for overdue (recorded once per bill)
+                const checkOverdueNotif = `
+                    SELECT id FROM "rentTrack_schema".notifications
+                    WHERE bill_id = $1 AND type = 'billing_overdue'
+                    LIMIT 1
+                `;
+                const { rows: existingOverdue } = await db.query(checkOverdueNotif, [bill.id]);
+
+                if (existingOverdue.length === 0) {
+                    const daysPast = Math.abs(diffDays);
+                    const notificationTitle = `Payment Overdue - ${bill.billing_month}`;
+                    const notificationMessage = `Your rent payment for ${bill.billing_month} was due on ${formatDate(bill.due_date)} (${daysPast} day${daysPast > 1 ? 's' : ''} ago). Outstanding balance: ${formatCurrency(bill.balance)}.`;
+
+                    await db.query(`
+                        INSERT INTO "rentTrack_schema".notifications (user_id, title, message, type, bill_id, is_read, created_at)
+                        VALUES ($1, $2, $3, 'billing_overdue', $4, FALSE, CURRENT_TIMESTAMP)
+                    `, [bill.tenant_id, notificationTitle, notificationMessage, bill.id]);
+                    summary.overdueRemindersSent++;
+                }
+
+                // 3. DO NOT SEND EMAIL FOR OVERDUE BILLS per user requirement:
+                // "dont send another email if it is overdue"
+                console.log(`[NO EMAIL - OVERDUE] Bill #${bill.id} is overdue (${diffDays} days). No email dispatched per policy.`);
                 continue;
             }
 
-            // 2. Check if a reminder for this bill & type was already sent TODAY
-            const checkQuery = `
-                SELECT id FROM "rentTrack_schema".notifications
-                WHERE bill_id = $1 
-                  AND type = $2 
-                  AND created_at >= CURRENT_DATE
-                LIMIT 1
-            `;
-            const { rows: existingNotifs } = await db.query(checkQuery, [bill.id, reminderType]);
+            if (diffDays === 0) {
+                // Exactly on Due Date -> Send Email Notification ONLY ONCE
+                const checkQuery = `
+                    SELECT id FROM "rentTrack_schema".notifications
+                    WHERE bill_id = $1 
+                      AND type = 'billing_due'
+                    LIMIT 1
+                `;
+                const { rows: existingNotifs } = await db.query(checkQuery, [bill.id]);
 
-            if (existingNotifs.length > 0) {
-                summary.skippedAlreadySent++;
-                console.log(`[SKIPPED] ${reminderType} already sent today for Bill #${bill.id} (${bill.tenant_name}).`);
-                continue;
-            }
+                if (existingNotifs.length > 0) {
+                    summary.skippedAlreadySent++;
+                    console.log(`[SKIPPED] Due date reminder email was already sent once for Bill #${bill.id} (${bill.tenant_name}).`);
+                    continue;
+                }
 
-            // 3. Create In-System Notification
-            const insertNotifQuery = `
-                INSERT INTO "rentTrack_schema".notifications (user_id, title, message, type, bill_id, is_read, created_at)
-                VALUES ($1, $2, $3, $4, $5, FALSE, CURRENT_TIMESTAMP)
-                RETURNING id
-            `;
-            await db.query(insertNotifQuery, [
-                bill.tenant_id,
-                notificationTitle,
-                notificationMessage,
-                reminderType,
-                bill.id
-            ]);
+                // Create In-System Notification
+                const notificationTitle = `Payment Due Reminder - ${bill.billing_month}`;
+                const notificationMessage = `Friendly reminder: Your rent payment for ${bill.billing_month} is due today (${formatDate(bill.due_date)}). Outstanding balance: ${formatCurrency(bill.balance)}. Please settle on time.`;
 
-            if (reminderType === 'billing_due') {
+                await db.query(`
+                    INSERT INTO "rentTrack_schema".notifications (user_id, title, message, type, bill_id, is_read, created_at)
+                    VALUES ($1, $2, $3, 'billing_due', $4, FALSE, CURRENT_TIMESTAMP)
+                `, [
+                    bill.tenant_id,
+                    notificationTitle,
+                    notificationMessage,
+                    bill.id
+                ]);
                 summary.dueRemindersSent++;
-            } else {
-                summary.overdueRemindersSent++;
-            }
-            console.log(`[IN-SYSTEM NOTIF CREATED] ${notificationTitle} for tenant ${bill.tenant_name} (ID: ${bill.tenant_id}).`);
+                console.log(`[IN-SYSTEM NOTIF CREATED] ${notificationTitle} for tenant ${bill.tenant_name} (ID: ${bill.tenant_id}).`);
 
-            // 4. Send Email Notification
-            let emailResult = { success: false, reason: 'No email address' };
-            if (bill.tenant_email) {
-                const breakdown = {
-                    rent: bill.rent_amount,
-                    water: bill.water_charges,
-                    electricity: bill.electricity_charges,
-                    other: bill.other_fees,
-                };
+                // Send Email Notification (Only Once on Due Date)
+                let emailResult = { success: false, reason: 'No email address' };
+                if (bill.tenant_email) {
+                    const breakdown = {
+                        rent: bill.rent_amount,
+                        water: bill.water_charges,
+                        electricity: bill.electricity_charges,
+                        other: bill.other_fees,
+                    };
 
-                if (reminderType === 'billing_due') {
                     emailResult = await sendPaymentDueEmail({
                         to: bill.tenant_email,
                         tenantName: bill.tenant_name,
@@ -178,35 +177,27 @@ const checkAndSendPaymentReminders = async () => {
                         totalAmount: bill.total_amount,
                         breakdown
                     });
-                } else {
-                    emailResult = await sendPaymentOverdueEmail({
-                        to: bill.tenant_email,
-                        tenantName: bill.tenant_name,
-                        roomNumber: bill.room_number,
-                        billingMonth: bill.billing_month,
-                        dueDate: bill.due_date,
-                        balance: bill.balance,
-                        totalAmount: bill.total_amount,
-                        breakdown
-                    });
+
+                    if (emailResult.success) {
+                        summary.emailsSent++;
+                    }
                 }
 
-                if (emailResult.success) {
-                    summary.emailsSent++;
-                }
+                summary.details.push({
+                    billId: bill.id,
+                    tenantId: bill.tenant_id,
+                    tenantName: bill.tenant_name,
+                    email: bill.tenant_email,
+                    type: 'billing_due',
+                    balance: bill.balance,
+                    dueDate: bill.due_date,
+                    systemNotifCreated: true,
+                    emailSent: emailResult.success
+                });
+            } else {
+                // diffDays > 0: Due date is in the future
+                console.log(`[FUTURE] Bill #${bill.id} is due in ${diffDays} day(s). Email reminder will be sent once on due date.`);
             }
-
-            summary.details.push({
-                billId: bill.id,
-                tenantId: bill.tenant_id,
-                tenantName: bill.tenant_name,
-                email: bill.tenant_email,
-                type: reminderType,
-                balance: bill.balance,
-                dueDate: bill.due_date,
-                systemNotifCreated: true,
-                emailSent: emailResult.success
-            });
         }
 
         console.log('--- [PAYMENT REMINDER ROUTINE COMPLETED] ---', summary);
