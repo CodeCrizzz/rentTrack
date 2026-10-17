@@ -124,10 +124,10 @@ const sendPaymentDueEmail = async ({
       <p>Official Rental Billing Notification</p>
     </div>
     <div class="content">
-      <div class="badge-due">Upcoming Payment Due</div>
+      <div class="badge-due">Payment Due Today</div>
       <div class="greeting">Hello, ${tenantName}!</div>
       <p class="message">
-        This is a friendly reminder that your monthly rent invoice for <strong>${billingMonth}</strong> is approaching its due date. Please ensure your payment is completed on or before <strong>${formattedDue}</strong>.
+        This is a friendly reminder that your monthly rent invoice for <strong>${billingMonth}</strong> is due today, <strong>${formattedDue}</strong>. Please ensure your payment is settled on time.
       </p>
 
       <div class="highlight-card">
@@ -164,7 +164,7 @@ const sendPaymentDueEmail = async ({
         const mailOptions = {
             from: fromAddress,
             to,
-            subject: `Payment Reminder: Invoice for ${billingMonth} Due Soon - RentTrack`,
+            subject: `Payment Reminder: Invoice for ${billingMonth} Due Today - RentTrack`,
             html,
         };
 
