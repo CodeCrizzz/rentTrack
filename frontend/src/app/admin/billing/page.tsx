@@ -130,7 +130,7 @@ export default function AdminBilling() {
 
     // Filters
     const [searchQuery, setSearchQuery] = useState("");
-    const [statusFilter, setStatusFilter] = useState<'All' | 'Pending Verification' | 'Overdue' | 'Partial' | 'Unpaid' | 'Paid'>('All');
+    const [statusFilter, setStatusFilter] = useState<'All' | 'Pending Verification' | 'Overdue' | 'Partial' | 'Unpaid'>('All');
     const [monthFilter, setMonthFilter] = useState("All");
     const [roomFilter, setRoomFilter] = useState("All Rooms");
     const [sortFilter, setSortFilter] = useState("Newest First");
@@ -249,9 +249,14 @@ export default function AdminBilling() {
         };
     }, [bills, pendingPayments]);
 
+    // --- DUE INVOICES (PAID BILLS EXCLUDED AS THEY ARE DISPLAYED IN PAYMENT JOURNAL) ---
+    const dueBills = useMemo(() => {
+        return bills.filter(b => b.status !== 'Paid');
+    }, [bills]);
+
     // --- FILTERED INVOICES ---
     const filteredBills = useMemo(() => {
-        return bills.filter(bill => {
+        return dueBills.filter(bill => {
             // Status Category
             if (statusFilter !== 'All' && bill.status !== statusFilter) return false;
 
@@ -288,7 +293,7 @@ export default function AdminBilling() {
             const dateB = b.created_at ? new Date(b.created_at).getTime() : 0;
             return dateB - dateA;
         });
-    }, [bills, statusFilter, monthFilter, roomFilter, searchQuery, sortFilter]);
+    }, [dueBills, statusFilter, monthFilter, roomFilter, searchQuery, sortFilter]);
 
     // --- FILTERED PAYMENTS (ONLY PAID STATUS) ---
     const filteredPayments = useMemo(() => {
@@ -773,7 +778,7 @@ export default function AdminBilling() {
                             <Receipt className="w-3.5 h-3.5" />
                             <span>Invoices & Dues</span>
                             <span className="text-[10px] px-1.5 py-0.2 bg-teal-50 dark:bg-teal-500/20 text-teal-700 dark:text-teal-300 rounded-full font-mono">
-                                {bills.length}
+                                {dueBills.length}
                             </span>
                         </button>
                         <button
@@ -796,12 +801,11 @@ export default function AdminBilling() {
                     {activeTab === 'invoices' && (
                         <div className="flex items-center gap-1 overflow-x-auto custom-scrollbar text-xs">
                             {[
-                                { key: 'All', label: 'All Invoices', count: bills.length },
+                                { key: 'All', label: 'All Invoices', count: dueBills.length },
                                 { key: 'Pending Verification', label: 'Verification', count: metrics.pendingVerificationCount, alert: metrics.pendingVerificationCount > 0 },
                                 { key: 'Overdue', label: 'Overdue', count: metrics.overdueCount, alert: metrics.overdueCount > 0 },
                                 { key: 'Partial', label: 'Partial', count: metrics.partialCount },
-                                { key: 'Unpaid', label: 'Unpaid', count: metrics.unpaidCount },
-                                { key: 'Paid', label: 'Paid', count: metrics.paidCount }
+                                { key: 'Unpaid', label: 'Unpaid', count: metrics.unpaidCount }
                             ].map(tab => (
                                 <button
                                     key={tab.key}
