@@ -81,6 +81,14 @@ const loginUser = async (req, res) => {
             { expiresIn: '30d' } 
         );
 
+        // Record active presence
+        try {
+            const presenceService = require('../services/presenceService');
+            presenceService.recordActivity(user.id);
+        } catch (e) {
+            // non-blocking
+        }
+
         // 4. Send response back to Next.js
         res.status(200).json({
             message: 'Login successful',
@@ -98,4 +106,19 @@ const loginUser = async (req, res) => {
     }
 };
 
-module.exports = { registerUser, loginUser };
+// @desc    Logout user & mark offline
+// @route   POST /api/auth/logout
+const logoutUser = async (req, res) => {
+    try {
+        if (req.user && req.user.id) {
+            const presenceService = require('../services/presenceService');
+            presenceService.markOffline(req.user.id);
+        }
+        res.status(200).json({ message: 'Logged out successfully' });
+    } catch (error) {
+        console.error('Logout Error:', error);
+        res.status(500).json({ message: 'Server error during logout' });
+    }
+};
+
+module.exports = { registerUser, loginUser, logoutUser };

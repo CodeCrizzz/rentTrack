@@ -1,4 +1,5 @@
 const db = require('../config/db');
+const presenceService = require('../services/presenceService');
 
 // @desc    Get Admin Dashboard Statistics
 const getDashboardStats = async (req, res) => {
@@ -119,9 +120,17 @@ const getDashboardStats = async (req, res) => {
 
             // Pending Payment Verifications
             db.query(`
-                SELECT b.id, u.name as tenant_name, b.total_amount, b.created_at
+                SELECT 
+                    b.id as bill_id,
+                    COALESCE(p.id, b.id) as id,
+                    p.id as payment_id,
+                    b.tenant_id,
+                    u.name as tenant_name,
+                    COALESCE(p.amount_paid, b.total_amount) as total_amount,
+                    COALESCE(p.payment_date, b.created_at) as created_at
                 FROM bills b
                 JOIN users u ON b.tenant_id = u.id
+                LEFT JOIN payments p ON p.bill_id = b.id AND p.status = 'Pending Verification'
                 WHERE b.status = 'Pending Verification'
                 ORDER BY b.created_at ASC
             `),
@@ -635,7 +644,7 @@ const getConversations = async (req, res) => {
     try {
         const query = `
             SELECT 
-                u.id, u.name, r.room_number,
+                u.id, u.name, u.status as user_status, u.last_active_at, r.room_number,
                 (
                     SELECT message FROM messages 
                     WHERE (sender_id = u.id AND receiver_id = 1) OR (sender_id = 1 AND receiver_id = u.id)
@@ -656,7 +665,15 @@ const getConversations = async (req, res) => {
             ORDER BY last_message_time DESC NULLS LAST
         `;
         const result = await db.query(query);
-        res.status(200).json(result.rows);
+        const conversations = result.rows.map(c => {
+            const active = presenceService.isUserActive(c.id, c.last_active_at);
+            return {
+                ...c,
+                is_active: active,
+                status: active ? 'Active' : 'Offline'
+            };
+        });
+        res.status(200).json(conversations);
     } catch (error) {
         console.error('Get Conversations Error:', error);
         res.status(500).json({ message: 'Server error fetching conversations' });

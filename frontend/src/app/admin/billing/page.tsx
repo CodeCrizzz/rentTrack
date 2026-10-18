@@ -1,5 +1,6 @@
 "use client";
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState, useMemo, Suspense } from 'react';
+import { useSearchParams } from 'next/navigation';
 import api from '@/lib/api';
 import { motion, AnimatePresence, type Variants } from 'framer-motion';
 import CustomSelect from '@/components/CustomSelect';
@@ -117,14 +118,14 @@ const cardVariants: Variants = {
     show: { opacity: 1, y: 0, transition: { duration: 0.2, ease: "easeOut" } }
 };
 
-export default function AdminBilling() {
+function BillingContent() {
+    const searchParams = useSearchParams();
     const [bills, setBills] = useState<Bill[]>([]);
     const [tenants, setTenants] = useState<Tenant[]>([]);
     const [rooms, setRooms] = useState<Room[]>([]);
     const [pendingPayments, setPendingPayments] = useState<PendingPayment[]>([]);
     const [allPayments, setAllPayments] = useState<any[]>([]);
     const [isLoading, setIsLoading] = useState(true);
-    const [isRefreshing, setIsRefreshing] = useState(false);
 
     // Active Tab & View Mode
     const [activeTab, setActiveTab] = useState<'invoices' | 'payments'>('invoices');
@@ -136,6 +137,90 @@ export default function AdminBilling() {
     const [monthFilter, setMonthFilter] = useState("All");
     const [roomFilter, setRoomFilter] = useState("All Rooms");
     const [sortFilter, setSortFilter] = useState("Newest First");
+
+    // Deep Linking Highlight State
+    const [highlightedBillId, setHighlightedBillId] = useState<number | null>(null);
+    const [highlightedTenant, setHighlightedTenant] = useState<string | null>(null);
+
+    // Handle incoming URL search parameters (e.g. from Action Center deep links)
+    useEffect(() => {
+        if (!searchParams) return;
+        const tenantParam = searchParams.get('tenant') || searchParams.get('search');
+        const billIdParam = searchParams.get('billId');
+        const statusParam = searchParams.get('status');
+        const tabParam = searchParams.get('tab');
+        const isHighlight = searchParams.get('highlight') === 'true';
+
+        // When deep linking to a specific item, do not filter out other bills so the full list remains visible
+        if (tenantParam) {
+            setHighlightedTenant(tenantParam);
+            // Only set searchQuery if NOT highlighting a specific tenant
+            if (!isHighlight && !billIdParam) {
+                setSearchQuery(tenantParam);
+            }
+        }
+        if (billIdParam) {
+            setHighlightedBillId(Number(billIdParam));
+        }
+
+        if (statusParam && ['All', 'Pending Verification', 'Overdue', 'Partial', 'Unpaid'].includes(statusParam)) {
+            setStatusFilter(statusParam as any);
+        }
+        if (tabParam === 'payments' || tabParam === 'invoices') {
+            setActiveTab(tabParam);
+        }
+    }, [searchParams]);
+
+    // Smoothly scroll to the targeted bill row or card
+    useEffect(() => {
+        if (!highlightedBillId && !highlightedTenant) return;
+        if (bills.length === 0) return;
+
+        const timer = setTimeout(() => {
+            let el: HTMLElement | null = null;
+            if (highlightedBillId) {
+                el = document.getElementById(`bill-row-${highlightedBillId}`) || document.getElementById(`bill-card-${highlightedBillId}`);
+            }
+            if (!el && highlightedTenant) {
+                const matched = bills.find(b => b.tenant_name?.toLowerCase().includes(highlightedTenant.toLowerCase()));
+                if (matched) {
+                    el = document.getElementById(`bill-row-${matched.id}`) || document.getElementById(`bill-card-${matched.id}`);
+                    if (!highlightedBillId) setHighlightedBillId(matched.id);
+                }
+            }
+            if (el) {
+                el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+        }, 300);
+
+        return () => clearTimeout(timer);
+    }, [highlightedBillId, highlightedTenant, bills]);
+
+    // Automatically target and open verification modal if requested via URL
+    useEffect(() => {
+        if (!searchParams || pendingPayments.length === 0) return;
+        const shouldVerify = searchParams.get('verify') === 'true';
+        const billIdParam = searchParams.get('billId');
+        const tenantParam = searchParams.get('tenant') || searchParams.get('search');
+
+        if (shouldVerify || billIdParam) {
+            let matchIdx = -1;
+            if (billIdParam) {
+                matchIdx = pendingPayments.findIndex(p => p.bill_id === Number(billIdParam));
+            }
+            if (matchIdx === -1 && tenantParam) {
+                matchIdx = pendingPayments.findIndex(p => p.tenant_name.toLowerCase().includes(tenantParam.toLowerCase()));
+            }
+
+            if (matchIdx !== -1) {
+                setCurrentVerifyIndex(matchIdx);
+                setIsVerifyModalOpen(true);
+            } else if (shouldVerify && pendingPayments.length > 0) {
+                setCurrentVerifyIndex(0);
+                setIsVerifyModalOpen(true);
+            }
+        }
+    }, [searchParams, pendingPayments]);
 
     // Modals
     const [isViewOpen, setIsViewOpen] = useState(false);
@@ -173,8 +258,7 @@ export default function AdminBilling() {
     const [paymentForm, setPaymentForm] = useState<PaymentFormData>(initialPaymentForm);
 
     // --- DATA FETCHING ---
-    const fetchData = async (showToast = false) => {
-        if (showToast) setIsRefreshing(true);
+    const fetchData = async () => {
         try {
             const [billsRes, tenantsRes, roomsRes, pendingRes, paymentsRes] = await Promise.all([
                 api.get('/admin/bills'),
@@ -188,13 +272,10 @@ export default function AdminBilling() {
             setRooms(roomsRes.data);
             setPendingPayments(pendingRes.data);
             setAllPayments(paymentsRes.data);
-            if (showToast) toast.success("Billing ledgers synchronized");
         } catch (error) {
             console.error("Failed to fetch billing data:", error);
-            if (showToast) toast.error("Failed to sync billing data");
         } finally {
             setIsLoading(false);
-            setIsRefreshing(false);
         }
     };
 
@@ -487,31 +568,31 @@ export default function AdminBilling() {
             case 'Paid':
                 return {
                     label: 'Paid',
-                    className: 'text-emerald-600 dark:text-emerald-400',
+                    className: 'text-emerald-700 dark:text-emerald-400/80 bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200/60 dark:border-emerald-500/20 font-medium',
                     dot: 'bg-emerald-500'
                 };
             case 'Partial':
                 return {
                     label: 'Partial',
-                    className: 'text-blue-600 dark:text-blue-400',
+                    className: 'text-blue-700 dark:text-blue-400/80 bg-blue-50 dark:bg-blue-500/10 border border-blue-200/60 dark:border-blue-500/20 font-medium',
                     dot: 'bg-blue-500'
                 };
             case 'Pending Verification':
                 return {
                     label: 'Pending Verification',
-                    className: 'text-amber-600 dark:text-amber-400',
+                    className: 'text-amber-700 dark:text-amber-400/80 bg-amber-50 dark:bg-amber-500/10 border border-amber-200/60 dark:border-amber-500/20 font-medium',
                     dot: 'bg-amber-500 animate-pulse'
                 };
             case 'Overdue':
                 return {
                     label: 'Overdue',
-                    className: 'text-rose-600 dark:text-rose-400',
+                    className: 'text-rose-700 dark:text-rose-400/80 bg-rose-50 dark:bg-rose-500/10 border border-rose-200/60 dark:border-rose-500/20 font-medium',
                     dot: 'bg-rose-500 animate-pulse'
                 };
             default:
                 return {
                     label: 'Unpaid',
-                    className: 'text-slate-600 dark:text-zinc-400',
+                    className: 'text-slate-600 dark:text-zinc-400 bg-slate-100 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 font-medium',
                     dot: 'bg-slate-400'
                 };
         }
@@ -519,93 +600,89 @@ export default function AdminBilling() {
 
     if (isLoading) {
         return (
-            <div className="w-full h-[calc(100vh-6.2rem)] md:h-[calc(100vh-7.2rem)] lg:h-[calc(100dvh-7.2rem)] flex flex-col font-sans text-slate-900 dark:text-zinc-100 overflow-hidden space-y-2.5 animate-pulse">
-                {/* 1. Header Toolbar */}
-                <div className="shrink-0 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+            <div className="w-full h-[calc(100vh-6.2rem)] md:h-[calc(100vh-7.2rem)] lg:h-[calc(100dvh-7.2rem)] flex flex-col font-sans text-slate-900 dark:text-zinc-100 overflow-hidden space-y-3.5 sm:space-y-4 animate-pulse">
+                {/* Header Toolbar */}
+                <div className="shrink-0 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                     <div>
                         <div className="flex items-center gap-2">
-                            <div className="h-6 w-48 bg-slate-200 dark:bg-zinc-800 rounded-md"></div>
-                            <div className="h-5 w-20 bg-slate-200 dark:bg-zinc-800 rounded-full"></div>
+                            <div className="h-8 w-64 bg-slate-200 dark:bg-zinc-800 rounded-md"></div>
                         </div>
-                        <div className="h-3.5 w-80 bg-slate-200 dark:bg-zinc-800 rounded-md mt-1.5"></div>
+                        <div className="h-4 w-80 bg-slate-200 dark:bg-zinc-800 rounded-md mt-2"></div>
                     </div>
 
-                    <div className="flex items-center gap-2">
-                        <div className="h-8 w-28 bg-slate-200 dark:bg-zinc-800 rounded-lg"></div>
-                        <div className="h-8 w-20 bg-slate-200 dark:bg-zinc-800 rounded-lg"></div>
-                        <div className="h-8 w-32 bg-slate-200 dark:bg-zinc-800 rounded-lg"></div>
-                        <div className="h-8 w-32 bg-slate-200 dark:bg-zinc-800 rounded-lg"></div>
+                    <div className="flex items-center gap-2.5">
+                        <div className="h-9 w-28 bg-slate-200 dark:bg-zinc-800 rounded-lg"></div>
+                        <div className="h-9 w-32 bg-slate-200 dark:bg-zinc-800 rounded-lg"></div>
                     </div>
                 </div>
 
                 {/* Executive Financial Metric Ribbon (4 Tiles) */}
-                <div className="shrink-0 grid grid-cols-2 lg:grid-cols-4 gap-2.5">
+                <div className="shrink-0 grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-3.5">
                     {[...Array(4)].map((_, i) => (
-                        <div key={i} className="bg-card border border-slate-200 dark:border-zinc-800 rounded-xl p-3 shadow-xs flex items-center justify-between">
-                            <div className="space-y-1.5 flex-1">
-                                <div className="h-2.5 w-24 bg-slate-200 dark:bg-zinc-800 rounded"></div>
-                                <div className="h-6 w-32 bg-slate-200 dark:bg-zinc-800 rounded-md"></div>
-                                <div className="h-2.5 w-24 bg-slate-200 dark:bg-zinc-800 rounded"></div>
+                        <div key={i} className="bg-card border border-slate-200 dark:border-zinc-800 rounded-xl p-4 shadow-xs flex items-center justify-between">
+                            <div className="space-y-2 flex-1">
+                                <div className="h-3 w-28 bg-slate-200 dark:bg-zinc-800 rounded"></div>
+                                <div className="h-8 w-36 bg-slate-200 dark:bg-zinc-800 rounded-md"></div>
+                                <div className="h-3 w-24 bg-slate-200 dark:bg-zinc-800 rounded"></div>
                             </div>
-                            <div className="w-10 h-10 rounded-xl bg-slate-100 dark:bg-zinc-800 shrink-0"></div>
+                            <div className="w-12 h-12 rounded-xl bg-slate-100 dark:bg-zinc-800 shrink-0"></div>
                         </div>
                     ))}
                 </div>
 
-                {/* 3. Navigation Tab Bar & Quick Filters */}
-                <div className="shrink-0 bg-card border border-slate-200 dark:border-zinc-800 rounded-xl p-2 shadow-xs">
-                    <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-2">
-                        <div className="flex items-center gap-1 overflow-x-auto">
-                            {[...Array(3)].map((_, i) => (
-                                <div key={i} className="h-7 w-32 bg-slate-100 dark:bg-zinc-800 rounded-md"></div>
+                {/* Navigation Tab Bar & Quick Filters */}
+                <div className="shrink-0 bg-card border border-slate-200 dark:border-zinc-800 rounded-xl p-3 shadow-xs space-y-3">
+                    <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-2.5">
+                        <div className="flex items-center gap-1.5 overflow-x-auto">
+                            {[...Array(2)].map((_, i) => (
+                                <div key={i} className="h-9 w-36 bg-slate-100 dark:bg-zinc-800 rounded-lg"></div>
                             ))}
                         </div>
-                        <div className="flex flex-wrap items-center gap-2">
-                            <div className="h-7 w-40 bg-slate-100 dark:bg-zinc-800 rounded-lg"></div>
-                            <div className="h-7 w-28 bg-slate-100 dark:bg-zinc-800 rounded-lg"></div>
-                            <div className="h-7 w-28 bg-slate-100 dark:bg-zinc-800 rounded-lg"></div>
-                            <div className="h-7 w-28 bg-slate-100 dark:bg-zinc-800 rounded-lg"></div>
+                        <div className="flex flex-wrap items-center gap-2.5">
+                            <div className="h-9.5 w-52 bg-slate-100 dark:bg-zinc-800 rounded-xl"></div>
+                            <div className="h-9.5 w-36 bg-slate-100 dark:bg-zinc-800 rounded-xl"></div>
+                            <div className="h-9.5 w-36 bg-slate-100 dark:bg-zinc-800 rounded-xl"></div>
                         </div>
                     </div>
                 </div>
 
-                {/*  Main Ledger Table */}
+                {/* Main Ledger Table */}
                 <div className="flex-1 min-h-0 bg-card border border-slate-200 dark:border-zinc-800 rounded-xl overflow-hidden shadow-xs flex flex-col">
                     <div className="overflow-x-auto overflow-y-auto flex-1 custom-scrollbar">
-                        <table className="w-full min-w-full text-left text-xs border-collapse">
+                        <table className="w-full min-w-full text-left text-sm border-collapse">
                             <thead className="sticky top-0 z-10 bg-slate-100 dark:bg-zinc-800 shadow-xs">
-                                <tr className="h-10 text-slate-700 dark:text-zinc-300 uppercase tracking-wider text-[11px] font-bold">
-                                    <th className="py-2.5 px-4"><div className="h-3 w-28 bg-slate-200 dark:bg-zinc-700 rounded"></div></th>
-                                    <th className="py-2.5 px-4"><div className="h-3 w-28 bg-slate-200 dark:bg-zinc-700 rounded"></div></th>
-                                    <th className="py-2.5 px-3 text-right"><div className="h-3 w-16 bg-slate-200 dark:bg-zinc-700 rounded ml-auto"></div></th>
-                                    <th className="py-2.5 px-3 text-right"><div className="h-3 w-16 bg-slate-200 dark:bg-zinc-700 rounded ml-auto"></div></th>
-                                    <th className="py-2.5 px-3 text-right"><div className="h-3 w-16 bg-slate-200 dark:bg-zinc-700 rounded ml-auto"></div></th>
-                                    <th className="py-2.5 px-3 text-center"><div className="h-3 w-16 bg-slate-200 dark:bg-zinc-700 rounded mx-auto"></div></th>
-                                    <th className="py-2.5 px-3"><div className="h-3 w-20 bg-slate-200 dark:bg-zinc-700 rounded"></div></th>
-                                    <th className="py-2.5 px-4 text-right"><div className="h-3 w-20 bg-slate-200 dark:bg-zinc-700 rounded ml-auto"></div></th>
+                                <tr className="h-[48px] text-slate-700 dark:text-zinc-300 uppercase tracking-wider text-[13px] font-bold">
+                                    <th className="py-2.5 px-4"><div className="h-3.5 w-32 bg-slate-200 dark:bg-zinc-700 rounded"></div></th>
+                                    <th className="py-2.5 px-3.5"><div className="h-3.5 w-24 bg-slate-200 dark:bg-zinc-700 rounded"></div></th>
+                                    <th className="py-2.5 px-3.5 text-right"><div className="h-3.5 w-16 bg-slate-200 dark:bg-zinc-700 rounded ml-auto"></div></th>
+                                    <th className="py-2.5 px-3.5 text-right"><div className="h-3.5 w-16 bg-slate-200 dark:bg-zinc-700 rounded ml-auto"></div></th>
+                                    <th className="py-2.5 px-3.5 text-right"><div className="h-3.5 w-16 bg-slate-200 dark:bg-zinc-700 rounded ml-auto"></div></th>
+                                    <th className="py-2.5 px-3.5 text-right"><div className="h-3.5 w-20 bg-slate-200 dark:bg-zinc-700 rounded ml-auto"></div></th>
+                                    <th className="py-2.5 px-3.5 text-center"><div className="h-3.5 w-20 bg-slate-200 dark:bg-zinc-700 rounded mx-auto"></div></th>
+                                    <th className="py-2.5 px-4 text-right"><div className="h-3.5 w-24 bg-slate-200 dark:bg-zinc-700 rounded ml-auto"></div></th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-slate-100 dark:divide-zinc-800/60 font-sans">
                                 {[...Array(7)].map((_, i) => (
-                                    <tr key={i} className="h-12">
-                                        <td className="py-2 px-4">
-                                            <div className="flex items-center gap-2">
-                                                <div className="h-4 w-20 bg-slate-200 dark:bg-zinc-800 rounded"></div>
-                                                <div className="h-3.5 w-16 bg-slate-100 dark:bg-zinc-800/60 rounded"></div>
+                                    <tr key={i} className="h-[60px]">
+                                        <td className="py-2.5 px-4">
+                                            <div className="space-y-1">
+                                                <div className="h-4 w-32 bg-slate-200 dark:bg-zinc-800 rounded"></div>
+                                                <div className="h-3 w-20 bg-slate-100 dark:bg-zinc-800/60 rounded"></div>
                                             </div>
                                         </td>
-                                        <td className="py-2 px-4">
+                                        <td className="py-2.5 px-3.5">
                                             <div className="space-y-1">
-                                                <div className="h-3.5 w-24 bg-slate-200 dark:bg-zinc-800 rounded"></div>
+                                                <div className="h-4 w-24 bg-slate-200 dark:bg-zinc-800 rounded"></div>
                                                 <div className="h-3 w-16 bg-slate-100 dark:bg-zinc-800/60 rounded"></div>
                                             </div>
                                         </td>
-                                        <td className="py-2 px-3 text-right"><div className="h-4 w-16 bg-slate-100 dark:bg-zinc-800 rounded ml-auto"></div></td>
-                                        <td className="py-2 px-3 text-right"><div className="h-4 w-16 bg-slate-100 dark:bg-zinc-800 rounded ml-auto"></div></td>
-                                        <td className="py-2 px-3 text-right"><div className="h-4 w-16 bg-slate-100 dark:bg-zinc-800 rounded ml-auto"></div></td>
-                                        <td className="py-2 px-3 text-center"><div className="h-5 w-20 bg-slate-100 dark:bg-zinc-800 rounded-full mx-auto"></div></td>
-                                        <td className="py-2 px-3"><div className="h-3.5 w-20 bg-slate-100 dark:bg-zinc-800 rounded"></div></td>
-                                        <td className="py-2 px-4 text-right"><div className="h-6 w-24 bg-slate-100 dark:bg-zinc-800 rounded-lg ml-auto"></div></td>
+                                        <td className="py-2.5 px-3.5 text-right"><div className="h-4 w-16 bg-slate-100 dark:bg-zinc-800 rounded ml-auto"></div></td>
+                                        <td className="py-2.5 px-3.5 text-right"><div className="h-4 w-16 bg-slate-100 dark:bg-zinc-800 rounded ml-auto"></div></td>
+                                        <td className="py-2.5 px-3.5 text-right"><div className="h-4 w-16 bg-slate-100 dark:bg-zinc-800 rounded ml-auto"></div></td>
+                                        <td className="py-2.5 px-3.5 text-right"><div className="h-4.5 w-20 bg-slate-200 dark:bg-zinc-800 rounded ml-auto"></div></td>
+                                        <td className="py-2.5 px-3.5 text-center"><div className="h-6 w-20 bg-slate-100 dark:bg-zinc-800 rounded-md mx-auto"></div></td>
+                                        <td className="py-2.5 px-4 text-right"><div className="h-7 w-24 bg-slate-100 dark:bg-zinc-800 rounded-lg ml-auto"></div></td>
                                     </tr>
                                 ))}
                             </tbody>
@@ -617,42 +694,39 @@ export default function AdminBilling() {
     }
 
     return (
-        <div className="w-full h-[calc(100vh-6.2rem)] md:h-[calc(100vh-7.2rem)] lg:h-[calc(100dvh-7.2rem)] flex flex-col font-sans text-slate-900 dark:text-zinc-100 overflow-hidden space-y-2.5">
+        <div className="w-full h-[calc(100vh-6.2rem)] md:h-[calc(100vh-7.2rem)] lg:h-[calc(100dvh-7.2rem)] flex flex-col font-sans text-slate-900 dark:text-zinc-100 overflow-hidden space-y-3 sm:space-y-3.5">
             
-            {/* 1. Header Toolbar */}
-            <div className="shrink-0 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+            {/* Header Toolbar */}
+            <div className="shrink-0 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                 <div>
                     <div className="flex items-center gap-2">
-                        <h1 className="text-xl font-black text-slate-900 dark:text-white tracking-tight">
+                        <h1 className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white tracking-tight">
                             Bills and Payments
                         </h1>
-                        <span className="px-2 py-0.5 rounded-full text-[11px] font-mono font-bold bg-slate-100 dark:bg-zinc-800 text-slate-600 dark:text-zinc-400 border border-slate-200 dark:border-zinc-700">
-                            {filteredBills.length} records
-                        </span>
                     </div>
-                    <p className="text-xs text-slate-500 dark:text-zinc-400 mt-0.5">
-                        Financial ledger, automated rent invoices, utility submeters, and GCash/Maya online verification.
+                    <p className="text-sm font-medium text-slate-500 dark:text-zinc-400 mt-1">
+                        Track rent invoices and Payments.
                     </p>
                 </div>
 
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2.5">
                     {/* View Switcher for Invoices Tab */}
                     {activeTab === 'invoices' && (
-                        <div className="flex items-center bg-slate-100 dark:bg-zinc-800/80 p-0.5 rounded-lg border border-slate-200 dark:border-zinc-700/80 text-xs font-semibold">
+                        <div className="flex items-center bg-slate-100 dark:bg-zinc-800/80 p-1 rounded-xl border border-slate-200 dark:border-zinc-700/80 text-sm font-semibold">
                             <button
                                 onClick={() => setViewMode('table')}
-                                className={`px-2.5 py-1 rounded-md transition-all flex items-center gap-1.5 ${viewMode === 'table' ? 'bg-white dark:bg-zinc-900 text-slate-900 dark:text-white shadow-xs font-bold' : 'text-slate-500 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white'}`}
+                                className={`px-3 py-1.5 rounded-lg transition-all flex items-center gap-2 ${viewMode === 'table' ? 'bg-white dark:bg-zinc-900 text-slate-900 dark:text-white shadow-xs font-bold' : 'text-slate-500 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white'}`}
                                 title="Ledger table view"
                             >
-                                <List className="w-3.5 h-3.5" />
+                                <List className="w-4 h-4" />
                                 <span>Table</span>
                             </button>
                             <button
                                 onClick={() => setViewMode('cards')}
-                                className={`px-2.5 py-1 rounded-md transition-all flex items-center gap-1.5 ${viewMode === 'cards' ? 'bg-white dark:bg-zinc-900 text-slate-900 dark:text-white shadow-xs font-bold' : 'text-slate-500 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white'}`}
+                                className={`px-3 py-1.5 rounded-lg transition-all flex items-center gap-2 ${viewMode === 'cards' ? 'bg-white dark:bg-zinc-900 text-slate-900 dark:text-white shadow-xs font-bold' : 'text-slate-500 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white'}`}
                                 title="Statement cards view"
                             >
-                                <LayoutGrid className="w-3.5 h-3.5" />
+                                <LayoutGrid className="w-4 h-4" />
                                 <span>Cards</span>
                             </button>
                         </div>
@@ -664,137 +738,122 @@ export default function AdminBilling() {
                             setBillForm(initialBillForm);
                             setIsCreateOpen(true);
                         }}
-                        className="px-3.5 py-1.5 text-xs font-bold rounded-lg bg-teal-600 hover:bg-teal-700 text-white transition-all flex items-center gap-1.5 shadow-xs shadow-teal-600/20"
+                        className="px-4 py-2 text-sm font-bold rounded-xl bg-slate-900 hover:bg-slate-800 dark:bg-white dark:hover:bg-zinc-200 text-white dark:text-zinc-900 transition-all flex items-center gap-2 shadow-xs"
                     >
-                        <Plus className="w-3.5 h-3.5" />
+                        <Plus className="w-4 h-4" />
                         <span>Issue Bill</span>
                     </button>
                 </div>
             </div>
 
             {/* Executive Metric Ribbon */}
-            <div className="shrink-0 grid grid-cols-2 lg:grid-cols-4 gap-2.5">
+            <div className="shrink-0 grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-3.5">
                 
                 {/* Total Receivables */}
-                <motion.div variants={cardVariants} initial="hidden" animate="show" className="bg-card border border-slate-200 dark:border-zinc-800 rounded-xl p-3 shadow-xs flex items-center justify-between">
+                <motion.div variants={cardVariants} initial="hidden" animate="show" className="bg-card border border-slate-200 dark:border-zinc-800 rounded-xl p-3.5 sm:p-4.5 shadow-xs flex items-center justify-between">
                     <div>
-                        <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-500">Gross Receivables</span>
-                        <div className="text-xl font-extrabold font-mono text-slate-900 dark:text-white mt-0.5 flex items-baseline gap-1.5">
+                        <span className="text-xs sm:text-sm font-bold uppercase tracking-wider text-slate-500 dark:text-zinc-400">Gross Receivables</span>
+                        <div className="text-2xl sm:text-3xl lg:text-4xl font-extrabold font-mono text-slate-900 dark:text-zinc-100 mt-1 flex items-baseline gap-2">
                             ₱{metrics.totalInvoiced.toLocaleString()}
                         </div>
-                        <div className="text-[11px] font-semibold text-slate-500 dark:text-zinc-400 mt-0.5">
+                        <div className="text-xs sm:text-sm font-medium text-slate-500 dark:text-zinc-400 mt-1">
                             {bills.length} total bills issued
                         </div>
                     </div>
-                    <div className="w-10 h-10 rounded-xl bg-teal-50 dark:bg-teal-500/10 border border-teal-200/50 dark:border-teal-500/20 flex items-center justify-center text-teal-600 dark:text-teal-400 shrink-0">
-                        <Receipt className="w-5 h-5" />
+                    <div className="w-12 h-12 rounded-xl bg-slate-100 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 flex items-center justify-center text-slate-700 dark:text-zinc-300 shrink-0">
+                        <Receipt className="w-6 h-6" />
                     </div>
                 </motion.div>
 
                 {/* Collected Revenue */}
-                <motion.div variants={cardVariants} initial="hidden" animate="show" className="bg-card border border-slate-200 dark:border-zinc-800 rounded-xl p-3 shadow-xs flex items-center justify-between">
+                <motion.div variants={cardVariants} initial="hidden" animate="show" className="bg-card border border-slate-200 dark:border-zinc-800 rounded-xl p-3.5 sm:p-4.5 shadow-xs flex items-center justify-between">
                     <div>
-                        <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-500">Total Collected</span>
-                        <div className="text-xl font-extrabold font-mono text-emerald-600 dark:text-emerald-400 mt-0.5 flex items-baseline gap-1.5">
+                        <span className="text-xs sm:text-sm font-bold uppercase tracking-wider text-slate-500 dark:text-zinc-400">Total Collected</span>
+                        <div className="text-2xl sm:text-3xl lg:text-4xl font-extrabold font-mono text-slate-900 dark:text-zinc-100 mt-1 flex items-baseline gap-2">
                             ₱{metrics.totalCollected.toLocaleString()}
                         </div>
-                        <div className="text-[11px] font-bold text-emerald-600 dark:text-emerald-400 mt-0.5 flex items-center gap-1">
-                            <TrendingUp className="w-3 h-3" />
+                        <div className="text-xs sm:text-sm font-medium text-emerald-600 dark:text-emerald-400/80 mt-1 flex items-center gap-1.5">
+                            <TrendingUp className="w-4 h-4" />
                             <span>{metrics.collectionRate}% collected</span>
                         </div>
                     </div>
-                    <div className="w-10 h-10 rounded-xl bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200/50 dark:border-emerald-500/20 flex items-center justify-center text-emerald-600 dark:text-emerald-400 shrink-0">
-                        <DollarSign className="w-5 h-5" />
+                    <div className="w-12 h-12 rounded-xl bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200/50 dark:border-emerald-500/20 flex items-center justify-center text-emerald-600 dark:text-emerald-400/80 shrink-0">
+                        <DollarSign className="w-6 h-6" />
                     </div>
                 </motion.div>
 
-                {/*  GCash Verification */}
+                {/* GCash Verification */}
                 <motion.div 
                     variants={cardVariants} 
                     initial="hidden" 
                     animate="show" 
-                    onClick={() => {
-                        if (metrics.pendingVerificationCount > 0) {
-                            setCurrentVerifyIndex(0);
-                            setIsVerifyModalOpen(true);
-                        }
-                    }}
-                    className={`bg-card border rounded-xl p-3 shadow-xs flex items-center justify-between transition-all ${
-                        metrics.pendingVerificationCount > 0 
-                            ? 'border-amber-300 dark:border-amber-500/40 hover:bg-amber-50/40 dark:hover:bg-amber-500/5 cursor-pointer' 
-                            : 'border-slate-200 dark:border-zinc-800'
-                    }`}
+                    className="bg-card border border-slate-200 dark:border-zinc-800 rounded-xl p-3.5 sm:p-4.5 shadow-xs flex items-center justify-between"
                 >
                     <div>
-                        <div className="flex items-center gap-1.5">
-                            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-500">GCash Proof of Payment</span>
-                            {metrics.pendingVerificationCount > 0 && (
-                                <span className="w-2 h-2 rounded-full bg-amber-500 animate-ping"></span>
-                            )}
+                        <span className="text-xs sm:text-sm font-bold uppercase tracking-wider text-slate-500 dark:text-zinc-400">GCash Proof of Payment</span>
+                        <div className="text-2xl sm:text-3xl lg:text-4xl font-extrabold font-mono text-slate-900 dark:text-zinc-100 mt-1 flex items-baseline gap-2">
+                            {metrics.pendingVerificationCount} <span className="text-sm sm:text-base font-sans font-semibold text-slate-500">Pending</span>
                         </div>
-                        <div className="text-xl font-extrabold font-mono text-amber-600 dark:text-amber-400 mt-0.5 flex items-baseline gap-1.5">
-                            {metrics.pendingVerificationCount} Pending
-                        </div>
-                        <div className="text-[11px] font-bold text-amber-600 dark:text-amber-400 mt-0.5">
-                            {metrics.pendingVerificationCount > 0 ? 'Click to inspect & approve' : 'All digital receipts verified'}
+                        <div className="text-xs sm:text-sm font-medium text-amber-600 dark:text-amber-400/80 mt-1">
+                            {metrics.pendingVerificationCount > 0 ? 'Awaiting verification' : 'All digital receipts verified'}
                         </div>
                     </div>
-                    <div className="w-10 h-10 rounded-xl bg-amber-50 dark:bg-amber-500/10 border border-amber-200/50 dark:border-amber-500/20 flex items-center justify-center text-amber-600 dark:text-amber-400 shrink-0">
-                        <Clock className="w-5 h-5" />
+                    <div className="w-12 h-12 rounded-xl bg-amber-50 dark:bg-amber-500/10 border border-amber-200/50 dark:border-amber-500/20 flex items-center justify-center text-amber-600 dark:text-amber-400/80 shrink-0">
+                        <Clock className="w-6 h-6" />
                     </div>
                 </motion.div>
 
                 {/* Past Due */}
-                <motion.div variants={cardVariants} initial="hidden" animate="show" className="bg-card border border-slate-200 dark:border-zinc-800 rounded-xl p-3 shadow-xs flex items-center justify-between">
+                <motion.div variants={cardVariants} initial="hidden" animate="show" className="bg-card border border-slate-200 dark:border-zinc-800 rounded-xl p-3.5 sm:p-4.5 shadow-xs flex items-center justify-between">
                     <div>
-                        <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-500">Outstanding Arrears</span>
-                        <div className="text-xl font-extrabold font-mono text-rose-600 dark:text-rose-400 mt-0.5 flex items-baseline gap-1.5">
+                        <span className="text-xs sm:text-sm font-bold uppercase tracking-wider text-slate-500 dark:text-zinc-400">Outstanding Arrears</span>
+                        <div className="text-2xl sm:text-3xl lg:text-4xl font-extrabold font-mono text-slate-900 dark:text-zinc-100 mt-1 flex items-baseline gap-2">
                             ₱{metrics.totalBalance.toLocaleString()}
                         </div>
-                        <div className="text-[11px] font-semibold text-rose-600 dark:text-rose-400 mt-0.5 flex items-center gap-1">
-                            <AlertTriangle className="w-3 h-3" />
+                        <div className="text-xs sm:text-sm font-medium text-rose-600 dark:text-rose-400/80 mt-1 flex items-center gap-1.5">
+                            <AlertTriangle className="w-4 h-4" />
                             <span>{metrics.overdueCount} bills overdue</span>
                         </div>
                     </div>
-                    <div className="w-10 h-10 rounded-xl bg-rose-50 dark:bg-rose-500/10 border border-rose-200/50 dark:border-rose-500/20 flex items-center justify-center text-rose-600 dark:text-rose-400 shrink-0">
-                        <AlertTriangle className="w-5 h-5" />
+                    <div className="w-12 h-12 rounded-xl bg-rose-50 dark:bg-rose-500/10 border border-rose-200/50 dark:border-rose-500/20 flex items-center justify-center text-rose-600 dark:text-rose-400/80 shrink-0">
+                        <AlertTriangle className="w-6 h-6" />
                     </div>
                 </motion.div>
 
             </div>
 
             {/* Category Tabs & Filter */}
-            <div className="shrink-0 bg-card border border-slate-200 dark:border-zinc-800 rounded-xl p-2 shadow-xs space-y-2">
+            <div className="shrink-0 bg-card border border-slate-200 dark:border-zinc-800 rounded-xl p-2.5 sm:p-3 shadow-xs space-y-2.5">
                 
-                {/* Top Row: Main Tab Navigation (Invoices vs Payments) & Triage */}
-                <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 dark:border-zinc-800/80 pb-2">
+                {/* Top Row: Main Tab Navigation (Invoices vs Payments) & Filters */}
+                <div className="flex flex-wrap items-center justify-between gap-2.5 border-b border-slate-100 dark:border-zinc-800/80 pb-2.5">
                     {/* Tabs */}
-                    <div className="flex items-center bg-slate-100 dark:bg-zinc-800/90 p-0.5 rounded-lg border border-slate-200 dark:border-zinc-700/80 text-xs font-bold">
+                    <div className="flex items-center bg-slate-100 dark:bg-zinc-800/90 p-1 rounded-xl border border-slate-200 dark:border-zinc-700/80 text-sm font-bold">
                         <button
                             onClick={() => setActiveTab('invoices')}
-                            className={`px-3 py-1.5 rounded-md transition-all flex items-center gap-1.5 ${
+                            className={`px-3.5 py-2 rounded-lg transition-all flex items-center gap-2 ${
                                 activeTab === 'invoices' 
-                                    ? 'bg-white dark:bg-zinc-900 text-teal-600 dark:text-teal-400 shadow-xs font-black' 
+                                    ? 'bg-white dark:bg-zinc-900 text-slate-900 dark:text-white shadow-xs font-bold' 
                                     : 'text-slate-500 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white'
                             }`}
                         >
-                            <Receipt className="w-3.5 h-3.5" />
+                            <Receipt className="w-4 h-4" />
                             <span>Invoices & Dues</span>
-                            <span className="text-[10px] px-1.5 py-0.2 bg-teal-50 dark:bg-teal-500/20 text-teal-700 dark:text-teal-300 rounded-full font-mono">
+                            <span className="text-xs px-2 py-0.5 bg-slate-200/80 dark:bg-zinc-700 text-slate-700 dark:text-zinc-300 rounded-full font-mono font-bold">
                                 {dueBills.length}
                             </span>
                         </button>
                         <button
                             onClick={() => setActiveTab('payments')}
-                            className={`px-3 py-1.5 rounded-md transition-all flex items-center gap-1.5 ${
+                            className={`px-3.5 py-2 rounded-lg transition-all flex items-center gap-2 ${
                                 activeTab === 'payments' 
-                                    ? 'bg-white dark:bg-zinc-900 text-teal-600 dark:text-teal-400 shadow-xs font-black' 
+                                    ? 'bg-white dark:bg-zinc-900 text-slate-900 dark:text-white shadow-xs font-bold' 
                                     : 'text-slate-500 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white'
                             }`}
                         >
-                            <CreditCard className="w-3.5 h-3.5" />
+                            <CreditCard className="w-4 h-4" />
                             <span>Payment Journal</span>
-                            <span className="text-[10px] px-1.5 py-0.2 bg-slate-200 dark:bg-zinc-700 text-slate-700 dark:text-zinc-300 rounded-full font-mono">
+                            <span className="text-xs px-2 py-0.5 bg-slate-200/80 dark:bg-zinc-700 text-slate-700 dark:text-zinc-300 rounded-full font-mono font-bold">
                                 {paidPaymentsCount}
                             </span>
                         </button>
@@ -802,7 +861,7 @@ export default function AdminBilling() {
 
                     {/* Status Filter */}
                     {activeTab === 'invoices' && (
-                        <div className="flex items-center gap-1 overflow-x-auto custom-scrollbar text-xs">
+                        <div className="flex items-center gap-1.5 overflow-x-auto custom-scrollbar text-xs sm:text-sm">
                             {[
                                 { key: 'All', label: 'All Invoices', count: dueBills.length },
                                 { key: 'Pending Verification', label: 'Verification', count: metrics.pendingVerificationCount, alert: metrics.pendingVerificationCount > 0 },
@@ -813,18 +872,18 @@ export default function AdminBilling() {
                                 <button
                                     key={tab.key}
                                     onClick={() => setStatusFilter(tab.key as any)}
-                                    className={`px-2.5 py-1 rounded-md text-xs font-semibold transition-all flex items-center gap-1.5 shrink-0 ${
+                                    className={`px-3 py-1.5 rounded-lg text-xs sm:text-sm font-semibold transition-all flex items-center gap-2 shrink-0 ${
                                         statusFilter === tab.key
-                                            ? 'bg-teal-600 text-white font-bold shadow-xs'
+                                            ? 'bg-slate-900 dark:bg-white text-white dark:text-zinc-900 font-bold shadow-xs'
                                             : 'bg-slate-100 dark:bg-zinc-800/60 text-slate-600 dark:text-zinc-400 hover:bg-slate-200 dark:hover:bg-zinc-800'
                                     }`}
                                 >
                                     <span>{tab.label}</span>
-                                    <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-mono font-bold ${
+                                    <span className={`px-2 py-0.5 rounded-full text-xs font-mono font-bold ${
                                         statusFilter === tab.key
-                                            ? 'bg-white/20 text-white'
+                                            ? 'bg-white/20 text-white dark:bg-black/20 dark:text-zinc-900'
                                             : tab.alert
-                                                ? 'bg-rose-500 text-white animate-pulse'
+                                                ? 'bg-rose-500/80 text-white'
                                                 : 'bg-slate-200 dark:bg-zinc-700 text-slate-700 dark:text-zinc-300'
                                     }`}>
                                         {tab.count}
@@ -836,58 +895,58 @@ export default function AdminBilling() {
                 </div>
 
                 {/* Bottom Row: Search & Filters */}
-                <div className="flex flex-wrap items-center justify-between gap-2">
+                <div className="flex flex-wrap items-center justify-between gap-2.5">
                     
                     {/* Search Field */}
-                    <div className="relative min-w-[200px] flex-1 sm:max-w-xs">
-                        <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 dark:text-zinc-500" />
+                    <div className="relative min-w-[220px] flex-1 sm:max-w-md">
+                        <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 dark:text-zinc-500" />
                         <input
                             type="text"
                             placeholder={activeTab === 'invoices' ? "Filter tenant name, room, or notes..." : "Search payment records..."}
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
-                            className="w-full py-1.5 pl-8 pr-3 text-xs rounded-lg bg-slate-50 dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-zinc-500 focus:outline-none focus:ring-1 focus:ring-teal-500"
+                            className="w-full py-2 pl-9 pr-3.5 text-sm rounded-xl bg-slate-50 dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-zinc-500 focus:outline-none focus:ring-1.5 focus:ring-slate-400/30 dark:focus:ring-zinc-600/40"
                         />
                         {searchQuery && (
                             <button
                                 onClick={() => setSearchQuery('')}
-                                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-zinc-300"
+                                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-zinc-300"
                             >
-                                <X className="w-3 h-3" />
+                                <X className="w-3.5 h-3.5" />
                             </button>
                         )}
                     </div>
 
                     {/* Invoice Selectors */}
                     {activeTab === 'invoices' && (
-                        <div className="flex flex-wrap items-center gap-2">
+                        <div className="flex flex-wrap items-center gap-2.5">
                             {/* Month Selector */}
-                            <div className="w-36">
+                            <div className="w-40 sm:w-44">
                                 <CustomSelect
                                     value={monthFilter}
                                     onChange={(val) => setMonthFilter(val)}
                                     options={monthOptions}
-                                    className="py-1.5 px-3 rounded-lg bg-slate-50 dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 text-xs font-semibold text-slate-700 dark:text-zinc-300"
+                                    className="py-2 px-3.5 rounded-xl bg-slate-50 dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 text-sm font-semibold text-slate-700 dark:text-zinc-300"
                                 />
                             </div>
 
                             {/* Room Selector */}
-                            <div className="w-32">
+                            <div className="w-36 sm:w-40">
                                 <CustomSelect
                                     value={roomFilter}
                                     onChange={(val) => setRoomFilter(val)}
                                     options={uniqueRooms}
-                                    className="py-1.5 px-3 rounded-lg bg-slate-50 dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 text-xs font-semibold text-slate-700 dark:text-zinc-300"
+                                    className="py-2 px-3.5 rounded-xl bg-slate-50 dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 text-sm font-semibold text-slate-700 dark:text-zinc-300"
                                 />
                             </div>
 
                             {/* Sort Selector */}
-                            <div className="w-36">
+                            <div className="w-40 sm:w-44">
                                 <CustomSelect
                                     value={sortFilter}
                                     onChange={(val) => setSortFilter(val)}
                                     options={["Newest First", "Oldest First", "Highest Balance", "Highest Total"]}
-                                    className="py-1.5 px-3 rounded-lg bg-slate-50 dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 text-xs font-semibold text-slate-700 dark:text-zinc-300"
+                                    className="py-2 px-3.5 rounded-xl bg-slate-50 dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 text-sm font-semibold text-slate-700 dark:text-zinc-300"
                                 />
                             </div>
                         </div>
@@ -897,116 +956,149 @@ export default function AdminBilling() {
             </div>
 
             {/* Main Content Area */}
-            <div className="flex-1 min-h-0 bg-card border border-slate-200 dark:border-zinc-800 rounded-xl overflow-hidden shadow-xs flex flex-col">
+            <div className="flex-1 min-h-0 bg-card border border-slate-200 dark:border-zinc-800 rounded-xl overflow-hidden shadow-xs flex flex-col relative">
+                {/* Top-Right scrollbar header filler */}
+                <div className="absolute top-0 right-0 w-8 h-[48px] bg-slate-100 dark:bg-zinc-800 border-b border-slate-200 dark:border-zinc-700 z-30 pointer-events-none rounded-tr-xl" />
                 
                 {activeTab === 'invoices' ? (
                     viewMode === 'table' ? (
                         /* INVOICES TABLE */
                         <div className="overflow-x-auto overflow-y-auto flex-1 custom-scrollbar">
-                            <table className="w-full min-w-full text-left text-xs border-collapse">
+                            <table className="w-full min-w-full text-left text-sm border-collapse">
                                 <thead className="sticky top-0 z-10 bg-slate-100 dark:bg-zinc-800 shadow-xs">
-                                    <tr className="h-[40px] text-slate-700 dark:text-zinc-300 uppercase tracking-wider text-[11px] font-bold">
+                                    <tr className="h-[48px] bg-slate-100 dark:bg-zinc-800 text-slate-700 dark:text-zinc-300 uppercase tracking-wider text-[13px] sm:text-sm font-bold">
                                         <th className="py-2.5 px-4 bg-slate-100 dark:bg-zinc-800 border-b border-slate-200 dark:border-zinc-700">Tenant & Room</th>
-                                        <th className="py-2.5 px-3 bg-slate-100 dark:bg-zinc-800 border-b border-slate-200 dark:border-zinc-700">Period & Due</th>
-                                        <th className="py-2.5 px-3 text-right bg-slate-100 dark:bg-zinc-800 border-b border-slate-200 dark:border-zinc-700">Rent</th>
-                                        <th className="py-2.5 px-3 text-right bg-slate-100 dark:bg-zinc-800 border-b border-slate-200 dark:border-zinc-700">Water</th>
-                                        <th className="py-2.5 px-3 text-right bg-slate-100 dark:bg-zinc-800 border-b border-slate-200 dark:border-zinc-700">Power</th>
-                                        <th className="py-2.5 px-3 text-right bg-slate-100 dark:bg-zinc-800 border-b border-slate-200 dark:border-zinc-700">Gross Total</th>
-                                        <th className="py-2.5 px-3 text-right bg-slate-100 dark:bg-zinc-800 border-b border-slate-200 dark:border-zinc-700">Paid</th>
-                                        <th className="py-2.5 px-3 text-right bg-slate-100 dark:bg-zinc-800 border-b border-slate-200 dark:border-zinc-700">Balance</th>
-                                        <th className="py-2.5 px-3 text-center bg-slate-100 dark:bg-zinc-800 border-b border-slate-200 dark:border-zinc-700">Status</th>
+                                        <th className="py-2.5 px-3.5 bg-slate-100 dark:bg-zinc-800 border-b border-slate-200 dark:border-zinc-700">Period & Due</th>
+                                        <th className="py-2.5 px-3.5 text-right bg-slate-100 dark:bg-zinc-800 border-b border-slate-200 dark:border-zinc-700">Rent</th>
+                                        <th className="py-2.5 px-3.5 text-right bg-slate-100 dark:bg-zinc-800 border-b border-slate-200 dark:border-zinc-700">Water</th>
+                                        <th className="py-2.5 px-3.5 text-right bg-slate-100 dark:bg-zinc-800 border-b border-slate-200 dark:border-zinc-700">Power</th>
+                                        <th className="py-2.5 px-3.5 text-right bg-slate-100 dark:bg-zinc-800 border-b border-slate-200 dark:border-zinc-700">Gross Total</th>
+                                        <th className="py-2.5 px-3.5 text-right bg-slate-100 dark:bg-zinc-800 border-b border-slate-200 dark:border-zinc-700">Paid</th>
+                                        <th className="py-2.5 px-3.5 text-right bg-slate-100 dark:bg-zinc-800 border-b border-slate-200 dark:border-zinc-700">Balance</th>
+                                        <th className="py-2.5 px-3.5 text-center bg-slate-100 dark:bg-zinc-800 border-b border-slate-200 dark:border-zinc-700">Status</th>
                                         <th className="py-2.5 px-4 text-right bg-slate-100 dark:bg-zinc-800 border-b border-slate-200 dark:border-zinc-700">Actions</th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-slate-100 dark:divide-zinc-800/60 font-sans">
                                     {filteredBills.length === 0 ? (
                                         <tr>
-                                            <td colSpan={10} className="py-12 text-center text-slate-400 dark:text-zinc-500">
-                                                <Receipt className="w-8 h-8 mx-auto mb-2 opacity-30" />
-                                                <p className="font-semibold text-sm">No billing records found matching your filters.</p>
+                                            <td colSpan={10} className="py-14 text-center text-slate-400 dark:text-zinc-500">
+                                                <Receipt className="w-10 h-10 mx-auto mb-2 opacity-30" />
+                                                <p className="font-semibold text-base">No billing records found matching your filters.</p>
                                             </td>
                                         </tr>
                                     ) : (
                                         filteredBills.map(bill => {
                                             const status = getStatusBadge(bill.status);
                                             const isOverdue = bill.status === 'Overdue';
+                                            const isHighlighted = Boolean(
+                                                (highlightedBillId && bill.id === highlightedBillId) ||
+                                                (highlightedTenant && bill.tenant_name?.toLowerCase().includes(highlightedTenant.toLowerCase()))
+                                            );
 
                                             return (
                                                 <tr 
                                                     key={bill.id} 
-                                                    className="h-[48px] hover:bg-slate-50/70 dark:hover:bg-zinc-800/40 transition-colors group"
+                                                    id={`bill-row-${bill.id}`}
+                                                    className={`h-[60px] transition-all group ${
+                                                        isHighlighted 
+                                                            ? 'bg-amber-100/90 dark:bg-amber-500/25 ring-2 ring-amber-500 shadow-md font-semibold' 
+                                                            : 'hover:bg-slate-50/70 dark:hover:bg-zinc-800/40'
+                                                    }`}
                                                 >
                                                     {/* Tenant & Room */}
-                                                    <td className="py-2 px-4 whitespace-nowrap">
-                                                        <div className="font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
+                                                    <td className="py-2.5 px-4 whitespace-nowrap">
+                                                        <div className="font-bold text-slate-900 dark:text-white text-base sm:text-[17px] flex items-center gap-2 leading-tight">
                                                             <span>{bill.tenant_name}</span>
+                                                            {isHighlighted && (
+                                                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-amber-500 text-white shadow-xs">
+                                                                    <span className="w-1.5 h-1.5 rounded-full bg-white animate-ping"></span>
+                                                                    Targeted
+                                                                </span>
+                                                            )}
                                                         </div>
-                                                        <div className="text-[11px] font-semibold text-slate-500 dark:text-zinc-400">
+                                                        <div className="text-xs sm:text-sm font-semibold text-slate-500 dark:text-zinc-400 mt-0.5 leading-tight">
                                                             {bill.room_number ? `Room ${bill.room_number}` : 'No Room Assigned'}
                                                         </div>
                                                     </td>
 
                                                     {/* Period & Due Date */}
-                                                    <td className="py-2 px-3 whitespace-nowrap">
-                                                        <div className="font-semibold text-slate-800 dark:text-zinc-200">
+                                                    <td className="py-2.5 px-3.5 whitespace-nowrap">
+                                                        <div className="font-bold text-slate-800 dark:text-zinc-200 text-sm sm:text-base leading-tight">
                                                             {bill.billing_month}
                                                         </div>
-                                                        <div className={`text-[11px] font-mono ${isOverdue ? 'text-rose-600 dark:text-rose-400 font-bold' : 'text-slate-400 dark:text-zinc-500'}`}>
+                                                        <div className={`text-xs sm:text-sm font-mono mt-0.5 leading-tight ${isOverdue ? 'text-rose-600 dark:text-rose-400/80 font-bold' : 'text-slate-400 dark:text-zinc-500 font-medium'}`}>
                                                             Due {bill.due_date ? new Date(bill.due_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : 'N/A'}
                                                         </div>
                                                     </td>
 
                                                     {/* Base Rent */}
-                                                    <td className="py-2 px-3 text-right font-mono text-slate-700 dark:text-zinc-300">
+                                                    <td className="py-2.5 px-3.5 text-right font-mono text-sm sm:text-base font-medium text-slate-700 dark:text-zinc-300">
                                                         ₱{Number(bill.rent_amount).toLocaleString()}
                                                     </td>
 
                                                     {/* Water */}
-                                                    <td className="py-2 px-3 text-right font-mono text-slate-600 dark:text-zinc-400">
+                                                    <td className="py-2.5 px-3.5 text-right font-mono text-sm sm:text-base font-medium text-slate-600 dark:text-zinc-400">
                                                         ₱{Number(bill.water_charges).toLocaleString()}
                                                     </td>
 
                                                     {/* Power */}
-                                                    <td className="py-2 px-3 text-right font-mono text-slate-600 dark:text-zinc-400">
+                                                    <td className="py-2.5 px-3.5 text-right font-mono text-sm sm:text-base font-medium text-slate-600 dark:text-zinc-400">
                                                         ₱{Number(bill.electricity_charges).toLocaleString()}
                                                     </td>
 
                                                     {/* Total Due */}
-                                                    <td className="py-2 px-3 text-right font-mono font-bold text-slate-900 dark:text-white">
+                                                    <td className="py-2.5 px-3.5 text-right font-mono font-extrabold text-base sm:text-lg text-slate-900 dark:text-zinc-100">
                                                         ₱{Number(bill.total_amount).toLocaleString()}
                                                     </td>
 
                                                     {/* Amount Paid */}
-                                                    <td className="py-2 px-3 text-right font-mono font-semibold text-emerald-600 dark:text-emerald-400">
+                                                    <td className="py-2.5 px-3.5 text-right font-mono font-bold text-base sm:text-lg text-slate-900 dark:text-zinc-100">
                                                         ₱{Number(bill.amount_paid).toLocaleString()}
                                                     </td>
 
                                                     {/* Outstanding Balance */}
-                                                    <td className="py-2 px-3 text-right font-mono font-bold whitespace-nowrap">
-                                                        <span className={Number(bill.balance) > 0 ? (isOverdue ? 'text-rose-600 dark:text-rose-400' : 'text-amber-600 dark:text-amber-400') : 'text-slate-400 dark:text-zinc-500'}>
+                                                    <td className="py-2.5 px-3.5 text-right font-mono text-base sm:text-lg whitespace-nowrap">
+                                                        <span className={Number(bill.balance) > 0 ? (isOverdue ? 'text-rose-600 dark:text-rose-400/85 font-extrabold' : 'text-amber-600 dark:text-amber-400/85 font-extrabold') : 'text-slate-400 dark:text-zinc-500 font-medium'}>
                                                             ₱{Number(bill.balance).toLocaleString()}
                                                         </span>
                                                     </td>
 
                                                     {/* Status Badge */}
-                                                    <td className="py-2 px-3 text-center whitespace-nowrap">
-                                                        <span className={`inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider ${status.className}`}>
-                                                            <span className={`w-1.5 h-1.5 rounded-full ${status.dot}`}></span>
+                                                    <td className="py-2.5 px-3.5 text-center whitespace-nowrap">
+                                                        <span className={`inline-flex items-center gap-1.5 text-xs sm:text-[13px] font-bold uppercase tracking-wider px-3 py-1.2 rounded-lg ${status.className}`}>
+                                                            <span className={`w-2 h-2 rounded-full ${status.dot}`}></span>
                                                             {status.label}
                                                         </span>
                                                     </td>
 
                                                     {/* Actions */}
-                                                    <td className="py-2 px-4 text-right whitespace-nowrap">
-                                                        <div className="flex items-center justify-end gap-1">
+                                                    <td className="py-2.5 px-4 text-right whitespace-nowrap">
+                                                        <div className="flex items-center justify-end gap-1.5">
+                                                            {/* Verify Receipt */}
+                                                            {bill.status === 'Pending Verification' && (
+                                                                <button
+                                                                    onClick={() => {
+                                                                        const matchIdx = pendingPayments.findIndex(p => p.bill_id === bill.id);
+                                                                        setCurrentVerifyIndex(matchIdx >= 0 ? matchIdx : 0);
+                                                                        setIsVerifyModalOpen(true);
+                                                                    }}
+                                                                    className="px-3 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold transition-all flex items-center gap-1.5 shadow-xs cursor-pointer shrink-0"
+                                                                    title="Review proof of payment receipt"
+                                                                >
+                                                                    <Clock className="w-3.5 h-3.5" />
+                                                                    <span>Verify</span>
+                                                                </button>
+                                                            )}
+
                                                             {/* Mark as Paid */}
                                                             {bill.status !== 'Paid' && (
                                                                 <button
                                                                     onClick={() => openPayModal(bill)}
-                                                                    className="px-2.5 py-1 rounded-md bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-bold transition-all flex items-center gap-1.5 shadow-xs cursor-pointer shrink-0"
+                                                                    className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition-all flex items-center gap-1.5 shadow-xs cursor-pointer shrink-0"
                                                                     title="Process cash payment and mark as paid"
                                                                 >
-                                                                    <CheckCircle2 className="w-3.5 h-3.5" />
+                                                                    <CheckCircle2 className="w-4 h-4" />
                                                                     <span>Mark as Paid</span>
                                                                 </button>
                                                             )}
@@ -1014,28 +1106,28 @@ export default function AdminBilling() {
                                                             {/* View Statement */}
                                                             <button
                                                                 onClick={() => openViewModal(bill)}
-                                                                className="p-1.5 rounded-md hover:bg-slate-200 dark:hover:bg-zinc-700 text-slate-500 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white transition-colors"
+                                                                className="p-2 rounded-lg hover:bg-slate-200 dark:hover:bg-zinc-700 text-slate-500 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white transition-colors cursor-pointer"
                                                                 title="View Statement"
                                                             >
-                                                                <Eye className="w-3.5 h-3.5" />
+                                                                <Eye className="w-4.5 h-4.5" />
                                                             </button>
 
                                                             {/* Edit Charges */}
                                                             <button
                                                                 onClick={() => openEditModal(bill)}
-                                                                className="p-1.5 rounded-md hover:bg-slate-200 dark:hover:bg-zinc-700 text-slate-500 dark:text-zinc-400 hover:text-indigo-600 transition-colors"
+                                                                className="p-2 rounded-lg hover:bg-slate-200 dark:hover:bg-zinc-700 text-slate-500 dark:text-zinc-400 hover:text-indigo-600 transition-colors cursor-pointer"
                                                                 title="Edit Charges"
                                                             >
-                                                                <Edit className="w-3.5 h-3.5" />
+                                                                <Edit className="w-4.5 h-4.5" />
                                                             </button>
 
                                                             {/* Delete Bill */}
                                                             <button
                                                                 onClick={() => handleDeleteBill(bill.id)}
-                                                                className="p-1.5 rounded-md hover:bg-rose-100 dark:hover:bg-rose-500/20 text-slate-400 hover:text-rose-600 transition-colors"
+                                                                className="p-2 rounded-lg hover:bg-rose-100 dark:hover:bg-rose-500/20 text-slate-400 hover:text-rose-600 transition-colors cursor-pointer"
                                                                 title="Delete Bill"
                                                             >
-                                                                <Trash2 className="w-3.5 h-3.5" />
+                                                                <Trash2 className="w-4.5 h-4.5" />
                                                             </button>
                                                         </div>
                                                     </td>
@@ -1048,52 +1140,70 @@ export default function AdminBilling() {
                         </div>
                     ) : (
                         /* billing statement card grid */
-                        <div className="overflow-y-auto flex-1 p-3 custom-scrollbar">
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                        <div className="overflow-y-auto flex-1 p-3.5 sm:p-4 custom-scrollbar">
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5 sm:gap-4">
                                 {filteredBills.length === 0 ? (
-                                    <div className="col-span-full py-12 text-center text-slate-400 dark:text-zinc-500">
-                                        <Receipt className="w-8 h-8 mx-auto mb-2 opacity-30" />
-                                        <p className="font-semibold text-sm">No billing records found matching your filters.</p>
+                                    <div className="col-span-full py-14 text-center text-slate-400 dark:text-zinc-500">
+                                        <Receipt className="w-10 h-10 mx-auto mb-2 opacity-30" />
+                                        <p className="font-semibold text-base">No billing records found matching your filters.</p>
                                     </div>
                                 ) : (
                                     filteredBills.map(bill => {
                                         const status = getStatusBadge(bill.status);
+                                        const isHighlighted = Boolean(
+                                            (highlightedBillId && bill.id === highlightedBillId) ||
+                                            (highlightedTenant && bill.tenant_name?.toLowerCase().includes(highlightedTenant.toLowerCase()))
+                                        );
+
                                         return (
                                             <div 
                                                 key={bill.id} 
-                                                className="bg-card border border-slate-200 dark:border-zinc-800 rounded-xl p-3.5 shadow-xs hover:border-slate-300 dark:hover:border-zinc-700 transition-all flex flex-col justify-between"
+                                                id={`bill-card-${bill.id}`}
+                                                className={`bg-card border rounded-xl p-4 sm:p-5 shadow-xs transition-all flex flex-col justify-between ${
+                                                    isHighlighted
+                                                        ? 'border-amber-500 ring-2 ring-amber-500/80 bg-amber-50/70 dark:bg-amber-500/15 shadow-md'
+                                                        : 'border-slate-200 dark:border-zinc-800 hover:border-slate-300 dark:hover:border-zinc-700'
+                                                }`}
                                             >
                                                 <div>
-                                                    <div className="flex items-start justify-between gap-2 mb-2">
+                                                    <div className="flex items-start justify-between gap-2 mb-3">
                                                         <div>
-                                                            <span className="font-extrabold text-slate-900 dark:text-white text-sm">
-                                                                {bill.tenant_name}
-                                                            </span>
-                                                            <div className="text-[11px] font-semibold text-slate-500 dark:text-zinc-400">
+                                                            <div className="flex items-center gap-2">
+                                                                <span className="font-extrabold text-slate-900 dark:text-white text-base sm:text-lg">
+                                                                    {bill.tenant_name}
+                                                                </span>
+                                                                {isHighlighted && (
+                                                                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-amber-500 text-white shadow-xs">
+                                                                        <span className="w-1.5 h-1.5 rounded-full bg-white animate-ping"></span>
+                                                                        Targeted
+                                                                    </span>
+                                                                )}
+                                                            </div>
+                                                            <div className="text-xs sm:text-sm font-semibold text-slate-500 dark:text-zinc-400 mt-0.5">
                                                                 {bill.room_number ? `Room ${bill.room_number}` : 'No Room'} · {bill.billing_month}
                                                             </div>
                                                         </div>
-                                                        <span className={`inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider ${status.className}`}>
-                                                            <span className={`w-1.5 h-1.5 rounded-full ${status.dot}`}></span>
+                                                        <span className={`inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider px-2.5 py-1 rounded-md ${status.className}`}>
+                                                            <span className={`w-2 h-2 rounded-full ${status.dot}`}></span>
                                                             {status.label}
                                                         </span>
                                                     </div>
 
                                                     {/* Cost breakdown pill */}
-                                                    <div className="bg-slate-50 dark:bg-zinc-900/60 rounded-lg p-2.5 border border-slate-100 dark:border-zinc-800 space-y-1 mb-3 text-xs">
+                                                    <div className="bg-slate-50 dark:bg-zinc-900/60 rounded-xl p-3 border border-slate-100 dark:border-zinc-800 space-y-1.5 mb-3.5 text-sm">
                                                         <div className="flex justify-between text-slate-600 dark:text-zinc-400">
                                                             <span>Base Rent</span>
                                                             <span className="font-mono font-bold text-slate-900 dark:text-white">₱{Number(bill.rent_amount).toLocaleString()}</span>
                                                         </div>
                                                         {(Number(bill.water_charges) > 0 || Number(bill.electricity_charges) > 0) && (
-                                                            <div className="flex justify-between text-slate-500 dark:text-zinc-500 text-[11px]">
+                                                            <div className="flex justify-between text-slate-500 dark:text-zinc-500 text-xs">
                                                                 <span>Utilities (Water+Elec)</span>
                                                                 <span className="font-mono">₱{(Number(bill.water_charges) + Number(bill.electricity_charges)).toLocaleString()}</span>
                                                             </div>
                                                         )}
-                                                        <div className="pt-1 border-t border-slate-200 dark:border-zinc-800 flex justify-between font-bold">
+                                                        <div className="pt-1.5 border-t border-slate-200 dark:border-zinc-800 flex justify-between font-bold">
                                                             <span className="text-slate-700 dark:text-zinc-300">Remaining Balance</span>
-                                                            <span className={`font-mono text-sm ${Number(bill.balance) > 0 ? 'text-rose-600 dark:text-rose-400 font-extrabold' : 'text-emerald-600 dark:text-emerald-400'}`}>
+                                                            <span className={`font-mono text-base ${Number(bill.balance) > 0 ? 'text-rose-600 dark:text-rose-400/85 font-bold' : 'text-slate-900 dark:text-zinc-100 font-semibold'}`}>
                                                                 ₱{Number(bill.balance).toLocaleString()}
                                                             </span>
                                                         </div>
@@ -1101,27 +1211,41 @@ export default function AdminBilling() {
                                                 </div>
 
                                                 {/* Card Footer Actions */}
-                                                <div className="flex items-center justify-between pt-2 border-t border-slate-100 dark:border-zinc-800/80">
-                                                    <span className="text-[10px] text-slate-400 font-mono">
+                                                <div className="flex items-center justify-between pt-3 border-t border-slate-100 dark:border-zinc-800/80">
+                                                    <span className="text-xs text-slate-400 font-mono font-medium">
                                                         Due: {bill.due_date ? new Date(bill.due_date).toLocaleDateString() : 'N/A'}
                                                     </span>
-                                                    <div className="flex items-center gap-1">
+                                                    <div className="flex items-center gap-1.5">
+                                                        {bill.status === 'Pending Verification' && (
+                                                            <button
+                                                                onClick={() => {
+                                                                    const matchIdx = pendingPayments.findIndex(p => p.bill_id === bill.id);
+                                                                    setCurrentVerifyIndex(matchIdx >= 0 ? matchIdx : 0);
+                                                                    setIsVerifyModalOpen(true);
+                                                                }}
+                                                                className="px-2.5 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold transition-all flex items-center gap-1.5 shadow-xs cursor-pointer shrink-0"
+                                                                title="Review proof of payment receipt"
+                                                            >
+                                                                <Clock className="w-3.5 h-3.5" />
+                                                                <span>Verify</span>
+                                                            </button>
+                                                        )}
                                                         {bill.status !== 'Paid' && (
                                                             <button
                                                                 onClick={() => openPayModal(bill)}
-                                                                className="px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-[10px] font-bold flex items-center gap-1 cursor-pointer shadow-xs"
+                                                                className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold flex items-center gap-1.5 cursor-pointer shadow-xs"
                                                                 title="Process cash payment and mark as paid"
                                                             >
-                                                                <CheckCircle2 className="w-3 h-3" />
+                                                                <CheckCircle2 className="w-3.5 h-3.5" />
                                                                 <span>Mark as Paid</span>
                                                             </button>
                                                         )}
                                                         <button
                                                             onClick={() => openViewModal(bill)}
-                                                            className="p-1 rounded text-slate-500 hover:text-slate-900 dark:hover:text-white"
+                                                            className="p-1.5 rounded-lg text-slate-500 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-zinc-800 transition-colors"
                                                             title="View Statement"
                                                         >
-                                                            <Eye className="w-3.5 h-3.5" />
+                                                            <Eye className="w-4 h-4" />
                                                         </button>
                                                     </div>
                                                 </div>
@@ -1135,76 +1259,76 @@ export default function AdminBilling() {
                 ) : (
                     /* PAYMENTS AUDIT JOURNAL TABLE */
                     <div className="overflow-x-auto overflow-y-auto flex-1 custom-scrollbar">
-                        <table className="w-full min-w-full text-left text-xs border-collapse">
+                        <table className="w-full min-w-full text-left text-sm border-collapse">
                             <thead className="sticky top-0 z-10 bg-slate-100 dark:bg-zinc-800 shadow-xs">
-                                <tr className="h-[40px] text-slate-700 dark:text-zinc-300 uppercase tracking-wider text-[11px] font-bold">
+                                <tr className="h-[48px] text-slate-700 dark:text-zinc-300 uppercase tracking-wider text-[13px] sm:text-sm font-bold">
                                     <th className="py-2.5 px-4 bg-slate-100 dark:bg-zinc-800 border-b border-slate-200 dark:border-zinc-700">Payment Date</th>
                                     <th className="py-2.5 px-4 bg-slate-100 dark:bg-zinc-800 border-b border-slate-200 dark:border-zinc-700">Resident Name</th>
-                                    <th className="py-2.5 px-3 bg-slate-100 dark:bg-zinc-800 border-b border-slate-200 dark:border-zinc-700">Room</th>
-                                    <th className="py-2.5 px-3 bg-slate-100 dark:bg-zinc-800 border-b border-slate-200 dark:border-zinc-700">Billing Period</th>
-                                    <th className="py-2.5 px-3 bg-slate-100 dark:bg-zinc-800 border-b border-slate-200 dark:border-zinc-700">Payment Method</th>
+                                    <th className="py-2.5 px-3.5 bg-slate-100 dark:bg-zinc-800 border-b border-slate-200 dark:border-zinc-700">Room</th>
+                                    <th className="py-2.5 px-3.5 bg-slate-100 dark:bg-zinc-800 border-b border-slate-200 dark:border-zinc-700">Billing Period</th>
+                                    <th className="py-2.5 px-3.5 bg-slate-100 dark:bg-zinc-800 border-b border-slate-200 dark:border-zinc-700">Payment Method</th>
                                     <th className="py-2.5 px-4 text-right bg-slate-100 dark:bg-zinc-800 border-b border-slate-200 dark:border-zinc-700">Amount Paid</th>
-                                    <th className="py-2.5 px-3 text-center bg-slate-100 dark:bg-zinc-800 border-b border-slate-200 dark:border-zinc-700">Payment Status</th>
+                                    <th className="py-2.5 px-3.5 text-center bg-slate-100 dark:bg-zinc-800 border-b border-slate-200 dark:border-zinc-700">Payment Status</th>
                                     <th className="py-2.5 px-4 bg-slate-100 dark:bg-zinc-800 border-b border-slate-200 dark:border-zinc-700">Reference</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-slate-100 dark:divide-zinc-800/60 font-sans">
                                 {filteredPayments.length === 0 ? (
                                     <tr>
-                                        <td colSpan={8} className="py-12 text-center text-slate-400 dark:text-zinc-500">
-                                            <CreditCard className="w-8 h-8 mx-auto mb-2 opacity-30" />
-                                            <p className="font-semibold text-sm">No paid payment records found in the ledger.</p>
+                                        <td colSpan={8} className="py-14 text-center text-slate-400 dark:text-zinc-500">
+                                            <CreditCard className="w-10 h-10 mx-auto mb-2 opacity-30" />
+                                            <p className="font-semibold text-base">No paid payment records found in the ledger.</p>
                                         </td>
                                     </tr>
                                 ) : (
                                     filteredPayments.map(payment => (
                                         <tr 
                                             key={payment.id} 
-                                            className="h-[46px] hover:bg-slate-50/70 dark:hover:bg-zinc-800/40 transition-colors"
+                                            className="h-[60px] hover:bg-slate-50/70 dark:hover:bg-zinc-800/40 transition-colors"
                                         >
                                             {/* Date */}
-                                            <td className="py-2 px-4 whitespace-nowrap font-mono text-slate-800 dark:text-zinc-200">
+                                            <td className="py-2.5 px-4 whitespace-nowrap font-mono text-sm sm:text-base font-semibold text-slate-800 dark:text-zinc-200">
                                                 {payment.payment_date ? new Date(payment.payment_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'N/A'}
                                             </td>
 
                                             {/* Tenant Name */}
-                                            <td className="py-2 px-4 whitespace-nowrap font-bold text-slate-900 dark:text-white">
+                                            <td className="py-2.5 px-4 whitespace-nowrap font-bold text-slate-900 dark:text-white text-base sm:text-[17px]">
                                                 {payment.tenant_name}
                                             </td>
 
                                             {/* Room */}
-                                            <td className="py-2 px-3 whitespace-nowrap text-slate-600 dark:text-zinc-400 font-semibold">
+                                            <td className="py-2.5 px-3.5 whitespace-nowrap text-slate-600 dark:text-zinc-400 font-semibold text-sm sm:text-base">
                                                 {payment.room_number ? `Room ${payment.room_number}` : 'N/A'}
                                             </td>
 
                                             {/* Month */}
-                                            <td className="py-2 px-3 whitespace-nowrap text-slate-600 dark:text-zinc-400">
+                                            <td className="py-2.5 px-3.5 whitespace-nowrap text-slate-700 dark:text-zinc-300 font-medium text-sm sm:text-base">
                                                 {payment.billing_month}
                                             </td>
 
                                             {/* Method */}
-                                            <td className="py-2 px-3 whitespace-nowrap">
-                                                <span className="px-2 py-0.5 rounded text-[11px] font-semibold bg-slate-100 dark:bg-zinc-800 text-slate-700 dark:text-zinc-300 border border-slate-200 dark:border-zinc-700">
+                                            <td className="py-2.5 px-3.5 whitespace-nowrap">
+                                                <span className="px-3 py-1 rounded-md text-xs sm:text-sm font-semibold bg-slate-100 dark:bg-zinc-800 text-slate-700 dark:text-zinc-300 border border-slate-200 dark:border-zinc-700">
                                                     {payment.payment_method || 'Cash'}
                                                 </span>
                                             </td>
 
                                             {/* Amount Paid */}
-                                            <td className="py-2 px-4 text-right whitespace-nowrap font-mono font-extrabold text-emerald-600 dark:text-emerald-400">
+                                            <td className="py-2.5 px-4 text-right whitespace-nowrap font-mono font-extrabold text-base sm:text-lg text-slate-900 dark:text-zinc-100">
                                                 ₱{Number(payment.amount_paid).toLocaleString()}
                                             </td>
 
                                             {/* Status */}
-                                            <td className="py-2 px-3 text-center whitespace-nowrap">
-                                                <span className="inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400">
-                                                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                                            <td className="py-2.5 px-3.5 text-center whitespace-nowrap">
+                                                <span className="inline-flex items-center gap-1.5 text-xs sm:text-[13px] font-semibold uppercase tracking-wider px-3 py-1.2 rounded-md text-emerald-700 dark:text-emerald-400/80 bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200/60 dark:border-emerald-500/20">
+                                                    <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
                                                     Paid
                                                 </span>
                                             </td>
 
                                             {/* Reference */}
-                                            <td className="py-2 px-4 whitespace-nowrap">
-                                                <span className="font-mono text-xs font-bold text-slate-800 dark:text-zinc-200 bg-slate-100 dark:bg-zinc-800/80 px-2 py-0.5 rounded border border-slate-200 dark:border-zinc-700">
+                                            <td className="py-2.5 px-4 whitespace-nowrap">
+                                                <span className="font-mono text-xs sm:text-sm font-bold text-slate-800 dark:text-zinc-200 bg-slate-100 dark:bg-zinc-800/80 px-3 py-1 rounded-md border border-slate-200 dark:border-zinc-700">
                                                     {payment.reference_number || payment.referenceNumber || (payment.notes ? payment.notes.replace(/^Ref[:#]?\s*/i, '') : `REF-${payment.id}`)}
                                                 </span>
                                             </td>
@@ -1423,9 +1547,9 @@ export default function AdminBilling() {
                                                 </div>
 
                                                 {(Number(billDetails.amount_paid) || 0) > 0 && (
-                                                    <div className="flex justify-between text-emerald-600 dark:text-emerald-400">
+                                                    <div className="flex justify-between text-slate-600 dark:text-zinc-400">
                                                         <span>Less: Payments Applied</span>
-                                                        <span className="font-mono font-bold">
+                                                        <span className="font-mono font-bold text-slate-800 dark:text-zinc-200">
                                                             -₱{(Number(billDetails.amount_paid) || 0).toLocaleString()}
                                                         </span>
                                                     </div>
@@ -1433,17 +1557,17 @@ export default function AdminBilling() {
 
                                                 <div className="pt-2 border-t border-slate-200 dark:border-zinc-800 flex justify-between items-baseline">
                                                     <span className="font-bold text-slate-900 dark:text-white">Balance Due</span>
-                                                    <span className={`font-mono text-base font-black ${
+                                                    <span className={`font-mono text-base font-bold ${
                                                         Number(billDetails.balance) === 0
-                                                            ? 'text-emerald-600 dark:text-emerald-400'
-                                                            : 'text-rose-600 dark:text-rose-400'
+                                                            ? 'text-slate-900 dark:text-zinc-100'
+                                                            : 'text-rose-600 dark:text-rose-400/80'
                                                     }`}>
                                                         ₱{Number(billDetails.balance).toLocaleString()}
                                                     </span>
                                                 </div>
 
                                                 {Number(billDetails.balance) === 0 && (
-                                                    <div className="text-[11px] text-emerald-600 dark:text-emerald-400 font-medium text-right flex items-center justify-end gap-1">
+                                                    <div className="text-[11px] text-emerald-600 dark:text-emerald-400/80 font-medium text-right flex items-center justify-end gap-1">
                                                         <CheckCircle2 className="w-3 h-3" />
                                                         <span>Account fully settled</span>
                                                     </div>
@@ -1490,7 +1614,7 @@ export default function AdminBilling() {
                                                                     </p>
                                                                 )}
                                                             </div>
-                                                            <div className="font-mono font-bold text-emerald-600 dark:text-emerald-400 sm:text-right shrink-0">
+                                                            <div className="font-mono font-bold text-slate-900 dark:text-zinc-100 sm:text-right shrink-0">
                                                                 +₱{(Number(p.amount_paid) || 0).toLocaleString()}
                                                             </div>
                                                         </div>
@@ -1640,7 +1764,7 @@ export default function AdminBilling() {
                                                 <button
                                                     type="button"
                                                     onClick={() => setPaymentForm({ ...paymentForm, amount_paid: Number(selectedBill.balance) })}
-                                                    className="text-[11px] font-bold text-teal-600 dark:text-teal-400 hover:underline cursor-pointer"
+                                                    className="text-[11px] font-semibold text-slate-600 dark:text-zinc-300 hover:text-slate-900 dark:hover:text-white hover:underline cursor-pointer"
                                                 >
                                                     Pay Full (₱{Number(selectedBill.balance).toLocaleString()})
                                                 </button>
@@ -1653,7 +1777,7 @@ export default function AdminBilling() {
                                             max={Number(selectedBill.balance)}
                                             value={paymentForm.amount_paid}
                                             onChange={(e) => setPaymentForm({ ...paymentForm, amount_paid: e.target.value === '' ? '' : parseFloat(e.target.value) })}
-                                            className="w-full px-3 py-2 text-sm font-mono font-bold rounded-lg bg-slate-50 dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 text-slate-900 dark:text-white focus:outline-none focus:border-teal-500 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                                            className="w-full px-3 py-2 text-sm font-mono font-bold rounded-lg bg-slate-50 dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 text-slate-900 dark:text-white focus:outline-none focus:border-slate-400 dark:focus:border-zinc-500 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                                         />
                                     </div>
 
@@ -1661,7 +1785,7 @@ export default function AdminBilling() {
                                         <div className="space-y-1">
                                             <label className="text-xs font-bold text-slate-700 dark:text-zinc-300">Payment Method</label>
                                             <div className="py-2 px-3 text-xs rounded-lg bg-slate-100 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 font-bold text-slate-800 dark:text-zinc-200 flex items-center gap-1.5">
-                                                <Building2 className="w-3.5 h-3.5 text-emerald-600" />
+                                                <Building2 className="w-3.5 h-3.5 text-slate-600 dark:text-zinc-400" />
                                                 <span>Cash</span>
                                             </div>
                                         </div>
@@ -1672,7 +1796,7 @@ export default function AdminBilling() {
                                                 type="date"
                                                 value={paymentForm.payment_date}
                                                 onChange={(e) => setPaymentForm({ ...paymentForm, payment_date: e.target.value })}
-                                                className="w-full py-2 px-3 text-xs font-semibold rounded-lg bg-slate-50 dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 text-slate-900 dark:text-white focus:outline-none focus:border-teal-500"
+                                                className="w-full py-2 px-3 text-xs font-semibold rounded-lg bg-slate-50 dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 text-slate-900 dark:text-white focus:outline-none focus:border-slate-400 dark:focus:border-zinc-500"
                                             />
                                         </div>
                                     </div>
@@ -1753,7 +1877,7 @@ export default function AdminBilling() {
                                             placeholder="e.g. October 2026"
                                             value={billForm.billing_month}
                                             onChange={(e) => setBillForm({ ...billForm, billing_month: e.target.value })}
-                                            className="w-full py-2 px-3 text-xs rounded-lg bg-slate-50 dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 font-semibold text-slate-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-teal-500"
+                                            className="w-full py-2 px-3 text-xs rounded-lg bg-slate-50 dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 font-semibold text-slate-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-slate-400/30 dark:focus:ring-zinc-600/40"
                                         />
                                     </div>
 
@@ -1765,7 +1889,7 @@ export default function AdminBilling() {
                                             type="date"
                                             value={billForm.due_date}
                                             onChange={(e) => setBillForm({ ...billForm, due_date: e.target.value })}
-                                            className="w-full py-2 px-3 text-xs rounded-lg bg-slate-50 dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 font-semibold text-slate-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-teal-500"
+                                            className="w-full py-2 px-3 text-xs rounded-lg bg-slate-50 dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 font-semibold text-slate-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-slate-400/30 dark:focus:ring-zinc-600/40"
                                         />
                                     </div>
                                 </div>
@@ -1823,7 +1947,7 @@ export default function AdminBilling() {
                                     {/* Live Total Calculation */}
                                     <div className="pt-2 border-t border-slate-200 dark:border-zinc-800 flex justify-between items-center text-xs">
                                         <span className="font-bold text-slate-700 dark:text-zinc-300">Calculated Invoice Total:</span>
-                                        <span className="text-base font-mono font-extrabold text-teal-600 dark:text-teal-400">
+                                        <span className="text-base font-mono font-bold text-slate-900 dark:text-zinc-100">
                                             ₱{(
                                                 (Number(billForm.rent_amount) || 0) +
                                                 (Number(billForm.water_charges) || 0) +
@@ -1856,7 +1980,7 @@ export default function AdminBilling() {
                                     <button
                                         type="submit"
                                         disabled={isSubmitting}
-                                        className="px-4 py-2 text-xs font-bold rounded-lg bg-teal-600 hover:bg-teal-700 text-white flex items-center gap-1.5 shadow-xs"
+                                        className="px-4 py-2 text-xs font-bold rounded-lg bg-slate-900 hover:bg-slate-800 dark:bg-white dark:hover:bg-zinc-200 text-white dark:text-zinc-900 flex items-center gap-1.5 shadow-xs"
                                     >
                                         {isSubmitting ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Plus className="w-3.5 h-3.5" />}
                                         <span>Create Invoice</span>
@@ -2139,5 +2263,17 @@ export default function AdminBilling() {
             </AnimatePresence>
 
         </div>
+    );
+}
+
+export default function AdminBilling() {
+    return (
+        <Suspense fallback={
+            <div className="w-full h-[calc(100vh-6.2rem)] md:h-[calc(100vh-7.2rem)] lg:h-[calc(100dvh-7.2rem)] flex items-center justify-center">
+                <div className="w-8 h-8 border-2 border-slate-300 dark:border-zinc-700 border-t-cyan-500 rounded-full animate-spin" />
+            </div>
+        }>
+            <BillingContent />
+        </Suspense>
     );
 }

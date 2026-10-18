@@ -149,7 +149,6 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         { name: 'Bills and Payments', path: '/admin/billing', icon: CreditCard },
         { name: 'Maintenance Request', path: '/admin/requests', icon: Wrench },
         { name: 'Chat with Tenants', path: '/admin/chat', icon: MessageSquare },
-        { name: 'Announcements', path: '/admin/announcements', icon: Bell },
         { name: 'Security CCTV', path: '/admin/cctv', icon: Video },
         { name: 'Settings', path: '/admin/settings', icon: Settings },
     ];

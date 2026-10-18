@@ -29,7 +29,6 @@ const cardVariants: Variants = {
 export default function AdminAnnouncements() {
     const [announcements, setAnnouncements] = useState<Announcement[]>([]);
     const [isLoading, setIsLoading] = useState(true);
-    const [isRefreshing, setIsRefreshing] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
     const [typeFilter, setTypeFilter] = useState<'All' | 'Alert' | 'Event' | 'Info' | 'Success'>('All');
 
@@ -45,20 +44,16 @@ export default function AdminAnnouncements() {
         type: 'Info'
     });
 
-    const fetchAnnouncements = async (silent = false) => {
-        if (!silent) setIsLoading(true);
-        else setIsRefreshing(true);
+    const fetchAnnouncements = async () => {
+        setIsLoading(true);
 
         try {
             const { data } = await api.get('/admin/announcements');
             setAnnouncements(data || []);
-            if (silent) toast.success("Announcements synchronized");
         } catch (error) {
             console.error("Failed to fetch announcements:", error);
-            if (silent) toast.error("Failed to load announcements");
         } finally {
             setIsLoading(false);
-            setIsRefreshing(false);
         }
     };
 
@@ -245,15 +240,6 @@ export default function AdminAnnouncements() {
 
                 <div className="flex items-center gap-2">
                     <button
-                        onClick={() => fetchAnnouncements(true)}
-                        disabled={isRefreshing}
-                        className="px-3 py-1.5 text-xs font-semibold rounded-lg border border-slate-200 dark:border-zinc-800 bg-card hover:bg-slate-50 dark:hover:bg-zinc-800 text-slate-700 dark:text-zinc-300 transition-colors flex items-center gap-1.5 shadow-xs"
-                    >
-                        <RefreshCw className={`w-3.5 h-3.5 ${isRefreshing ? 'animate-spin text-teal-600' : ''}`} />
-                        <span>Sync</span>
-                    </button>
-
-                    <button
                         onClick={() => setShowCreateModal(true)}
                         className="px-3.5 py-1.5 text-xs font-bold rounded-lg bg-teal-600 hover:bg-teal-700 text-white transition-all flex items-center gap-1.5 shadow-xs"
                     >
@@ -323,7 +309,7 @@ export default function AdminAnnouncements() {
 
             </div>
 
-            {/* 3. Triage Category Tabs & Search Bar */}
+            {/* Category Tabs & Search Bar */}
             <div className="shrink-0 bg-card border border-slate-200 dark:border-zinc-800 rounded-xl p-2 shadow-xs flex flex-wrap items-center justify-between gap-2">
                 <div className="flex items-center gap-1 overflow-x-auto text-xs">
                     {[

@@ -117,6 +117,7 @@ export default function TenantLayout({ children }: { children: React.ReactNode }
     };
 
     const handleLogout = () => {
+        api.post('/auth/logout').catch(() => {});
         localStorage.removeItem('token');
         localStorage.removeItem('user');
         router.push('/');
