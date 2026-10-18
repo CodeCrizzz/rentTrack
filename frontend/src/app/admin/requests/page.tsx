@@ -7,7 +7,7 @@ import { toast } from 'sonner';
 import CustomSelect from '@/components/CustomSelect';
 import { 
     Wrench, AlertTriangle, Calendar, User, 
-    CheckCircle2, Clock, Trash2, Edit, Eye, X, 
+    CheckCircle2, Clock, Eye, X, 
     RefreshCw, Droplets, Zap, Wind, Hammer, Wifi, 
     HelpCircle, ZoomIn, UserCheck, Paperclip, Check,
     List, LayoutGrid, ShieldAlert, TrendingUp, Phone,
@@ -36,20 +36,10 @@ const cardVariants: Variants = {
     show: { opacity: 1, y: 0, transition: { duration: 0.2, ease: "easeOut" } }
 };
 
-const CONTRACTOR_PRESETS = [
-    'In-House Maintenance',
-    'Dave (Plumber)',
-    'ElectroTech Services',
-    'CoolAir HVAC Team',
-    'Rapid Handyman',
-    'FiberNet Tech'
-];
-
 export default function AdminMaintenanceRequests() {
     // Data State
     const [requests, setRequests] = useState<MaintenanceRequest[]>([]);
     const [isLoading, setIsLoading] = useState(true);
-    const [isRefreshing, setIsRefreshing] = useState(false);
 
     // View & Filters
     const [viewMode, setViewMode] = useState<'table' | 'cards'>('table');
@@ -60,36 +50,19 @@ export default function AdminMaintenanceRequests() {
 
     // Modals
     const [viewingRequest, setViewingRequest] = useState<MaintenanceRequest | null>(null);
-    const [editingRequest, setEditingRequest] = useState<MaintenanceRequest | null>(null);
-    const [deletingRequest, setDeletingRequest] = useState<MaintenanceRequest | null>(null);
     const [lightboxImage, setLightboxImage] = useState<string | null>(null);
 
-    // Edit Form State
-    const [isSubmitting, setIsSubmitting] = useState(false);
-    const [isDeleting, setIsDeleting] = useState(false);
-    const [manageForm, setManageForm] = useState({
-        status: 'Pending',
-        priority: 'Normal',
-        assigned_to: '',
-        scheduled_date: '',
-        admin_notes: ''
-    });
-
     // Fetch Data
-    const fetchRequests = async (showToast = false) => {
-        if (showToast) setIsRefreshing(true);
-        else setIsLoading(true);
+    const fetchRequests = async (silent = false) => {
+        if (!silent) setIsLoading(true);
 
         try {
             const { data } = await api.get('/admin/requests');
             setRequests(data || []);
-            if (showToast) toast.success("Maintenance tickets synchronized");
         } catch (error) {
             console.error("Failed to load requests", error);
-            if (showToast) toast.error("Failed to load maintenance requests");
         } finally {
-            setIsLoading(false);
-            setIsRefreshing(false);
+            if (!silent) setIsLoading(false);
         }
     };
 
@@ -97,90 +70,26 @@ export default function AdminMaintenanceRequests() {
         fetchRequests();
     }, []);
 
-    // Open Manage Modal
-    const handleOpenManage = (req: MaintenanceRequest) => {
-        setEditingRequest(req);
-        setManageForm({
-            status: req.status || 'Pending',
-            priority: req.priority || 'Normal',
-            assigned_to: req.assigned_to || '',
-            scheduled_date: req.scheduled_date ? new Date(req.scheduled_date).toISOString().split('T')[0] : '',
-            admin_notes: req.admin_notes || ''
-        });
-    };
-
-    // Save Managed Changes
-    const handleSaveManage = async (e: React.FormEvent) => {
-        e.preventDefault();
-        if (!editingRequest) return;
-
-        setIsSubmitting(true);
-        try {
-            const updatePayload: any = {
-                status: manageForm.status,
-                priority: manageForm.priority,
-                assigned_to: manageForm.assigned_to.trim() || null,
-                scheduled_date: manageForm.scheduled_date || null,
-                admin_notes: manageForm.admin_notes.trim() || null
-            };
-
-            if (manageForm.status === 'Resolved' && editingRequest.status !== 'Resolved') {
-                updatePayload.date_resolved = new Date().toISOString();
-            }
-
-            await api.put(`/admin/requests/${editingRequest.id}`, updatePayload);
-            toast.success(`Ticket #${editingRequest.id} dispatched & updated`);
-
-            setRequests(prev => prev.map(r => r.id === editingRequest.id ? { ...r, ...updatePayload } : r));
-            
-            if (viewingRequest && viewingRequest.id === editingRequest.id) {
-                setViewingRequest(prev => prev ? { ...prev, ...updatePayload } : null);
-            }
-
-            setEditingRequest(null);
-        } catch (error) {
-            console.error("Failed to update work order", error);
-            toast.error("Failed to update work order");
-        } finally {
-            setIsSubmitting(false);
-        }
-    };
-
-    // Quick Status Switch
+    // Quick Status Switch (Start -> Resolve)
     const handleQuickStatus = async (reqId: number, nextStatus: string) => {
         try {
             setRequests(prev => prev.map(r => r.id === reqId ? { ...r, status: nextStatus } : r));
+            if (viewingRequest && viewingRequest.id === reqId) {
+                setViewingRequest(prev => prev ? { ...prev, status: nextStatus } : null);
+            }
             
             const payload: any = { status: nextStatus };
             if (nextStatus === 'Resolved') payload.date_resolved = new Date().toISOString();
 
             await api.put(`/admin/requests/${reqId}`, payload);
-            toast.success(`Request #${reqId} marked as ${nextStatus}`);
+            toast.success(`Request #${formatRequestNumber(reqId)} marked as ${nextStatus}`);
         } catch (error) {
             console.error("Status update error", error);
             toast.error("Failed to update status");
-            fetchRequests(true);
+            fetchRequests();
         }
     };
 
-    // Delete Request
-    const handleDeleteRequest = async () => {
-        if (!deletingRequest) return;
-        setIsDeleting(true);
-
-        try {
-            await api.delete(`/admin/requests/${deletingRequest.id}`);
-            toast.success(`Request #${deletingRequest.id} removed`);
-            setRequests(prev => prev.filter(r => r.id !== deletingRequest.id));
-            if (viewingRequest?.id === deletingRequest.id) setViewingRequest(null);
-            setDeletingRequest(null);
-        } catch (error) {
-            console.error("Delete request error", error);
-            toast.error("Failed to delete request");
-        } finally {
-            setIsDeleting(false);
-        }
-    };
 
     // Derived Metrics
     const metrics = useMemo(() => {
@@ -204,11 +113,12 @@ export default function AdminMaintenanceRequests() {
                 r.tenant_name.toLowerCase().includes(q) ||
                 (r.room_number && r.room_number.toLowerCase().includes(q)) ||
                 (r.assigned_to && r.assigned_to.toLowerCase().includes(q)) ||
+                formatRequestNumber(r.id).toLowerCase().includes(q) ||
                 `#req-${r.id}`.includes(q) ||
                 r.id.toString() === q
             );
 
-            // Status Triage Filter
+            // Status Filter
             if (statusFilter === 'Pending' && r.status !== 'Pending') return false;
             if (statusFilter === 'In Progress' && r.status !== 'In Progress') return false;
             if (statusFilter === 'Resolved' && r.status !== 'Resolved') return false;
@@ -223,6 +133,11 @@ export default function AdminMaintenanceRequests() {
     }, [requests, searchQuery, statusFilter, priorityFilter, categoryFilter]);
 
     // Helpers
+    const formatRequestNumber = (id: number | string) => {
+        if (!id) return '';
+        return 'RT' + String(id).padStart(4, '0');
+    };
+
     const getAttachmentUrl = (path: string | null) => {
         if (!path) return null;
         if (path.startsWith('http://') || path.startsWith('https://')) return path;
@@ -244,27 +159,23 @@ export default function AdminMaintenanceRequests() {
         switch (status) {
             case 'Pending':
                 return {
-                    label: 'Pending Review',
-                    className: 'text-amber-600 dark:text-amber-400',
-                    dot: 'bg-amber-500 animate-pulse'
+                    label: 'Pending',
+                    className: 'text-amber-700 dark:text-amber-500 font-semibold'
                 };
             case 'In Progress':
                 return {
                     label: 'In Progress',
-                    className: 'text-blue-600 dark:text-blue-400',
-                    dot: 'bg-blue-500'
+                    className: 'text-blue-700 dark:text-blue-400 font-semibold'
                 };
             case 'Resolved':
                 return {
                     label: 'Resolved',
-                    className: 'text-emerald-600 dark:text-emerald-400',
-                    dot: 'bg-emerald-500'
+                    className: 'text-emerald-700 dark:text-emerald-400 font-semibold'
                 };
             default:
                 return {
                     label: status,
-                    className: 'text-slate-600 dark:text-zinc-400',
-                    dot: 'bg-slate-400'
+                    className: 'text-slate-600 dark:text-zinc-400 font-semibold'
                 };
         }
     };
@@ -274,20 +185,17 @@ export default function AdminMaintenanceRequests() {
             case 'High':
                 return {
                     label: 'High Priority',
-                    className: 'bg-rose-50 dark:bg-rose-500/10 text-rose-700 dark:text-rose-400 border border-rose-200/50 dark:border-rose-500/20',
-                    dot: 'bg-rose-500 animate-ping'
+                    className: 'text-rose-700 dark:text-rose-400 font-semibold'
                 };
             case 'Low':
                 return {
                     label: 'Low',
-                    className: 'bg-slate-100 dark:bg-zinc-800 text-slate-600 dark:text-zinc-400 border border-slate-200 dark:border-zinc-700',
-                    dot: 'bg-slate-400'
+                    className: 'text-slate-500 dark:text-zinc-400 font-semibold'
                 };
             default:
                 return {
                     label: 'Normal',
-                    className: 'bg-sky-50 dark:bg-sky-500/10 text-sky-700 dark:text-sky-400 border border-sky-200/50 dark:border-sky-500/20',
-                    dot: 'bg-sky-500'
+                    className: 'text-slate-600 dark:text-zinc-300 font-semibold'
                 };
         }
     };
@@ -295,89 +203,89 @@ export default function AdminMaintenanceRequests() {
     if (isLoading) {
         return (
             <div className="w-full h-[calc(100vh-6.2rem)] md:h-[calc(100vh-7.2rem)] lg:h-[calc(100dvh-7.2rem)] flex flex-col font-sans text-slate-900 dark:text-zinc-100 overflow-hidden space-y-2.5 animate-pulse">
-                {/* 1. Header Toolbar */}
+                {/*Header Toolbar */}
                 <div className="shrink-0 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
                     <div>
                         <div className="flex items-center gap-2">
-                            <div className="h-6 w-52 bg-slate-200 dark:bg-zinc-800 rounded-md"></div>
-                            <div className="h-5 w-24 bg-slate-200 dark:bg-zinc-800 rounded-full"></div>
+                            <div className="h-7 w-60 bg-slate-200 dark:bg-zinc-800 rounded-lg"></div>
+                            <div className="h-6 w-28 bg-slate-200 dark:bg-zinc-800 rounded-full"></div>
                         </div>
-                        <div className="h-3.5 w-80 bg-slate-200 dark:bg-zinc-800 rounded-md mt-1.5"></div>
+                        <div className="h-4 w-96 bg-slate-200 dark:bg-zinc-800 rounded mt-1.5"></div>
                     </div>
 
                     <div className="flex items-center gap-2">
-                        <div className="h-8 w-28 bg-slate-200 dark:bg-zinc-800 rounded-lg"></div>
-                        <div className="h-8 w-20 bg-slate-200 dark:bg-zinc-800 rounded-lg"></div>
+                        <div className="h-9 w-28 bg-slate-200 dark:bg-zinc-800 rounded-lg"></div>
+                        <div className="h-9 w-20 bg-slate-200 dark:bg-zinc-800 rounded-lg"></div>
                     </div>
                 </div>
 
-                {/* 2. Executive Metric Ribbon (4 Tiles) */}
-                <div className="shrink-0 grid grid-cols-2 lg:grid-cols-4 gap-2.5">
+                {/* Executive Metric Ribbon (4 Tiles) */}
+                <div className="shrink-0 grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-3">
                     {[...Array(4)].map((_, i) => (
-                        <div key={i} className="bg-card border border-slate-200 dark:border-zinc-800 rounded-xl p-3 shadow-xs flex items-center justify-between">
-                            <div className="space-y-1.5 flex-1">
-                                <div className="h-2.5 w-24 bg-slate-200 dark:bg-zinc-800 rounded"></div>
-                                <div className="h-6 w-28 bg-slate-200 dark:bg-zinc-800 rounded-md"></div>
-                                <div className="h-2.5 w-24 bg-slate-200 dark:bg-zinc-800 rounded"></div>
+                        <div key={i} className="bg-card border border-slate-200 dark:border-zinc-800 rounded-xl p-2.5 sm:p-3 shadow-xs flex items-center justify-between">
+                            <div className="space-y-2 flex-1">
+                                <div className="h-3 w-28 bg-slate-200 dark:bg-zinc-800 rounded"></div>
+                                <div className="h-8 w-32 bg-slate-200 dark:bg-zinc-800 rounded-md"></div>
+                                <div className="h-3 w-28 bg-slate-200 dark:bg-zinc-800 rounded"></div>
                             </div>
-                            <div className="w-10 h-10 rounded-xl bg-slate-100 dark:bg-zinc-800 shrink-0"></div>
+                            <div className="w-11 h-11 rounded-xl bg-slate-100 dark:bg-zinc-800 shrink-0"></div>
                         </div>
                     ))}
                 </div>
 
-                {/* 3. Status Triage Bar & Filters */}
+                {/* Status Tabs & Filters */}
                 <div className="shrink-0 bg-card border border-slate-200 dark:border-zinc-800 rounded-xl p-2 shadow-xs">
                     <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-2">
-                        <div className="flex items-center gap-1 overflow-x-auto">
+                        <div className="flex items-center gap-1.5 overflow-x-auto">
                             {[...Array(5)].map((_, i) => (
-                                <div key={i} className="h-7 w-28 bg-slate-100 dark:bg-zinc-800 rounded-md"></div>
+                                <div key={i} className="h-8 w-28 bg-slate-100 dark:bg-zinc-800 rounded-lg"></div>
                             ))}
                         </div>
                         <div className="flex flex-wrap items-center gap-2">
-                            <div className="h-7 w-48 bg-slate-100 dark:bg-zinc-800 rounded-lg"></div>
-                            <div className="h-7 w-28 bg-slate-100 dark:bg-zinc-800 rounded-lg"></div>
-                            <div className="h-7 w-32 bg-slate-100 dark:bg-zinc-800 rounded-lg"></div>
+                            <div className="h-8 w-56 bg-slate-100 dark:bg-zinc-800 rounded-lg"></div>
+                            <div className="h-8 w-36 bg-slate-100 dark:bg-zinc-800 rounded-lg"></div>
+                            <div className="h-8 w-40 bg-slate-100 dark:bg-zinc-800 rounded-lg"></div>
                         </div>
                     </div>
                 </div>
 
-                {/* 4. Main Work Orders Ledger */}
+                {/* Main Work Orders Ledger */}
                 <div className="flex-1 min-h-0 bg-card border border-slate-200 dark:border-zinc-800 rounded-xl overflow-hidden shadow-xs flex flex-col">
                     <div className="overflow-x-auto overflow-y-auto flex-1 custom-scrollbar">
-                        <table className="w-full min-w-full text-left text-xs border-collapse">
+                        <table className="w-full min-w-full text-left text-sm border-collapse">
                             <thead className="sticky top-0 z-10 bg-slate-100 dark:bg-zinc-800 shadow-xs">
-                                <tr className="h-10 text-slate-700 dark:text-zinc-300 uppercase tracking-wider text-[11px] font-bold">
-                                    <th className="py-2.5 px-4"><div className="h-3 w-24 bg-slate-200 dark:bg-zinc-700 rounded"></div></th>
-                                    <th className="py-2.5 px-4"><div className="h-3 w-32 bg-slate-200 dark:bg-zinc-700 rounded"></div></th>
-                                    <th className="py-2.5 px-3 text-center"><div className="h-3 w-16 bg-slate-200 dark:bg-zinc-700 rounded mx-auto"></div></th>
-                                    <th className="py-2.5 px-3 text-center"><div className="h-3 w-16 bg-slate-200 dark:bg-zinc-700 rounded mx-auto"></div></th>
-                                    <th className="py-2.5 px-4"><div className="h-3 w-28 bg-slate-200 dark:bg-zinc-700 rounded"></div></th>
-                                    <th className="py-2.5 px-3"><div className="h-3 w-20 bg-slate-200 dark:bg-zinc-700 rounded"></div></th>
-                                    <th className="py-2.5 px-3 text-center"><div className="h-3 w-12 bg-slate-200 dark:bg-zinc-700 rounded mx-auto"></div></th>
-                                    <th className="py-2.5 px-4 text-right"><div className="h-3 w-20 bg-slate-200 dark:bg-zinc-700 rounded ml-auto"></div></th>
+                                <tr className="h-[44px] text-slate-700 dark:text-zinc-300 uppercase tracking-wider text-sm font-black">
+                                    <th className="py-2.5 px-4"><div className="h-4 w-28 bg-slate-200 dark:bg-zinc-700 rounded"></div></th>
+                                    <th className="py-2.5 px-4"><div className="h-4 w-36 bg-slate-200 dark:bg-zinc-700 rounded"></div></th>
+                                    <th className="py-2.5 px-3 text-center"><div className="h-4 w-20 bg-slate-200 dark:bg-zinc-700 rounded mx-auto"></div></th>
+                                    <th className="py-2.5 px-3 text-center"><div className="h-4 w-20 bg-slate-200 dark:bg-zinc-700 rounded mx-auto"></div></th>
+                                    <th className="py-2.5 px-4"><div className="h-4 w-32 bg-slate-200 dark:bg-zinc-700 rounded"></div></th>
+                                    <th className="py-2.5 px-3.5"><div className="h-4 w-24 bg-slate-200 dark:bg-zinc-700 rounded"></div></th>
+                                    <th className="py-2.5 px-3 text-center"><div className="h-4 w-12 bg-slate-200 dark:bg-zinc-700 rounded mx-auto"></div></th>
+                                    <th className="py-2.5 px-4 text-right"><div className="h-4 w-24 bg-slate-200 dark:bg-zinc-700 rounded ml-auto"></div></th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-slate-100 dark:divide-zinc-800/60 font-sans">
-                                {[...Array(7)].map((_, i) => (
-                                    <tr key={i} className="h-12">
+                                {[...Array(9)].map((_, i) => (
+                                    <tr key={i} className="h-[52px]">
                                         <td className="py-2 px-4">
-                                            <div className="flex items-center gap-1.5">
+                                            <div className="flex items-center gap-2">
                                                 <div className="h-4 w-16 bg-slate-200 dark:bg-zinc-800 rounded"></div>
-                                                <div className="h-3 w-16 bg-slate-100 dark:bg-zinc-800/60 rounded"></div>
+                                                <div className="h-4 w-24 bg-slate-100 dark:bg-zinc-800/60 rounded"></div>
                                             </div>
                                         </td>
                                         <td className="py-2 px-4">
                                             <div className="space-y-1">
-                                                <div className="h-3.5 w-36 bg-slate-200 dark:bg-zinc-800 rounded"></div>
-                                                <div className="h-3 w-20 bg-slate-100 dark:bg-zinc-800/60 rounded"></div>
+                                                <div className="h-4 w-44 bg-slate-200 dark:bg-zinc-800 rounded"></div>
+                                                <div className="h-3.5 w-28 bg-slate-100 dark:bg-zinc-800/60 rounded"></div>
                                             </div>
                                         </td>
-                                        <td className="py-2 px-3 text-center"><div className="h-5 w-16 bg-slate-100 dark:bg-zinc-800 rounded-full mx-auto"></div></td>
-                                        <td className="py-2 px-3 text-center"><div className="h-5 w-20 bg-slate-100 dark:bg-zinc-800 rounded-full mx-auto"></div></td>
-                                        <td className="py-2 px-4"><div className="h-3.5 w-28 bg-slate-100 dark:bg-zinc-800 rounded"></div></td>
-                                        <td className="py-2 px-3"><div className="h-3.5 w-20 bg-slate-100 dark:bg-zinc-800 rounded"></div></td>
-                                        <td className="py-2 px-3 text-center"><div className="w-8 h-8 rounded bg-slate-100 dark:bg-zinc-800 mx-auto"></div></td>
-                                        <td className="py-2 px-4 text-right"><div className="h-6 w-20 bg-slate-100 dark:bg-zinc-800 rounded-lg ml-auto"></div></td>
+                                        <td className="py-2 px-3 text-center"><div className="h-6 w-20 bg-slate-100 dark:bg-zinc-800 rounded-full mx-auto"></div></td>
+                                        <td className="py-2 px-3 text-center"><div className="h-6 w-24 bg-slate-100 dark:bg-zinc-800 rounded-full mx-auto"></div></td>
+                                        <td className="py-2 px-4"><div className="h-4 w-32 bg-slate-100 dark:bg-zinc-800 rounded"></div></td>
+                                        <td className="py-2 px-3.5"><div className="h-4 w-24 bg-slate-100 dark:bg-zinc-800 rounded"></div></td>
+                                        <td className="py-2 px-3 text-center"><div className="w-8 h-8 rounded-lg bg-slate-100 dark:bg-zinc-800 mx-auto"></div></td>
+                                        <td className="py-2 px-4 text-right"><div className="h-7 w-24 bg-slate-100 dark:bg-zinc-800 rounded-lg ml-auto"></div></td>
                                     </tr>
                                 ))}
                             </tbody>
@@ -391,71 +299,60 @@ export default function AdminMaintenanceRequests() {
     return (
         <div className="w-full h-[calc(100vh-6.2rem)] md:h-[calc(100vh-7.2rem)] lg:h-[calc(100dvh-7.2rem)] flex flex-col font-sans text-slate-900 dark:text-zinc-100 overflow-hidden space-y-2.5">
             
-            {/* 1. Header Toolbar */}
+            {/* Header Toolbar */}
             <div className="shrink-0 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
                 <div>
                     <div className="flex items-center gap-2">
-                        <h1 className="text-xl font-black text-slate-900 dark:text-white tracking-tight">
+                        <h1 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white tracking-tight">
                             Maintenance Requests
                         </h1>
-                        <span className="px-2 py-0.5 rounded-full text-[11px] font-mono font-bold bg-slate-100 dark:bg-zinc-800 text-slate-600 dark:text-zinc-400 border border-slate-200 dark:border-zinc-700">
-                            {filteredRequests.length} of {requests.length} tickets
+                        <span className="px-2.5 py-0.5 rounded-full text-xs font-mono font-bold bg-slate-100 dark:bg-zinc-800 text-slate-700 dark:text-zinc-300 border border-slate-300 dark:border-zinc-700">
+                            {filteredRequests.length} of {requests.length} requests
                         </span>
                     </div>
-                    <p className="text-xs text-slate-500 dark:text-zinc-400 mt-0.5">
-                        Repair ticket triage, contractor dispatching, and resolution timeline auditing.
+                    <p className="text-xs sm:text-sm font-semibold text-slate-600 dark:text-zinc-400 mt-0.5">
+                        Maintenance request tracking and resolution timeline auditing.
                     </p>
                 </div>
 
                 <div className="flex items-center gap-2">
                     {/* View Switcher */}
-                    <div className="flex items-center bg-slate-100 dark:bg-zinc-800/80 p-0.5 rounded-lg border border-slate-200 dark:border-zinc-700/80 text-xs font-semibold">
+                    <div className="flex items-center bg-slate-100 dark:bg-zinc-800/80 p-0.5 rounded-lg border border-slate-300 dark:border-zinc-700 text-xs sm:text-sm font-semibold">
                         <button
                             onClick={() => setViewMode('table')}
-                            className={`px-2.5 py-1 rounded-md transition-all flex items-center gap-1.5 ${viewMode === 'table' ? 'bg-white dark:bg-zinc-900 text-slate-900 dark:text-white shadow-xs font-bold' : 'text-slate-500 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white'}`}
-                            title="Table view"
+                            className={`px-3 py-1.5 rounded-md transition-all flex items-center gap-1.5 cursor-pointer ${viewMode === 'table' ? 'bg-white dark:bg-zinc-900 text-slate-950 dark:text-white shadow-xs font-extrabold' : 'text-slate-700 dark:text-zinc-300 hover:text-slate-950 dark:hover:text-white font-semibold'}`}
+                            title="Table list view"
                         >
                             <List className="w-3.5 h-3.5" />
-                            <span>Table</span>
+                            <span>List View</span>
                         </button>
                         <button
                             onClick={() => setViewMode('cards')}
-                            className={`px-2.5 py-1 rounded-md transition-all flex items-center gap-1.5 ${viewMode === 'cards' ? 'bg-white dark:bg-zinc-900 text-slate-900 dark:text-white shadow-xs font-bold' : 'text-slate-500 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white'}`}
+                            className={`px-3 py-1.5 rounded-md transition-all flex items-center gap-1.5 cursor-pointer ${viewMode === 'cards' ? 'bg-white dark:bg-zinc-900 text-slate-950 dark:text-white shadow-xs font-extrabold' : 'text-slate-700 dark:text-zinc-300 hover:text-slate-950 dark:hover:text-white font-semibold'}`}
                             title="Work order cards"
                         >
                             <LayoutGrid className="w-3.5 h-3.5" />
                             <span>Cards</span>
                         </button>
                     </div>
-
-                    {/* Sync Refresh Button */}
-                    <button
-                        onClick={() => fetchRequests(true)}
-                        disabled={isRefreshing}
-                        className="px-3 py-1.5 text-xs font-semibold rounded-lg border border-slate-200 dark:border-zinc-800 bg-card hover:bg-slate-50 dark:hover:bg-zinc-800/80 text-slate-700 dark:text-zinc-300 transition-colors flex items-center gap-1.5 shadow-xs"
-                        title="Sync requests"
-                    >
-                        <RefreshCw className={`w-3.5 h-3.5 ${isRefreshing ? 'animate-spin text-teal-600' : ''}`} />
-                        <span>{isRefreshing ? 'Syncing...' : 'Sync'}</span>
-                    </button>
                 </div>
             </div>
 
-            {/* 2. Executive Metric Ribbon (4 High-Density KPI Tiles) */}
-            <div className="shrink-0 grid grid-cols-2 lg:grid-cols-4 gap-2.5">
+            {/* Executive Metric Ribbon (4 High-Density KPI Tiles) */}
+            <div className="shrink-0 grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-3">
                 
-                {/* Metric 1: Total Tickets */}
-                <motion.div variants={cardVariants} initial="hidden" animate="show" className="bg-card border border-slate-200 dark:border-zinc-800 rounded-xl p-3 shadow-xs flex items-center justify-between">
+                {/* Metric 1: Total Requests */}
+                <motion.div variants={cardVariants} initial="hidden" animate="show" className="bg-card border border-slate-200 dark:border-zinc-800 rounded-xl p-2.5 sm:p-3 shadow-xs flex items-center justify-between select-none">
                     <div>
-                        <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-500">Gross Work Orders</span>
-                        <div className="text-xl font-extrabold font-mono text-slate-900 dark:text-white mt-0.5 flex items-baseline gap-1.5">
-                            {metrics.total} <span className="text-xs font-medium text-slate-500">tickets</span>
+                        <span className="text-xs sm:text-sm font-extrabold uppercase tracking-wider text-slate-700 dark:text-zinc-300">Total Requests</span>
+                        <div className="text-2xl sm:text-3xl lg:text-4xl font-black font-mono text-slate-950 dark:text-white mt-0.5 flex items-baseline gap-2">
+                            {metrics.total} <span className="text-sm sm:text-base font-sans font-extrabold text-slate-700 dark:text-zinc-300">Requests</span>
                         </div>
-                        <div className="text-[11px] font-semibold text-slate-500 dark:text-zinc-400 mt-0.5">
-                            {metrics.pending + metrics.inProgress} currently open
-                        </div>
+                        <p className="text-xs sm:text-sm font-medium text-slate-700 dark:text-zinc-300 mt-0.5">
+                            <span className="font-extrabold text-slate-950 dark:text-white">{metrics.pending + metrics.inProgress}</span> currently active
+                        </p>
                     </div>
-                    <div className="w-10 h-10 rounded-xl bg-teal-50 dark:bg-teal-500/10 border border-teal-200/50 dark:border-teal-500/20 flex items-center justify-center text-teal-600 dark:text-teal-400 shrink-0">
+                    <div className="w-11 h-11 rounded-xl bg-slate-100 dark:bg-zinc-800 text-slate-900 dark:text-white flex items-center justify-center shrink-0 border border-slate-300 dark:border-zinc-700">
                         <Wrench className="w-5 h-5" />
                     </div>
                 </motion.div>
@@ -465,44 +362,39 @@ export default function AdminMaintenanceRequests() {
                     variants={cardVariants} 
                     initial="hidden" 
                     animate="show" 
-                    onClick={() => setStatusFilter('Pending')}
-                    className="bg-card border border-slate-200 dark:border-zinc-800 rounded-xl p-3 shadow-xs flex items-center justify-between cursor-pointer hover:border-amber-400 transition-colors"
+                    className="bg-card border border-slate-200 dark:border-zinc-800 rounded-xl p-2.5 sm:p-3 shadow-xs flex items-center justify-between select-none"
                 >
                     <div>
-                        <div className="flex items-center gap-1.5">
-                            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-500">Needs Triage</span>
-                            {metrics.pending > 0 && <span className="w-2 h-2 rounded-full bg-amber-500 animate-ping"></span>}
+                        <span className="text-xs sm:text-sm font-extrabold uppercase tracking-wider text-slate-700 dark:text-zinc-300">Needs Review</span>
+                        <div className="text-2xl sm:text-3xl lg:text-4xl font-black font-mono mt-0.5 flex items-baseline gap-2">
+                            <span className={metrics.pending > 0 ? "text-amber-700 dark:text-amber-400" : "text-slate-950 dark:text-white"}>{metrics.pending}</span> <span className="text-sm sm:text-base font-sans font-extrabold text-amber-700 dark:text-amber-400">Pending</span>
                         </div>
-                        <div className="text-xl font-extrabold font-mono text-amber-600 dark:text-amber-400 mt-0.5 flex items-baseline gap-1.5">
-                            {metrics.pending} <span className="text-xs font-medium text-amber-600">pending</span>
-                        </div>
-                        <div className="text-[11px] font-semibold text-amber-600 dark:text-amber-400 mt-0.5">
-                            Awaiting dispatching
-                        </div>
+                        <p className="text-xs sm:text-sm font-medium text-slate-700 dark:text-zinc-300 mt-0.5">
+                            {metrics.pending > 0 ? 'Awaiting review and action' : 'All requests processed'}
+                        </p>
                     </div>
-                    <div className="w-10 h-10 rounded-xl bg-amber-50 dark:bg-amber-500/10 border border-amber-200/50 dark:border-amber-500/20 flex items-center justify-center text-amber-600 dark:text-amber-400 shrink-0">
+                    <div className="w-11 h-11 rounded-xl bg-amber-50 dark:bg-amber-500/10 text-amber-700 dark:text-amber-400 flex items-center justify-center shrink-0 border border-amber-300/60 dark:border-amber-500/30">
                         <Clock className="w-5 h-5" />
                     </div>
                 </motion.div>
 
-                {/* Metric 3: Dispatched (In Progress) */}
+                {/* Metric 3: In Progress */}
                 <motion.div 
                     variants={cardVariants} 
                     initial="hidden" 
                     animate="show" 
-                    onClick={() => setStatusFilter('In Progress')}
-                    className="bg-card border border-slate-200 dark:border-zinc-800 rounded-xl p-3 shadow-xs flex items-center justify-between cursor-pointer hover:border-blue-400 transition-colors"
+                    className="bg-card border border-slate-200 dark:border-zinc-800 rounded-xl p-2.5 sm:p-3 shadow-xs flex items-center justify-between select-none"
                 >
                     <div>
-                        <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-500">Active Dispatches</span>
-                        <div className="text-xl font-extrabold font-mono text-blue-600 dark:text-blue-400 mt-0.5 flex items-baseline gap-1.5">
-                            {metrics.inProgress} <span className="text-xs font-medium text-blue-600">in progress</span>
+                        <span className="text-xs sm:text-sm font-extrabold uppercase tracking-wider text-slate-700 dark:text-zinc-300">In Progress</span>
+                        <div className="text-2xl sm:text-3xl lg:text-4xl font-black font-mono mt-0.5 flex items-baseline gap-2">
+                            <span className={metrics.inProgress > 0 ? "text-blue-700 dark:text-blue-400" : "text-slate-950 dark:text-white"}>{metrics.inProgress}</span> <span className="text-sm sm:text-base font-sans font-extrabold text-blue-700 dark:text-blue-400">In Progress</span>
                         </div>
-                        <div className="text-[11px] font-semibold text-blue-600 dark:text-blue-400 mt-0.5">
-                            Field technicians assigned
-                        </div>
+                        <p className="text-xs sm:text-sm font-medium text-slate-700 dark:text-zinc-300 mt-0.5">
+                            {metrics.inProgress > 0 ? 'Repairs currently ongoing' : 'Zero ongoing repairs'}
+                        </p>
                     </div>
-                    <div className="w-10 h-10 rounded-xl bg-blue-50 dark:bg-blue-500/10 border border-blue-200/50 dark:border-blue-500/20 flex items-center justify-center text-blue-600 dark:text-blue-400 shrink-0">
+                    <div className="w-11 h-11 rounded-xl bg-blue-50 dark:bg-blue-500/10 text-blue-700 dark:text-blue-400 flex items-center justify-center shrink-0 border border-blue-300/60 dark:border-blue-500/30">
                         <UserCheck className="w-5 h-5" />
                     </div>
                 </motion.div>
@@ -512,35 +404,34 @@ export default function AdminMaintenanceRequests() {
                     variants={cardVariants} 
                     initial="hidden" 
                     animate="show" 
-                    onClick={() => setStatusFilter('Resolved')}
-                    className="bg-card border border-slate-200 dark:border-zinc-800 rounded-xl p-3 shadow-xs flex items-center justify-between cursor-pointer hover:border-emerald-400 transition-colors"
+                    className="bg-card border border-slate-200 dark:border-zinc-800 rounded-xl p-2.5 sm:p-3 shadow-xs flex items-center justify-between select-none"
                 >
                     <div>
-                        <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-500">Resolution Rate</span>
-                        <div className="text-xl font-extrabold font-mono text-emerald-600 dark:text-emerald-400 mt-0.5 flex items-baseline gap-1.5">
-                            {metrics.resolutionRate}% <span className="text-xs font-medium text-emerald-600">efficiency</span>
+                        <span className="text-xs sm:text-sm font-extrabold uppercase tracking-wider text-slate-700 dark:text-zinc-300">Resolution Rate</span>
+                        <div className="text-2xl sm:text-3xl lg:text-4xl font-black font-mono text-slate-950 dark:text-white mt-0.5 flex items-baseline gap-2">
+                            {metrics.resolutionRate}% <span className="text-sm sm:text-base font-sans font-extrabold text-emerald-700 dark:text-emerald-400">Resolved</span>
                         </div>
-                        <div className="text-[11px] font-bold text-emerald-600 dark:text-emerald-400 mt-0.5 flex items-center gap-1">
-                            <TrendingUp className="w-3 h-3" />
-                            <span>{metrics.resolved} tickets closed</span>
-                        </div>
+                        <p className="text-xs sm:text-sm font-medium text-slate-700 dark:text-zinc-300 mt-0.5 flex items-center gap-1.5">
+                            <TrendingUp className="w-3.5 h-3.5 text-emerald-700 dark:text-emerald-400" />
+                            <span><span className="font-extrabold text-slate-950 dark:text-white">{metrics.resolved}</span> of <span className="font-bold text-slate-900 dark:text-zinc-100">{metrics.total}</span> requests closed</span>
+                        </p>
                     </div>
-                    <div className="w-10 h-10 rounded-xl bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200/50 dark:border-emerald-500/20 flex items-center justify-center text-emerald-600 dark:text-emerald-400 shrink-0">
+                    <div className="w-11 h-11 rounded-xl bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 flex items-center justify-center shrink-0 border border-emerald-300/60 dark:border-emerald-500/30">
                         <CheckCircle2 className="w-5 h-5" />
                     </div>
                 </motion.div>
 
             </div>
 
-            {/* 3. Triage Category Tabs & Filter Toolbar */}
+            {/* Status Filter Tabs & Toolbar */}
             <div className="shrink-0 bg-card border border-slate-200 dark:border-zinc-800 rounded-xl p-2 shadow-xs space-y-2">
                 <div className="flex flex-wrap items-center justify-between gap-2">
                     
-                    {/* Status Triage Filter Tabs */}
-                    <div className="flex items-center gap-1 overflow-x-auto custom-scrollbar text-xs">
+                    {/* Status Filter Tabs */}
+                    <div className="flex items-center gap-1.5 overflow-x-auto custom-scrollbar">
                         {[
-                            { key: 'All', label: 'All Tickets', count: metrics.total },
-                            { key: 'Pending', label: 'Pending Triage', count: metrics.pending, alert: metrics.pending > 0 },
+                            { key: 'All', label: 'All Requests', count: metrics.total },
+                            { key: 'Pending', label: 'Pending Review', count: metrics.pending, alert: metrics.pending > 0 },
                             { key: 'In Progress', label: 'In Progress', count: metrics.inProgress },
                             { key: 'High Priority', label: 'High Priority', count: metrics.highPriority, alert: metrics.highPriority > 0 },
                             { key: 'Resolved', label: 'Resolved', count: metrics.resolved }
@@ -548,19 +439,19 @@ export default function AdminMaintenanceRequests() {
                             <button
                                 key={tab.key}
                                 onClick={() => setStatusFilter(tab.key as any)}
-                                className={`px-2.5 py-1 rounded-md text-xs font-semibold transition-all flex items-center gap-1.5 shrink-0 ${
+                                className={`px-3 py-1.5 rounded-lg text-xs sm:text-sm transition-all flex items-center gap-1.5 shrink-0 cursor-pointer ${
                                     statusFilter === tab.key
-                                        ? 'bg-teal-600 text-white font-bold shadow-xs'
-                                        : 'bg-slate-100 dark:bg-zinc-800/60 text-slate-600 dark:text-zinc-400 hover:bg-slate-200 dark:hover:bg-zinc-800'
+                                        ? 'bg-slate-950 text-white dark:bg-white dark:text-zinc-950 font-extrabold shadow-xs'
+                                        : 'bg-slate-100 dark:bg-zinc-800/90 text-slate-700 dark:text-zinc-300 hover:bg-slate-200 dark:hover:bg-zinc-700 font-bold border border-slate-300 dark:border-zinc-700'
                                 }`}
                             >
                                 <span>{tab.label}</span>
-                                <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-mono font-bold ${
+                                <span className={`px-1.5 py-0.2 rounded-full text-xs font-mono font-bold ${
                                     statusFilter === tab.key
-                                        ? 'bg-white/20 text-white'
+                                        ? 'bg-white/20 text-white dark:bg-black/20 dark:text-zinc-950'
                                         : tab.alert
                                             ? 'bg-rose-500 text-white animate-pulse'
-                                            : 'bg-slate-200 dark:bg-zinc-700 text-slate-700 dark:text-zinc-300'
+                                            : 'bg-slate-200 dark:bg-zinc-700 text-slate-900 dark:text-zinc-100'
                                 }`}>
                                     {tab.count}
                                 </span>
@@ -571,34 +462,34 @@ export default function AdminMaintenanceRequests() {
                     {/* Search & Selectors */}
                     <div className="flex flex-wrap items-center gap-2">
                         {/* Search Bar */}
-                        <div className="relative min-w-45 max-w-xs">
-                            <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                        <div className="relative min-w-56 max-w-sm">
+                            <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 dark:text-zinc-400" />
                             <input
                                 type="text"
-                                placeholder="Search title, tenant, room..."
+                                placeholder="Search resident, room, category, request #..."
                                 value={searchQuery}
                                 onChange={(e) => setSearchQuery(e.target.value)}
-                                className="w-full py-1.5 pl-8 pr-3 text-xs rounded-lg bg-slate-50 dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-teal-500"
+                                className="w-full py-1.5 pl-8 pr-3 text-xs sm:text-sm font-semibold rounded-lg bg-slate-50/70 dark:bg-zinc-900/60 border border-slate-300 dark:border-zinc-700 text-slate-950 dark:text-white placeholder:text-slate-500 dark:placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-teal-500/30"
                             />
                         </div>
 
                         {/* Priority Selector */}
-                        <div className="w-32">
+                        <div className="w-36">
                             <CustomSelect
                                 value={priorityFilter}
                                 onChange={(val) => setPriorityFilter(val)}
                                 options={["All Priorities", "High", "Normal", "Low"]}
-                                className="py-1.5 px-3 rounded-lg bg-slate-50 dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 text-xs font-semibold text-slate-700 dark:text-zinc-300"
+                                className="w-full py-1.5 px-3 rounded-lg bg-slate-50/70 dark:bg-zinc-900/60 border border-slate-300 dark:border-zinc-700 text-xs sm:text-sm font-bold text-slate-900 dark:text-zinc-100"
                             />
                         </div>
 
                         {/* Category Selector */}
-                        <div className="w-36">
+                        <div className="w-40">
                             <CustomSelect
                                 value={categoryFilter}
                                 onChange={(val) => setCategoryFilter(val)}
                                 options={["All Categories", "Plumbing", "Electrical", "HVAC", "Carpentry", "Internet", "Furniture"]}
-                                className="py-1.5 px-3 rounded-lg bg-slate-50 dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 text-xs font-semibold text-slate-700 dark:text-zinc-300"
+                                className="w-full py-1.5 px-3 rounded-lg bg-slate-50/70 dark:bg-zinc-900/60 border border-slate-300 dark:border-zinc-700 text-xs sm:text-sm font-bold text-slate-900 dark:text-zinc-100"
                             />
                         </div>
                     </div>
@@ -606,31 +497,33 @@ export default function AdminMaintenanceRequests() {
                 </div>
             </div>
 
-            {/* 4. Main Work Orders Ledger (Locked 1-Page with inner scrollbar) */}
-            <div className="flex-1 min-h-0 bg-card border border-slate-200 dark:border-zinc-800 rounded-xl overflow-hidden shadow-xs flex flex-col">
-                
+            {/* Main Work Orders Ledger (Locked 1-Page with inner scrollbar, Minimum 9 Rows) */}
+            <div className="flex-1 min-h-0 bg-card border border-slate-200 dark:border-zinc-800 rounded-xl overflow-hidden shadow-xs flex flex-col relative">
+                {/* Header filler to prevent horizontal scrollbar alignment gap */}
+                <div className="absolute top-0 right-0 w-8 h-[44px] bg-slate-100 dark:bg-zinc-800 border-b border-slate-200 dark:border-zinc-700 z-30 pointer-events-none rounded-tr-xl" />
+
                 {viewMode === 'table' ? (
                     /* WORK ORDER TABLE */
                     <div className="overflow-x-auto overflow-y-auto flex-1 custom-scrollbar">
-                        <table className="w-full min-w-full text-left text-xs border-collapse">
-                            <thead className="sticky top-0 z-10 bg-slate-100 dark:bg-zinc-800 shadow-xs">
-                                <tr className="h-10 text-slate-700 dark:text-zinc-300 uppercase tracking-wider text-[11px] font-bold">
-                                    <th className="py-2.5 px-4 bg-slate-100 dark:bg-zinc-800 border-b border-slate-200 dark:border-zinc-700">Ticket & Unit</th>
-                                    <th className="py-2.5 px-4 bg-slate-100 dark:bg-zinc-800 border-b border-slate-200 dark:border-zinc-700">Issue Title & Category</th>
+                        <table className="w-full min-w-full text-left text-sm border-collapse">
+                            <thead className="sticky top-0 z-20 bg-slate-100 dark:bg-zinc-800 shadow-xs border-b border-slate-200 dark:border-zinc-700">
+                                <tr className="h-[44px] bg-slate-100 dark:bg-zinc-800 text-sm sm:text-[15px] font-black text-slate-900 dark:text-white uppercase tracking-wider">
+                                    <th className="py-2.5 px-4 bg-slate-100 dark:bg-zinc-800 border-b border-slate-200 dark:border-zinc-700">Request #</th>
+                                    <th className="py-2.5 px-4 bg-slate-100 dark:bg-zinc-800 border-b border-slate-200 dark:border-zinc-700">Tenant</th>
+                                    <th className="py-2.5 px-4 bg-slate-100 dark:bg-zinc-800 border-b border-slate-200 dark:border-zinc-700">Category</th>
                                     <th className="py-2.5 px-3 bg-slate-100 dark:bg-zinc-800 border-b border-slate-200 dark:border-zinc-700 text-center">Priority</th>
                                     <th className="py-2.5 px-3 bg-slate-100 dark:bg-zinc-800 border-b border-slate-200 dark:border-zinc-700 text-center">Status</th>
-                                    <th className="py-2.5 px-4 bg-slate-100 dark:bg-zinc-800 border-b border-slate-200 dark:border-zinc-700">Assigned Contractor</th>
-                                    <th className="py-2.5 px-3 bg-slate-100 dark:bg-zinc-800 border-b border-slate-200 dark:border-zinc-700">Scheduled</th>
                                     <th className="py-2.5 px-3 text-center bg-slate-100 dark:bg-zinc-800 border-b border-slate-200 dark:border-zinc-700">Proof</th>
-                                    <th className="py-2.5 px-4 text-right bg-slate-100 dark:bg-zinc-800 border-b border-slate-200 dark:border-zinc-700">Quick Actions</th>
+                                    <th className="py-2.5 px-4 text-right bg-slate-100 dark:bg-zinc-800 border-b border-slate-200 dark:border-zinc-700">Actions</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-slate-100 dark:divide-zinc-800/60 font-sans">
                                 {filteredRequests.length === 0 ? (
                                     <tr>
-                                        <td colSpan={8} className="py-12 text-center text-slate-400 dark:text-zinc-500">
-                                            <Wrench className="w-8 h-8 mx-auto mb-2 opacity-30" />
-                                            <p className="font-semibold text-sm">No maintenance requests matching filters.</p>
+                                        <td colSpan={7} className="py-14 text-center text-slate-400 dark:text-zinc-500">
+                                            <Wrench className="w-10 h-10 mx-auto mb-2 opacity-30" />
+                                            <p className="font-extrabold text-base text-slate-900 dark:text-white">No maintenance requests found</p>
+                                            <p className="text-sm font-medium text-slate-600 dark:text-zinc-400 mt-0.5">Try adjusting your filters or search keywords.</p>
                                         </td>
                                     </tr>
                                 ) : (
@@ -641,62 +534,43 @@ export default function AdminMaintenanceRequests() {
                                         const attachUrl = getAttachmentUrl(req.attachment_url);
 
                                         return (
-                                            <tr key={req.id} className="h-12 hover:bg-slate-50/70 dark:hover:bg-zinc-800/40 transition-colors">
+                                            <tr key={req.id} className="h-[52px] sm:h-[54px] hover:bg-slate-50/80 dark:hover:bg-zinc-800/40 transition-colors group">
                                                 
-                                                {/* Ticket ID & Unit */}
+                                                {/* Request # */}
                                                 <td className="py-2 px-4 whitespace-nowrap">
-                                                    <div className="font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
-                                                        <span className="font-mono text-teal-600 dark:text-teal-400">#REQ-{req.id}</span>
-                                                        <span>·</span>
-                                                        <span>{req.tenant_name}</span>
+                                                    <span className="font-mono font-bold text-sm sm:text-base text-teal-700 dark:text-teal-400">{formatRequestNumber(req.id)}</span>
+                                                </td>
+
+                                                {/* Tenant */}
+                                                <td className="py-2 px-4 whitespace-nowrap">
+                                                    <div className="font-extrabold text-sm sm:text-base text-slate-950 dark:text-white leading-tight">
+                                                        {req.tenant_name}
                                                     </div>
-                                                    <div className="text-[11px] font-semibold text-slate-500 dark:text-zinc-400">
+                                                    <div className="text-xs sm:text-[13px] font-semibold text-slate-700 dark:text-zinc-300 leading-tight mt-0.5">
                                                         {req.room_number ? `Room ${req.room_number}` : 'Common Property'}
                                                     </div>
                                                 </td>
 
-                                                {/* Issue & Category */}
-                                                <td className="py-2 px-4">
-                                                    <div className="font-bold text-slate-800 dark:text-zinc-200 flex items-center gap-1.5 truncate max-w-xs">
-                                                        <CategoryIcon className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-                                                        <span className="truncate">{req.title}</span>
-                                                    </div>
-                                                    <div className="text-[11px] text-slate-500 truncate max-w-xs">
-                                                        {req.description}
+                                                {/* Category */}
+                                                <td className="py-2 px-4 whitespace-nowrap">
+                                                    <div className="flex items-center gap-2 font-medium text-sm text-slate-900 dark:text-zinc-100">
+                                                        <CategoryIcon className="w-4 h-4 text-slate-500 dark:text-zinc-400 shrink-0" />
+                                                        <span>{req.category}</span>
                                                     </div>
                                                 </td>
 
-                                                {/* Priority Badge */}
+                                                {/* Priority */}
                                                 <td className="py-2 px-3 text-center whitespace-nowrap">
-                                                    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${priority.className}`}>
-                                                        <span className={`w-1.5 h-1.5 rounded-full ${priority.dot}`}></span>
+                                                    <span className={`text-xs sm:text-sm ${priority.className}`}>
                                                         {priority.label}
                                                     </span>
                                                 </td>
 
-                                                {/* Status Badge */}
+                                                {/* Status */}
                                                 <td className="py-2 px-3 text-center whitespace-nowrap">
-                                                    <span className={`inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider ${status.className}`}>
-                                                        <span className={`w-1.5 h-1.5 rounded-full ${status.dot}`}></span>
+                                                    <span className={`text-xs sm:text-sm ${status.className}`}>
                                                         {status.label}
                                                     </span>
-                                                </td>
-
-                                                {/* Contractor */}
-                                                <td className="py-2 px-4 whitespace-nowrap font-medium text-slate-700 dark:text-zinc-300">
-                                                    {req.assigned_to ? (
-                                                        <div className="flex items-center gap-1.5 text-xs">
-                                                            <UserCheck className="w-3.5 h-3.5 text-teal-600" />
-                                                            <span>{req.assigned_to}</span>
-                                                        </div>
-                                                    ) : (
-                                                        <span className="text-slate-400 italic text-[11px]">Unassigned</span>
-                                                    )}
-                                                </td>
-
-                                                {/* Scheduled Date */}
-                                                <td className="py-2 px-3 whitespace-nowrap text-slate-600 dark:text-zinc-400 text-xs font-mono">
-                                                    {req.scheduled_date ? new Date(req.scheduled_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '-'}
                                                 </td>
 
                                                 {/* Proof Image */}
@@ -704,64 +578,46 @@ export default function AdminMaintenanceRequests() {
                                                     {attachUrl ? (
                                                         <button 
                                                             onClick={() => setLightboxImage(attachUrl)}
-                                                            className="p-1 rounded-md bg-slate-100 hover:bg-slate-200 dark:bg-zinc-800 text-teal-600"
-                                                            title="View attached photo"
+                                                            className="p-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-zinc-800 text-teal-700 dark:text-teal-400 transition-colors inline-flex items-center justify-center border border-slate-300 dark:border-zinc-700 cursor-pointer"
+                                                            title="View attached photo proof"
                                                         >
-                                                            <Paperclip className="w-3.5 h-3.5" />
+                                                            <Paperclip className="w-4 h-4" />
                                                         </button>
                                                     ) : (
-                                                        <span className="text-slate-400 text-[11px]">-</span>
+                                                        <span className="text-sm font-semibold text-slate-400">—</span>
                                                     )}
                                                 </td>
 
                                                 {/* Actions */}
                                                 <td className="py-2 px-4 text-right whitespace-nowrap">
-                                                    <div className="flex items-center justify-end gap-1">
-                                                        {/* Quick Status Advance Button */}
+                                                    <div className="flex items-center justify-end gap-2.5">
+                                                        {/* Quick Status Advance Button: Start -> Resolve */}
                                                         {req.status === 'Pending' && (
                                                             <button
                                                                 onClick={() => handleQuickStatus(req.id, 'In Progress')}
-                                                                className="px-2 py-1 rounded-md bg-blue-50 hover:bg-blue-100 text-blue-700 dark:bg-blue-500/10 dark:text-blue-400 text-[11px] font-bold"
-                                                                title="Mark as In Progress"
+                                                                className="text-xs sm:text-sm font-semibold text-blue-700 dark:text-blue-400 hover:text-blue-900 dark:hover:text-blue-300 hover:underline transition-colors cursor-pointer"
+                                                                title="Start Repair (Mark as In Progress)"
                                                             >
-                                                                Dispatch
+                                                                Start
                                                             </button>
                                                         )}
                                                         {req.status === 'In Progress' && (
                                                             <button
                                                                 onClick={() => handleQuickStatus(req.id, 'Resolved')}
-                                                                className="px-2 py-1 rounded-md bg-emerald-50 hover:bg-emerald-100 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400 text-[11px] font-bold"
+                                                                className="text-xs sm:text-sm font-semibold text-emerald-700 dark:text-emerald-400 hover:text-emerald-900 dark:hover:text-emerald-300 hover:underline transition-colors cursor-pointer"
                                                                 title="Mark as Resolved"
                                                             >
                                                                 Resolve
                                                             </button>
                                                         )}
 
-                                                        {/* Dispatch / Manage Modal */}
-                                                        <button
-                                                            onClick={() => handleOpenManage(req)}
-                                                            className="p-1.5 rounded-md hover:bg-slate-200 dark:hover:bg-zinc-700 text-slate-500 hover:text-slate-900"
-                                                            title="Manage Work Order"
-                                                        >
-                                                            <Edit className="w-3.5 h-3.5" />
-                                                        </button>
-
                                                         {/* View Details */}
                                                         <button
                                                             onClick={() => setViewingRequest(req)}
-                                                            className="p-1.5 rounded-md hover:bg-slate-200 dark:hover:bg-zinc-700 text-slate-500 hover:text-slate-900"
+                                                            className="p-1.5 text-slate-600 hover:text-slate-900 dark:text-zinc-400 dark:hover:text-white transition-colors cursor-pointer"
                                                             title="View Details"
                                                         >
-                                                            <Eye className="w-3.5 h-3.5" />
-                                                        </button>
-
-                                                        {/* Delete */}
-                                                        <button
-                                                            onClick={() => setDeletingRequest(req)}
-                                                            className="p-1.5 rounded-md hover:bg-rose-100 text-slate-400 hover:text-rose-600"
-                                                            title="Delete Ticket"
-                                                        >
-                                                            <Trash2 className="w-3.5 h-3.5" />
+                                                            <Eye className="w-4 h-4" />
                                                         </button>
                                                     </div>
                                                 </td>
@@ -780,7 +636,8 @@ export default function AdminMaintenanceRequests() {
                             {filteredRequests.length === 0 ? (
                                 <div className="col-span-full py-12 text-center text-slate-400 dark:text-zinc-500">
                                     <Wrench className="w-8 h-8 mx-auto mb-2 opacity-30" />
-                                    <p className="font-semibold text-sm">No maintenance requests found.</p>
+                                    <p className="font-extrabold text-base text-slate-900 dark:text-white">No maintenance requests found.</p>
+                                    <p className="text-sm font-medium text-slate-600 dark:text-zinc-400 mt-0.5">Try adjusting your filters or search keywords.</p>
                                 </div>
                             ) : (
                                 filteredRequests.map(req => {
@@ -793,55 +650,58 @@ export default function AdminMaintenanceRequests() {
                                             <div>
                                                 <div className="flex items-start justify-between gap-2 mb-2">
                                                     <div>
-                                                        <div className="flex items-center gap-1.5 text-xs font-mono font-bold text-teal-600">
-                                                            <span>#REQ-{req.id}</span>
-                                                            <span className="text-slate-400">·</span>
-                                                            <span className="text-slate-700 dark:text-zinc-300 font-sans">{req.tenant_name}</span>
+                                                        <span className="inline-block font-mono font-bold text-xs sm:text-sm px-2 py-0.5 rounded-md bg-teal-50 dark:bg-teal-500/10 text-teal-700 dark:text-teal-400 border border-teal-200/60 dark:border-teal-500/20">
+                                                            {formatRequestNumber(req.id)}
+                                                        </span>
+                                                        <div className="font-sans font-extrabold text-slate-950 dark:text-white text-base mt-1">
+                                                            {req.tenant_name}
                                                         </div>
-                                                        <div className="text-[11px] font-semibold text-slate-500 mt-0.5">
-                                                            {req.room_number ? `Room ${req.room_number}` : 'Common Area'}
+                                                        <div className="text-xs sm:text-[13px] font-semibold text-slate-700 dark:text-zinc-300 mt-0.5">
+                                                            {req.room_number ? `Room ${req.room_number}` : 'Common Property'}
                                                         </div>
                                                     </div>
-                                                    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${priority.className}`}>
-                                                        <span className={`w-1.5 h-1.5 rounded-full ${priority.dot}`}></span>
+                                                    <span className={`text-xs sm:text-sm ${priority.className}`}>
                                                         {priority.label}
                                                     </span>
                                                 </div>
 
-                                                <div className="bg-slate-50 dark:bg-zinc-900/60 rounded-lg p-2.5 border border-slate-100 dark:border-zinc-800 space-y-1 mb-3 text-xs">
-                                                    <div className="font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
-                                                        <CategoryIcon className="w-3.5 h-3.5 text-slate-500" />
-                                                        <span>{req.title}</span>
+                                                <div className="bg-slate-50 dark:bg-zinc-900/60 rounded-lg p-2.5 border border-slate-200 dark:border-zinc-800 mb-3">
+                                                    <div className="flex items-center gap-2 font-medium text-sm text-slate-900 dark:text-zinc-100">
+                                                        <CategoryIcon className="w-4 h-4 text-slate-500 dark:text-zinc-400" />
+                                                        <span>{req.category}</span>
                                                     </div>
-                                                    <p className="text-[11px] text-slate-600 dark:text-zinc-400 line-clamp-2">
-                                                        {req.description}
-                                                    </p>
-                                                    {req.assigned_to && (
-                                                        <div className="pt-1 border-t border-slate-200 dark:border-zinc-800 flex justify-between text-[11px] font-medium text-slate-500">
-                                                            <span>Contractor:</span>
-                                                            <span className="font-bold text-slate-800 dark:text-zinc-200">{req.assigned_to}</span>
-                                                        </div>
-                                                    )}
                                                 </div>
                                             </div>
 
-                                            <div className="flex items-center justify-between pt-2 border-t border-slate-100 dark:border-zinc-800/80">
-                                                <span className={`inline-flex items-center gap-1.5 text-[10px] font-bold uppercase ${status.className}`}>
-                                                    <span className={`w-1.5 h-1.5 rounded-full ${status.dot}`}></span>
+                                            <div className="flex items-center justify-between pt-2 border-t border-slate-200 dark:border-zinc-800/80">
+                                                <span className={`text-xs sm:text-sm ${status.className}`}>
                                                     {status.label}
                                                 </span>
-                                                <div className="flex items-center gap-1">
+                                                <div className="flex items-center gap-2">
+                                                    {req.status === 'Pending' && (
+                                                        <button
+                                                            onClick={() => handleQuickStatus(req.id, 'In Progress')}
+                                                            className="text-xs sm:text-sm font-semibold text-blue-700 dark:text-blue-400 hover:text-blue-900 dark:hover:text-blue-300 hover:underline transition-colors cursor-pointer"
+                                                            title="Start Repair (Mark as In Progress)"
+                                                        >
+                                                            Start
+                                                        </button>
+                                                    )}
+                                                    {req.status === 'In Progress' && (
+                                                        <button
+                                                            onClick={() => handleQuickStatus(req.id, 'Resolved')}
+                                                            className="text-xs sm:text-sm font-semibold text-emerald-700 dark:text-emerald-400 hover:text-emerald-900 dark:hover:text-emerald-300 hover:underline transition-colors cursor-pointer"
+                                                            title="Mark as Resolved"
+                                                        >
+                                                            Resolve
+                                                        </button>
+                                                    )}
                                                     <button
                                                         onClick={() => setViewingRequest(req)}
-                                                        className="p-1 rounded text-slate-500 hover:text-slate-900"
+                                                        className="p-1.5 text-slate-600 hover:text-slate-900 dark:text-zinc-400 dark:hover:text-white transition-colors cursor-pointer"
+                                                        title="View Details"
                                                     >
-                                                        <Eye className="w-3.5 h-3.5" />
-                                                    </button>
-                                                    <button
-                                                        onClick={() => handleOpenManage(req)}
-                                                        className="px-2 py-0.5 rounded bg-teal-600 hover:bg-teal-700 text-white text-[10px] font-bold"
-                                                    >
-                                                        Manage
+                                                        <Eye className="w-4 h-4" />
                                                     </button>
                                                 </div>
                                             </div>
@@ -855,152 +715,56 @@ export default function AdminMaintenanceRequests() {
 
             </div>
 
-            {/* ============================================================== */}
-            {/* 5. MODALS */}
-            {/* ============================================================== */}
+            {/* MODALS */}
             <AnimatePresence>
                 
-                {/* MODAL 1: DISPATCH / MANAGE WORK ORDER */}
-                {editingRequest && (
-                    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 bg-black/60 backdrop-blur-xs z-50 flex items-center justify-center p-3">
-                        <motion.div initial={{ scale: 0.96, y: 8, opacity: 0 }} animate={{ scale: 1, y: 0, opacity: 1 }} exit={{ scale: 0.96, opacity: 0 }} className="bg-card border border-slate-200 dark:border-zinc-800 rounded-2xl w-full max-w-lg overflow-hidden shadow-2xl flex flex-col">
-                            
-                            <div className="p-4 border-b border-slate-200 dark:border-zinc-800 flex justify-between items-center bg-slate-50/80 dark:bg-zinc-900/60">
-                                <div>
-                                    <h2 className="text-base font-extrabold text-slate-900 dark:text-white">
-                                        Manage Work Order #REQ-{editingRequest.id}
-                                    </h2>
-                                    <p className="text-xs text-slate-500 mt-0.5">
-                                        {editingRequest.title} · Room {editingRequest.room_number || 'N/A'}
-                                    </p>
-                                </div>
-                                <button onClick={() => setEditingRequest(null)} className="p-1 rounded-lg hover:bg-slate-200 text-slate-500">
-                                    <X className="w-5 h-5" />
-                                </button>
-                            </div>
-
-                            <form onSubmit={handleSaveManage} className="p-5 space-y-4">
-                                <div className="grid grid-cols-2 gap-3">
-                                    <div className="space-y-1">
-                                        <label className="text-xs font-bold text-slate-700 dark:text-zinc-300">Ticket Status</label>
-                                        <CustomSelect
-                                            value={manageForm.status}
-                                            onChange={(val) => setManageForm({ ...manageForm, status: val })}
-                                            options={["Pending", "In Progress", "Resolved"]}
-                                            className="py-2 px-3 text-xs rounded-lg bg-slate-50 dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 font-semibold"
-                                        />
-                                    </div>
-                                    <div className="space-y-1">
-                                        <label className="text-xs font-bold text-slate-700 dark:text-zinc-300">Priority Level</label>
-                                        <CustomSelect
-                                            value={manageForm.priority}
-                                            onChange={(val) => setManageForm({ ...manageForm, priority: val })}
-                                            options={["Low", "Normal", "High"]}
-                                            className="py-2 px-3 text-xs rounded-lg bg-slate-50 dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 font-semibold"
-                                        />
-                                    </div>
-                                </div>
-
-                                {/* Contractor Preset Selection */}
-                                <div className="space-y-1">
-                                    <label className="text-xs font-bold text-slate-700 dark:text-zinc-300">Assigned Contractor / Technician</label>
-                                    <input
-                                        type="text"
-                                        placeholder="e.g. Dave (Plumber) or In-House..."
-                                        value={manageForm.assigned_to}
-                                        onChange={(e) => setManageForm({ ...manageForm, assigned_to: e.target.value })}
-                                        className="w-full py-2 px-3 text-xs rounded-lg bg-slate-50 dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 text-slate-900 dark:text-white font-semibold focus:outline-none focus:ring-1 focus:ring-teal-500"
-                                    />
-                                    <div className="flex flex-wrap gap-1 mt-1">
-                                        {CONTRACTOR_PRESETS.map((p, i) => (
-                                            <button
-                                                key={i}
-                                                type="button"
-                                                onClick={() => setManageForm({ ...manageForm, assigned_to: p })}
-                                                className="px-2 py-0.5 rounded bg-slate-100 dark:bg-zinc-800 hover:bg-slate-200 text-[10px] font-semibold text-slate-600 dark:text-zinc-400"
-                                            >
-                                                {p}
-                                            </button>
-                                        ))}
-                                    </div>
-                                </div>
-
-                                {/* Scheduled Date */}
-                                <div className="space-y-1">
-                                    <label className="text-xs font-bold text-slate-700 dark:text-zinc-300">Scheduled Repair Date</label>
-                                    <input
-                                        type="date"
-                                        value={manageForm.scheduled_date}
-                                        onChange={(e) => setManageForm({ ...manageForm, scheduled_date: e.target.value })}
-                                        className="w-full py-2 px-3 text-xs rounded-lg bg-slate-50 dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 text-slate-900 dark:text-white font-semibold focus:outline-none focus:ring-1 focus:ring-teal-500"
-                                    />
-                                </div>
-
-                                {/* Admin Notes */}
-                                <div className="space-y-1">
-                                    <label className="text-xs font-bold text-slate-700 dark:text-zinc-300">Internal Admin Notes</label>
-                                    <textarea
-                                        rows={2}
-                                        placeholder="Add technician feedback, spare parts needed..."
-                                        value={manageForm.admin_notes}
-                                        onChange={(e) => setManageForm({ ...manageForm, admin_notes: e.target.value })}
-                                        className="w-full py-2 px-3 text-xs rounded-lg bg-slate-50 dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 text-slate-900 dark:text-white font-semibold focus:outline-none focus:ring-1 focus:ring-teal-500"
-                                    />
-                                </div>
-
-                                <div className="flex justify-end gap-2 pt-2 border-t border-slate-100 dark:border-zinc-800">
-                                    <button
-                                        type="button"
-                                        onClick={() => setEditingRequest(null)}
-                                        className="px-4 py-2 text-xs font-semibold rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700"
-                                    >
-                                        Cancel
-                                    </button>
-                                    <button
-                                        type="submit"
-                                        disabled={isSubmitting}
-                                        className="px-4 py-2 text-xs font-bold rounded-lg bg-teal-600 hover:bg-teal-700 text-white flex items-center gap-1.5 shadow-xs"
-                                    >
-                                        {isSubmitting ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
-                                        <span>Update Ticket</span>
-                                    </button>
-                                </div>
-                            </form>
-                        </motion.div>
-                    </motion.div>
-                )}
-
-                {/* MODAL 2: VIEW TICKET DETAILS */}
+                {/* VIEW REQUEST DETAILS */}
                 {viewingRequest && (
                     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 bg-black/60 backdrop-blur-xs z-50 flex items-center justify-center p-3">
                         <motion.div initial={{ scale: 0.96, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.96, opacity: 0 }} className="bg-card border border-slate-200 dark:border-zinc-800 rounded-2xl w-full max-w-lg overflow-hidden shadow-2xl p-5 space-y-4">
                             <div className="flex justify-between items-start">
                                 <div>
-                                    <span className="font-mono text-xs font-bold text-teal-600">#REQ-{viewingRequest.id}</span>
-                                    <h3 className="text-base font-extrabold text-slate-900 dark:text-white mt-0.5">{viewingRequest.title}</h3>
-                                    <p className="text-xs text-slate-500">{viewingRequest.tenant_name} · Room {viewingRequest.room_number || 'N/A'}</p>
+                                    <span className="font-mono text-sm font-bold text-teal-700 dark:text-teal-400">{formatRequestNumber(viewingRequest.id)}</span>
+                                    <h3 className="text-lg sm:text-xl font-black text-slate-950 dark:text-white mt-0.5">{viewingRequest.title}</h3>
+                                    <p className="text-sm font-semibold text-slate-700 dark:text-zinc-300">{viewingRequest.tenant_name} · Room {viewingRequest.room_number || 'Common Property'}</p>
                                 </div>
-                                <button onClick={() => setViewingRequest(null)} className="p-1 rounded-lg text-slate-500">
+                                <button onClick={() => setViewingRequest(null)} className="p-1.5 rounded-lg hover:bg-slate-200 dark:hover:bg-zinc-800 text-slate-600 dark:text-zinc-300">
                                     <X className="w-5 h-5" />
                                 </button>
                             </div>
 
-                            <div className="bg-slate-50 dark:bg-zinc-900/60 p-3 rounded-xl border border-slate-200 dark:border-zinc-800 text-xs space-y-2">
-                                <div>
-                                    <span className="text-[10px] uppercase font-bold text-slate-400">Description</span>
-                                    <p className="text-slate-800 dark:text-zinc-200 mt-0.5">{viewingRequest.description}</p>
+                            <div className="bg-slate-50 dark:bg-zinc-900/60 p-3.5 rounded-xl border border-slate-200 dark:border-zinc-800 text-sm space-y-2.5">
+                                <div className="flex items-center justify-between">
+                                    <span className="text-xs uppercase font-extrabold text-slate-600 dark:text-zinc-400 tracking-wider">Status</span>
+                                    <span className={`text-xs sm:text-sm ${getStatusBadge(viewingRequest.status).className}`}>
+                                        {getStatusBadge(viewingRequest.status).label}
+                                    </span>
+                                </div>
+                                <div className="pt-2.5 border-t border-slate-200 dark:border-zinc-800">
+                                    <span className="text-xs uppercase font-extrabold text-slate-600 dark:text-zinc-400 tracking-wider">Category & Priority</span>
+                                    <div className="flex items-center gap-3 mt-1">
+                                        <span className="text-slate-900 dark:text-zinc-100 font-semibold">{viewingRequest.category}</span>
+                                        <span className="text-slate-300 dark:text-zinc-600">•</span>
+                                        <span className={`text-xs sm:text-sm ${getPriorityBadge(viewingRequest.priority).className}`}>
+                                            {getPriorityBadge(viewingRequest.priority).label}
+                                        </span>
+                                    </div>
+                                </div>
+                                <div className="pt-2.5 border-t border-slate-200 dark:border-zinc-800">
+                                    <span className="text-xs uppercase font-extrabold text-slate-600 dark:text-zinc-400 tracking-wider">Description</span>
+                                    <p className="text-slate-900 dark:text-zinc-100 font-medium text-sm sm:text-base mt-1">{viewingRequest.description}</p>
                                 </div>
                                 {viewingRequest.admin_notes && (
-                                    <div className="pt-2 border-t border-slate-200 dark:border-zinc-800">
-                                        <span className="text-[10px] uppercase font-bold text-slate-400">Admin Dispatch Notes</span>
-                                        <p className="text-slate-700 dark:text-zinc-300 italic mt-0.5">{viewingRequest.admin_notes}</p>
+                                    <div className="pt-2.5 border-t border-slate-200 dark:border-zinc-800">
+                                        <span className="text-xs uppercase font-extrabold text-slate-600 dark:text-zinc-400 tracking-wider">Admin Notes</span>
+                                        <p className="text-slate-800 dark:text-zinc-200 font-medium italic mt-1">{viewingRequest.admin_notes}</p>
                                     </div>
                                 )}
                             </div>
 
                             {getAttachmentUrl(viewingRequest.attachment_url) && (
                                 <div>
-                                    <span className="text-xs font-bold text-slate-500 mb-1.5 block">Attached Photo Proof</span>
+                                    <span className="text-xs sm:text-sm font-bold text-slate-700 dark:text-zinc-300 mb-1.5 block">Attached Photo Proof</span>
                                     <img
                                         src={getAttachmentUrl(viewingRequest.attachment_url)!}
                                         alt="Proof"
@@ -1010,23 +774,29 @@ export default function AdminMaintenanceRequests() {
                                 </div>
                             )}
 
-                            <div className="flex justify-end gap-2 pt-2 border-t border-slate-100 dark:border-zinc-800">
+                            <div className="flex justify-end items-center gap-2.5 pt-3 border-t border-slate-200 dark:border-zinc-800">
                                 <button
                                     onClick={() => setViewingRequest(null)}
-                                    className="px-4 py-2 text-xs font-semibold rounded-lg bg-slate-100 text-slate-700"
+                                    className="px-4 py-2 text-sm font-bold rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-slate-800 dark:text-zinc-200 transition-colors cursor-pointer"
                                 >
                                     Close
                                 </button>
-                                <button
-                                    onClick={() => {
-                                        const req = viewingRequest;
-                                        setViewingRequest(null);
-                                        handleOpenManage(req);
-                                    }}
-                                    className="px-4 py-2 text-xs font-bold rounded-lg bg-teal-600 text-white"
-                                >
-                                    Manage Work Order
-                                </button>
+                                {viewingRequest.status === 'Pending' && (
+                                    <button
+                                        onClick={() => handleQuickStatus(viewingRequest.id, 'In Progress')}
+                                        className="px-4 py-2 text-sm font-bold rounded-lg bg-blue-700 hover:bg-blue-800 text-white transition-colors cursor-pointer shadow-xs"
+                                    >
+                                        Start
+                                    </button>
+                                )}
+                                {viewingRequest.status === 'In Progress' && (
+                                    <button
+                                        onClick={() => handleQuickStatus(viewingRequest.id, 'Resolved')}
+                                        className="px-4 py-2 text-sm font-bold rounded-lg bg-emerald-700 hover:bg-emerald-800 text-white transition-colors cursor-pointer shadow-xs"
+                                    >
+                                        Resolve
+                                    </button>
+                                )}
                             </div>
                         </motion.div>
                     </motion.div>
@@ -1044,25 +814,7 @@ export default function AdminMaintenanceRequests() {
                     </motion.div>
                 )}
 
-                {/* MODAL 4: DELETE CONFIRMATION */}
-                {deletingRequest && (
-                    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 bg-black/60 backdrop-blur-xs z-50 flex items-center justify-center p-3">
-                        <motion.div initial={{ scale: 0.96, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.96, opacity: 0 }} className="bg-card border border-slate-200 dark:border-zinc-800 rounded-2xl w-full max-w-sm overflow-hidden shadow-2xl p-5 space-y-3">
-                            <h3 className="text-base font-extrabold text-slate-900 dark:text-white">Delete Maintenance Ticket</h3>
-                            <p className="text-xs text-slate-500">
-                                Are you sure you want to remove ticket #REQ-{deletingRequest.id} ({deletingRequest.title})? This action cannot be reversed.
-                            </p>
-                            <div className="flex justify-end gap-2 pt-2 border-t border-slate-100 dark:border-zinc-800">
-                                <button onClick={() => setDeletingRequest(null)} className="px-3.5 py-1.5 text-xs font-semibold rounded-lg bg-slate-100">
-                                    Cancel
-                                </button>
-                                <button onClick={handleDeleteRequest} disabled={isDeleting} className="px-3.5 py-1.5 text-xs font-bold rounded-lg bg-rose-600 text-white">
-                                    {isDeleting ? 'Deleting...' : 'Delete Ticket'}
-                                </button>
-                            </div>
-                        </motion.div>
-                    </motion.div>
-                )}
+
 
             </AnimatePresence>
 
