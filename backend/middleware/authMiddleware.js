@@ -33,6 +33,17 @@ const protect = async (req, res, next) => {
                 id: userId,
                 role: role
             };
+
+            // Track active presence for tenants
+            if (role === 'tenant') {
+                try {
+                    const presenceService = require('../services/presenceService');
+                    presenceService.recordActivity(userId);
+                } catch (e) {
+                    // non-blocking
+                }
+            }
+
             next();
         } catch (error) {
             console.error('JWT Verification Failed:', error.message);
