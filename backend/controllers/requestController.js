@@ -19,7 +19,14 @@ const createRequest = async (req, res) => {
             [tenant_id, title, description, category || 'Other', priority || 'Normal', attachment_url]
         );
 
-        res.status(201).json({ message: 'Request submitted successfully', request: newRequest.rows[0] });
+        const createdReq = newRequest.rows[0];
+        const request_number = `RT${String(createdReq.id).padStart(4, '0')}`;
+
+        res.status(201).json({ 
+            message: 'Request submitted successfully', 
+            request: { ...createdReq, request_number },
+            request_number
+        });
     } catch (error) {
         console.error('Error creating request:', error);
         res.status(500).json({ message: 'Server error while creating request' });
@@ -36,7 +43,11 @@ const getMyRequests = async (req, res) => {
             `SELECT * FROM requests WHERE tenant_id = $1 ORDER BY created_at DESC`,
             [tenant_id]
         );
-        res.status(200).json(requests.rows);
+        const rows = requests.rows.map(r => ({
+            ...r,
+            request_number: `RT${String(r.id).padStart(4, '0')}`
+        }));
+        res.status(200).json(rows);
     } catch (error) {
         console.error('Error fetching tenant requests:', error);
         res.status(500).json({ message: 'Server error while fetching requests' });
@@ -58,7 +69,11 @@ const getAllRequests = async (req, res) => {
             LEFT JOIN rooms rm ON u.room_id = rm.id
             ORDER BY r.created_at DESC
         `);
-        res.status(200).json(requests.rows);
+        const rows = requests.rows.map(r => ({
+            ...r,
+            request_number: `RT${String(r.id).padStart(4, '0')}`
+        }));
+        res.status(200).json(rows);
     } catch (error) {
         console.error('Error fetching all requests:', error);
         res.status(500).json({ message: 'Server error while fetching all requests' });
@@ -99,7 +114,13 @@ const updateRequest = async (req, res) => {
             ]
         );
 
-        res.status(200).json({ message: 'Request updated successfully', request: updatedRequest.rows[0] });
+        const updated = updatedRequest.rows[0];
+        const request_number = `RT${String(updated.id).padStart(4, '0')}`;
+        res.status(200).json({ 
+            message: 'Request updated successfully', 
+            request: { ...updated, request_number },
+            request_number
+        });
     } catch (error) {
         console.error('Error updating request:', error);
         res.status(500).json({ message: 'Server error while updating request' });
@@ -134,7 +155,13 @@ const cancelRequest = async (req, res) => {
             [id]
         );
 
-        res.status(200).json({ message: 'Request cancelled successfully', request: updatedRequest.rows[0] });
+        const cancelled = updatedRequest.rows[0];
+        const request_number = `RT${String(cancelled.id).padStart(4, '0')}`;
+        res.status(200).json({ 
+            message: 'Request cancelled successfully', 
+            request: { ...cancelled, request_number },
+            request_number
+        });
     } catch (error) {
         console.error('Error cancelling request:', error);
         res.status(500).json({ message: 'Server error while cancelling request' });
