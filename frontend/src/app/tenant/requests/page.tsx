@@ -18,7 +18,13 @@ interface Request {
     image_url?: string | null;
     attachment_url?: string | null;
     schedule?: string | null;
+    request_number?: string | null;
 }
+
+const formatRequestNumber = (id: number | string) => {
+    if (!id) return '';
+    return 'RT' + String(id).padStart(4, '0');
+};
 
 const formatDate = (dateString: string | null | undefined, options?: Intl.DateTimeFormatOptions) => {
     if (!dateString) return "N/A";
@@ -106,7 +112,9 @@ export default function TenantMaintenance() {
 
     const filteredRequests = useMemo(() => {
         return requests.filter(r => {
+            const reqNum = formatRequestNumber(r.id);
             const matchesSearch = r.id.toString().includes(searchQuery) || 
+                reqNum.toLowerCase().includes(searchQuery.toLowerCase()) ||
                 r.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
                 r.description.toLowerCase().includes(searchQuery.toLowerCase());
             const matchesStatus = filterStatus === "All" || r.status === filterStatus;
@@ -164,12 +172,19 @@ export default function TenantMaintenance() {
             if (schedule.trim()) formData.append('schedule', schedule.trim()); 
             if (imageFile) formData.append('attachment', imageFile);
 
-            await api.post('/requests', formData, {
+            const res = await api.post('/requests', formData, {
                 headers: { 'Content-Type': 'multipart/form-data' }
             });
             
+            const newId = res.data?.request?.id || res.data?.id;
+            const reqNum = res.data?.request_number || (newId ? formatRequestNumber(newId) : '');
+
             handleClearForm();
-            toast.success("Maintenance request submitted successfully!");
+            toast.success(
+                reqNum
+                    ? `Maintenance request submitted successfully! (Request #: ${reqNum})`
+                    : "Maintenance request submitted successfully!"
+            );
             await fetchMyRequests();
         } catch (error: any) {
             console.error("Failed to submit request:", error);
@@ -191,7 +206,7 @@ export default function TenantMaintenance() {
                 setSelectedRequest(prev => prev ? { ...prev, status: 'Cancelled' } : null);
             }
             
-            toast.success(`Request #${id} cancelled successfully.`);
+            toast.success(`Request #${formatRequestNumber(id)} cancelled successfully.`);
             setConfirmCancelRequest(null);
         } catch (error: any) {
             console.error("Failed to cancel request", error);
@@ -453,7 +468,7 @@ export default function TenantMaintenance() {
                         <table className="w-full text-left border-collapse min-w-[700px]">
                             <thead className="bg-secondary/30">
                                 <tr>
-                                    <th className="px-5 py-3 text-xs font-bold text-slate-500 dark:text-zinc-400 uppercase tracking-widest border-b border-slate-200 dark:border-zinc-800">ID / Date</th>
+                                    <th className="px-5 py-3 text-xs font-bold text-slate-500 dark:text-zinc-400 uppercase tracking-widest border-b border-slate-200 dark:border-zinc-800">Request # / Date</th>
                                     <th className="px-5 py-3 text-xs font-bold text-slate-500 dark:text-zinc-400 uppercase tracking-widest border-b border-slate-200 dark:border-zinc-800">Issue</th>
                                     <th className="px-5 py-3 text-xs font-bold text-slate-500 dark:text-zinc-400 uppercase tracking-widest text-center border-b border-slate-200 dark:border-zinc-800">Priority</th>
                                     <th className="px-5 py-3 text-xs font-bold text-slate-500 dark:text-zinc-400 uppercase tracking-widest text-center border-b border-slate-200 dark:border-zinc-800">Status</th>
@@ -469,7 +484,7 @@ export default function TenantMaintenance() {
                                     paginatedRequests.map((r) => (
                                         <tr key={r.id} className="hover:bg-slate-50 dark:hover:bg-zinc-800/50 transition-colors">
                                             <td className="px-5 py-3.5">
-                                                <p className="font-bold text-xs font-mono text-slate-900 dark:text-white">#{r.id.toString().padStart(4, '0')}</p>
+                                                <p className="font-bold text-xs font-mono text-slate-900 dark:text-white">{formatRequestNumber(r.id)}</p>
                                                 <p className="text-[11px] text-slate-500 dark:text-zinc-400 mt-0.5">{formatDate(r.created_at)}</p>
                                             </td>
                                             <td className="px-5 py-3.5">
@@ -541,7 +556,7 @@ export default function TenantMaintenance() {
                                 <div className="p-5 border-b border-slate-200 dark:border-zinc-800 flex justify-between items-center bg-secondary/50">
                                     <div>
                                         <h2 className="text-base font-bold flex items-center gap-2 text-slate-900 dark:text-white">
-                                            Request #{selectedRequest.id.toString().padStart(4, '0')}
+                                            Request #{formatRequestNumber(selectedRequest.id)}
                                         </h2>
                                     </div>
                                     <button onClick={() => setSelectedRequest(null)} className="p-1.5 rounded-lg hover:bg-slate-200 dark:hover:bg-zinc-800 text-slate-500 transition-colors">
@@ -657,7 +672,7 @@ export default function TenantMaintenance() {
                                     </div>
                                     <div>
                                         <h3 className="text-base font-bold text-slate-900 dark:text-white">
-                                            Cancel Request #{confirmCancelRequest.id}?
+                                            Cancel Request #{formatRequestNumber(confirmCancelRequest.id)}?
                                         </h3>
                                         <p className="text-xs text-slate-500 dark:text-zinc-400">
                                             This will withdraw your submitted request.
