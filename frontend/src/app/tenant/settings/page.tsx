@@ -97,6 +97,7 @@ export default function TenantSettingsPage() {
     const strength = handlePasswordStrength(newPassword);
 
     const handleLogout = () => {
+        api.post('/auth/logout').catch(() => {});
         localStorage.removeItem('token');
         localStorage.removeItem('user');
         router.push('/');
@@ -430,7 +431,7 @@ export default function TenantSettingsPage() {
                             </h2>
                         </div>
                         <p className="text-xs text-slate-500 dark:text-zinc-400 mt-1">
-                            Control which system events dispatch real-time alerts and in-system reminders to your resident account.
+                            Control which system events send real-time alerts and in-system reminders to your resident account.
                         </p>
                     </div>
                     <span className="text-[11px] font-semibold text-teal-600 dark:text-teal-400">
@@ -443,7 +444,7 @@ export default function TenantSettingsPage() {
                         { key: 'paymentReminders', label: 'Billing Statement Reminders', desc: 'Alert when a new monthly invoice is published' },
                         { key: 'paymentStatusUpdates', label: 'Payment Verification Confirmations', desc: 'Notify when uploaded GCash/Maya receipts are verified' },
                         { key: 'overduePayment', label: 'Overdue Dues Warnings', desc: 'Immediate notification if payment passes the grace period' },
-                        { key: 'maintenanceUpdates', label: 'Maintenance Ticket Dispatches', desc: 'Updates when a technician is assigned to your repair request' },
+                        { key: 'maintenanceUpdates', label: 'Maintenance Request Updates', desc: 'Updates when repair work begins on your request' },
                         { key: 'maintenanceResolution', label: 'Work Order Resolution Notifications', desc: 'Notify when repairs in your suite are marked completed' },
                         { key: 'adminMessages', label: 'Management Direct Chat Pings', desc: 'Badge and sound notifications on new landlord messages' },
                         { key: 'soundAlerts', label: 'Audio Chime Alerts', desc: 'Play gentle sound chime on critical incoming announcements' }
