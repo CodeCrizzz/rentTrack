@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { 
     Video, Maximize2, Camera, ShieldAlert, 
     WifiOff, Volume2, VolumeX, Eye, ShieldCheck, 
-    HardDrive, Radio, RefreshCw, ZoomIn, ZoomOut,
+    HardDrive, Radio, ZoomIn, ZoomOut,
     Sliders, AlertTriangle, Play, Pause, X, Layers,
     ChevronUp, ChevronDown
 } from 'lucide-react';
@@ -304,19 +304,6 @@ export default function CCTVPage() {
                         </button>
                     </div>
 
-                    <button
-                        onClick={() => {
-                            setIsLoading(true);
-                            setTimeout(() => {
-                                setIsLoading(false);
-                                toast.success("All security feeds refreshed");
-                            }, 350);
-                        }}
-                        className="px-3 py-1.5 text-xs font-semibold rounded-lg border border-slate-200 dark:border-zinc-800 bg-card hover:bg-slate-50 dark:hover:bg-zinc-800 text-slate-700 dark:text-zinc-300 transition-colors flex items-center gap-1.5 shadow-xs"
-                    >
-                        <RefreshCw className="w-3.5 h-3.5 text-teal-600" />
-                        <span>Re-Sync Feeds</span>
-                    </button>
                 </div>
             </div>
 
@@ -355,7 +342,7 @@ export default function CCTVPage() {
                         <div className="text-lg font-extrabold font-mono text-indigo-600 mt-0.5 leading-tight">
                             Armed
                         </div>
-                        <div className="text-[10px] font-semibold text-indigo-600 mt-0.5">Optical motion triage on</div>
+                        <div className="text-[10px] font-semibold text-indigo-600 mt-0.5">Optical motion detection on</div>
                     </div>
                     <div className="w-8 h-8 rounded-lg bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 flex items-center justify-center shrink-0">
                         <ShieldCheck className="w-4 h-4" />
