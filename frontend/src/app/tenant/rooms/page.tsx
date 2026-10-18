@@ -24,6 +24,8 @@ const getAmenityIcon = (label: string) => {
     return Sparkles;
 };
 
+const formatRequestNumber = (id: any) => 'RT' + String(id || '').padStart(4, '0');
+
 export default function TenantRooms() {
     const [rooms, setRooms] = useState<any[]>([]);
     const [assignedRoomData, setAssignedRoomData] = useState<any>(null);
@@ -194,7 +196,7 @@ export default function TenantRooms() {
                             </h1>
                         </div>
                         <p className="text-sm text-slate-500 dark:text-zinc-400 mt-1">
-                            Official room specs, rental terms, room roster, and facility maintenance tickets.
+                            Official room specs, rental terms, room roster, and facility maintenance requests.
                         </p>
                     </div>
                 </div>
@@ -253,7 +255,7 @@ export default function TenantRooms() {
                         <div>
                             <span className="text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-500">Maintenance History</span>
                             <div className="text-2xl sm:text-3xl font-black font-mono text-slate-900 dark:text-white mt-0.5 leading-tight">
-                                {maintenance_history.length} Ticket{maintenance_history.length !== 1 ? 's' : ''}
+                                {maintenance_history.length} Request{maintenance_history.length !== 1 ? 's' : ''}
                             </div>
                             <div className="text-xs font-semibold text-slate-500 dark:text-zinc-400 mt-1">
                                 Facility logs verified
@@ -338,30 +340,33 @@ export default function TenantRooms() {
 
                                 {maintenance_history.length > 0 ? (
                                     <div className="h-[382px] overflow-y-auto custom-scrollbar pr-1 flex flex-col gap-2.5">
-                                        {maintenance_history.map((ticket: any, idx: number) => (
+                                        {maintenance_history.map((reqItem: any, idx: number) => (
                                             <div 
                                                 key={idx}
-                                                onClick={() => setSelectedMaintenance(ticket)}
+                                                onClick={() => setSelectedMaintenance(reqItem)}
                                                 className="h-[68px] px-3.5 py-2.5 rounded-xl border border-slate-100 dark:border-zinc-800/80 bg-slate-50/50 dark:bg-zinc-900/30 hover:border-teal-500/50 transition-all cursor-pointer flex items-center justify-between gap-3 group shrink-0"
                                             >
                                                 <div className="min-w-0 pr-2">
                                                     <div className="flex items-center gap-2">
                                                         <span className={`w-2.5 h-2.5 rounded-full shrink-0 ${
-                                                            ticket.status === 'Resolved' ? 'bg-emerald-500' :
-                                                            ticket.status === 'In Progress' ? 'bg-indigo-500' : 'bg-amber-500'
+                                                            reqItem.status === 'Resolved' ? 'bg-emerald-500' :
+                                                            reqItem.status === 'In Progress' ? 'bg-indigo-500' : 'bg-amber-500'
                                                         }`}></span>
-                                                        <p className="text-sm sm:text-base font-bold text-slate-900 dark:text-white truncate group-hover:text-teal-500 transition-colors">{ticket.title}</p>
+                                                        <span className="font-mono text-xs font-bold text-teal-600 dark:text-teal-400 shrink-0">
+                                                            {formatRequestNumber(reqItem.id)}
+                                                        </span>
+                                                        <p className="text-sm sm:text-base font-bold text-slate-900 dark:text-white truncate group-hover:text-teal-500 transition-colors">{reqItem.title}</p>
                                                     </div>
                                                     <p className="text-xs text-slate-500 dark:text-zinc-400 font-mono mt-0.5 truncate">
-                                                        {ticket.category || 'General'} · Submitted {new Date(ticket.created_at).toLocaleDateString()}
+                                                        {reqItem.category || 'General'} · Submitted {new Date(reqItem.created_at).toLocaleDateString()}
                                                     </p>
                                                 </div>
                                                 <span className={`text-xs font-bold uppercase shrink-0 ${
-                                                    ticket.status === 'Resolved' ? 'text-emerald-600 dark:text-emerald-400' :
-                                                    ticket.status === 'In Progress' ? 'text-indigo-600 dark:text-indigo-400' :
+                                                    reqItem.status === 'Resolved' ? 'text-emerald-600 dark:text-emerald-400' :
+                                                    reqItem.status === 'In Progress' ? 'text-indigo-600 dark:text-indigo-400' :
                                                     'text-amber-600 dark:text-amber-400'
                                                 }`}>
-                                                    {ticket.status}
+                                                    {reqItem.status}
                                                 </span>
                                             </div>
                                         ))}
@@ -370,7 +375,7 @@ export default function TenantRooms() {
                                     <div className="h-[382px] p-6 rounded-xl border border-dashed border-slate-200 dark:border-zinc-800 text-center flex flex-col items-center justify-center">
                                         <CheckCircle2 className="w-9 h-9 text-emerald-500 mx-auto mb-2 opacity-80" />
                                         <p className="text-sm font-bold text-slate-700 dark:text-zinc-300">All Systems Functional</p>
-                                        <p className="text-xs text-slate-500 mt-1">Zero outstanding repair tickets logged for your room.</p>
+                                        <p className="text-xs text-slate-500 mt-1">Zero outstanding repair requests logged for your room.</p>
                                     </div>
                                 )}
                             </div>
@@ -466,7 +471,7 @@ export default function TenantRooms() {
                                     <div className="p-4 border-b border-slate-100 dark:border-zinc-800 flex justify-between items-center bg-slate-50/50 dark:bg-zinc-900/40">
                                         <h2 className="text-base font-extrabold text-slate-900 dark:text-white flex items-center gap-2">
                                             <Wrench className="w-4.5 h-4.5 text-teal-600" />
-                                            <span>Work Order Details</span>
+                                            <span>Request #{formatRequestNumber(selectedMaintenance.id)} Details</span>
                                         </h2>
                                         <button onClick={() => setSelectedMaintenance(null)} className="p-1 rounded-lg hover:bg-slate-200 dark:hover:bg-zinc-800 text-slate-500">
                                             <X className="w-4 h-4" />
