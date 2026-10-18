@@ -13,11 +13,20 @@ import {
 } from "recharts";
 import { 
     Building2, Users, Wallet, Receipt, Wrench, AlertTriangle, 
-    CheckCircle2, Clock, ArrowUpRight, ArrowDownRight, RefreshCw, 
+    CheckCircle2, Clock, ArrowUpRight, ArrowDownRight, 
     ChevronRight, ExternalLink, Calendar, Check, X, ShieldAlert, 
     FileText, ArrowRight, Activity, DollarSign, BedDouble, Filter,
-    Sparkles, CreditCard, UserCheck, AlertCircle
+    Sparkles, CreditCard, UserCheck, AlertCircle, Megaphone, Trash2, Send, RefreshCw
 } from 'lucide-react';
+
+interface Announcement {
+    id: number;
+    title: string;
+    content: string;
+    type: string;
+    created_at: string;
+    created_by_name?: string;
+}
 
 interface ExpiringContract {
     id: number;
@@ -66,13 +75,15 @@ interface DashboardStats {
     expiringContracts: ExpiringContract[];
     overdueAccounts: { tenant_id: number; tenant_name: string; room_number: string | null; total_overdue: number }[];
     upcomingRent: { id: number; tenant_name: string; room_number: string | null; balance: number; due_date: string }[];
-    pendingPaymentVerifications: { id: number; tenant_name: string; total_amount: number; created_at: string }[];
+    pendingPaymentVerifications: { id: number; bill_id?: number; payment_id?: number; tenant_id?: number; tenant_name: string; total_amount: number; created_at: string }[];
 }
 
 const cardVariants: Variants = {
     hidden: { opacity: 0, y: 12 },
     show: { opacity: 1, y: 0, transition: { duration: 0.35, ease: "easeOut" } }
 };
+
+const formatRequestNumber = (id: any) => 'RT' + String(id || '').padStart(4, '0');
 
 const CustomChartTooltip = ({ active, payload, label }: any) => {
     if (active && payload && payload.length) {
@@ -109,14 +120,73 @@ export default function AdminDashboard() {
     const [cashflowData, setCashflowData] = useState<any[]>([]);
     const [dateRange, setDateRange] = useState("this_year");
     const [isLoading, setIsLoading] = useState(true);
-    const [isRefreshing, setIsRefreshing] = useState(false);
     const [adminName, setAdminName] = useState('Admin');
     
     // Interactive Tab States
     const [urgentFilter, setUrgentFilter] = useState<'all' | 'verifications' | 'applications' | 'overdue'>('all');
     const [activeLedgerTab, setActiveLedgerTab] = useState<'payments' | 'overdue' | 'maintenance' | 'audit'>('payments');
 
-    const fetchDashboardData = async (silent = false) => {
+    // Announcement Modal State
+    const [showAnnouncementModal, setShowAnnouncementModal] = useState(false);
+    const [announcements, setAnnouncements] = useState<Announcement[]>([]);
+    const [isLoadingAnnouncements, setIsLoadingAnnouncements] = useState(false);
+    const [isPostingAnnouncement, setIsPostingAnnouncement] = useState(false);
+    const [announcementForm, setAnnouncementForm] = useState({
+        title: '',
+        content: '',
+        type: 'General'
+    });
+
+    const fetchAnnouncements = async () => {
+        setIsLoadingAnnouncements(true);
+        try {
+            const { data } = await api.get('/admin/announcements');
+            setAnnouncements(data || []);
+        } catch (err) {
+            console.error("Failed to fetch announcements:", err);
+        } finally {
+            setIsLoadingAnnouncements(false);
+        }
+    };
+
+    const handlePostAnnouncement = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!announcementForm.title.trim() || !announcementForm.content.trim()) {
+            toast.error("Please provide both a title and announcement content.");
+            return;
+        }
+
+        setIsPostingAnnouncement(true);
+        try {
+            const { data } = await api.post('/admin/announcements', {
+                title: announcementForm.title.trim(),
+                content: announcementForm.content.trim(),
+                type: announcementForm.type
+            });
+            toast.success("Announcement broadcasted successfully");
+            const newAnn = data.announcement || data;
+            setAnnouncements(prev => [newAnn, ...prev]);
+            setAnnouncementForm({ title: '', content: '', type: 'General' });
+        } catch (err) {
+            console.error("Failed to post announcement:", err);
+            toast.error("Failed to post announcement");
+        } finally {
+            setIsPostingAnnouncement(false);
+        }
+    };
+
+    const handleDeleteAnnouncement = async (id: number) => {
+        try {
+            await api.delete(`/admin/announcements/${id}`);
+            setAnnouncements(prev => prev.filter(a => a.id !== id));
+            toast.success("Announcement deleted");
+        } catch (err) {
+            console.error("Failed to delete announcement:", err);
+            toast.error("Failed to delete announcement");
+        }
+    };
+
+    const fetchDashboardData = async () => {
         // Early exit if user is not admin
         if (typeof window !== 'undefined') {
             const userStr = localStorage.getItem('user');
@@ -136,13 +206,11 @@ export default function AdminDashboard() {
             }
         }
 
-        if (!silent) setIsLoading(true);
-        else setIsRefreshing(true);
+        setIsLoading(true);
 
         try {
             const { data } = await api.get('/admin/dashboard');
             setStats(data);
-            if (silent) toast.success("Dashboard metrics synchronized");
         } catch (error: any) {
             if (error.response?.status === 403) {
                 toast.error("Access denied: Administrator privileges required.");
@@ -158,7 +226,6 @@ export default function AdminDashboard() {
             toast.error("Could not load dashboard statistics");
         } finally {
             setIsLoading(false);
-            setIsRefreshing(false);
         }
     };
 
@@ -262,10 +329,8 @@ export default function AdminDashboard() {
                         <div className="h-3.5 w-80 bg-slate-200 dark:bg-zinc-800 rounded-md mt-2"></div>
                     </div>
 
-                    <div className="flex flex-wrap items-center gap-3">
-                        <div className="h-9 w-24 bg-slate-200 dark:bg-zinc-800 rounded-lg"></div>
-                        <div className="h-9 w-32 bg-slate-200 dark:bg-zinc-800 rounded-lg"></div>
-                        <div className="h-9 w-28 bg-slate-200 dark:bg-zinc-800 rounded-lg"></div>
+                    <div className="flex items-center gap-3">
+                        <div className="h-9 w-40 bg-slate-200 dark:bg-zinc-800 rounded-lg"></div>
                     </div>
                 </div>
 
@@ -287,9 +352,9 @@ export default function AdminDashboard() {
                 </div>
 
                 {/* 3. Main Split Skeleton: Chart & Urgent Actions */}
-                <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
+                <div className="grid grid-cols-1 xl:grid-cols-12 gap-6">
                     {/* Financial Chart Skeleton */}
-                    <div className="xl:col-span-2 bg-card border border-slate-200 dark:border-zinc-800 rounded-xl p-5 shadow-xs flex flex-col justify-between h-[420px]">
+                    <div className="xl:col-span-8 bg-card border border-slate-200 dark:border-zinc-800 rounded-xl p-5 shadow-xs flex flex-col justify-between h-[540px]">
                         <div>
                             <div className="flex items-center justify-between border-b border-slate-100 dark:border-zinc-800 pb-3">
                                 <div className="space-y-1">
@@ -320,7 +385,7 @@ export default function AdminDashboard() {
                     </div>
 
                     {/* Urgent Action Center Skeleton */}
-                    <div className="xl:col-span-1 bg-card border border-slate-200 dark:border-zinc-800 rounded-xl p-5 shadow-xs flex flex-col justify-between h-[420px]">
+                    <div className="xl:col-span-4 bg-card border border-slate-200 dark:border-zinc-800 rounded-xl p-5 shadow-xs flex flex-col justify-between h-[540px]">
                         <div className="space-y-3">
                             <div className="flex items-center justify-between border-b border-slate-100 dark:border-zinc-800 pb-3">
                                 <div className="h-5 w-44 bg-slate-200 dark:bg-zinc-800 rounded"></div>
@@ -381,37 +446,18 @@ export default function AdminDashboard() {
                     </p>
                 </div>
 
-                <div className="flex flex-wrap items-center gap-3">
+                <div className="flex items-center gap-3">
                     <button
-                        onClick={() => fetchDashboardData(true)}
-                        disabled={isRefreshing}
-                        className="px-3.5 py-2 text-xs font-semibold rounded-lg border border-slate-200 dark:border-zinc-800 bg-card hover:bg-slate-50 dark:hover:bg-zinc-800/80 text-slate-700 dark:text-zinc-300 transition-colors flex items-center gap-2 shadow-sm"
-                        title="Sync dashboard data"
+                        type="button"
+                        onClick={() => {
+                            setShowAnnouncementModal(true);
+                            fetchAnnouncements();
+                        }}
+                        className="px-3.5 py-2 text-xs sm:text-sm font-semibold rounded-lg bg-teal-700 hover:bg-teal-800 text-white transition-colors flex items-center gap-2 shadow-xs cursor-pointer"
                     >
-                        <RefreshCw className={`w-3.5 h-3.5 ${isRefreshing ? 'animate-spin text-cyan-600' : ''}`} />
-                        <span>{isRefreshing ? 'Syncing...' : 'Sync'}</span>
+                        <Megaphone className="w-4 h-4" />
+                        <span>Add Announcement</span>
                     </button>
-
-                    <Link
-                        href="/admin/billing"
-                        className="px-3.5 py-2 text-xs font-semibold rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white transition-colors flex items-center gap-1.5 shadow-sm"
-                    >
-                        <CreditCard className="w-3.5 h-3.5" />
-                        <span>Manage Billing</span>
-                    </Link>
-
-                    <Link
-                        href="/admin/tenants"
-                        className="px-3.5 py-2 text-xs font-semibold rounded-lg bg-cyan-600 hover:bg-cyan-700 text-white transition-colors flex items-center gap-1.5 shadow-sm"
-                    >
-                        <Users className="w-3.5 h-3.5" />
-                        <span>Tenants</span>
-                        {computedMetrics.applicationsCount > 0 && (
-                            <span className="ml-1 px-1.5 py-0.2 bg-white/20 text-white rounded-full text-[10px] font-bold">
-                                {computedMetrics.applicationsCount}
-                            </span>
-                        )}
-                    </Link>
                 </div>
             </div>
 
@@ -539,7 +585,7 @@ export default function AdminDashboard() {
                         <div>
                             <span className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-zinc-400">Open Work Orders</span>
                             <div className="text-2xl sm:text-3xl font-extrabold tracking-tight font-mono text-slate-900 dark:text-white mt-1">
-                                {computedMetrics.openWorkOrders} Tickets
+                                {computedMetrics.openWorkOrders} Requests
                             </div>
                         </div>
                         <div className="w-9 h-9 rounded-lg bg-teal-50 dark:bg-teal-500/10 text-teal-600 dark:text-teal-400 flex items-center justify-center shrink-0 border border-teal-200/50 dark:border-teal-500/20">
@@ -553,13 +599,13 @@ export default function AdminDashboard() {
                             <span className="font-semibold text-amber-600 dark:text-amber-400">{computedMetrics.pendingRequests} pending</span>
                         </div>
                         <div className="flex items-center justify-between text-xs">
-                            <span className="text-slate-500 dark:text-zinc-400">Dispatched Technicians</span>
+                            <span className="text-slate-500 dark:text-zinc-400">In Progress</span>
                             <span className="font-semibold text-blue-600 dark:text-blue-400">{computedMetrics.inProgressRequests} in progress</span>
                         </div>
                         <div className="flex items-center justify-between text-[11px] text-slate-500 dark:text-zinc-400 pt-1">
-                            <span className="text-emerald-600 dark:text-emerald-400 font-semibold">{computedMetrics.resolvedRequests} tickets resolved</span>
+                            <span className="text-emerald-600 dark:text-emerald-400 font-semibold">{computedMetrics.resolvedRequests} requests resolved</span>
                             <Link href="/admin/requests" className="text-cyan-600 dark:text-cyan-400 hover:underline flex items-center gap-0.5 font-medium">
-                                Dispatch <ChevronRight className="w-2.5 h-2.5" />
+                                View Requests <ChevronRight className="w-2.5 h-2.5" />
                             </Link>
                         </div>
                     </div>
@@ -570,10 +616,10 @@ export default function AdminDashboard() {
             {/* Core Analytics & Urgent Action Center (2-Column Grid) */}
             <div className="grid grid-cols-1 xl:grid-cols-12 gap-6">
                 
-                {/* Left: Cash Flow Velocity Analytics (7 Cols) */}
-                <div className="xl:col-span-7 bg-card border border-slate-200 dark:border-zinc-800 rounded-xl p-6 shadow-sm flex flex-col justify-between">
+                {/* Left: Cash Flow Velocity Analytics (8 Cols) */}
+                <div className="xl:col-span-8 bg-card border border-slate-200 dark:border-zinc-800 rounded-xl p-6 shadow-sm flex flex-col justify-between h-auto xl:h-[540px]">
                     <div>
-                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
                             <div>
                                 <div className="flex items-center gap-2">
                                     <h2 className="text-lg font-bold text-slate-900 dark:text-white">Cash Flow Overview</h2>
@@ -598,7 +644,7 @@ export default function AdminDashboard() {
                         </div>
 
                         {/* Chart Area */}
-                        <div className="h-[320px] w-full">
+                        <div className="h-[310px] w-full">
                             <ResponsiveContainer width="100%" height="100%">
                                 <ComposedChart data={cashflowData} margin={{ top: 15, right: 10, left: -10, bottom: 0 }} barGap={6} barSize={14}>
                                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="currentColor" className="text-slate-200 dark:text-zinc-800/80" />
@@ -632,7 +678,7 @@ export default function AdminDashboard() {
                     </div>
 
                     {/* Financial Snapshot Summary Bar Below Chart */}
-                    <div className="grid grid-cols-3 gap-3 pt-4 mt-4 border-t border-slate-100 dark:border-zinc-800/80 bg-slate-50/50 dark:bg-zinc-900/40 p-3 rounded-lg text-center">
+                    <div className="grid grid-cols-3 gap-3 pt-3 mt-3 border-t border-slate-100 dark:border-zinc-800/80 bg-slate-50/50 dark:bg-zinc-900/40 p-3 rounded-lg text-center">
                         <div>
                             <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-500">Period Invoiced</span>
                             <p className="font-mono font-bold text-xs sm:text-sm text-cyan-600 dark:text-cyan-400 mt-0.5">
@@ -654,155 +700,156 @@ export default function AdminDashboard() {
                     </div>
                 </div>
 
-                {/* Right: Urgent Action Center & Operations Triage (5 Cols) */}
-                <div className="xl:col-span-5 bg-card border border-slate-200 dark:border-zinc-800 rounded-xl p-6 shadow-sm flex flex-col justify-between">
-                    <div>
-                        <div className="flex items-center justify-between mb-4">
-                            <div>
-                                <div className="flex items-center gap-2">
-                                    <h2 className="text-lg font-bold text-slate-900 dark:text-white">Action Center</h2>
-                                    {computedMetrics.totalActionCount > 0 && (
-                                        <span className="px-2 py-0.5 rounded-full text-[11px] font-bold bg-rose-500 text-white shadow-sm">
-                                            {computedMetrics.totalActionCount} Urgent
-                                        </span>
-                                    )}
-                                </div>
-                                <p className="text-xs text-slate-500 dark:text-zinc-400 mt-0.5">
-                                    Items requiring administrator review or intervention
-                                </p>
-                            </div>
-                        </div>
-
-                        {/* Triage Filter Pills */}
-                        <div className="flex items-center gap-1.5 p-1 bg-slate-100 dark:bg-zinc-800/80 rounded-lg mb-4 text-xs font-semibold overflow-x-auto">
-                            <button
-                                onClick={() => setUrgentFilter('all')}
-                                className={`px-2.5 py-1 rounded-md transition-all ${urgentFilter === 'all' ? 'bg-white dark:bg-zinc-900 text-slate-900 dark:text-white shadow-sm' : 'text-slate-500 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white'}`}
-                            >
-                                All ({computedMetrics.totalActionCount})
-                            </button>
-                            <button
-                                onClick={() => setUrgentFilter('verifications')}
-                                className={`px-2.5 py-1 rounded-md transition-all ${urgentFilter === 'verifications' ? 'bg-white dark:bg-zinc-900 text-amber-600 dark:text-amber-400 shadow-sm' : 'text-slate-500 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white'}`}
-                            >
-                                Slips ({computedMetrics.verificationsCount})
-                            </button>
-                            <button
-                                onClick={() => setUrgentFilter('applications')}
-                                className={`px-2.5 py-1 rounded-md transition-all ${urgentFilter === 'applications' ? 'bg-white dark:bg-zinc-900 text-cyan-600 dark:text-cyan-400 shadow-sm' : 'text-slate-500 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white'}`}
-                            >
-                                Applicants ({computedMetrics.applicationsCount})
-                            </button>
-                            <button
-                                onClick={() => setUrgentFilter('overdue')}
-                                className={`px-2.5 py-1 rounded-md transition-all ${urgentFilter === 'overdue' ? 'bg-white dark:bg-zinc-900 text-rose-600 dark:text-rose-400 shadow-sm' : 'text-slate-500 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white'}`}
-                            >
-                                Overdue ({computedMetrics.overdueCount})
-                            </button>
-                        </div>
-
-                        {/* Action Items List */}
-                        <div className="space-y-3 max-h-[340px] overflow-y-auto pr-1 custom-scrollbar">
-                            
-                            {/* Payment Verifications */}
-                            {(urgentFilter === 'all' || urgentFilter === 'verifications') && stats.pendingPaymentVerifications?.map((verification) => (
-                                <div key={`ver-${verification.id}`} className="p-3 rounded-lg border border-amber-200/80 dark:border-amber-500/20 bg-amber-50/40 dark:bg-amber-500/5 flex items-center justify-between gap-3">
-                                    <div className="flex items-start gap-2.5 min-w-0">
-                                        <div className="w-8 h-8 rounded-lg bg-amber-100 dark:bg-amber-500/20 text-amber-700 dark:text-amber-400 flex items-center justify-center shrink-0 mt-0.5">
-                                            <Receipt className="w-4 h-4" />
-                                        </div>
-                                        <div className="min-w-0">
-                                            <p className="text-xs font-bold text-slate-900 dark:text-white truncate">
-                                                {verification.tenant_name}
-                                            </p>
-                                            <p className="text-[11px] text-amber-700 dark:text-amber-400 font-semibold mt-0.5">
-                                                Submitted payment receipt • ₱{Number(verification.total_amount).toLocaleString()}
-                                            </p>
-                                            <span className="text-[10px] text-slate-400 dark:text-zinc-500">
-                                                {new Date(verification.created_at).toLocaleDateString()}
-                                            </span>
-                                        </div>
-                                    </div>
-                                    <Link
-                                        href="/admin/billing"
-                                        className="px-2.5 py-1 text-[11px] font-bold rounded bg-amber-600 hover:bg-amber-700 text-white shrink-0 transition-colors"
-                                    >
-                                        Verify Slip
-                                    </Link>
-                                </div>
-                            ))}
-
-                            {/* Pending Tenant Applications */}
-                            {(urgentFilter === 'all' || urgentFilter === 'applications') && stats.pendingTenantsList?.map((tenant) => (
-                                <div key={`ten-${tenant.id}`} className="p-3 rounded-lg border border-cyan-200/80 dark:border-cyan-500/20 bg-cyan-50/40 dark:bg-cyan-500/5 flex items-center justify-between gap-3">
-                                    <div className="flex items-start gap-2.5 min-w-0">
-                                        <div className="w-8 h-8 rounded-lg bg-cyan-100 dark:bg-cyan-500/20 text-cyan-700 dark:text-cyan-400 flex items-center justify-center shrink-0 mt-0.5">
-                                            <UserCheck className="w-4 h-4" />
-                                        </div>
-                                        <div className="min-w-0">
-                                            <p className="text-xs font-bold text-slate-900 dark:text-white truncate">
-                                                {tenant.name}
-                                            </p>
-                                            <p className="text-[11px] text-slate-600 dark:text-zinc-400 truncate mt-0.5">
-                                                {tenant.email}
-                                            </p>
-                                            <span className="text-[10px] text-slate-400 dark:text-zinc-500">
-                                                Applied on {new Date(tenant.created_at).toLocaleDateString()}
-                                            </span>
-                                        </div>
-                                    </div>
-                                    <Link
-                                        href="/admin/tenants"
-                                        className="px-2.5 py-1 text-[11px] font-bold rounded bg-cyan-600 hover:bg-cyan-700 text-white shrink-0 transition-colors"
-                                    >
-                                        Review
-                                    </Link>
-                                </div>
-                            ))}
-
-                            {/* Overdue Unpaid Balances (Flexible Stays - Tenants can leave anytime) */}
-                            {(urgentFilter === 'all' || urgentFilter === 'overdue') && stats.overdueAccounts?.map((account) => (
-                                <div key={`overdue-${account.tenant_id}`} className="p-3 rounded-lg border border-rose-200/80 dark:border-rose-500/20 bg-rose-50/40 dark:bg-rose-500/5 flex items-center justify-between gap-3">
-                                    <div className="flex items-start gap-2.5 min-w-0">
-                                        <div className="w-8 h-8 rounded-lg bg-rose-100 dark:bg-rose-500/20 text-rose-700 dark:text-rose-400 flex items-center justify-center shrink-0 mt-0.5">
-                                            <AlertTriangle className="w-4 h-4" />
-                                        </div>
-                                        <div className="min-w-0">
-                                            <p className="text-xs font-bold text-slate-900 dark:text-white truncate">
-                                                {account.tenant_name} (Room {account.room_number || 'N/A'})
-                                            </p>
-                                            <p className="text-[11px] text-rose-600 dark:text-rose-400 font-semibold mt-0.5">
-                                                Overdue: ₱{Number(account.total_overdue).toLocaleString()}
-                                            </p>
-                                            <span className="text-[10px] text-slate-400 dark:text-zinc-500">
-                                                No fixed contract • Open-ended stay
-                                            </span>
-                                        </div>
-                                    </div>
-                                    <Link
-                                        href="/admin/billing"
-                                        className="px-2.5 py-1 text-[11px] font-bold rounded bg-rose-600 hover:bg-rose-700 text-white shrink-0 transition-colors"
-                                    >
-                                        Collect
-                                    </Link>
-                                </div>
-                            ))}
-
-                            {/* Empty State */}
-                            {computedMetrics.totalActionCount === 0 && (
-                                <div className="text-center py-10 px-4 border border-dashed border-slate-200 dark:border-zinc-800 rounded-xl">
-                                    <CheckCircle2 className="w-10 h-10 text-emerald-500 mx-auto mb-2" />
-                                    <h4 className="text-sm font-bold text-slate-800 dark:text-white">All Action Queues Clear</h4>
-                                    <p className="text-xs text-slate-500 dark:text-zinc-400 mt-1">
-                                        No pending payment verifications, applicant reviews, or overdue balances.
-                                    </p>
-                                </div>
+                {/* Right: Urgent Action Center & Operations Tasks (4 Cols, Fixed Height) */}
+                <div className="xl:col-span-4 bg-card border border-slate-200 dark:border-zinc-800 rounded-xl p-6 shadow-sm flex flex-col h-[540px]">
+                    {/* Header (fixed) */}
+                    <div className="shrink-0 mb-4">
+                        <div className="flex items-center gap-2">
+                            <h2 className="text-lg font-bold text-slate-900 dark:text-white">Action Center</h2>
+                            {computedMetrics.totalActionCount > 0 && (
+                                <span className="px-2 py-0.5 rounded-full text-[11px] font-bold bg-rose-500 text-white shadow-sm">
+                                    {computedMetrics.totalActionCount} Urgent
+                                </span>
                             )}
-
                         </div>
+                        <p className="text-xs text-slate-500 dark:text-zinc-400 mt-0.5">
+                            Items requiring administrator review or intervention
+                        </p>
                     </div>
 
-                    <div className="pt-4 mt-4 border-t border-slate-100 dark:border-zinc-800/80 flex items-center justify-between text-xs text-slate-500 dark:text-zinc-400">
+                    {/* Filter Pills (fixed) */}
+                    <div className="shrink-0 flex items-center gap-1.5 p-1 bg-slate-100 dark:bg-zinc-800/80 rounded-lg mb-4 text-xs font-semibold overflow-x-auto no-scrollbar">
+                        <button
+                            onClick={() => setUrgentFilter('all')}
+                            className={`px-2.5 py-1 rounded-md transition-all shrink-0 ${urgentFilter === 'all' ? 'bg-white dark:bg-zinc-900 text-slate-900 dark:text-white shadow-xs' : 'text-slate-500 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white'}`}
+                        >
+                            All ({computedMetrics.totalActionCount})
+                        </button>
+                        <button
+                            onClick={() => setUrgentFilter('verifications')}
+                            className={`px-2.5 py-1 rounded-md transition-all shrink-0 ${urgentFilter === 'verifications' ? 'bg-white dark:bg-zinc-900 text-amber-600 dark:text-amber-400 shadow-xs' : 'text-slate-500 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white'}`}
+                        >
+                            Slips ({computedMetrics.verificationsCount})
+                        </button>
+                        <button
+                            onClick={() => setUrgentFilter('applications')}
+                            className={`px-2.5 py-1 rounded-md transition-all shrink-0 ${urgentFilter === 'applications' ? 'bg-white dark:bg-zinc-900 text-cyan-600 dark:text-cyan-400 shadow-xs' : 'text-slate-500 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white'}`}
+                        >
+                            Applicants ({computedMetrics.applicationsCount})
+                        </button>
+                        <button
+                            onClick={() => setUrgentFilter('overdue')}
+                            className={`px-2.5 py-1 rounded-md transition-all shrink-0 ${urgentFilter === 'overdue' ? 'bg-white dark:bg-zinc-900 text-rose-600 dark:text-rose-400 shadow-xs' : 'text-slate-500 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white'}`}
+                        >
+                            Overdue ({computedMetrics.overdueCount})
+                        </button>
+                    </div>
+
+                    {/* Action Items List (scrollable, occupies remaining space) */}
+                    <div className="flex-1 min-h-0 overflow-y-auto pr-1 space-y-3 custom-scrollbar">
+                        
+                        {/* Payment Verifications */}
+                        {(urgentFilter === 'all' || urgentFilter === 'verifications') && stats.pendingPaymentVerifications?.map((verification) => (
+                            <Link
+                                key={`ver-${verification.id}`}
+                                href={`/admin/billing?tenant=${encodeURIComponent(verification.tenant_name)}&billId=${verification.bill_id || verification.id}&verify=true&highlight=true`}
+                                className="p-3 rounded-lg border border-amber-200/80 dark:border-amber-500/20 bg-amber-50/40 dark:bg-amber-500/5 hover:bg-amber-100/60 dark:hover:bg-amber-500/10 transition-colors flex items-center justify-between gap-2.5 group cursor-pointer"
+                            >
+                                <div className="flex items-start gap-2.5 min-w-0">
+                                    <div className="w-8 h-8 rounded-lg bg-amber-100 dark:bg-amber-500/20 text-amber-700 dark:text-amber-400 flex items-center justify-center shrink-0 mt-0.5 group-hover:scale-105 transition-transform">
+                                        <Receipt className="w-4 h-4" />
+                                    </div>
+                                    <div className="min-w-0">
+                                        <p className="text-xs font-bold text-slate-900 dark:text-white truncate group-hover:text-amber-600 dark:group-hover:text-amber-400 transition-colors">
+                                            {verification.tenant_name}
+                                        </p>
+                                        <p className="text-[11px] text-amber-700 dark:text-amber-400 font-semibold mt-0.5 truncate">
+                                            Submitted payment receipt • ₱{Number(verification.total_amount).toLocaleString()}
+                                        </p>
+                                        <span className="text-[10px] text-slate-400 dark:text-zinc-500 block truncate">
+                                            {new Date(verification.created_at).toLocaleDateString()}
+                                        </span>
+                                    </div>
+                                </div>
+                                <span className="px-2.5 py-1 text-[11px] font-bold rounded bg-amber-600 group-hover:bg-amber-700 text-white shrink-0 transition-colors shadow-xs">
+                                    Verify Slip
+                                </span>
+                            </Link>
+                        ))}
+
+                        {/* Pending Tenant Applications */}
+                        {(urgentFilter === 'all' || urgentFilter === 'applications') && stats.pendingTenantsList?.map((tenant) => (
+                            <Link
+                                key={`ten-${tenant.id}`}
+                                href={`/admin/tenants?tab=approvals&search=${encodeURIComponent(tenant.name)}&tenantId=${tenant.id}`}
+                                className="p-3 rounded-lg border border-cyan-200/80 dark:border-cyan-500/20 bg-cyan-50/40 dark:bg-cyan-500/5 hover:bg-cyan-100/60 dark:hover:bg-cyan-500/10 transition-colors flex items-center justify-between gap-2.5 group cursor-pointer"
+                            >
+                                <div className="flex items-start gap-2.5 min-w-0">
+                                    <div className="w-8 h-8 rounded-lg bg-cyan-100 dark:bg-cyan-500/20 text-cyan-700 dark:text-cyan-400 flex items-center justify-center shrink-0 mt-0.5 group-hover:scale-105 transition-transform">
+                                        <UserCheck className="w-4 h-4" />
+                                    </div>
+                                    <div className="min-w-0">
+                                        <p className="text-xs font-bold text-slate-900 dark:text-white truncate group-hover:text-cyan-600 dark:group-hover:text-cyan-400 transition-colors">
+                                            {tenant.name}
+                                        </p>
+                                        <p className="text-[11px] text-slate-600 dark:text-zinc-400 truncate mt-0.5">
+                                            {tenant.email}
+                                        </p>
+                                        <span className="text-[10px] text-slate-400 dark:text-zinc-500 block truncate">
+                                            Applied on {new Date(tenant.created_at).toLocaleDateString()}
+                                        </span>
+                                    </div>
+                                </div>
+                                <span className="px-2.5 py-1 text-[11px] font-bold rounded bg-cyan-600 group-hover:bg-cyan-700 text-white shrink-0 transition-colors shadow-xs">
+                                    Review
+                                </span>
+                            </Link>
+                        ))}
+
+                        {/* Overdue Unpaid Balances (Flexible Stays - Tenants can leave anytime) */}
+                        {(urgentFilter === 'all' || urgentFilter === 'overdue') && stats.overdueAccounts?.map((account) => (
+                            <Link
+                                key={`overdue-${account.tenant_id}`}
+                                href={`/admin/billing?tenant=${encodeURIComponent(account.tenant_name)}&highlight=true`}
+                                className="p-3 rounded-lg border border-rose-200/80 dark:border-rose-500/20 bg-rose-50/40 dark:bg-rose-500/5 hover:bg-rose-100/60 dark:hover:bg-rose-500/10 transition-colors flex items-center justify-between gap-2.5 group cursor-pointer"
+                            >
+                                <div className="flex items-start gap-2.5 min-w-0">
+                                    <div className="w-8 h-8 rounded-lg bg-rose-100 dark:bg-rose-500/20 text-rose-700 dark:text-rose-400 flex items-center justify-center shrink-0 mt-0.5 group-hover:scale-105 transition-transform">
+                                        <AlertTriangle className="w-4 h-4" />
+                                    </div>
+                                    <div className="min-w-0">
+                                        <p className="text-xs font-bold text-slate-900 dark:text-white truncate group-hover:text-rose-600 dark:group-hover:text-rose-400 transition-colors">
+                                            {account.tenant_name} (Room {account.room_number || 'N/A'})
+                                        </p>
+                                        <p className="text-[11px] text-rose-600 dark:text-rose-400 font-semibold mt-0.5 truncate">
+                                            Overdue: ₱{Number(account.total_overdue).toLocaleString()}
+                                        </p>
+                                        <span className="text-[10px] text-slate-400 dark:text-zinc-500 block truncate">
+                                            No fixed contract • Open-ended stay
+                                        </span>
+                                    </div>
+                                </div>
+                                <span className="px-2.5 py-1 text-[11px] font-bold rounded bg-rose-600 group-hover:bg-rose-700 text-white shrink-0 transition-colors shadow-xs">
+                                    Collect
+                                </span>
+                            </Link>
+                        ))}
+
+                        {/* Empty State */}
+                        {computedMetrics.totalActionCount === 0 && (
+                            <div className="text-center py-10 px-4 border border-dashed border-slate-200 dark:border-zinc-800 rounded-xl my-auto">
+                                <CheckCircle2 className="w-10 h-10 text-emerald-500 mx-auto mb-2" />
+                                <h4 className="text-sm font-bold text-slate-800 dark:text-white">All Action Queues Clear</h4>
+                                <p className="text-xs text-slate-500 dark:text-zinc-400 mt-1">
+                                    No pending payment verifications, applicant reviews, or overdue balances.
+                                </p>
+                            </div>
+                        )}
+
+                    </div>
+
+                    {/* Footer (fixed at bottom) */}
+                    <div className="shrink-0 pt-4 mt-auto border-t border-slate-100 dark:border-zinc-800/80 flex items-center justify-between text-xs text-slate-500 dark:text-zinc-400">
                         <span>Automatic refresh active</span>
                         <Link href="/admin/settings" className="text-cyan-600 dark:text-cyan-400 font-medium hover:underline flex items-center gap-1">
                             Workflow settings <ChevronRight className="w-3 h-3" />
@@ -822,7 +869,7 @@ export default function AdminDashboard() {
                             Operational Activity Ledger
                         </h2>
                         <p className="text-xs text-slate-500 dark:text-zinc-400 mt-0.5">
-                            Real-time records for collections, delinquent accounts, maintenance dispatches, and activity log
+                            Real-time records for collections, delinquent accounts, maintenance requests, and activity log
                         </p>
                     </div>
 
@@ -946,7 +993,7 @@ export default function AdminDashboard() {
                                             </td>
                                             <td className="py-2.5 px-6 text-right">
                                                 <button 
-                                                    onClick={() => toast.success(`Payment overdue notice dispatched to ${account.tenant_name}`)}
+                                                    onClick={() => toast.success(`Payment overdue notice sent to ${account.tenant_name}`)}
                                                     className="text-rose-600 dark:text-rose-400 font-semibold hover:underline"
                                                 >
                                                     Send Reminder
@@ -966,13 +1013,13 @@ export default function AdminDashboard() {
                         </div>
                     )}
 
-                    {/* Maintenance Tickets */}
+                    {/* Maintenance Requests */}
                     {activeLedgerTab === 'maintenance' && (
                         <div className="overflow-x-auto overflow-y-auto max-h-[282px] custom-scrollbar">
                             <table className="w-full min-w-full text-left text-xs border-collapse">
                                 <thead className="sticky top-0 z-10 bg-slate-100 dark:bg-zinc-800 shadow-xs">
                                     <tr className="h-[42px] bg-slate-100 dark:bg-zinc-800 text-slate-700 dark:text-zinc-300 uppercase tracking-wider text-[11px] font-bold">
-                                        <th className="py-2.5 px-6 bg-slate-100 dark:bg-zinc-800 border-b border-slate-200 dark:border-zinc-700">Ticket Title</th>
+                                        <th className="py-2.5 px-6 bg-slate-100 dark:bg-zinc-800 border-b border-slate-200 dark:border-zinc-700">Request # & Title</th>
                                         <th className="py-2.5 px-4 bg-slate-100 dark:bg-zinc-800 border-b border-slate-200 dark:border-zinc-700">Tenant</th>
                                         <th className="py-2.5 px-4 bg-slate-100 dark:bg-zinc-800 border-b border-slate-200 dark:border-zinc-700">Created Date</th>
                                         <th className="py-2.5 px-4 bg-slate-100 dark:bg-zinc-800 border-b border-slate-200 dark:border-zinc-700">Status</th>
@@ -983,7 +1030,12 @@ export default function AdminDashboard() {
                                     {stats.recentRequests.map((req) => (
                                         <tr key={req.id} className="h-[48px] hover:bg-slate-50/50 dark:hover:bg-zinc-900/30 transition-colors">
                                             <td className="py-2.5 px-6 font-bold text-slate-900 dark:text-white">
-                                                {req.title}
+                                                <div className="flex items-center gap-2">
+                                                    <span className="font-mono text-[11px] font-semibold text-teal-600 dark:text-teal-400">
+                                                        {formatRequestNumber(req.id)}
+                                                    </span>
+                                                    <span className="truncate">{req.title}</span>
+                                                </div>
                                             </td>
                                             <td className="py-2.5 px-4 text-slate-600 dark:text-zinc-300">
                                                 {req.tenant_name}
@@ -993,12 +1045,12 @@ export default function AdminDashboard() {
                                             </td>
                                             <td className="py-2.5 px-4">
                                                 <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-amber-600 dark:text-amber-400">
-                                                    <Clock className="w-3 h-3" /> Active Ticket
+                                                    <Clock className="w-3 h-3" /> Active Request
                                                 </span>
                                             </td>
                                             <td className="py-2.5 px-6 text-right">
                                                 <Link href="/admin/requests" className="text-cyan-600 dark:text-cyan-400 font-semibold hover:underline">
-                                                    Manage Ticket
+                                                    Manage Request
                                                 </Link>
                                             </td>
                                         </tr>
@@ -1049,6 +1101,230 @@ export default function AdminDashboard() {
                 </div>
 
             </div>
+
+            {/* ANNOUNCEMENT POP-UP MODAL */}
+            <AnimatePresence>
+                {showAnnouncementModal && (
+                    <motion.div 
+                        initial={{ opacity: 0 }} 
+                        animate={{ opacity: 1 }} 
+                        exit={{ opacity: 0 }} 
+                        className="fixed inset-0 bg-black/60 backdrop-blur-xs z-50 flex items-center justify-center p-3 sm:p-4"
+                        onClick={(e) => {
+                            if (e.target === e.currentTarget) setShowAnnouncementModal(false);
+                        }}
+                    >
+                        <motion.div 
+                            initial={{ scale: 0.96, opacity: 0, y: 8 }} 
+                            animate={{ scale: 1, opacity: 1, y: 0 }} 
+                            exit={{ scale: 0.96, opacity: 0, y: 8 }} 
+                            className="bg-card border border-slate-200 dark:border-zinc-800 rounded-2xl w-full max-w-2xl overflow-hidden shadow-2xl flex flex-col max-h-[90vh]"
+                        >
+                            {/* Modal Header */}
+                            <div className="p-4 sm:p-5 border-b border-slate-200 dark:border-zinc-800 flex items-center justify-between bg-slate-50/80 dark:bg-zinc-900/80 shrink-0">
+                                <div className="flex items-center gap-2.5">
+                                    <div className="w-9 h-9 rounded-xl bg-teal-50 dark:bg-teal-500/10 text-teal-700 dark:text-teal-400 border border-teal-200 dark:border-teal-500/30 flex items-center justify-center shrink-0">
+                                        <Megaphone className="w-4 h-4" />
+                                    </div>
+                                    <div>
+                                        <h2 className="text-base sm:text-lg font-black text-slate-950 dark:text-white">
+                                            Property Announcements
+                                        </h2>
+                                        <p className="text-xs text-slate-500 dark:text-zinc-400 mt-0.5">
+                                            Broadcast notices to all residents and review recent bulletins
+                                        </p>
+                                    </div>
+                                </div>
+                                <button 
+                                    onClick={() => setShowAnnouncementModal(false)} 
+                                    className="p-1.5 rounded-lg hover:bg-slate-200 dark:hover:bg-zinc-800 text-slate-500 dark:text-zinc-400 transition-colors cursor-pointer"
+                                    title="Close modal"
+                                >
+                                    <X className="w-5 h-5" />
+                                </button>
+                            </div>
+
+                            {/* Modal Body - Scrollable */}
+                            <div className="p-4 sm:p-5 overflow-y-auto custom-scrollbar space-y-5">
+                                
+                                {/* 1. Recent Announcements Section */}
+                                <div>
+                                    <div className="flex items-center justify-between mb-2.5">
+                                        <span className="text-xs font-black uppercase tracking-wider text-slate-700 dark:text-zinc-300">
+                                            Recent Announcements ({announcements.length})
+                                        </span>
+                                        {isLoadingAnnouncements && (
+                                            <span className="text-[11px] text-slate-400 flex items-center gap-1 font-semibold">
+                                                <RefreshCw className="w-3 h-3 animate-spin" />
+                                                <span>Refreshing...</span>
+                                            </span>
+                                        )}
+                                    </div>
+
+                                    <div className="max-h-56 overflow-y-auto custom-scrollbar space-y-2 border border-slate-200 dark:border-zinc-800 rounded-xl p-2 bg-slate-50/50 dark:bg-zinc-900/30">
+                                        {isLoadingAnnouncements && announcements.length === 0 ? (
+                                            <div className="py-8 text-center text-xs text-slate-400">
+                                                <RefreshCw className="w-5 h-5 animate-spin mx-auto mb-2 text-teal-600" />
+                                                <p>Loading recent announcements...</p>
+                                            </div>
+                                        ) : announcements.length === 0 ? (
+                                            <div className="py-8 text-center text-xs text-slate-400 dark:text-zinc-500">
+                                                <Megaphone className="w-6 h-6 mx-auto mb-1.5 opacity-30 text-teal-600" />
+                                                <p className="font-semibold text-slate-700 dark:text-zinc-300">No announcements posted yet.</p>
+                                                <p className="text-[11px] text-slate-400 mt-0.5">Use the form below to publish your first announcement to all tenants.</p>
+                                            </div>
+                                        ) : (
+                                            announcements.map((ann) => {
+                                                const annDate = new Date(ann.created_at).toLocaleDateString(undefined, { 
+                                                    month: 'short', 
+                                                    day: 'numeric', 
+                                                    year: 'numeric' 
+                                                });
+                                                const isUrgent = ann.type === 'Alert' || ann.type === 'Urgent';
+                                                const isMaintenance = ann.type === 'Maintenance';
+                                                const isBilling = ann.type === 'Billing';
+
+                                                return (
+                                                    <div 
+                                                        key={ann.id} 
+                                                        className="p-3 bg-white dark:bg-zinc-800/80 border border-slate-200 dark:border-zinc-700/70 rounded-lg shadow-2xs hover:border-slate-300 dark:hover:border-zinc-600 transition-colors"
+                                                    >
+                                                        <div className="flex items-start justify-between gap-2">
+                                                            <div className="flex items-center gap-2 flex-wrap">
+                                                                <h4 className="font-bold text-xs sm:text-sm text-slate-950 dark:text-white">
+                                                                    {ann.title}
+                                                                </h4>
+                                                                <span className={`px-2 py-0.2 rounded-md text-[10px] font-bold ${
+                                                                    isUrgent
+                                                                        ? 'bg-rose-50 dark:bg-rose-500/10 text-rose-700 dark:text-rose-400 border border-rose-200 dark:border-rose-500/30'
+                                                                        : isMaintenance
+                                                                            ? 'bg-amber-50 dark:bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-200 dark:border-amber-500/30'
+                                                                            : isBilling
+                                                                                ? 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-500/30'
+                                                                                : 'bg-slate-100 dark:bg-zinc-700 text-slate-700 dark:text-zinc-200 border border-slate-200 dark:border-zinc-600'
+                                                                }`}>
+                                                                    {ann.type}
+                                                                </span>
+                                                            </div>
+
+                                                            <div className="flex items-center gap-2 shrink-0">
+                                                                <span className="text-[11px] font-mono text-slate-400 dark:text-zinc-500">
+                                                                    {annDate}
+                                                                </span>
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => handleDeleteAnnouncement(ann.id)}
+                                                                    className="p-1 text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 rounded transition-colors cursor-pointer"
+                                                                    title="Delete announcement"
+                                                                >
+                                                                    <Trash2 className="w-3.5 h-3.5" />
+                                                                </button>
+                                                            </div>
+                                                        </div>
+
+                                                        <p className="text-xs text-slate-700 dark:text-zinc-300 font-normal leading-relaxed mt-1.5 whitespace-pre-wrap">
+                                                            {ann.content}
+                                                        </p>
+
+                                                        {ann.created_by_name && (
+                                                            <div className="text-[10px] text-slate-400 dark:text-zinc-500 mt-2 font-medium">
+                                                                Posted by {ann.created_by_name}
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                );
+                                            })
+                                        )}
+                                    </div>
+                                </div>
+
+                                {/* 2. New Announcement Input Section */}
+                                <form onSubmit={handlePostAnnouncement} className="space-y-3 pt-4 border-t border-slate-200 dark:border-zinc-800">
+                                    <div className="flex items-center justify-between">
+                                        <span className="text-xs font-black uppercase tracking-wider text-slate-700 dark:text-zinc-300">
+                                            Compose Announcement
+                                        </span>
+                                        <span className="text-[11px] text-slate-400 font-medium">
+                                            Notifies all tenant portals
+                                        </span>
+                                    </div>
+
+                                    {/* Title and Category Row */}
+                                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                                        <div className="sm:col-span-2 space-y-1">
+                                            <label className="text-[11px] font-bold text-slate-700 dark:text-zinc-300">
+                                                Announcement Title
+                                            </label>
+                                            <input
+                                                type="text"
+                                                placeholder="e.g., Scheduled Water Interruption, Cleanliness Notice"
+                                                value={announcementForm.title}
+                                                onChange={(e) => setAnnouncementForm({ ...announcementForm, title: e.target.value })}
+                                                className="w-full py-2 px-3 text-xs sm:text-sm font-semibold rounded-lg bg-slate-50 dark:bg-zinc-900 border border-slate-300 dark:border-zinc-700 text-slate-950 dark:text-white placeholder:text-slate-400 dark:placeholder:text-zinc-500 focus:outline-none focus:ring-1 focus:ring-teal-500"
+                                            />
+                                        </div>
+
+                                        <div className="space-y-1">
+                                            <label className="text-[11px] font-bold text-slate-700 dark:text-zinc-300">
+                                                Category
+                                            </label>
+                                            <CustomSelect
+                                                value={announcementForm.type}
+                                                onChange={(val) => setAnnouncementForm({ ...announcementForm, type: val })}
+                                                options={["General", "Urgent", "Maintenance", "Billing"]}
+                                                className="w-full py-2 px-3 text-xs sm:text-sm font-bold rounded-lg bg-slate-50 dark:bg-zinc-900 border border-slate-300 dark:border-zinc-700 text-slate-900 dark:text-zinc-100"
+                                            />
+                                        </div>
+                                    </div>
+
+                                    {/* Announcement Content Text Box */}
+                                    <div className="space-y-1">
+                                        <label className="text-[11px] font-bold text-slate-700 dark:text-zinc-300">
+                                            Announcement Message
+                                        </label>
+                                        <textarea
+                                            rows={3}
+                                            placeholder="Write your announcement details here. Tenants will see this on their dashboard and notifications..."
+                                            value={announcementForm.content}
+                                            onChange={(e) => setAnnouncementForm({ ...announcementForm, content: e.target.value })}
+                                            className="w-full py-2.5 px-3 text-xs sm:text-sm font-medium rounded-lg bg-slate-50 dark:bg-zinc-900 border border-slate-300 dark:border-zinc-700 text-slate-950 dark:text-white placeholder:text-slate-400 dark:placeholder:text-zinc-500 focus:outline-none focus:ring-1 focus:ring-teal-500 leading-relaxed"
+                                        />
+                                    </div>
+
+                                    {/* Footer Action Buttons */}
+                                    <div className="flex items-center justify-end gap-2.5 pt-2">
+                                        <button
+                                            type="button"
+                                            onClick={() => setShowAnnouncementModal(false)}
+                                            className="px-3.5 py-2 text-xs sm:text-sm font-semibold rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-slate-700 dark:text-zinc-300 transition-colors cursor-pointer"
+                                        >
+                                            Cancel
+                                        </button>
+                                        <button
+                                            type="submit"
+                                            disabled={isPostingAnnouncement || !announcementForm.title.trim() || !announcementForm.content.trim()}
+                                            className="px-4 py-2 text-xs sm:text-sm font-bold rounded-lg bg-teal-700 hover:bg-teal-800 text-white transition-colors flex items-center gap-1.5 shadow-xs cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                                        >
+                                            {isPostingAnnouncement ? (
+                                                <>
+                                                    <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                                                    <span>Broadcasting...</span>
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <Send className="w-3.5 h-3.5" />
+                                                    <span>Publish Announcement</span>
+                                                </>
+                                            )}
+                                        </button>
+                                    </div>
+                                </form>
+
+                            </div>
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
 
         </div>
     );
