@@ -719,7 +719,7 @@ export default function AdminSettingsPage() {
                             </h2>
                         </div>
                         <p className="text-xs text-slate-500 dark:text-zinc-400 mt-1">
-                            Configure automated management alerts, payment verification pings, and audio dispatch tones.
+                            Configure automated management alerts, payment verification pings, and audio alert tones.
                         </p>
                     </div>
                     <span className="text-[11px] font-semibold text-teal-600 dark:text-teal-400">
@@ -732,9 +732,9 @@ export default function AdminSettingsPage() {
                         { key: 'tenantRegistration', label: 'New Resident Registration Online', desc: 'Instant toast & badge alert when an applicant registers for room assignment' },
                         { key: 'paymentSubmission', label: 'E-Receipt & Payment Proof Submissions', desc: 'Alert when a tenant uploads GCash, Maya, or bank transfer receipt for verification' },
                         { key: 'overduePayment', label: 'Overdue Rent & Balance Accounts', desc: 'Notify management when a tenant passes the grace period without settling dues' },
-                        { key: 'newMaintenance', label: 'Emergency & Maintenance Work Orders', desc: 'Instant high-priority ticket ping when a repair request is lodged' },
+                        { key: 'newMaintenance', label: 'Emergency & Maintenance Work Orders', desc: 'Instant high-priority notification when a repair request is lodged' },
                         { key: 'chatMessage', label: 'Resident Direct Chat Inquiries', desc: 'Live counter increment & sound chime on unread resident messages' },
-                        { key: 'soundAlerts', label: 'Audio Chime on Critical Alerts', desc: 'Play subtle soft notification audio tone for urgent maintenance tickets' }
+                        { key: 'soundAlerts', label: 'Audio Chime on Critical Alerts', desc: 'Play subtle soft notification audio tone for urgent maintenance requests' }
                     ].map((item: any) => (
                         <ToggleSwitch
                             key={item.key}
