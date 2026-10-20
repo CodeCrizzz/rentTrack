@@ -74,13 +74,13 @@ export default function CustomSelect({ value, onChange, options, className = '',
                                     }}
                                     className={`px-4 py-2.5 cursor-pointer transition-colors flex items-center justify-between ${
                                         value === option.value 
-                                            ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400 font-bold' 
-                                            : 'hover:bg-slate-50 dark:hover:bg-zinc-900/50'
+                                            ? 'bg-zinc-100 text-zinc-950 dark:bg-zinc-800 dark:text-white font-bold' 
+                                            : 'hover:bg-slate-50 dark:hover:bg-zinc-800/50'
                                     }`}
                                 >
                                     <span className="block truncate">{option.label}</span>
                                     {value === option.value && (
-                                        <div className="w-1.5 h-1.5 rounded-full bg-emerald-500"></div>
+                                        <div className="w-1.5 h-1.5 rounded-full bg-zinc-950 dark:bg-white"></div>
                                     )}
                                 </li>
                             ))}
