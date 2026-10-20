@@ -1,0 +1,542 @@
+================================================================================
+                           RENTTRACK PLATFORM WORKFLOW
+             End-to-End System, User & Operational Workflows Guide
+================================================================================
+
+PROJECT NAME       : RentTrack (RentFlow)
+SYSTEM TYPE        : Boarding House, Dormitory & Rental Property Management Platform
+ARCHITECTURE       : Decoupled Full-Stack Web Application (Next.js + Express + PostgreSQL)
+DOCUMENT VERSION   : 1.0.0
+DATE CREATED       : October 2026
+ENVIRONMENT        : Node.js v20+, Next.js 15, PostgreSQL 16 (Schema: rentTrack_schema)
+
+================================================================================
+TABLE OF CONTENTS
+================================================================================
+1. High-Level Architectural Flow
+2. End-to-End Tenant Lifecycle Workflow
+   2.1 Resident Registration & Application
+   2.2 Room Discovery, Reservation & Bedspace Selection
+   2.3 Account Verification & Placement
+   2.4 Daily Living, Dashboard & Tenancy Status
+   2.5 Billing Invoices & Notification Flow
+   2.6 Payment Submission & Proof-of-Payment Flow
+   2.7 Maintenance & Repair Ticketing Flow
+   2.8 Direct Messaging & Community Announcements
+   2.9 Resident Profile & Settings
+   2.10 Move-Out & Departure Process
+3. End-to-End Administrator Operational Workflow
+   3.1 Daily Login & Executive Dashboard Oversight
+   3.2 Room Inventory & Bed Capacity Management
+   3.3 Tenant Registry & Application Review Desk
+   3.4 Billing Operations & Tariff Configuration
+   3.5 Payment Verification & Financial Reconciliation
+   3.6 Maintenance & Repair Dispatch Desk
+   3.7 Community Broadcasting & Direct Resident Chat
+   3.8 Premises CCTV & Security Monitoring Matrix
+   3.9 System Settings & Platform Governance
+4. Automated Background & Cron Engine Workflows
+   4.1 Scheduled Monthly Bill Generation Engine
+   4.2 Overdue Rent Auditing & Automated Reminders
+   4.3 Resident Presence & Activity Tracking Service
+5. State Machine & Lifecycle Transitions
+   5.1 Room & Bed Space State Machine
+   5.2 Invoice & Bill State Machine
+   5.3 Payment Transaction State Machine
+   5.4 Maintenance Work Order State Machine
+   5.5 Resident Account State Machine
+6. API & Network Communication Flow
+7. File Upload & Attachment Workflow
+
+================================================================================
+1. HIGH-LEVEL ARCHITECTURAL FLOW
+================================================================================
+
+The RentTrack platform operates on a client-server architecture with separation 
+of concerns between the frontend user interface, backend REST API, and relational 
+PostgreSQL database.
+
+  +------------------------------------------------------------------------+
+  |                           CLIENT BROWSER                               |
+  |                                                                        |
+  |  [Admin Web Portal]                           [Tenant Self-Service]    |
+  |  Next.js 15 (React 19)                        Next.js 15 (React 19)    |
+  |  Tailwind CSS v4 + Framer Motion              Tailwind CSS v4          |
+  |  Role: 'admin'                                Role: 'tenant'           |
+  +-----------------------------------+------------------------------------+
+                                      |
+                           HTTPS / JSON REST API
+                         (Bearer JWT in Auth Header)
+                                      |
+  +-----------------------------------v------------------------------------+
+  |                           BACKEND API ENGINE                           |
+  |                                                                        |
+  |  Node.js (Express.js v5)                                               |
+  |  - Auth Middleware: protect, adminOnly, tenantOnly                     |
+  |  - Multer Disk Engine: /uploads/payments, /uploads/requests            |
+  |  - Business Controllers: Rooms, Tenants, Bills, Payments, Chat, CCTV   |
+  |  - Scheduled Cron Services: Billing Engine, Reminder & Overdue Watcher |
+  |  - Real-time Presence Engine: Active connection polling & heartbeats   |
+  +-----------------------------------+------------------------------------+
+                                      |
+                        PostgreSQL Connection Pool
+                      (Schema: rentTrack_schema, pg)
+                                      |
+  +-----------------------------------v------------------------------------+
+  |                           DATABASE LAYER                               |
+  |                                                                        |
+  |  PostgreSQL 16 Database: rentTrack_db                                  |
+  |  Schema: "rentTrack_schema"                                            |
+  |  Tables: users, rooms, bills, payments, requests, messages,            |
+  |          announcements, notifications                                  |
+  +------------------------------------------------------------------------+
+
+================================================================================
+2. END-TO-END TENANT LIFECYCLE WORKFLOW
+================================================================================
+
+--------------------------------------------------------------------------------
+2.1 Resident Registration & Application
+--------------------------------------------------------------------------------
+1. Tenant visits the public portal and navigates to the Registration page.
+2. Tenant inputs credentials:
+   - Full Name
+   - Email address (unique identifier)
+   - Password & password confirmation
+   - Phone number
+   - Emergency contact name & phone
+3. Frontend validates inputs and submits to `POST /api/auth/register`.
+4. Backend hashes the password using bcryptjs (salt rounds: 10), sets user role 
+   to 'tenant' and status to 'Pending', and saves record in `users` table.
+5. System returns a signed JWT token and user profile. Tenant is automatically 
+   redirected to the Tenant Portal onboarding view.
+
+--------------------------------------------------------------------------------
+2.2 Room Discovery, Reservation & Bedspace Selection
+--------------------------------------------------------------------------------
+1. Upon first login (or when unassigned), tenant navigates to `/tenant/rooms`.
+2. Tenant reviews available units, filtering by:
+   - Room number
+   - Floor level
+   - Room type (Single, Double, Shared/Dormitory)
+   - Rental type (Whole Room vs. Bedspace)
+   - Monthly rental rate
+   - Amenities (Air Conditioning, Private Bath, Wi-Fi, Balcony, etc.)
+3. Tenant clicks "Select Room" or "Apply for Bedspace".
+4. Frontend dispatches `POST /api/tenant/rooms/choose` with `{ room_id }`.
+5. Backend associates the tenant record with the selected room in `users` table, 
+   sets tenant status to 'Pending' (awaiting landlord approval), and generates 
+   an onboarding notification for the property administrator.
+
+--------------------------------------------------------------------------------
+2.3 Account Verification & Placement
+--------------------------------------------------------------------------------
+1. The administrator reviews the pending applicant on the Admin Portal.
+2. Once the admin clicks "Approve", the tenant's account status transitions to 'Active'.
+3. The selected room's occupant counter (`current_occupants`) increments by 1.
+4. Tenant receives real-time approval status on the next portal refresh, granting 
+   full access to all resident features (Billing, Maintenance, Messaging).
+
+--------------------------------------------------------------------------------
+2.4 Daily Living, Dashboard & Tenancy Status
+--------------------------------------------------------------------------------
+1. Tenant accesses `/tenant/dashboard` to view their executive resident summary:
+   - Outstanding Balance Counter (animated in PHP currency format).
+   - Current Room Information (Unit #, bed capacity, roommates, assigned amenities).
+   - Upcoming Due Date Countdown & alert status.
+   - Quick Action Shortcuts (Pay Rent, Log Maintenance, Message Landlord).
+   - Recent Activity & Payment Timeline.
+   - Property Announcements Carousel.
+
+--------------------------------------------------------------------------------
+2.5 Billing Invoices & Notification Flow
+--------------------------------------------------------------------------------
+1. Invoices are generated automatically on the 1st of each month (or issued 
+   manually by the administrator).
+2. The bill record contains:
+   - Base monthly room/bedspace rent
+   - Water utility charge
+   - Electricity charges (submetered or shared)
+   - Miscellaneous / ancillary charges
+   - Total amount due, balance, and due date (typically the 5th of the month)
+3. An automated notification (`billing_due`) is created in the database.
+4. The tenant's navbar notification bell increments and displays a badge.
+5. The Tenant Dashboard updates the outstanding balance card to reflect the new invoice.
+
+--------------------------------------------------------------------------------
+2.6 Payment Submission & Proof-of-Payment Flow
+--------------------------------------------------------------------------------
+1. Tenant navigates to `/tenant/payments` and clicks "Submit Payment".
+2. System presents payment options:
+   - GCash (with display of property QR code and account details)
+   - Maya (with QR and mobile number)
+   - Bank Transfer (BDO/BPI account details)
+   - Cash / In-Person payment
+3. Tenant submits payment details:
+   - Associated Bill ID
+   - Payment Date
+   - Payment Method
+   - Amount Paid (Supports full or partial payment)
+   - Reference Number (e.g., GCash 13-digit transaction reference)
+   - Notes / remarks
+   - Proof-of-Payment Receipt (File upload: JPG/PNG/PDF screenshot)
+4. Frontend dispatches `multipart/form-data` to `POST /api/tenant/payments`.
+5. Backend Multer middleware saves the receipt image into `/uploads/payments/`.
+6. A new payment record is created with status = 'Pending' (or 'Pending Verification').
+7. The bill status updates to 'Pending Verification'.
+8. Administrator is alerted via the admin notification queue to audit the receipt.
+
+--------------------------------------------------------------------------------
+2.7 Maintenance & Repair Ticketing Flow
+--------------------------------------------------------------------------------
+1. When an issue occurs in the tenant's room or common area, tenant navigates 
+   to `/tenant/requests` and clicks "New Maintenance Request".
+2. Tenant fills out the request form:
+   - Category (Plumbing, Electrical, HVAC, Carpentry, Internet, Furniture, General)
+   - Priority level (Low, Normal, High)
+   - Issue description
+   - Optional photo/attachment of the defect
+3. Frontend sends `multipart/form-data` to `POST /api/requests`.
+4. Backend assigns a standardized tracking number (e.g., `RT-667916`), stores 
+   uploaded defect image in `/uploads/requests/`, and sets status to 'Pending'.
+5. Tenant can monitor ticket status in real-time:
+   - "Pending" -> Landlord review
+   - "In Progress" -> Technician dispatched and repair underway
+   - "Resolved" -> Repair completed
+6. If the repair issue resolves itself before technician dispatch, tenant can 
+   cancel the pending ticket with one click.
+
+--------------------------------------------------------------------------------
+2.8 Direct Messaging & Community Announcements
+--------------------------------------------------------------------------------
+1. Direct Messaging (`/tenant/chat`):
+   - Tenant opens the chat module to directly converse with the property administrator.
+   - Fast messaging interface showing sent/received bubbles with exact timestamps.
+   - Online status indicators show whether admin is currently active.
+   - Unread message counters dynamically update the sidebar and header badges.
+2. Announcements (`/tenant/announcements`):
+   - Tenant reviews official property broadcasts from the landlord.
+   - Notices are prioritized (Urgent, Important, Standard) with publication timestamps.
+
+--------------------------------------------------------------------------------
+2.9 Resident Profile & Settings
+--------------------------------------------------------------------------------
+1. Tenant clicks the Settings icon in the header navbar to open the pop-up modal.
+2. Tenant can configure:
+   - Registered statements email
+   - Security password (with password strength rating and authorization check)
+   - Two-factor authentication preference
+   - Notification triggers (Billing, Payment verifications, Maintenance updates, Chimes)
+   - Appearance theme (Clean Light, Deep Obsidian, System Sync)
+   - Active session device review and secure Sign Out
+3. Changes remain in draft state and ONLY apply upon clicking "Save Changes".
+
+--------------------------------------------------------------------------------
+2.10 Move-Out & Departure Process
+--------------------------------------------------------------------------------
+1. Tenant communicates move-out intent to administrator (or leaves at end of stay).
+2. Administrator verifies that all invoices have zero remaining balance.
+3. Administrator terminates occupancy in the tenant directory:
+   - Tenant status updates to 'Moved Out' / 'Inactive'.
+   - Tenant is detached from the room.
+   - Room occupancy counter decrements by 1, automatically freeing bedspace.
+   - User account is archived or deactivated.
+
+================================================================================
+3. END-TO-END ADMINISTRATOR OPERATIONAL WORKFLOW
+================================================================================
+
+--------------------------------------------------------------------------------
+3.1 Daily Login & Executive Dashboard Oversight
+--------------------------------------------------------------------------------
+1. Administrator logs into `/login` with administrative credentials.
+2. System validates role = 'admin' and issues an administrative JWT token.
+3. Admin is directed to `/admin/dashboard`, presenting:
+   - High-Density KPI Metric Ribbon:
+     * Total Units, Occupancy Density %, Vacant Units, Maintenance Units
+     * Total Tenants, Active Residents, Pending Approvals, Overdue Arrears
+     * Gross Receivables, Total Collected Revenue, Collection Rate %
+   - Cash Flow Overview (Interactive Recharts chart comparing Billed vs Collected).
+   - Operational Action Counters (Pending Verification Payments, Pending Applicants).
+   - Recent Live Activity Stream (Recent payments, maintenance alerts, arrivals).
+   - Offline Activity Notification Catch-Up System (Top Navbar Bell Dropdown):
+     * The notification panel functions specifically to alert the administrator of activities
+       that occurred while the administrator account was offline.
+     * When a tenant performs an action (submitting account approval, submitting payment proof,
+       creating a maintenance ticket, or sending a direct message) while the admin is offline,
+       an offline activity alert is queued.
+     * If the administrator is actively online in the portal, real-time counters and views 
+       handle updates directly without cluttering the offline notification panel.
+     * When the administrator opens the system or logs back in after being away, the Bell icon
+       displays an unread counter badge. Opening the panel displays the exact changes made during
+       their absence, with direct navigation links to review, approve, or verify each item.
+     * Clicking "Mark all read" or reviewing individual items clears the alerts, returning the
+       panel to the "No new notifications" idle state.
+
+--------------------------------------------------------------------------------
+3.2 Room Inventory & Bed Capacity Management
+--------------------------------------------------------------------------------
+1. Admin navigates to `/admin/rooms` to manage units across all building floors.
+2. Actions available:
+   - Add Room (`POST /api/admin/rooms`): Room number, floor, capacity, room type, 
+     rental mode (whole room vs bedspace), base rate, and amenities tags.
+   - Edit Room (`PUT /api/admin/rooms/:id`): Update rates, capacity, or amenities.
+   - Room Status Management: Mark unit as "Maintenance" to temporarily take it offline.
+   - Delete Room (`DELETE /api/admin/rooms/:id`): Permitted only if 0 occupants.
+   - Resident Assignment: Directly allocate residents into specific room slots.
+3. Real-time filtering by Floor, Room Type, Rental Mode, and Occupancy Status.
+
+--------------------------------------------------------------------------------
+3.3 Tenant Registry & Application Review Desk
+--------------------------------------------------------------------------------
+1. Admin navigates to `/admin/tenants` containing two operational views:
+   - View A: "Resident Directory"
+     * Alphabetical/room-sorted ledger of all active and departed residents.
+     * Fast search by first letter or full name tokens.
+     * Displays: Resident identity, room & bedspace, phone, monthly rent, ledger balance, status.
+     * Actions: View full tenant audit drawer, edit profile, terminate tenancy.
+   - View B: "Account Approvals"
+     * Queue of newly registered applicants who selected a room.
+     * Displays: Applicant photo avatar, email, requested room, phone, submission date.
+     * Actions: "Approve" (activates tenant and allocates bedspace) or "Decline".
+
+--------------------------------------------------------------------------------
+3.4 Billing Operations & Tariff Configuration
+--------------------------------------------------------------------------------
+1. Admin navigates to `/admin/billing` containing:
+   - Executive Metric Ribbon: Gross Receivables, Total Collected, GCash Proofs Pending, 
+     Outstanding Arrears.
+   - Tab 1: "Invoices & Dues"
+     * Master billing table listing every generated invoice.
+     * Columns: Tenant & Room, Period & Due Date, Rent, Water, Power, Gross Total, 
+       Paid, Balance, Status, Actions.
+     * Filterable by Month, Room, Newest/Oldest/Balance, and Payment Status.
+   - Tab 2: "Payment Journal"
+     * Real-time ledger of verified cash and digital transactions.
+   - Single Bill Issuance: Admin clicks "Issue Bill" to manually create custom invoices.
+
+--------------------------------------------------------------------------------
+3.5 Payment Verification & Financial Reconciliation
+--------------------------------------------------------------------------------
+1. When tenants upload payment proofs, admin sees the "GCash Proof of Payment: X Pending" counter.
+2. Admin opens the invoice row or filters by "Verification":
+   - Admin clicks "Verify / Inspect Receipt".
+   - System presents high-resolution proof image modal (with zoom and pan capabilities).
+   - Modal displays: Tenant name, declared amount, reference number, date, and payment channel.
+3. Decision:
+   - "Approve & Mark Paid":
+     * Backend updates payment record status to 'Approved' / 'Verified'.
+     * Backend recalculates bill balance: `balance = total_amount - sum(verified_payments)`.
+     * If balance <= 0, bill status sets to 'Paid'. If balance > 0, status sets to 'Partial'.
+     * Tenant ledger updates automatically.
+   - "Reject Proof":
+     * Status marked 'Rejected' with rejection note sent to resident. Bill remains unpaid.
+
+--------------------------------------------------------------------------------
+3.6 Maintenance & Repair Dispatch Desk
+--------------------------------------------------------------------------------
+1. Admin navigates to `/admin/requests`:
+   - High-density ledger of all open and resolved repair work orders.
+   - Displays: Standardized Request # (e.g. `RT-740746`), Tenant & Room, Category, 
+     Priority (High Priority in red, Normal, Low), Status, Actions.
+2. Quick Action Workflow:
+   - For 'Pending' tickets: Click "Start" -> Transitions ticket directly to 'In Progress'.
+   - For 'In Progress' tickets: Click "Resolve" -> Transitions ticket to 'Resolved'.
+3. Admin clicks "Inspect" to view full complaint description, uploaded defect photo, 
+   and tenant contact information.
+
+--------------------------------------------------------------------------------
+3.7 Community Broadcasting & Direct Resident Chat
+--------------------------------------------------------------------------------
+1. Announcements (`/admin/announcements`):
+   - Admin creates property-wide broadcast notices with title, body, priority flag, 
+     and target audience.
+   - Broadcast immediately appears on all tenant dashboards.
+2. Landlord Chat (`/admin/chat`):
+   - Unified inbox showing all resident conversations with unread badges.
+   - Real-time conversation stream with automatic read status updates upon opening.
+
+--------------------------------------------------------------------------------
+3.8 Premises CCTV & Security Monitoring Matrix
+--------------------------------------------------------------------------------
+1. Admin navigates to `/admin/cctv`.
+2. System loads multi-camera surveillance matrix:
+   - 12 active camera feeds covering Entrance, Lobby, Corridors, Parking, Rooftop, etc.
+   - Live simulated timecode, FPS display, and operational health indicators.
+   - Configurable grid view switcher (2x2, 3x3, 4x4 matrix).
+   - Fullscreen camera inspection modal for granular perimeter monitoring.
+
+--------------------------------------------------------------------------------
+3.9 System Settings & Platform Governance
+--------------------------------------------------------------------------------
+1. Access & Interaction:
+   - Admin clicks Settings icon in the top header navbar to open the high-density modal,
+     or navigates directly to `/admin/settings` for the dedicated full-page console.
+2. Configuration Pillars:
+   - Property Profile: Management of the official property name, physical address, 
+     contact details, landlord name, and TIN/Tax ID.
+   - Billing & Tariffs: Configuration of the monthly due day, late fee penalties, 
+     grace periods, water rates, and electricity rates.
+   - Notification Rules: Toggles for various system alerts, including new registration 
+     notifications, payment verification prompts, and overdue notices.
+   - Appearance: UI theme selection options including Clean Light, Deep Obsidian, 
+     or System Sync.
+   - Security & Sessions: Tools to inspect active administrative sessions and securely 
+     log out, manage master credentials, and enforce Two-Factor Authentication (2FA).
+3. Draft State Governance:
+   - A structural rule where all modifications remain strictly in a draft state and are 
+     only applied to the live system once the admin clicks "Save Changes".
+   - Clicking "Discard", pressing Escape, or closing the modal immediately reverts all 
+     unsaved modifications back to the persisted snapshot.
+
+================================================================================
+4. AUTOMATED BACKGROUND & CRON ENGINE WORKFLOWS
+================================================================================
+
+The RentTrack backend runs automated background daemons without requiring manual 
+administrator intervention:
+
+--------------------------------------------------------------------------------
+4.1 Scheduled Monthly Bill Generation Engine
+--------------------------------------------------------------------------------
+- Trigger Schedule: Executed on the 1st day of every month at 00:00:00 midnight.
+- Engine: `node-cron` daemon inside `backend/services/billingService.js`.
+- Procedure:
+  1. Queries all tenants where `status = 'Active'` and `room_id IS NOT NULL`.
+  2. For each active tenant, queries assigned room base price (`price`).
+  3. Computes:
+     - Rent Amount = `room.price`
+     - Water Charge = configured default water tariff
+     - Electricity Charge = base charge or submetered reading
+     - Total Amount = `rent + water + electricity`
+  4. Verifies idempotency (ensures duplicate bill does not already exist for current billing_month).
+  5. Inserts new bill row into `rentTrack_schema.bills` with status = 'Unpaid' and balance = total.
+  6. Inserts in-app notifications (`billing_due`) for each tenant.
+
+--------------------------------------------------------------------------------
+4.2 Overdue Rent Auditing & Automated Reminders
+--------------------------------------------------------------------------------
+- Trigger Schedule: Runs automatically every 24 hours at 01:00:00 AM.
+- Procedure:
+  1. Compares current calendar date against `due_date + grace_period_days`.
+  2. For all unpaid or partially paid bills exceeding due date:
+     - Updates bill status to 'Overdue'.
+     - Applies configured late fee penalty (if auto-penalty enabled).
+     - Inserts urgent overdue reminder into tenant notification queue.
+  3. Updates admin dashboard Overdue Arrears metric tile.
+
+--------------------------------------------------------------------------------
+4.3 Resident Presence & Activity Tracking Service
+--------------------------------------------------------------------------------
+- Trigger Schedule: Periodic heartbeats every 30 seconds from active web sockets / HTTP polling.
+- Tracks active sessions to display real-time Online/Offline presence badges in landlord chat.
+
+================================================================================
+5. STATE MACHINE & LIFECYCLE TRANSITIONS
+================================================================================
+
+--------------------------------------------------------------------------------
+5.1 Room & Bed Space State Machine
+--------------------------------------------------------------------------------
+  [ Vacant Unit ]
+        |
+        | (Tenant selects bedspace / Admin allocates tenant)
+        v
+  [ Partially Occupied ]  <--- (Occupants > 0 AND Occupants < Capacity)
+        |
+        | (Additional tenants assigned until Capacity reached)
+        v
+  [ Fully Occupied ]      <--- (Occupants == Capacity)
+        |
+        | (Tenant moves out / departure)
+        v
+  [ Partially Occupied / Vacant ]
+
+  * Any room can transition to [ Maintenance ] manually by administrator, 
+    temporarily hiding it from new applicant discovery.
+
+--------------------------------------------------------------------------------
+5.2 Invoice & Bill State Machine
+--------------------------------------------------------------------------------
+  [ Issued / Unpaid ]
+        |
+        +---> (Tenant uploads payment proof) --------> [ Pending Verification ]
+        |                                                     |
+        |                                                     +--> (Admin Approves)
+        |                                                     |         |
+        |                                                     |         v
+        +---> (Due date expires + grace period)               |    [ Paid / Partial ]
+        |                                                     |
+        v                                                     +--> (Admin Rejects)
+  [ Overdue ] <-----------------------------------------------+         |
+        |                                                               v
+        +---> (Payment submitted and verified) ---------------->   [ Unpaid ]
+
+--------------------------------------------------------------------------------
+5.3 Maintenance Work Order State Machine
+--------------------------------------------------------------------------------
+  [ Submitted / Pending ]
+        |
+        +---> (Admin clicks 'Start') ---------> [ In Progress ]
+        |                                            |
+        +---> (Tenant cancels before dispatch)       +--> (Admin clicks 'Resolve')
+        |                                            |
+        v                                            v
+  [ Cancelled ]                                [ Resolved ]
+
+--------------------------------------------------------------------------------
+5.4 Resident Account State Machine
+--------------------------------------------------------------------------------
+  [ Registered Applicant ]
+        |
+        +---> (Admin Approves Application) ---> [ Active Resident ]
+        |                                             |
+        +---> (Admin Declines Application)            +--> (Tenant Departed / Moved Out)
+        |                                             |
+        v                                             v
+  [ Declined ]                                  [ Moved Out / Inactive ]
+
+================================================================================
+6. API & NETWORK COMMUNICATION FLOW
+================================================================================
+
+All client communications pass through the centralized Axios API client 
+(`frontend/src/lib/api.ts`) configured with automatic request/response interceptors:
+
+1. Request Interceptor:
+   - Reads `token` from `localStorage`.
+   - Injects `Authorization: Bearer <token>` into HTTP request headers.
+2. Response Interceptor:
+   - Intercepts 401 Unauthorized responses.
+   - Clears stale credentials and cleanly redirects client to `/login`.
+3. Network Error Resilience:
+   - Intercepts offline/network failures (`ERR_NETWORK`) gracefully, preventing 
+     unhandled client-side crashes and alerting with Sonner toast notices.
+
+Key Endpoint Namespaces:
+- `/api/auth/*`          : Authentication, registration, login, token refresh
+- `/api/admin/*`         : Landlord dashboard, rooms CRUD, tenant registry, billing
+- `/api/tenant/*`        : Resident dashboard, room selection, payment uploads, notifications
+- `/api/requests/*`      : Maintenance ticketing and work order tracking
+- `/api/admin/chat/*`    : Real-time messaging and conversation threads
+
+================================================================================
+7. FILE UPLOAD & ATTACHMENT WORKFLOW
+================================================================================
+
+1. Payment Receipts:
+   - Uploaded through `multipart/form-data` with field name `proofOfPayment`.
+   - Filtered for allowed MIME types: `image/jpeg`, `image/png`, `image/webp`, `application/pdf`.
+   - Stored on server disk in `backend/uploads/payments/`.
+   - Filename format: `${Date.now()}-${tenantId}.${ext}`.
+   - Accessed statically via `GET /uploads/payments/:filename`.
+
+2. Maintenance Defect Photos:
+   - Uploaded with field name `attachment` or `image`.
+   - Stored on server disk in `backend/uploads/requests/`.
+   - Filename format: `${Date.now()}-${requestId}.${ext}`.
+   - Accessed statically via `GET /uploads/requests/:filename`.
+
+================================================================================
+                             END OF WORKFLOW DOCUMENT
+================================================================================
