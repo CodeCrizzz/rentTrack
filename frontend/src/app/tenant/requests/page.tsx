@@ -263,20 +263,20 @@ export default function TenantMaintenance() {
             {/* Summary Dashboard */}
             <motion.div variants={itemVariants} className="grid grid-cols-2 sm:grid-cols-4 gap-4 bg-card rounded-xl border border-slate-200 dark:border-zinc-800 p-5 shadow-xs mb-6">
                 <div className="border-r border-slate-200 dark:border-zinc-800 pr-4">
-                    <p className="text-xs font-bold text-slate-500 uppercase tracking-widest">Total</p>
+                    <p className="text-xs font-bold text-slate-500 dark:text-zinc-400 uppercase tracking-widest">Total</p>
                     <p className="text-2xl sm:text-3xl font-black font-mono text-slate-900 dark:text-white mt-1">{summary.total}</p>
                 </div>
                 <div className="border-r border-slate-200 dark:border-zinc-800 sm:px-4">
-                    <p className="text-xs font-bold text-slate-500 uppercase tracking-widest">Pending</p>
-                    <p className="text-2xl sm:text-3xl font-black font-mono text-amber-600 dark:text-amber-400 mt-1">{summary.pending}</p>
+                    <p className="text-xs font-bold text-slate-500 dark:text-zinc-400 uppercase tracking-widest">Pending</p>
+                    <p className="text-2xl sm:text-3xl font-black font-mono text-slate-900 dark:text-white mt-1">{summary.pending}</p>
                 </div>
                 <div className="border-r border-slate-200 dark:border-zinc-800 sm:px-4">
-                    <p className="text-xs font-bold text-slate-500 uppercase tracking-widest">In Progress</p>
-                    <p className="text-2xl sm:text-3xl font-black font-mono text-blue-600 dark:text-blue-400 mt-1">{summary.progress}</p>
+                    <p className="text-xs font-bold text-slate-500 dark:text-zinc-400 uppercase tracking-widest">In Progress</p>
+                    <p className="text-2xl sm:text-3xl font-black font-mono text-slate-900 dark:text-white mt-1">{summary.progress}</p>
                 </div>
                 <div className="sm:pl-4">
-                    <p className="text-xs font-bold text-slate-500 uppercase tracking-widest">Resolved</p>
-                    <p className="text-2xl sm:text-3xl font-black font-mono text-emerald-600 dark:text-emerald-400 mt-1">{summary.resolved}</p>
+                    <p className="text-xs font-bold text-slate-500 dark:text-zinc-400 uppercase tracking-widest">Resolved</p>
+                    <p className="text-2xl sm:text-3xl font-black font-mono text-slate-900 dark:text-white mt-1">{summary.resolved}</p>
                 </div>
             </motion.div>
 
@@ -314,7 +314,7 @@ export default function TenantMaintenance() {
                                 placeholder="E.g. Leaking Faucet in bathroom" 
                                 value={title} 
                                 onChange={(e) => setTitle(e.target.value)} 
-                                className="w-full bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-lg px-4 py-2.5 text-sm outline-none focus:border-indigo-500 text-slate-900 dark:text-white" 
+                                className="w-full bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-lg px-4 py-2.5 text-sm outline-none focus:border-zinc-400 dark:focus:border-zinc-600 text-slate-900 dark:text-white" 
                             />
                         </div>
 
@@ -324,7 +324,7 @@ export default function TenantMaintenance() {
                                 <select 
                                     value={category} 
                                     onChange={(e) => setCategory(e.target.value)} 
-                                    className="w-full bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-lg px-3 py-2.5 text-sm outline-none focus:border-indigo-500 cursor-pointer text-slate-900 dark:text-white"
+                                    className="w-full bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-lg px-3 py-2.5 text-sm outline-none focus:border-zinc-400 dark:focus:border-zinc-600 cursor-pointer text-slate-900 dark:text-white"
                                 >
                                     <option value="Plumbing">Plumbing</option>
                                     <option value="Electrical">Electrical</option>
@@ -340,7 +340,7 @@ export default function TenantMaintenance() {
                                 <select 
                                     value={priority} 
                                     onChange={(e) => setPriority(e.target.value)} 
-                                    className="w-full bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-lg px-3 py-2.5 text-sm outline-none focus:border-indigo-500 cursor-pointer text-slate-900 dark:text-white"
+                                    className="w-full bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-lg px-3 py-2.5 text-sm outline-none focus:border-zinc-400 dark:focus:border-zinc-600 cursor-pointer text-slate-900 dark:text-white"
                                 >
                                     <option value="Low">Low</option>
                                     <option value="Medium">Medium</option>
@@ -358,7 +358,7 @@ export default function TenantMaintenance() {
                                 placeholder="Explain the issue in detail..." 
                                 value={description} 
                                 onChange={(e) => setDescription(e.target.value)} 
-                                className="w-full bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-lg px-4 py-2.5 text-sm outline-none focus:border-indigo-500 resize-none text-slate-900 dark:text-white" 
+                                className="w-full bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-lg px-4 py-2.5 text-sm outline-none focus:border-zinc-400 dark:focus:border-zinc-600 resize-none text-slate-900 dark:text-white" 
                             />
                         </div>
 
@@ -371,7 +371,7 @@ export default function TenantMaintenance() {
                                 placeholder="E.g. Tomorrow morning or Saturday afternoon" 
                                 value={schedule} 
                                 onChange={(e) => setSchedule(e.target.value)} 
-                                className="w-full bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-lg px-4 py-2.5 text-sm outline-none focus:border-indigo-500 text-slate-900 dark:text-white" 
+                                className="w-full bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-lg px-4 py-2.5 text-sm outline-none focus:border-zinc-400 dark:focus:border-zinc-600 text-slate-900 dark:text-white" 
                             />
                         </div>
 
@@ -382,7 +382,7 @@ export default function TenantMaintenance() {
                             >
                                 {imageFile ? (
                                     <div className="flex items-center justify-between w-full text-xs">
-                                        <span className="font-semibold text-indigo-600 dark:text-indigo-400 truncate max-w-[200px]">{imageFile.name}</span>
+                                        <span className="font-semibold text-slate-900 dark:text-white truncate max-w-[200px]">{imageFile.name}</span>
                                         <button 
                                             type="button" 
                                             onClick={(e) => { e.stopPropagation(); setImageFile(null); if (fileInputRef.current) fileInputRef.current.value = ''; }}
@@ -415,7 +415,7 @@ export default function TenantMaintenance() {
                                 type="submit" 
                                 form="maintenance-form" 
                                 disabled={isSubmitting} 
-                                className="w-1/2 py-2.5 text-xs sm:text-sm font-bold rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white transition-colors disabled:opacity-70 flex items-center justify-center gap-2 shadow-xs"
+                                className="w-1/2 py-2.5 text-xs sm:text-sm font-bold rounded-lg bg-zinc-900 hover:bg-zinc-800 dark:bg-zinc-100 dark:hover:bg-zinc-200 text-white dark:text-zinc-950 transition-colors disabled:opacity-70 flex items-center justify-center gap-2 shadow-xs"
                             >
                                 {isSubmitting && <div className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />}
                                 {isSubmitting ? 'Submitting...' : 'Submit Request'}
@@ -436,11 +436,11 @@ export default function TenantMaintenance() {
                                 placeholder="Search requests..." 
                                 value={searchQuery} 
                                 onChange={(e) => setSearchQuery(e.target.value)} 
-                                className="w-full bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-lg pl-9 pr-3 py-2 text-xs sm:text-sm outline-none focus:border-indigo-500" 
+                                className="w-full bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-lg pl-9 pr-3 py-2 text-xs sm:text-sm outline-none focus:border-zinc-400 dark:focus:border-zinc-600" 
                             />
                         </div>
                         
-                        <select value={filterStatus} onChange={(e) => { setFilterStatus(e.target.value); setCurrentPage(1); }} className="bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-lg px-2.5 py-2 text-xs font-semibold outline-none focus:border-indigo-500">
+                        <select value={filterStatus} onChange={(e) => { setFilterStatus(e.target.value); setCurrentPage(1); }} className="bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-lg px-2.5 py-2 text-xs font-semibold outline-none focus:border-zinc-400 dark:focus:border-zinc-600">
                             <option value="All">All Status</option>
                             <option value="Pending">Pending</option>
                             <option value="In Progress">In Progress</option>
@@ -448,7 +448,7 @@ export default function TenantMaintenance() {
                             <option value="Cancelled">Cancelled</option>
                         </select>
                         
-                        <select value={filterCategory} onChange={(e) => { setFilterCategory(e.target.value); setCurrentPage(1); }} className="bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-lg px-2.5 py-2 text-xs font-semibold outline-none focus:border-indigo-500">
+                        <select value={filterCategory} onChange={(e) => { setFilterCategory(e.target.value); setCurrentPage(1); }} className="bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-lg px-2.5 py-2 text-xs font-semibold outline-none focus:border-zinc-400 dark:focus:border-zinc-600">
                             <option value="All">All Categories</option>
                             <option value="Plumbing">Plumbing</option>
                             <option value="Electrical">Electrical</option>
@@ -459,7 +459,7 @@ export default function TenantMaintenance() {
                             <option value="Other">Other</option>
                         </select>
 
-                        <select value={sortBy} onChange={(e) => setSortBy(e.target.value)} className="bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-lg px-2.5 py-2 text-xs font-semibold outline-none focus:border-indigo-500">
+                        <select value={sortBy} onChange={(e) => setSortBy(e.target.value)} className="bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-lg px-2.5 py-2 text-xs font-semibold outline-none focus:border-zinc-400 dark:focus:border-zinc-600">
                             <option value="date_desc">Newest First</option>
                             <option value="date_asc">Oldest First</option>
                             <option value="priority_desc">Priority (High-Low)</option>
@@ -516,7 +516,7 @@ export default function TenantMaintenance() {
                                                     )}
                                                     <button 
                                                         onClick={() => setSelectedRequest(r)} 
-                                                        className="p-1.5 rounded-md hover:bg-secondary text-slate-500 hover:text-indigo-600 transition-colors inline-block" 
+                                                        className="p-1.5 rounded-md hover:bg-secondary text-slate-500 hover:text-slate-900 dark:hover:text-white transition-colors inline-block" 
                                                         title="View Details"
                                                     >
                                                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path></svg>
