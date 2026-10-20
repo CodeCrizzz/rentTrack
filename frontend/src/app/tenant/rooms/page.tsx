@@ -24,7 +24,12 @@ const getAmenityIcon = (label: string) => {
     return Sparkles;
 };
 
-const formatRequestNumber = (id: any) => 'RT' + String(id || '').padStart(4, '0');
+const formatRequestNumber = (id: any, reqNum?: string | null) => {
+    if (reqNum) return reqNum;
+    if (typeof id === 'string' && id.startsWith('RT')) return id;
+    if (!id) return '';
+    return 'RT-' + String(id).padStart(6, '0');
+};
 
 export default function TenantRooms() {
     const [rooms, setRooms] = useState<any[]>([]);
@@ -353,7 +358,7 @@ export default function TenantRooms() {
                                                             reqItem.status === 'In Progress' ? 'bg-indigo-500' : 'bg-amber-500'
                                                         }`}></span>
                                                         <span className="font-mono text-xs font-bold text-teal-600 dark:text-teal-400 shrink-0">
-                                                            {formatRequestNumber(reqItem.id)}
+                                                            {formatRequestNumber(reqItem.id, reqItem.request_number)}
                                                         </span>
                                                         <p className="text-sm sm:text-base font-bold text-slate-900 dark:text-white truncate group-hover:text-teal-500 transition-colors">{reqItem.title}</p>
                                                     </div>
@@ -471,7 +476,7 @@ export default function TenantRooms() {
                                     <div className="p-4 border-b border-slate-100 dark:border-zinc-800 flex justify-between items-center bg-slate-50/50 dark:bg-zinc-900/40">
                                         <h2 className="text-base font-extrabold text-slate-900 dark:text-white flex items-center gap-2">
                                             <Wrench className="w-4.5 h-4.5 text-teal-600" />
-                                            <span>Request #{formatRequestNumber(selectedMaintenance.id)} Details</span>
+                                            <span>Request #{formatRequestNumber(selectedMaintenance.id, selectedMaintenance.request_number)} Details</span>
                                         </h2>
                                         <button onClick={() => setSelectedMaintenance(null)} className="p-1 rounded-lg hover:bg-slate-200 dark:hover:bg-zinc-800 text-slate-500">
                                             <X className="w-4 h-4" />

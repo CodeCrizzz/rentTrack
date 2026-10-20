@@ -514,7 +514,7 @@ const getTenantRooms = async (req, res) => {
             // Fetch room maintenance history
             const maintenanceQuery = `
                 SELECT 
-                    r.id, r.title, r.description, r.category, r.status, r.priority, r.created_at,
+                    r.id, r.request_number, r.title, r.description, r.category, r.status, r.priority, r.created_at,
                     u.name as reported_by
                 FROM requests r
                 JOIN users u ON r.tenant_id = u.id

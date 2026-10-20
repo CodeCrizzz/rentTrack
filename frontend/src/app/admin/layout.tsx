@@ -133,7 +133,6 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         localStorage.setItem('admin_read_unreadCount', unreadCount.toString());
         localStorage.setItem('admin_read_pendingCount', pendingTenantsCount.toString());
         localStorage.setItem('admin_read_paymentsCount', pendingPaymentsCount.toString());
-        toast.success("All notifications marked as read");
     };
 
     const handleLogout = () => {

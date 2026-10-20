@@ -21,9 +21,11 @@ interface Request {
     request_number?: string | null;
 }
 
-const formatRequestNumber = (id: number | string) => {
+const formatRequestNumber = (id: number | string, reqNum?: string | null) => {
+    if (reqNum) return reqNum;
+    if (typeof id === 'string' && id.startsWith('RT')) return id;
     if (!id) return '';
-    return 'RT' + String(id).padStart(4, '0');
+    return 'RT-' + String(id).padStart(6, '0');
 };
 
 const formatDate = (dateString: string | null | undefined, options?: Intl.DateTimeFormatOptions) => {
@@ -112,7 +114,7 @@ export default function TenantMaintenance() {
 
     const filteredRequests = useMemo(() => {
         return requests.filter(r => {
-            const reqNum = formatRequestNumber(r.id);
+            const reqNum = r.request_number || formatRequestNumber(r.id);
             const matchesSearch = r.id.toString().includes(searchQuery) || 
                 reqNum.toLowerCase().includes(searchQuery.toLowerCase()) ||
                 r.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -206,7 +208,8 @@ export default function TenantMaintenance() {
                 setSelectedRequest(prev => prev ? { ...prev, status: 'Cancelled' } : null);
             }
             
-            toast.success(`Request #${formatRequestNumber(id)} cancelled successfully.`);
+            const targetNum = confirmCancelRequest?.request_number || formatRequestNumber(id);
+            toast.success(`Request #${targetNum} cancelled successfully.`);
             setConfirmCancelRequest(null);
         } catch (error: any) {
             console.error("Failed to cancel request", error);
@@ -484,7 +487,7 @@ export default function TenantMaintenance() {
                                     paginatedRequests.map((r) => (
                                         <tr key={r.id} className="hover:bg-slate-50 dark:hover:bg-zinc-800/50 transition-colors">
                                             <td className="px-5 py-3.5">
-                                                <p className="font-bold text-xs font-mono text-slate-900 dark:text-white">{formatRequestNumber(r.id)}</p>
+                                                <p className="font-bold text-xs font-mono text-slate-900 dark:text-white">{formatRequestNumber(r.id, r.request_number)}</p>
                                                 <p className="text-[11px] text-slate-500 dark:text-zinc-400 mt-0.5">{formatDate(r.created_at)}</p>
                                             </td>
                                             <td className="px-5 py-3.5">
@@ -556,7 +559,7 @@ export default function TenantMaintenance() {
                                 <div className="p-5 border-b border-slate-200 dark:border-zinc-800 flex justify-between items-center bg-secondary/50">
                                     <div>
                                         <h2 className="text-base font-bold flex items-center gap-2 text-slate-900 dark:text-white">
-                                            Request #{formatRequestNumber(selectedRequest.id)}
+                                            Request #{formatRequestNumber(selectedRequest.id, selectedRequest.request_number)}
                                         </h2>
                                     </div>
                                     <button onClick={() => setSelectedRequest(null)} className="p-1.5 rounded-lg hover:bg-slate-200 dark:hover:bg-zinc-800 text-slate-500 transition-colors">
@@ -672,7 +675,7 @@ export default function TenantMaintenance() {
                                     </div>
                                     <div>
                                         <h3 className="text-base font-bold text-slate-900 dark:text-white">
-                                            Cancel Request #{formatRequestNumber(confirmCancelRequest.id)}?
+                                            Cancel Request #{formatRequestNumber(confirmCancelRequest.id, confirmCancelRequest.request_number)}?
                                         </h3>
                                         <p className="text-xs text-slate-500 dark:text-zinc-400">
                                             This will withdraw your submitted request.

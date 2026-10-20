@@ -44,7 +44,7 @@ const getDashboardStats = async (req, res) => {
                 ORDER BY p.payment_date DESC LIMIT 50
             `),
             db.query(`
-                SELECT r.id, u.name as tenant_name, r.title, r.created_at 
+                SELECT r.id, r.request_number, u.name as tenant_name, r.title, r.created_at 
                 FROM requests r 
                 JOIN users u ON r.tenant_id = u.id 
                 ORDER BY r.created_at DESC LIMIT 50
@@ -277,6 +277,7 @@ const getDashboardStats = async (req, res) => {
         // Recent Requests List
         const recentRequests = recentRequestsResult.rows.map(r => ({
             id: r.id,
+            request_number: r.request_number || `RT-${String(r.id).padStart(6, '0')}`,
             tenant_name: r.tenant_name,
             title: r.title,
             created_at: r.created_at

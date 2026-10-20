@@ -1,4 +1,5 @@
 const db = require('../config/db');
+const { generateUniqueRequestNumber } = require('../utils/requestNumberGenerator');
 
 // @desc    Create a new maintenance request
 // @route   POST /api/requests
@@ -13,19 +14,21 @@ const createRequest = async (req, res) => {
             attachment_url = `/uploads/requests/${req.file.filename}`;
         }
 
+        // Dynamically generate collision-proof unique random request number
+        const request_number = await generateUniqueRequestNumber(db);
+
         const newRequest = await db.query(
-            `INSERT INTO requests (tenant_id, title, description, category, priority, attachment_url) 
-             VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
-            [tenant_id, title, description, category || 'Other', priority || 'Normal', attachment_url]
+            `INSERT INTO requests (tenant_id, title, description, category, priority, attachment_url, request_number) 
+             VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *`,
+            [tenant_id, title, description, category || 'Other', priority || 'Normal', attachment_url, request_number]
         );
 
         const createdReq = newRequest.rows[0];
-        const request_number = `RT${String(createdReq.id).padStart(4, '0')}`;
 
         res.status(201).json({ 
             message: 'Request submitted successfully', 
-            request: { ...createdReq, request_number },
-            request_number
+            request: { ...createdReq, request_number: createdReq.request_number || request_number },
+            request_number: createdReq.request_number || request_number
         });
     } catch (error) {
         console.error('Error creating request:', error);
@@ -45,7 +48,7 @@ const getMyRequests = async (req, res) => {
         );
         const rows = requests.rows.map(r => ({
             ...r,
-            request_number: `RT${String(r.id).padStart(4, '0')}`
+            request_number: r.request_number || `RT-${String(r.id).padStart(6, '0')}`
         }));
         res.status(200).json(rows);
     } catch (error) {
@@ -61,7 +64,7 @@ const getAllRequests = async (req, res) => {
     try {
         const requests = await db.query(`
             SELECT 
-                r.id, r.title, r.description, r.category, r.priority, r.status, r.created_at, r.assigned_to, r.admin_notes, r.scheduled_date, r.date_resolved, r.attachment_url,
+                r.id, r.request_number, r.title, r.description, r.category, r.priority, r.status, r.created_at, r.assigned_to, r.admin_notes, r.scheduled_date, r.date_resolved, r.attachment_url,
                 u.name as tenant_name,
                 rm.room_number
             FROM requests r
@@ -71,7 +74,7 @@ const getAllRequests = async (req, res) => {
         `);
         const rows = requests.rows.map(r => ({
             ...r,
-            request_number: `RT${String(r.id).padStart(4, '0')}`
+            request_number: r.request_number || `RT-${String(r.id).padStart(6, '0')}`
         }));
         res.status(200).json(rows);
     } catch (error) {
@@ -115,7 +118,7 @@ const updateRequest = async (req, res) => {
         );
 
         const updated = updatedRequest.rows[0];
-        const request_number = `RT${String(updated.id).padStart(4, '0')}`;
+        const request_number = updated.request_number || `RT-${String(updated.id).padStart(6, '0')}`;
         res.status(200).json({ 
             message: 'Request updated successfully', 
             request: { ...updated, request_number },
@@ -156,7 +159,7 @@ const cancelRequest = async (req, res) => {
         );
 
         const cancelled = updatedRequest.rows[0];
-        const request_number = `RT${String(cancelled.id).padStart(4, '0')}`;
+        const request_number = cancelled.request_number || `RT-${String(cancelled.id).padStart(6, '0')}`;
         res.status(200).json({ 
             message: 'Request cancelled successfully', 
             request: { ...cancelled, request_number },
