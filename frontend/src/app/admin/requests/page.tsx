@@ -9,13 +9,14 @@ import {
     Wrench, AlertTriangle, Calendar, User, 
     CheckCircle2, Clock, Eye, X, 
     RefreshCw, Droplets, Zap, Wind, Hammer, Wifi, 
-    HelpCircle, ZoomIn, UserCheck, Paperclip, Check,
+    HelpCircle, ZoomIn, UserCheck, Check,
     List, LayoutGrid, ShieldAlert, TrendingUp, Phone,
-    Send, Building2, Search
+    Send, Building2, Search, Camera
 } from 'lucide-react';
 
 interface MaintenanceRequest {
     id: number;
+    request_number?: string | null;
     title: string;
     description: string;
     category: string;
@@ -29,6 +30,7 @@ interface MaintenanceRequest {
     tenant_name: string;
     room_number: string | null;
     attachment_url: string | null;
+    image_url?: string | null;
 }
 
 const cardVariants: Variants = {
@@ -81,8 +83,9 @@ export default function AdminMaintenanceRequests() {
             const payload: any = { status: nextStatus };
             if (nextStatus === 'Resolved') payload.date_resolved = new Date().toISOString();
 
-            await api.put(`/admin/requests/${reqId}`, payload);
-            toast.success(`Request #${formatRequestNumber(reqId)} marked as ${nextStatus}`);
+            const targetReq = requests.find(r => r.id === reqId);
+            const reqLabel = targetReq?.request_number || formatRequestNumber(reqId);
+            toast.success(`Request #${reqLabel} marked as ${nextStatus}`);
         } catch (error) {
             console.error("Status update error", error);
             toast.error("Failed to update status");
@@ -108,13 +111,9 @@ export default function AdminMaintenanceRequests() {
         return requests.filter(r => {
             const q = searchQuery.toLowerCase().trim();
             const matchesSearch = !q || (
-                r.title.toLowerCase().includes(q) ||
-                r.description.toLowerCase().includes(q) ||
                 r.tenant_name.toLowerCase().includes(q) ||
-                (r.room_number && r.room_number.toLowerCase().includes(q)) ||
-                (r.assigned_to && r.assigned_to.toLowerCase().includes(q)) ||
-                formatRequestNumber(r.id).toLowerCase().includes(q) ||
-                `#req-${r.id}`.includes(q) ||
+                (r.request_number && r.request_number.toLowerCase().includes(q)) ||
+                formatRequestNumber(r.id, r.request_number).toLowerCase().includes(q) ||
                 r.id.toString() === q
             );
 
@@ -133,12 +132,14 @@ export default function AdminMaintenanceRequests() {
     }, [requests, searchQuery, statusFilter, priorityFilter, categoryFilter]);
 
     // Helpers
-    const formatRequestNumber = (id: number | string) => {
+    const formatRequestNumber = (id: number | string, reqNum?: string | null) => {
+        if (reqNum) return reqNum;
+        if (typeof id === 'string' && id.startsWith('RT')) return id;
         if (!id) return '';
-        return 'RT' + String(id).padStart(4, '0');
+        return 'RT-' + String(id).padStart(6, '0');
     };
 
-    const getAttachmentUrl = (path: string | null) => {
+    const getAttachmentUrl = (path: string | null | undefined) => {
         if (!path) return null;
         if (path.startsWith('http://') || path.startsWith('https://')) return path;
         const host = typeof window !== 'undefined' ? window.location.hostname : 'localhost';
@@ -233,41 +234,36 @@ export default function AdminMaintenanceRequests() {
                     ))}
                 </div>
 
-                {/* Status Tabs & Filters */}
+                {/* Status Tabs & Filters Skeleton */}
                 <div className="shrink-0 bg-card border border-slate-200 dark:border-zinc-800 rounded-xl p-2 shadow-xs">
-                    <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-2">
-                        <div className="flex items-center gap-1.5 overflow-x-auto">
-                            {[...Array(5)].map((_, i) => (
-                                <div key={i} className="h-8 w-28 bg-slate-100 dark:bg-zinc-800 rounded-lg"></div>
-                            ))}
-                        </div>
-                        <div className="flex flex-wrap items-center gap-2">
-                            <div className="h-8 w-56 bg-slate-100 dark:bg-zinc-800 rounded-lg"></div>
-                            <div className="h-8 w-36 bg-slate-100 dark:bg-zinc-800 rounded-lg"></div>
-                            <div className="h-8 w-40 bg-slate-100 dark:bg-zinc-800 rounded-lg"></div>
-                        </div>
+                    <div className="flex flex-wrap items-center gap-2">
+                        <div className="h-8 w-56 sm:w-64 bg-slate-100 dark:bg-zinc-800 rounded-lg"></div>
+                        <div className="h-8 w-36 bg-slate-100 dark:bg-zinc-800 rounded-lg"></div>
+                        <div className="h-8 w-40 bg-slate-100 dark:bg-zinc-800 rounded-lg"></div>
+                        <div className="h-8 w-40 bg-slate-100 dark:bg-zinc-800 rounded-lg"></div>
                     </div>
                 </div>
 
-                {/* Main Work Orders Ledger */}
-                <div className="flex-1 min-h-0 bg-card border border-slate-200 dark:border-zinc-800 rounded-xl overflow-hidden shadow-xs flex flex-col">
+                {/* Main Work Orders Ledger Skeleton */}
+                <div className="flex-1 min-h-0 max-h-[610px] bg-card border border-slate-200 dark:border-zinc-800 rounded-xl overflow-hidden shadow-xs flex flex-col relative">
+                    <div className="absolute top-0 right-0 w-6 h-[46px] bg-slate-100 dark:bg-zinc-900 border-b border-slate-200 dark:border-zinc-800 z-30 pointer-events-none rounded-tr-xl" />
                     <div className="overflow-x-auto overflow-y-auto flex-1 custom-scrollbar">
                         <table className="w-full min-w-full text-left text-sm border-collapse">
-                            <thead className="sticky top-0 z-10 bg-slate-100 dark:bg-zinc-800 shadow-xs">
-                                <tr className="h-[44px] text-slate-700 dark:text-zinc-300 uppercase tracking-wider text-sm font-black">
-                                    <th className="py-2.5 px-4"><div className="h-4 w-28 bg-slate-200 dark:bg-zinc-700 rounded"></div></th>
-                                    <th className="py-2.5 px-4"><div className="h-4 w-36 bg-slate-200 dark:bg-zinc-700 rounded"></div></th>
-                                    <th className="py-2.5 px-3 text-center"><div className="h-4 w-20 bg-slate-200 dark:bg-zinc-700 rounded mx-auto"></div></th>
-                                    <th className="py-2.5 px-3 text-center"><div className="h-4 w-20 bg-slate-200 dark:bg-zinc-700 rounded mx-auto"></div></th>
-                                    <th className="py-2.5 px-4"><div className="h-4 w-32 bg-slate-200 dark:bg-zinc-700 rounded"></div></th>
-                                    <th className="py-2.5 px-3.5"><div className="h-4 w-24 bg-slate-200 dark:bg-zinc-700 rounded"></div></th>
-                                    <th className="py-2.5 px-3 text-center"><div className="h-4 w-12 bg-slate-200 dark:bg-zinc-700 rounded mx-auto"></div></th>
-                                    <th className="py-2.5 px-4 text-right"><div className="h-4 w-24 bg-slate-200 dark:bg-zinc-700 rounded ml-auto"></div></th>
+                            <thead className="sticky top-0 z-20 bg-slate-100 dark:bg-zinc-900 shadow-xs border-b border-slate-200 dark:border-zinc-800">
+                                <tr className="h-[46px] bg-slate-100 dark:bg-zinc-900 text-slate-700 dark:text-zinc-300 uppercase tracking-wider text-sm font-black">
+                                    <th className="py-2.5 px-4 bg-slate-100 dark:bg-zinc-900 border-b border-slate-200 dark:border-zinc-800"><div className="h-4 w-28 bg-slate-200 dark:bg-zinc-700 rounded"></div></th>
+                                    <th className="py-2.5 px-4 bg-slate-100 dark:bg-zinc-900 border-b border-slate-200 dark:border-zinc-800"><div className="h-4 w-36 bg-slate-200 dark:bg-zinc-700 rounded"></div></th>
+                                    <th className="py-2.5 px-3 text-center bg-slate-100 dark:bg-zinc-900 border-b border-slate-200 dark:border-zinc-800"><div className="h-4 w-20 bg-slate-200 dark:bg-zinc-700 rounded mx-auto"></div></th>
+                                    <th className="py-2.5 px-3 text-center bg-slate-100 dark:bg-zinc-900 border-b border-slate-200 dark:border-zinc-800"><div className="h-4 w-20 bg-slate-200 dark:bg-zinc-700 rounded mx-auto"></div></th>
+                                    <th className="py-2.5 px-4 bg-slate-100 dark:bg-zinc-900 border-b border-slate-200 dark:border-zinc-800"><div className="h-4 w-32 bg-slate-200 dark:bg-zinc-700 rounded"></div></th>
+                                    <th className="py-2.5 px-3.5 bg-slate-100 dark:bg-zinc-900 border-b border-slate-200 dark:border-zinc-800"><div className="h-4 w-24 bg-slate-200 dark:bg-zinc-700 rounded"></div></th>
+                                    <th className="py-2.5 px-3 text-center bg-slate-100 dark:bg-zinc-900 border-b border-slate-200 dark:border-zinc-800"><div className="h-4 w-12 bg-slate-200 dark:bg-zinc-700 rounded mx-auto"></div></th>
+                                    <th className="py-2.5 pl-3.5 pr-6 text-right bg-slate-100 dark:bg-zinc-900 border-b border-slate-200 dark:border-zinc-800"><div className="h-4 w-24 bg-slate-200 dark:bg-zinc-700 rounded ml-auto"></div></th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-slate-100 dark:divide-zinc-800/60 font-sans">
                                 {[...Array(9)].map((_, i) => (
-                                    <tr key={i} className="h-[52px]">
+                                    <tr key={i} className="h-[62px]">
                                         <td className="py-2 px-4">
                                             <div className="flex items-center gap-2">
                                                 <div className="h-4 w-16 bg-slate-200 dark:bg-zinc-800 rounded"></div>
@@ -297,7 +293,7 @@ export default function AdminMaintenanceRequests() {
     }
 
     return (
-        <div className="w-full h-[calc(100vh-6.2rem)] md:h-[calc(100vh-7.2rem)] lg:h-[calc(100dvh-7.2rem)] flex flex-col font-sans text-slate-900 dark:text-zinc-100 overflow-hidden space-y-2.5">
+        <div className="w-full h-[calc(100vh-6.2rem)] md:h-[calc(100vh-7.2rem)] lg:h-[calc(100dvh-7.2rem)] flex flex-col font-sans text-slate-900 dark:text-zinc-100 overflow-hidden space-y-2.5 sm:space-y-3">
             
             {/* Header Toolbar */}
             <div className="shrink-0 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
@@ -366,8 +362,8 @@ export default function AdminMaintenanceRequests() {
                 >
                     <div>
                         <span className="text-xs sm:text-sm font-extrabold uppercase tracking-wider text-slate-700 dark:text-zinc-300">Needs Review</span>
-                        <div className="text-2xl sm:text-3xl lg:text-4xl font-black font-mono mt-0.5 flex items-baseline gap-2">
-                            <span className={metrics.pending > 0 ? "text-amber-700 dark:text-amber-400" : "text-slate-950 dark:text-white"}>{metrics.pending}</span> <span className="text-sm sm:text-base font-sans font-extrabold text-amber-700 dark:text-amber-400">Pending</span>
+                        <div className="text-2xl sm:text-3xl lg:text-4xl font-black font-mono text-slate-950 dark:text-white mt-0.5 flex items-baseline gap-2">
+                            {metrics.pending} <span className="text-sm sm:text-base font-sans font-extrabold text-amber-700 dark:text-amber-400">Pending</span>
                         </div>
                         <p className="text-xs sm:text-sm font-medium text-slate-700 dark:text-zinc-300 mt-0.5">
                             {metrics.pending > 0 ? 'Awaiting review and action' : 'All requests processed'}
@@ -387,8 +383,8 @@ export default function AdminMaintenanceRequests() {
                 >
                     <div>
                         <span className="text-xs sm:text-sm font-extrabold uppercase tracking-wider text-slate-700 dark:text-zinc-300">In Progress</span>
-                        <div className="text-2xl sm:text-3xl lg:text-4xl font-black font-mono mt-0.5 flex items-baseline gap-2">
-                            <span className={metrics.inProgress > 0 ? "text-blue-700 dark:text-blue-400" : "text-slate-950 dark:text-white"}>{metrics.inProgress}</span> <span className="text-sm sm:text-base font-sans font-extrabold text-blue-700 dark:text-blue-400">In Progress</span>
+                        <div className="text-2xl sm:text-3xl lg:text-4xl font-black font-mono text-slate-950 dark:text-white mt-0.5 flex items-baseline gap-2">
+                            {metrics.inProgress} <span className="text-sm sm:text-base font-sans font-extrabold text-blue-700 dark:text-blue-400">In Progress</span>
                         </div>
                         <p className="text-xs sm:text-sm font-medium text-slate-700 dark:text-zinc-300 mt-0.5">
                             {metrics.inProgress > 0 ? 'Repairs currently ongoing' : 'Zero ongoing repairs'}
@@ -424,106 +420,101 @@ export default function AdminMaintenanceRequests() {
             </div>
 
             {/* Status Filter Tabs & Toolbar */}
-            <div className="shrink-0 bg-card border border-slate-200 dark:border-zinc-800 rounded-xl p-2 shadow-xs space-y-2">
-                <div className="flex flex-wrap items-center justify-between gap-2">
+            <div className="shrink-0 bg-card border border-slate-200 dark:border-zinc-800 rounded-xl p-2 shadow-xs">
+                <div className="flex flex-wrap items-center gap-2">
                     
-                    {/* Status Filter Tabs */}
-                    <div className="flex items-center gap-1.5 overflow-x-auto custom-scrollbar">
-                        {[
-                            { key: 'All', label: 'All Requests', count: metrics.total },
-                            { key: 'Pending', label: 'Pending Review', count: metrics.pending, alert: metrics.pending > 0 },
-                            { key: 'In Progress', label: 'In Progress', count: metrics.inProgress },
-                            { key: 'High Priority', label: 'High Priority', count: metrics.highPriority, alert: metrics.highPriority > 0 },
-                            { key: 'Resolved', label: 'Resolved', count: metrics.resolved }
-                        ].map(tab => (
-                            <button
-                                key={tab.key}
-                                onClick={() => setStatusFilter(tab.key as any)}
-                                className={`px-3 py-1.5 rounded-lg text-xs sm:text-sm transition-all flex items-center gap-1.5 shrink-0 cursor-pointer ${
-                                    statusFilter === tab.key
-                                        ? 'bg-slate-950 text-white dark:bg-white dark:text-zinc-950 font-extrabold shadow-xs'
-                                        : 'bg-slate-100 dark:bg-zinc-800/90 text-slate-700 dark:text-zinc-300 hover:bg-slate-200 dark:hover:bg-zinc-700 font-bold border border-slate-300 dark:border-zinc-700'
-                                }`}
-                            >
-                                <span>{tab.label}</span>
-                                <span className={`px-1.5 py-0.2 rounded-full text-xs font-mono font-bold ${
-                                    statusFilter === tab.key
-                                        ? 'bg-white/20 text-white dark:bg-black/20 dark:text-zinc-950'
-                                        : tab.alert
-                                            ? 'bg-rose-500 text-white animate-pulse'
-                                            : 'bg-slate-200 dark:bg-zinc-700 text-slate-900 dark:text-zinc-100'
-                                }`}>
-                                    {tab.count}
-                                </span>
-                            </button>
-                        ))}
+                    {/* 1. Search Bar (Only request number & tenant name) */}
+                    <div className="relative min-w-56 sm:min-w-64 max-w-sm flex-1 sm:flex-initial">
+                        <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 dark:text-zinc-400" />
+                        <input
+                            type="text"
+                            placeholder="Search request # or tenant name..."
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            className="w-full py-1.5 pl-8 pr-3 text-xs sm:text-sm font-semibold rounded-lg bg-slate-50/70 dark:bg-zinc-900/60 border border-slate-300 dark:border-zinc-700 text-slate-950 dark:text-white placeholder:text-slate-500 dark:placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-teal-500/30"
+                        />
                     </div>
 
-                    {/* Search & Selectors */}
-                    <div className="flex flex-wrap items-center gap-2">
-                        {/* Search Bar */}
-                        <div className="relative min-w-56 max-w-sm">
-                            <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 dark:text-zinc-400" />
-                            <input
-                                type="text"
-                                placeholder="Search resident, room, category, request #..."
-                                value={searchQuery}
-                                onChange={(e) => setSearchQuery(e.target.value)}
-                                className="w-full py-1.5 pl-8 pr-3 text-xs sm:text-sm font-semibold rounded-lg bg-slate-50/70 dark:bg-zinc-900/60 border border-slate-300 dark:border-zinc-700 text-slate-950 dark:text-white placeholder:text-slate-500 dark:placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-teal-500/30"
-                            />
-                        </div>
-
-                        {/* Priority Selector */}
-                        <div className="w-36">
-                            <CustomSelect
-                                value={priorityFilter}
-                                onChange={(val) => setPriorityFilter(val)}
-                                options={["All Priorities", "High", "Normal", "Low"]}
-                                className="w-full py-1.5 px-3 rounded-lg bg-slate-50/70 dark:bg-zinc-900/60 border border-slate-300 dark:border-zinc-700 text-xs sm:text-sm font-bold text-slate-900 dark:text-zinc-100"
-                            />
-                        </div>
-
-                        {/* Category Selector */}
-                        <div className="w-40">
-                            <CustomSelect
-                                value={categoryFilter}
-                                onChange={(val) => setCategoryFilter(val)}
-                                options={["All Categories", "Plumbing", "Electrical", "HVAC", "Carpentry", "Internet", "Furniture"]}
-                                className="w-full py-1.5 px-3 rounded-lg bg-slate-50/70 dark:bg-zinc-900/60 border border-slate-300 dark:border-zinc-700 text-xs sm:text-sm font-bold text-slate-900 dark:text-zinc-100"
-                            />
-                        </div>
+                    {/* 2. Priority Selector */}
+                    <div className="w-36 sm:w-40 shrink-0">
+                        <CustomSelect
+                            value={priorityFilter}
+                            onChange={(val) => setPriorityFilter(val)}
+                            options={["All Priorities", "High", "Normal", "Low"]}
+                            className="w-full py-1.5 px-3 rounded-lg bg-slate-50/70 dark:bg-zinc-900/60 border border-slate-300 dark:border-zinc-700 text-xs sm:text-sm font-bold text-slate-900 dark:text-zinc-100"
+                        />
                     </div>
+
+                    {/* 3. Category Selector */}
+                    <div className="w-40 sm:w-44 shrink-0">
+                        <CustomSelect
+                            value={categoryFilter}
+                            onChange={(val) => setCategoryFilter(val)}
+                            options={["All Categories", "Plumbing", "Electrical", "HVAC", "Carpentry", "Internet", "Furniture"]}
+                            className="w-full py-1.5 px-3 rounded-lg bg-slate-50/70 dark:bg-zinc-900/60 border border-slate-300 dark:border-zinc-700 text-xs sm:text-sm font-bold text-slate-900 dark:text-zinc-100"
+                        />
+                    </div>
+
+                    {/* 4. Request Status Dropdown */}
+                    <div className="w-40 sm:w-44 shrink-0">
+                        <CustomSelect
+                            value={statusFilter}
+                            onChange={(val) => setStatusFilter(val as any)}
+                            options={[
+                                { value: 'All', label: 'All Requests' },
+                                { value: 'Pending', label: 'Pending Review' },
+                                { value: 'In Progress', label: 'In Progress' },
+                                { value: 'High Priority', label: 'High Priority' },
+                                { value: 'Resolved', label: 'Resolved' }
+                            ]}
+                            className="w-full py-1.5 px-3 rounded-lg bg-slate-50/70 dark:bg-zinc-900/60 border border-slate-300 dark:border-zinc-700 text-xs sm:text-sm font-bold text-slate-900 dark:text-zinc-100"
+                        />
+                    </div>
+
+                    {/* Reset Filters button if any filter is active */}
+                    {(searchQuery || priorityFilter !== 'All Priorities' || categoryFilter !== 'All Categories' || statusFilter !== 'All') && (
+                        <button
+                            onClick={() => {
+                                setSearchQuery('');
+                                setPriorityFilter('All Priorities');
+                                setCategoryFilter('All Categories');
+                                setStatusFilter('All');
+                            }}
+                            className="text-xs font-bold text-slate-500 hover:text-slate-900 dark:text-zinc-400 dark:hover:text-white px-2.5 py-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-zinc-800 transition-colors cursor-pointer"
+                        >
+                            Reset
+                        </button>
+                    )}
 
                 </div>
             </div>
 
-            {/* Main Work Orders Ledger (Locked 1-Page with inner scrollbar, Minimum 9 Rows) */}
-            <div className="flex-1 min-h-0 bg-card border border-slate-200 dark:border-zinc-800 rounded-xl overflow-hidden shadow-xs flex flex-col relative">
-                {/* Header filler to prevent horizontal scrollbar alignment gap */}
-                <div className="absolute top-0 right-0 w-8 h-[44px] bg-slate-100 dark:bg-zinc-800 border-b border-slate-200 dark:border-zinc-700 z-30 pointer-events-none rounded-tr-xl" />
+            {/* Main Work Orders Ledger (Displays exactly 9 Rows with scrollbar for more) */}
+            <div className="flex-1 min-h-0 max-h-[610px] bg-card border border-slate-200 dark:border-zinc-800 rounded-xl overflow-hidden shadow-xs flex flex-col relative">
+                {/* Header filler to extend label header width and align scrollbar with 1st data row */}
+                <div className="absolute top-0 right-0 w-6 h-[46px] bg-slate-100 dark:bg-zinc-900 border-b border-slate-200 dark:border-zinc-800 z-30 pointer-events-none rounded-tr-xl" />
 
                 {viewMode === 'table' ? (
                     /* WORK ORDER TABLE */
                     <div className="overflow-x-auto overflow-y-auto flex-1 custom-scrollbar">
                         <table className="w-full min-w-full text-left text-sm border-collapse">
-                            <thead className="sticky top-0 z-20 bg-slate-100 dark:bg-zinc-800 shadow-xs border-b border-slate-200 dark:border-zinc-700">
-                                <tr className="h-[44px] bg-slate-100 dark:bg-zinc-800 text-sm sm:text-[15px] font-black text-slate-900 dark:text-white uppercase tracking-wider">
-                                    <th className="py-2.5 px-4 bg-slate-100 dark:bg-zinc-800 border-b border-slate-200 dark:border-zinc-700">Request #</th>
-                                    <th className="py-2.5 px-4 bg-slate-100 dark:bg-zinc-800 border-b border-slate-200 dark:border-zinc-700">Tenant</th>
-                                    <th className="py-2.5 px-4 bg-slate-100 dark:bg-zinc-800 border-b border-slate-200 dark:border-zinc-700">Category</th>
-                                    <th className="py-2.5 px-3 bg-slate-100 dark:bg-zinc-800 border-b border-slate-200 dark:border-zinc-700 text-center">Priority</th>
-                                    <th className="py-2.5 px-3 bg-slate-100 dark:bg-zinc-800 border-b border-slate-200 dark:border-zinc-700 text-center">Status</th>
-                                    <th className="py-2.5 px-3 text-center bg-slate-100 dark:bg-zinc-800 border-b border-slate-200 dark:border-zinc-700">Proof</th>
-                                    <th className="py-2.5 px-4 text-right bg-slate-100 dark:bg-zinc-800 border-b border-slate-200 dark:border-zinc-700">Actions</th>
+                            <thead className="sticky top-0 z-20 bg-slate-100 dark:bg-zinc-900 shadow-xs border-b border-slate-200 dark:border-zinc-800">
+                                <tr className="h-[46px] bg-slate-100 dark:bg-zinc-900 text-sm sm:text-base font-black text-slate-900 dark:text-white uppercase tracking-wider">
+                                    <th className="py-3 px-4.5 bg-slate-100 dark:bg-zinc-900 border-b border-slate-200 dark:border-zinc-800">Request #</th>
+                                    <th className="py-3 px-4.5 bg-slate-100 dark:bg-zinc-900 border-b border-slate-200 dark:border-zinc-800">Tenant</th>
+                                    <th className="py-3 px-4.5 bg-slate-100 dark:bg-zinc-900 border-b border-slate-200 dark:border-zinc-800">Category</th>
+                                    <th className="py-3 px-3.5 bg-slate-100 dark:bg-zinc-900 border-b border-slate-200 dark:border-zinc-800 text-center">Priority</th>
+                                    <th className="py-3 px-3.5 bg-slate-100 dark:bg-zinc-900 border-b border-slate-200 dark:border-zinc-800 text-center">Status</th>
+                                    <th className="py-3 pl-3.5 pr-6 text-right bg-slate-100 dark:bg-zinc-900 border-b border-slate-200 dark:border-zinc-800">Actions</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-slate-100 dark:divide-zinc-800/60 font-sans">
                                 {filteredRequests.length === 0 ? (
                                     <tr>
-                                        <td colSpan={7} className="py-14 text-center text-slate-400 dark:text-zinc-500">
-                                            <Wrench className="w-10 h-10 mx-auto mb-2 opacity-30" />
-                                            <p className="font-extrabold text-base text-slate-900 dark:text-white">No maintenance requests found</p>
-                                            <p className="text-sm font-medium text-slate-600 dark:text-zinc-400 mt-0.5">Try adjusting your filters or search keywords.</p>
+                                        <td colSpan={6} className="py-16 text-center text-slate-400 dark:text-zinc-500">
+                                            <Wrench className="w-12 h-12 mx-auto mb-2.5 opacity-30" />
+                                            <p className="font-extrabold text-base sm:text-lg text-slate-900 dark:text-white">No maintenance requests found</p>
+                                            <p className="text-sm font-medium text-slate-600 dark:text-zinc-400 mt-1">Try adjusting your filters or search keywords.</p>
                                         </td>
                                     </tr>
                                 ) : (
@@ -531,71 +522,57 @@ export default function AdminMaintenanceRequests() {
                                         const CategoryIcon = getCategoryIcon(req.category);
                                         const status = getStatusBadge(req.status);
                                         const priority = getPriorityBadge(req.priority);
-                                        const attachUrl = getAttachmentUrl(req.attachment_url);
 
                                         return (
-                                            <tr key={req.id} className="h-[52px] sm:h-[54px] hover:bg-slate-50/80 dark:hover:bg-zinc-800/40 transition-colors group">
+                                            <tr key={req.id} className="h-[62px] hover:bg-slate-50/80 dark:hover:bg-zinc-800/40 transition-colors group">
                                                 
                                                 {/* Request # */}
-                                                <td className="py-2 px-4 whitespace-nowrap">
-                                                    <span className="font-mono font-bold text-sm sm:text-base text-teal-700 dark:text-teal-400">{formatRequestNumber(req.id)}</span>
+                                                <td className="py-2.5 px-4.5 whitespace-nowrap">
+                                                    <span className="font-mono font-bold text-base sm:text-[17px] text-teal-700 dark:text-teal-400">
+                                                        {formatRequestNumber(req.id, req.request_number)}
+                                                    </span>
                                                 </td>
 
                                                 {/* Tenant */}
-                                                <td className="py-2 px-4 whitespace-nowrap">
-                                                    <div className="font-extrabold text-sm sm:text-base text-slate-950 dark:text-white leading-tight">
+                                                <td className="py-2.5 px-4.5 whitespace-nowrap">
+                                                    <div className="font-extrabold text-base sm:text-[17px] text-slate-950 dark:text-white leading-tight">
                                                         {req.tenant_name}
                                                     </div>
-                                                    <div className="text-xs sm:text-[13px] font-semibold text-slate-700 dark:text-zinc-300 leading-tight mt-0.5">
+                                                    <div className="text-xs sm:text-sm font-semibold text-slate-600 dark:text-zinc-400 leading-tight mt-0.5">
                                                         {req.room_number ? `Room ${req.room_number}` : 'Common Property'}
                                                     </div>
                                                 </td>
 
                                                 {/* Category */}
-                                                <td className="py-2 px-4 whitespace-nowrap">
-                                                    <div className="flex items-center gap-2 font-medium text-sm text-slate-900 dark:text-zinc-100">
-                                                        <CategoryIcon className="w-4 h-4 text-slate-500 dark:text-zinc-400 shrink-0" />
+                                                <td className="py-2.5 px-4.5 whitespace-nowrap">
+                                                    <div className="flex items-center gap-2.5 font-semibold text-sm sm:text-base text-slate-900 dark:text-zinc-100">
+                                                        <CategoryIcon className="w-4.5 h-4.5 text-slate-500 dark:text-zinc-400 shrink-0" />
                                                         <span>{req.category}</span>
                                                     </div>
                                                 </td>
 
                                                 {/* Priority */}
-                                                <td className="py-2 px-3 text-center whitespace-nowrap">
-                                                    <span className={`text-xs sm:text-sm ${priority.className}`}>
+                                                <td className="py-2.5 px-3.5 text-center whitespace-nowrap">
+                                                    <span className={`text-xs sm:text-sm font-bold uppercase tracking-wider ${priority.className}`}>
                                                         {priority.label}
                                                     </span>
                                                 </td>
 
                                                 {/* Status */}
-                                                <td className="py-2 px-3 text-center whitespace-nowrap">
-                                                    <span className={`text-xs sm:text-sm ${status.className}`}>
+                                                <td className="py-2.5 px-3.5 text-center whitespace-nowrap">
+                                                    <span className={`text-xs sm:text-sm font-bold uppercase tracking-wider ${status.className}`}>
                                                         {status.label}
                                                     </span>
                                                 </td>
 
-                                                {/* Proof Image */}
-                                                <td className="py-2 px-3 text-center whitespace-nowrap">
-                                                    {attachUrl ? (
-                                                        <button 
-                                                            onClick={() => setLightboxImage(attachUrl)}
-                                                            className="p-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-zinc-800 text-teal-700 dark:text-teal-400 transition-colors inline-flex items-center justify-center border border-slate-300 dark:border-zinc-700 cursor-pointer"
-                                                            title="View attached photo proof"
-                                                        >
-                                                            <Paperclip className="w-4 h-4" />
-                                                        </button>
-                                                    ) : (
-                                                        <span className="text-sm font-semibold text-slate-400">—</span>
-                                                    )}
-                                                </td>
-
                                                 {/* Actions */}
-                                                <td className="py-2 px-4 text-right whitespace-nowrap">
-                                                    <div className="flex items-center justify-end gap-2.5">
+                                                <td className="py-2.5 px-4.5 text-right whitespace-nowrap">
+                                                    <div className="flex items-center justify-end gap-2">
                                                         {/* Quick Status Advance Button: Start -> Resolve */}
                                                         {req.status === 'Pending' && (
                                                             <button
                                                                 onClick={() => handleQuickStatus(req.id, 'In Progress')}
-                                                                className="text-xs sm:text-sm font-semibold text-blue-700 dark:text-blue-400 hover:text-blue-900 dark:hover:text-blue-300 hover:underline transition-colors cursor-pointer"
+                                                                className="px-3.5 py-1.5 rounded-lg bg-blue-50 dark:bg-blue-500/10 text-blue-700 dark:text-blue-400 border border-blue-200 dark:border-blue-900/40 hover:bg-blue-100 dark:hover:bg-blue-500/20 font-bold text-xs sm:text-sm transition-colors cursor-pointer"
                                                                 title="Start Repair (Mark as In Progress)"
                                                             >
                                                                 Start
@@ -604,7 +581,7 @@ export default function AdminMaintenanceRequests() {
                                                         {req.status === 'In Progress' && (
                                                             <button
                                                                 onClick={() => handleQuickStatus(req.id, 'Resolved')}
-                                                                className="text-xs sm:text-sm font-semibold text-emerald-700 dark:text-emerald-400 hover:text-emerald-900 dark:hover:text-emerald-300 hover:underline transition-colors cursor-pointer"
+                                                                className="px-3.5 py-1.5 rounded-lg bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-900/40 hover:bg-emerald-100 dark:hover:bg-emerald-500/20 font-bold text-xs sm:text-sm transition-colors cursor-pointer"
                                                                 title="Mark as Resolved"
                                                             >
                                                                 Resolve
@@ -614,10 +591,10 @@ export default function AdminMaintenanceRequests() {
                                                         {/* View Details */}
                                                         <button
                                                             onClick={() => setViewingRequest(req)}
-                                                            className="p-1.5 text-slate-600 hover:text-slate-900 dark:text-zinc-400 dark:hover:text-white transition-colors cursor-pointer"
+                                                            className="p-2 rounded-lg text-slate-600 hover:text-slate-900 dark:text-zinc-400 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-zinc-800 transition-colors cursor-pointer"
                                                             title="View Details"
                                                         >
-                                                            <Eye className="w-4 h-4" />
+                                                            <Eye className="w-4.5 h-4.5" />
                                                         </button>
                                                     </div>
                                                 </td>
@@ -651,7 +628,7 @@ export default function AdminMaintenanceRequests() {
                                                 <div className="flex items-start justify-between gap-2 mb-2">
                                                     <div>
                                                         <span className="inline-block font-mono font-bold text-xs sm:text-sm px-2 py-0.5 rounded-md bg-teal-50 dark:bg-teal-500/10 text-teal-700 dark:text-teal-400 border border-teal-200/60 dark:border-teal-500/20">
-                                                            {formatRequestNumber(req.id)}
+                                                            {formatRequestNumber(req.id, req.request_number)}
                                                         </span>
                                                         <div className="font-sans font-extrabold text-slate-950 dark:text-white text-base mt-1">
                                                             {req.tenant_name}
@@ -719,88 +696,120 @@ export default function AdminMaintenanceRequests() {
             <AnimatePresence>
                 
                 {/* VIEW REQUEST DETAILS */}
-                {viewingRequest && (
-                    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 bg-black/60 backdrop-blur-xs z-50 flex items-center justify-center p-3">
-                        <motion.div initial={{ scale: 0.96, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.96, opacity: 0 }} className="bg-card border border-slate-200 dark:border-zinc-800 rounded-2xl w-full max-w-lg overflow-hidden shadow-2xl p-5 space-y-4">
-                            <div className="flex justify-between items-start">
-                                <div>
-                                    <span className="font-mono text-sm font-bold text-teal-700 dark:text-teal-400">{formatRequestNumber(viewingRequest.id)}</span>
-                                    <h3 className="text-lg sm:text-xl font-black text-slate-950 dark:text-white mt-0.5">{viewingRequest.title}</h3>
-                                    <p className="text-sm font-semibold text-slate-700 dark:text-zinc-300">{viewingRequest.tenant_name} · Room {viewingRequest.room_number || 'Common Property'}</p>
+                {viewingRequest && (() => {
+                    const proofUrl = getAttachmentUrl(viewingRequest.attachment_url || viewingRequest.image_url);
+                    return (
+                        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 bg-black/60 backdrop-blur-xs z-50 flex items-center justify-center p-3 sm:p-4">
+                            <motion.div initial={{ scale: 0.96, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.96, opacity: 0 }} className="bg-card border border-slate-200 dark:border-zinc-800 rounded-2xl w-full max-w-lg max-h-[90vh] overflow-hidden shadow-2xl flex flex-col">
+                                <div className="p-5 border-b border-slate-100 dark:border-zinc-800 flex justify-between items-start shrink-0 bg-slate-50/50 dark:bg-zinc-900/40">
+                                    <div>
+                                        <div className="flex items-center gap-2">
+                                            <span className="font-mono text-xs sm:text-sm font-bold text-teal-700 dark:text-teal-400">
+                                                {formatRequestNumber(viewingRequest.id, viewingRequest.request_number)}
+                                            </span>
+                                            <span className="text-slate-300 dark:text-zinc-700">·</span>
+                                            <span className={`text-xs sm:text-sm font-bold uppercase tracking-wider ${getStatusBadge(viewingRequest.status).className}`}>
+                                                {getStatusBadge(viewingRequest.status).label}
+                                            </span>
+                                        </div>
+                                        <h3 className="text-lg sm:text-xl font-black text-slate-950 dark:text-white mt-1 leading-tight">{viewingRequest.title}</h3>
+                                        <p className="text-xs sm:text-sm font-semibold text-slate-600 dark:text-zinc-400 mt-0.5">{viewingRequest.tenant_name} · Room {viewingRequest.room_number || 'Common Property'}</p>
+                                    </div>
+                                    <button onClick={() => setViewingRequest(null)} className="p-1.5 rounded-lg hover:bg-slate-200 dark:hover:bg-zinc-800 text-slate-500 hover:text-slate-900 dark:hover:text-white transition-colors cursor-pointer">
+                                        <X className="w-5 h-5" />
+                                    </button>
                                 </div>
-                                <button onClick={() => setViewingRequest(null)} className="p-1.5 rounded-lg hover:bg-slate-200 dark:hover:bg-zinc-800 text-slate-600 dark:text-zinc-300">
-                                    <X className="w-5 h-5" />
-                                </button>
-                            </div>
 
-                            <div className="bg-slate-50 dark:bg-zinc-900/60 p-3.5 rounded-xl border border-slate-200 dark:border-zinc-800 text-sm space-y-2.5">
-                                <div className="flex items-center justify-between">
-                                    <span className="text-xs uppercase font-extrabold text-slate-600 dark:text-zinc-400 tracking-wider">Status</span>
-                                    <span className={`text-xs sm:text-sm ${getStatusBadge(viewingRequest.status).className}`}>
-                                        {getStatusBadge(viewingRequest.status).label}
-                                    </span>
-                                </div>
-                                <div className="pt-2.5 border-t border-slate-200 dark:border-zinc-800">
-                                    <span className="text-xs uppercase font-extrabold text-slate-600 dark:text-zinc-400 tracking-wider">Category & Priority</span>
-                                    <div className="flex items-center gap-3 mt-1">
-                                        <span className="text-slate-900 dark:text-zinc-100 font-semibold">{viewingRequest.category}</span>
-                                        <span className="text-slate-300 dark:text-zinc-600">•</span>
-                                        <span className={`text-xs sm:text-sm ${getPriorityBadge(viewingRequest.priority).className}`}>
-                                            {getPriorityBadge(viewingRequest.priority).label}
-                                        </span>
+                                <div className="p-5 overflow-y-auto custom-scrollbar space-y-4 flex-1">
+                                    <div className="bg-slate-50 dark:bg-zinc-900/60 p-3.5 rounded-xl border border-slate-200 dark:border-zinc-800 text-sm space-y-2.5">
+                                        <div className="flex items-center justify-between">
+                                            <span className="text-xs uppercase font-extrabold text-slate-600 dark:text-zinc-400 tracking-wider">Category & Priority</span>
+                                            <div className="flex items-center gap-2">
+                                                <span className="text-slate-900 dark:text-zinc-100 font-semibold">{viewingRequest.category}</span>
+                                                <span className="text-slate-300 dark:text-zinc-600">•</span>
+                                                <span className={`text-xs sm:text-sm ${getPriorityBadge(viewingRequest.priority).className}`}>
+                                                    {getPriorityBadge(viewingRequest.priority).label}
+                                                </span>
+                                            </div>
+                                        </div>
+                                        <div className="pt-2.5 border-t border-slate-200 dark:border-zinc-800">
+                                            <span className="text-xs uppercase font-extrabold text-slate-600 dark:text-zinc-400 tracking-wider">Description of Issue</span>
+                                            <p className="text-slate-900 dark:text-zinc-100 font-medium text-sm sm:text-base mt-1 whitespace-pre-wrap">{viewingRequest.description}</p>
+                                        </div>
+                                        {viewingRequest.admin_notes && (
+                                            <div className="pt-2.5 border-t border-slate-200 dark:border-zinc-800">
+                                                <span className="text-xs uppercase font-extrabold text-slate-600 dark:text-zinc-400 tracking-wider">Admin Notes</span>
+                                                <p className="text-slate-800 dark:text-zinc-200 font-medium italic mt-1">{viewingRequest.admin_notes}</p>
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    {/* Proof of Issue Image */}
+                                    <div>
+                                        <div className="flex items-center justify-between mb-2">
+                                            <span className="text-xs sm:text-sm font-extrabold text-slate-900 dark:text-white uppercase tracking-wider flex items-center gap-1.5">
+                                                <Camera className="w-4 h-4 text-teal-600 dark:text-teal-400" />
+                                                Proof of Issue
+                                            </span>
+                                            {proofUrl && (
+                                                <span className="text-[11px] font-semibold text-slate-500 dark:text-zinc-400">
+                                                    Click photo to zoom
+                                                </span>
+                                            )}
+                                        </div>
+
+                                        {proofUrl ? (
+                                            <div 
+                                                onClick={() => setLightboxImage(proofUrl)}
+                                                className="group relative rounded-xl overflow-hidden border border-slate-200 dark:border-zinc-800 bg-black cursor-zoom-in shadow-inner"
+                                            >
+                                                <img
+                                                    src={proofUrl}
+                                                    alt="Proof of Issue"
+                                                    className="w-full max-h-56 object-contain mx-auto transition-transform duration-200 group-hover:scale-[1.02]"
+                                                />
+                                                <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2 text-white font-bold text-xs pointer-events-none">
+                                                    <ZoomIn className="w-4 h-4" />
+                                                    <span>Click to expand full size</span>
+                                                </div>
+                                            </div>
+                                        ) : (
+                                            <div className="p-4 rounded-xl border border-dashed border-slate-200 dark:border-zinc-800 bg-slate-50/50 dark:bg-zinc-900/30 flex items-center justify-center gap-2 text-slate-400 dark:text-zinc-500 text-xs sm:text-sm">
+                                                <Camera className="w-4 h-4 opacity-50" />
+                                                <span>No proof of issue image attached by resident.</span>
+                                            </div>
+                                        )}
                                     </div>
                                 </div>
-                                <div className="pt-2.5 border-t border-slate-200 dark:border-zinc-800">
-                                    <span className="text-xs uppercase font-extrabold text-slate-600 dark:text-zinc-400 tracking-wider">Description</span>
-                                    <p className="text-slate-900 dark:text-zinc-100 font-medium text-sm sm:text-base mt-1">{viewingRequest.description}</p>
-                                </div>
-                                {viewingRequest.admin_notes && (
-                                    <div className="pt-2.5 border-t border-slate-200 dark:border-zinc-800">
-                                        <span className="text-xs uppercase font-extrabold text-slate-600 dark:text-zinc-400 tracking-wider">Admin Notes</span>
-                                        <p className="text-slate-800 dark:text-zinc-200 font-medium italic mt-1">{viewingRequest.admin_notes}</p>
-                                    </div>
-                                )}
-                            </div>
 
-                            {getAttachmentUrl(viewingRequest.attachment_url) && (
-                                <div>
-                                    <span className="text-xs sm:text-sm font-bold text-slate-700 dark:text-zinc-300 mb-1.5 block">Attached Photo Proof</span>
-                                    <img
-                                        src={getAttachmentUrl(viewingRequest.attachment_url)!}
-                                        alt="Proof"
-                                        className="rounded-xl max-h-48 w-full object-contain bg-black border border-slate-200 dark:border-zinc-800 cursor-zoom-in"
-                                        onClick={() => setLightboxImage(getAttachmentUrl(viewingRequest.attachment_url))}
-                                    />
+                                <div className="flex justify-end items-center gap-2.5 p-4 border-t border-slate-200 dark:border-zinc-800 shrink-0 bg-slate-50/40 dark:bg-zinc-900/20">
+                                    <button
+                                        onClick={() => setViewingRequest(null)}
+                                        className="px-4 py-2 text-sm font-bold rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-slate-800 dark:text-zinc-200 transition-colors cursor-pointer"
+                                    >
+                                        Close
+                                    </button>
+                                    {viewingRequest.status === 'Pending' && (
+                                        <button
+                                            onClick={() => handleQuickStatus(viewingRequest.id, 'In Progress')}
+                                            className="px-4 py-2 text-sm font-bold rounded-lg bg-blue-700 hover:bg-blue-800 text-white transition-colors cursor-pointer shadow-xs"
+                                        >
+                                            Start Repair
+                                        </button>
+                                    )}
+                                    {viewingRequest.status === 'In Progress' && (
+                                        <button
+                                            onClick={() => handleQuickStatus(viewingRequest.id, 'Resolved')}
+                                            className="px-4 py-2 text-sm font-bold rounded-lg bg-emerald-700 hover:bg-emerald-800 text-white transition-colors cursor-pointer shadow-xs"
+                                        >
+                                            Mark as Resolved
+                                        </button>
+                                    )}
                                 </div>
-                            )}
-
-                            <div className="flex justify-end items-center gap-2.5 pt-3 border-t border-slate-200 dark:border-zinc-800">
-                                <button
-                                    onClick={() => setViewingRequest(null)}
-                                    className="px-4 py-2 text-sm font-bold rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-slate-800 dark:text-zinc-200 transition-colors cursor-pointer"
-                                >
-                                    Close
-                                </button>
-                                {viewingRequest.status === 'Pending' && (
-                                    <button
-                                        onClick={() => handleQuickStatus(viewingRequest.id, 'In Progress')}
-                                        className="px-4 py-2 text-sm font-bold rounded-lg bg-blue-700 hover:bg-blue-800 text-white transition-colors cursor-pointer shadow-xs"
-                                    >
-                                        Start
-                                    </button>
-                                )}
-                                {viewingRequest.status === 'In Progress' && (
-                                    <button
-                                        onClick={() => handleQuickStatus(viewingRequest.id, 'Resolved')}
-                                        className="px-4 py-2 text-sm font-bold rounded-lg bg-emerald-700 hover:bg-emerald-800 text-white transition-colors cursor-pointer shadow-xs"
-                                    >
-                                        Resolve
-                                    </button>
-                                )}
-                            </div>
+                            </motion.div>
                         </motion.div>
-                    </motion.div>
-                )}
+                    );
+                })()}
 
                 {/* MODAL 3: LIGHTBOX IMAGE VIEWER */}
                 {lightboxImage && (
