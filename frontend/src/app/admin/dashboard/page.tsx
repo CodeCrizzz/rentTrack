@@ -71,7 +71,7 @@ interface DashboardStats {
     recentMessages: { id: number; tenant_name: string; message: string; status: string; created_at: string }[];
     pendingTenantsList: { id: number; name: string; email: string; created_at: string }[];
     recentPayments: { id: number; tenant_name: string; amount_paid: string; payment_date: string }[];
-    recentRequests: { id: number; tenant_name: string; title: string; created_at: string }[];
+    recentRequests: { id: number; request_number?: string | null; tenant_name: string; title: string; created_at: string }[];
     expiringContracts: ExpiringContract[];
     overdueAccounts: { tenant_id: number; tenant_name: string; room_number: string | null; total_overdue: number }[];
     upcomingRent: { id: number; tenant_name: string; room_number: string | null; balance: number; due_date: string }[];
@@ -83,7 +83,12 @@ const cardVariants: Variants = {
     show: { opacity: 1, y: 0, transition: { duration: 0.35, ease: "easeOut" } }
 };
 
-const formatRequestNumber = (id: any) => 'RT' + String(id || '').padStart(4, '0');
+const formatRequestNumber = (id: any, reqNum?: string | null) => {
+    if (reqNum) return reqNum;
+    if (typeof id === 'string' && id.startsWith('RT')) return id;
+    if (!id) return '';
+    return 'RT-' + String(id).padStart(6, '0');
+};
 
 const CustomChartTooltip = ({ active, payload, label }: any) => {
     if (active && payload && payload.length) {
@@ -909,25 +914,25 @@ export default function AdminDashboard() {
                 <div className="p-0 relative">
                     {/* Top-Right scrollbar header filler for table tabs */}
                     {activeLedgerTab !== 'audit' && (
-                        <div className="absolute top-0 right-0 w-8 h-[42px] bg-slate-100 dark:bg-zinc-800 border-b border-slate-200 dark:border-zinc-700 z-30 pointer-events-none rounded-tr-xl" />
+                        <div className="absolute top-0 right-0 w-6 h-[42px] bg-slate-100 dark:bg-zinc-900 border-b border-slate-200 dark:border-zinc-800 z-30 pointer-events-none rounded-tr-xl" />
                     )}
                     
                     {/* Recent Payments Table */}
                     {activeLedgerTab === 'payments' && (
                         <div className="overflow-x-auto overflow-y-auto max-h-[282px] custom-scrollbar">
                             <table className="w-full min-w-full text-left text-xs border-collapse">
-                                <thead className="sticky top-0 z-10 bg-slate-100 dark:bg-zinc-800 shadow-xs">
-                                    <tr className="h-[42px] bg-slate-100 dark:bg-zinc-800 text-slate-700 dark:text-zinc-300 uppercase tracking-wider text-[11px] font-bold">
-                                        <th className="py-2.5 px-6 bg-slate-100 dark:bg-zinc-800 border-b border-slate-200 dark:border-zinc-700">Tenant Name</th>
-                                        <th className="py-2.5 px-4 bg-slate-100 dark:bg-zinc-800 border-b border-slate-200 dark:border-zinc-700">Amount Paid</th>
-                                        <th className="py-2.5 px-4 bg-slate-100 dark:bg-zinc-800 border-b border-slate-200 dark:border-zinc-700">Transaction Date</th>
-                                        <th className="py-2.5 px-4 bg-slate-100 dark:bg-zinc-800 border-b border-slate-200 dark:border-zinc-700">Status</th>
-                                        <th className="py-2.5 px-6 text-right bg-slate-100 dark:bg-zinc-800 border-b border-slate-200 dark:border-zinc-700">Action</th>
+                                <thead className="sticky top-0 z-20 bg-slate-100 dark:bg-zinc-900 shadow-xs border-b border-slate-200 dark:border-zinc-800">
+                                    <tr className="h-[42px] bg-slate-100 dark:bg-zinc-900 text-slate-700 dark:text-zinc-300 uppercase tracking-wider text-[11px] font-bold">
+                                        <th className="py-2.5 px-6 bg-slate-100 dark:bg-zinc-900 border-b border-slate-200 dark:border-zinc-800">Tenant Name</th>
+                                        <th className="py-2.5 px-4 bg-slate-100 dark:bg-zinc-900 border-b border-slate-200 dark:border-zinc-800">Amount Paid</th>
+                                        <th className="py-2.5 px-4 bg-slate-100 dark:bg-zinc-900 border-b border-slate-200 dark:border-zinc-800">Transaction Date</th>
+                                        <th className="py-2.5 px-4 bg-slate-100 dark:bg-zinc-900 border-b border-slate-200 dark:border-zinc-800">Status</th>
+                                        <th className="py-2.5 pl-4 pr-6 text-right bg-slate-100 dark:bg-zinc-900 border-b border-slate-200 dark:border-zinc-800">Action</th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-slate-100 dark:divide-zinc-800/60">
                                     {stats.recentPayments.map((payment) => (
-                                        <tr key={payment.id} className="h-[48px] hover:bg-slate-50/50 dark:hover:bg-zinc-900/30 transition-colors">
+                                        <tr key={payment.id} className="h-[48px] hover:bg-slate-50/80 dark:hover:bg-zinc-800/40 transition-colors">
                                             <td className="py-2.5 px-6 font-bold text-slate-900 dark:text-white">
                                                 {payment.tenant_name}
                                             </td>
@@ -965,18 +970,18 @@ export default function AdminDashboard() {
                     {activeLedgerTab === 'overdue' && (
                         <div className="overflow-x-auto overflow-y-auto max-h-[282px] custom-scrollbar">
                             <table className="w-full min-w-full text-left text-xs border-collapse">
-                                <thead className="sticky top-0 z-10 bg-slate-100 dark:bg-zinc-800 shadow-xs">
-                                    <tr className="h-[42px] bg-slate-100 dark:bg-zinc-800 text-slate-700 dark:text-zinc-300 uppercase tracking-wider text-[11px] font-bold">
-                                        <th className="py-2.5 px-6 bg-slate-100 dark:bg-zinc-800 border-b border-slate-200 dark:border-zinc-700">Tenant Name</th>
-                                        <th className="py-2.5 px-4 bg-slate-100 dark:bg-zinc-800 border-b border-slate-200 dark:border-zinc-700">Room No.</th>
-                                        <th className="py-2.5 px-4 bg-slate-100 dark:bg-zinc-800 border-b border-slate-200 dark:border-zinc-700">Total Overdue</th>
-                                        <th className="py-2.5 px-4 bg-slate-100 dark:bg-zinc-800 border-b border-slate-200 dark:border-zinc-700">Aging Flag</th>
-                                        <th className="py-2.5 px-6 text-right bg-slate-100 dark:bg-zinc-800 border-b border-slate-200 dark:border-zinc-700">Action</th>
+                                <thead className="sticky top-0 z-20 bg-slate-100 dark:bg-zinc-900 shadow-xs border-b border-slate-200 dark:border-zinc-800">
+                                    <tr className="h-[42px] bg-slate-100 dark:bg-zinc-900 text-slate-700 dark:text-zinc-300 uppercase tracking-wider text-[11px] font-bold">
+                                        <th className="py-2.5 px-6 bg-slate-100 dark:bg-zinc-900 border-b border-slate-200 dark:border-zinc-800">Tenant Name</th>
+                                        <th className="py-2.5 px-4 bg-slate-100 dark:bg-zinc-900 border-b border-slate-200 dark:border-zinc-800">Room No.</th>
+                                        <th className="py-2.5 px-4 bg-slate-100 dark:bg-zinc-900 border-b border-slate-200 dark:border-zinc-800">Total Overdue</th>
+                                        <th className="py-2.5 px-4 bg-slate-100 dark:bg-zinc-900 border-b border-slate-200 dark:border-zinc-800">Aging Flag</th>
+                                        <th className="py-2.5 pl-4 pr-6 text-right bg-slate-100 dark:bg-zinc-900 border-b border-slate-200 dark:border-zinc-800">Action</th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-slate-100 dark:divide-zinc-800/60">
                                     {stats.overdueAccounts.map((account) => (
-                                        <tr key={account.tenant_id} className="h-[48px] hover:bg-slate-50/50 dark:hover:bg-zinc-900/30 transition-colors">
+                                        <tr key={account.tenant_id} className="h-[48px] hover:bg-slate-50/80 dark:hover:bg-zinc-800/40 transition-colors">
                                             <td className="py-2.5 px-6 font-bold text-slate-900 dark:text-white">
                                                 {account.tenant_name}
                                             </td>
@@ -1017,22 +1022,22 @@ export default function AdminDashboard() {
                     {activeLedgerTab === 'maintenance' && (
                         <div className="overflow-x-auto overflow-y-auto max-h-[282px] custom-scrollbar">
                             <table className="w-full min-w-full text-left text-xs border-collapse">
-                                <thead className="sticky top-0 z-10 bg-slate-100 dark:bg-zinc-800 shadow-xs">
-                                    <tr className="h-[42px] bg-slate-100 dark:bg-zinc-800 text-slate-700 dark:text-zinc-300 uppercase tracking-wider text-[11px] font-bold">
-                                        <th className="py-2.5 px-6 bg-slate-100 dark:bg-zinc-800 border-b border-slate-200 dark:border-zinc-700">Request # & Title</th>
-                                        <th className="py-2.5 px-4 bg-slate-100 dark:bg-zinc-800 border-b border-slate-200 dark:border-zinc-700">Tenant</th>
-                                        <th className="py-2.5 px-4 bg-slate-100 dark:bg-zinc-800 border-b border-slate-200 dark:border-zinc-700">Created Date</th>
-                                        <th className="py-2.5 px-4 bg-slate-100 dark:bg-zinc-800 border-b border-slate-200 dark:border-zinc-700">Status</th>
-                                        <th className="py-2.5 px-6 text-right bg-slate-100 dark:bg-zinc-800 border-b border-slate-200 dark:border-zinc-700">Action</th>
+                                <thead className="sticky top-0 z-20 bg-slate-100 dark:bg-zinc-900 shadow-xs border-b border-slate-200 dark:border-zinc-800">
+                                    <tr className="h-[42px] bg-slate-100 dark:bg-zinc-900 text-slate-700 dark:text-zinc-300 uppercase tracking-wider text-[11px] font-bold">
+                                        <th className="py-2.5 px-6 bg-slate-100 dark:bg-zinc-900 border-b border-slate-200 dark:border-zinc-800">Request # & Title</th>
+                                        <th className="py-2.5 px-4 bg-slate-100 dark:bg-zinc-900 border-b border-slate-200 dark:border-zinc-800">Tenant</th>
+                                        <th className="py-2.5 px-4 bg-slate-100 dark:bg-zinc-900 border-b border-slate-200 dark:border-zinc-800">Created Date</th>
+                                        <th className="py-2.5 px-4 bg-slate-100 dark:bg-zinc-900 border-b border-slate-200 dark:border-zinc-800">Status</th>
+                                        <th className="py-2.5 pl-4 pr-6 text-right bg-slate-100 dark:bg-zinc-900 border-b border-slate-200 dark:border-zinc-800">Action</th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-slate-100 dark:divide-zinc-800/60">
                                     {stats.recentRequests.map((req) => (
-                                        <tr key={req.id} className="h-[48px] hover:bg-slate-50/50 dark:hover:bg-zinc-900/30 transition-colors">
+                                        <tr key={req.id} className="h-[48px] hover:bg-slate-50/80 dark:hover:bg-zinc-800/40 transition-colors">
                                             <td className="py-2.5 px-6 font-bold text-slate-900 dark:text-white">
                                                 <div className="flex items-center gap-2">
                                                     <span className="font-mono text-[11px] font-semibold text-teal-600 dark:text-teal-400">
-                                                        {formatRequestNumber(req.id)}
+                                                        {formatRequestNumber(req.id, req.request_number)}
                                                     </span>
                                                     <span className="truncate">{req.title}</span>
                                                 </div>
