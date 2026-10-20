@@ -452,25 +452,26 @@ function TenantsContent() {
                 </div>
 
                 {/* 4. Table Skeleton */}
-                <div className="flex-1 min-h-0 bg-card border border-slate-200 dark:border-zinc-800 rounded-xl overflow-hidden shadow-xs flex flex-col">
+                <div className="flex-1 min-h-0 max-h-[610px] bg-card border border-slate-200 dark:border-zinc-800 rounded-xl overflow-hidden shadow-xs flex flex-col relative">
+                    <div className="absolute top-0 right-0 w-6 h-[46px] bg-slate-100 dark:bg-zinc-900 border-b border-slate-200 dark:border-zinc-800 z-30 pointer-events-none rounded-tr-xl" />
                     <div className="overflow-x-auto overflow-y-auto flex-1 custom-scrollbar">
                         <table className="w-full min-w-full text-left text-sm border-collapse">
-                            <thead className="sticky top-0 z-10 bg-slate-100 dark:bg-zinc-800 border-b border-slate-200 dark:border-zinc-700">
-                                <tr className="h-[40px] bg-slate-100 dark:bg-zinc-800">
-                                    <th className="py-2 px-3.5"><div className="h-3.5 w-28 bg-slate-200 dark:bg-zinc-700 rounded"></div></th>
-                                    <th className="py-2 px-3"><div className="h-3.5 w-20 bg-slate-200 dark:bg-zinc-700 rounded"></div></th>
-                                    <th className="py-2 px-3"><div className="h-3.5 w-20 bg-slate-200 dark:bg-zinc-700 rounded"></div></th>
-                                    <th className="py-2 px-3"><div className="h-3.5 w-24 bg-slate-200 dark:bg-zinc-700 rounded"></div></th>
-                                    <th className="py-2 px-3"><div className="h-3.5 w-16 bg-slate-200 dark:bg-zinc-700 rounded"></div></th>
-                                    <th className="py-2 px-4 text-right"><div className="h-3.5 w-14 bg-slate-200 dark:bg-zinc-700 rounded ml-auto"></div></th>
+                            <thead className="sticky top-0 z-20 bg-slate-100 dark:bg-zinc-900 border-b border-slate-200 dark:border-zinc-800">
+                                <tr className="h-[46px] bg-slate-100 dark:bg-zinc-900">
+                                    <th className="py-2.5 px-3.5 bg-slate-100 dark:bg-zinc-900 border-b border-slate-200 dark:border-zinc-800"><div className="h-4 w-28 bg-slate-200 dark:bg-zinc-700 rounded"></div></th>
+                                    <th className="py-2.5 px-3 bg-slate-100 dark:bg-zinc-900 border-b border-slate-200 dark:border-zinc-800"><div className="h-4 w-20 bg-slate-200 dark:bg-zinc-700 rounded"></div></th>
+                                    <th className="py-2.5 px-3 bg-slate-100 dark:bg-zinc-900 border-b border-slate-200 dark:border-zinc-800"><div className="h-4 w-20 bg-slate-200 dark:bg-zinc-700 rounded"></div></th>
+                                    <th className="py-2.5 px-3 bg-slate-100 dark:bg-zinc-900 border-b border-slate-200 dark:border-zinc-800"><div className="h-4 w-24 bg-slate-200 dark:bg-zinc-700 rounded"></div></th>
+                                    <th className="py-2.5 px-3 bg-slate-100 dark:bg-zinc-900 border-b border-slate-200 dark:border-zinc-800"><div className="h-4 w-16 bg-slate-200 dark:bg-zinc-700 rounded"></div></th>
+                                    <th className="py-2.5 pl-3.5 pr-6 text-right bg-slate-100 dark:bg-zinc-900 border-b border-slate-200 dark:border-zinc-800"><div className="h-4 w-14 bg-slate-200 dark:bg-zinc-700 rounded ml-auto"></div></th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-slate-100 dark:divide-zinc-800/60 font-sans">
                                 {[...Array(9)].map((_, i) => (
-                                    <tr key={i} className="h-[50px]">
+                                    <tr key={i} className="h-[62px]">
                                         <td className="py-2 px-3.5">
-                                            <div className="flex items-center gap-2.5">
-                                                <div className="w-8 h-8 rounded-full bg-slate-200 dark:bg-zinc-800 shrink-0"></div>
+                                            <div className="flex items-center gap-3">
+                                                <div className="w-10 h-10 rounded-full bg-slate-200 dark:bg-zinc-800 shrink-0"></div>
                                                 <div className="space-y-1">
                                                     <div className="h-4 w-28 bg-slate-200 dark:bg-zinc-800 rounded"></div>
                                                     <div className="h-3 w-32 bg-slate-100 dark:bg-zinc-800/60 rounded"></div>
@@ -491,7 +492,7 @@ function TenantsContent() {
                                             </div>
                                         </td>
                                         <td className="py-2 px-3"><div className="h-4 w-16 bg-slate-100 dark:bg-zinc-800 rounded"></div></td>
-                                        <td className="py-2 px-4 text-right"><div className="h-7 w-16 bg-slate-100 dark:bg-zinc-800 rounded-lg ml-auto"></div></td>
+                                        <td className="py-2 px-4 text-right"><div className="h-8 w-18 bg-slate-100 dark:bg-zinc-800 rounded-lg ml-auto"></div></td>
                                     </tr>
                                 ))}
                             </tbody>
@@ -774,30 +775,30 @@ function TenantsContent() {
 
             {/* 4. Main Inventory Data: Operations Table or Directory Cards */}
             {viewMode === 'table' ? (
-                <div className="flex-1 min-h-0 bg-card border border-slate-200 dark:border-zinc-800 rounded-xl shadow-xs flex flex-col overflow-hidden relative">
-                    {/* Header filler to prevent horizontal scrollbar alignment gap */}
-                    <div className="absolute top-0 right-0 w-8 h-[44px] bg-slate-100 dark:bg-zinc-800 border-b border-slate-200 dark:border-zinc-700 z-30 pointer-events-none rounded-tr-xl" />
+                <div className="flex-1 min-h-0 max-h-[610px] bg-card border border-slate-200 dark:border-zinc-800 rounded-xl shadow-xs flex flex-col overflow-hidden relative">
+                    {/* Header filler to extend label header width and align scrollbar with 1st data row */}
+                    <div className="absolute top-0 right-0 w-6 h-[46px] bg-slate-100 dark:bg-zinc-900 border-b border-slate-200 dark:border-zinc-800 z-30 pointer-events-none rounded-tr-xl" />
 
                     <div className="flex-1 min-h-0 overflow-y-auto overflow-x-auto custom-scrollbar">
                         <table className="w-full min-w-full text-left text-sm border-collapse">
-                            <thead className="sticky top-0 z-20 bg-slate-100 dark:bg-zinc-800 shadow-xs border-b border-slate-200 dark:border-zinc-700">
+                            <thead className="sticky top-0 z-20 bg-slate-100 dark:bg-zinc-900 shadow-xs border-b border-slate-200 dark:border-zinc-800">
                                 {activeTab === 'approvals' ? (
-                                    <tr className="h-[44px] bg-slate-100 dark:bg-zinc-800 text-sm sm:text-[15px] font-black text-slate-900 dark:text-white uppercase tracking-wider">
-                                        <th className="py-2.5 px-4 bg-slate-100 dark:bg-zinc-800 border-b border-slate-200 dark:border-zinc-700">Applicant</th>
-                                        <th className="py-2.5 px-3.5 bg-slate-100 dark:bg-zinc-800 border-b border-slate-200 dark:border-zinc-700">Phone</th>
-                                        <th className="py-2.5 px-3.5 bg-slate-100 dark:bg-zinc-800 border-b border-slate-200 dark:border-zinc-700">Address & Gender</th>
-                                        <th className="py-2.5 px-3.5 bg-slate-100 dark:bg-zinc-800 border-b border-slate-200 dark:border-zinc-700">Applied Date</th>
-                                        <th className="py-2.5 px-3.5 bg-slate-100 dark:bg-zinc-800 border-b border-slate-200 dark:border-zinc-700">Status</th>
-                                        <th className="py-2.5 px-4 text-right bg-slate-100 dark:bg-zinc-800 border-b border-slate-200 dark:border-zinc-700">Review Decision</th>
+                                    <tr className="h-[46px] bg-slate-100 dark:bg-zinc-900 text-sm sm:text-base font-black text-slate-900 dark:text-white uppercase tracking-wider">
+                                        <th className="py-3 px-4 bg-slate-100 dark:bg-zinc-900 border-b border-slate-200 dark:border-zinc-800">Applicant</th>
+                                        <th className="py-3 px-3.5 bg-slate-100 dark:bg-zinc-900 border-b border-slate-200 dark:border-zinc-800">Phone</th>
+                                        <th className="py-3 px-3.5 bg-slate-100 dark:bg-zinc-900 border-b border-slate-200 dark:border-zinc-800">Address & Gender</th>
+                                        <th className="py-3 px-3.5 bg-slate-100 dark:bg-zinc-900 border-b border-slate-200 dark:border-zinc-800">Applied Date</th>
+                                        <th className="py-3 px-3.5 bg-slate-100 dark:bg-zinc-900 border-b border-slate-200 dark:border-zinc-800">Status</th>
+                                        <th className="py-3 pl-3.5 pr-6 text-right bg-slate-100 dark:bg-zinc-900 border-b border-slate-200 dark:border-zinc-800">Review Decision</th>
                                     </tr>
                                 ) : (
-                                    <tr className="h-[44px] bg-slate-100 dark:bg-zinc-800 text-sm sm:text-[15px] font-black text-slate-900 dark:text-white uppercase tracking-wider">
-                                        <th className="py-2.5 px-4 bg-slate-100 dark:bg-zinc-800 border-b border-slate-200 dark:border-zinc-700">Resident</th>
-                                        <th className="py-2.5 px-3.5 bg-slate-100 dark:bg-zinc-800 border-b border-slate-200 dark:border-zinc-700">Room & Bed</th>
-                                        <th className="py-2.5 px-3.5 bg-slate-100 dark:bg-zinc-800 border-b border-slate-200 dark:border-zinc-700">Phone</th>
-                                        <th className="py-2.5 px-3.5 bg-slate-100 dark:bg-zinc-800 border-b border-slate-200 dark:border-zinc-700">Monthly Rent & Ledger</th>
-                                        <th className="py-2.5 px-3.5 bg-slate-100 dark:bg-zinc-800 border-b border-slate-200 dark:border-zinc-700">Status</th>
-                                        <th className="py-2.5 px-4 text-right bg-slate-100 dark:bg-zinc-800 border-b border-slate-200 dark:border-zinc-700">Actions</th>
+                                    <tr className="h-[46px] bg-slate-100 dark:bg-zinc-900 text-sm sm:text-base font-black text-slate-900 dark:text-white uppercase tracking-wider">
+                                        <th className="py-3 px-4 bg-slate-100 dark:bg-zinc-900 border-b border-slate-200 dark:border-zinc-800">Resident</th>
+                                        <th className="py-3 px-3.5 bg-slate-100 dark:bg-zinc-900 border-b border-slate-200 dark:border-zinc-800">Room & Bed</th>
+                                        <th className="py-3 px-3.5 bg-slate-100 dark:bg-zinc-900 border-b border-slate-200 dark:border-zinc-800">Phone</th>
+                                        <th className="py-3 px-3.5 bg-slate-100 dark:bg-zinc-900 border-b border-slate-200 dark:border-zinc-800">Monthly Rent & Ledger</th>
+                                        <th className="py-3 px-3.5 bg-slate-100 dark:bg-zinc-900 border-b border-slate-200 dark:border-zinc-800">Status</th>
+                                        <th className="py-3 pl-3.5 pr-6 text-right bg-slate-100 dark:bg-zinc-900 border-b border-slate-200 dark:border-zinc-800">Actions</th>
                                     </tr>
                                 )}
                             </thead>
@@ -814,16 +815,16 @@ function TenantsContent() {
                                         return (
                                             <tr 
                                                 key={tenant.id} 
-                                                className="h-[54px] hover:bg-slate-50/80 dark:hover:bg-zinc-800/40 transition-colors group"
+                                                className="h-[62px] hover:bg-slate-50/80 dark:hover:bg-zinc-800/40 transition-colors group"
                                             >
                                                 {/* Applicant Identity */}
                                                 <td className="py-2 px-4">
                                                     <div className="flex items-center gap-3">
-                                                        <div className="w-9 h-9 rounded-full bg-amber-100 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 font-extrabold flex items-center justify-center shrink-0 border border-amber-300 dark:border-amber-700 text-sm">
+                                                        <div className="w-10 h-10 rounded-full bg-amber-100 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 font-extrabold flex items-center justify-center shrink-0 border border-amber-300 dark:border-amber-700 text-base">
                                                             {tenant.name.charAt(0).toUpperCase()}
                                                         </div>
                                                         <div className="min-w-0">
-                                                            <span className="font-extrabold text-base text-slate-950 dark:text-white truncate block leading-tight">
+                                                            <span className="font-extrabold text-base sm:text-[17px] text-slate-950 dark:text-white truncate block leading-tight">
                                                                 {tenant.name}
                                                             </span>
                                                             <span className="text-sm text-slate-700 dark:text-zinc-300 font-medium truncate block leading-tight mt-0.5">
@@ -838,7 +839,7 @@ function TenantsContent() {
                                                     {tenant.phone ? (
                                                         <a 
                                                             href={`tel:${tenant.phone}`} 
-                                                            className="text-base font-mono font-bold text-slate-900 dark:text-zinc-100 hover:text-black dark:hover:text-white hover:underline transition-colors"
+                                                            className="text-base sm:text-[17px] font-mono font-bold text-slate-900 dark:text-zinc-100 hover:text-black dark:hover:text-white hover:underline transition-colors"
                                                         >
                                                             {tenant.phone}
                                                         </a>
@@ -849,7 +850,7 @@ function TenantsContent() {
 
                                                 {/* Address & Gender */}
                                                 <td className="py-2 px-3.5 max-w-[210px]">
-                                                    <span className="text-base font-bold text-slate-950 dark:text-white block truncate leading-tight">
+                                                    <span className="text-base sm:text-[17px] font-bold text-slate-950 dark:text-white block truncate leading-tight">
                                                         {tenant.address || 'No address provided'}
                                                     </span>
                                                     <span className="text-sm font-medium text-slate-700 dark:text-zinc-300 block leading-tight mt-0.5">
@@ -859,14 +860,14 @@ function TenantsContent() {
 
                                                 {/* Applied Date */}
                                                 <td className="py-2 px-3.5 whitespace-nowrap">
-                                                    <span className="text-sm font-mono font-bold text-slate-900 dark:text-zinc-100">
+                                                    <span className="text-sm sm:text-base font-mono font-bold text-slate-900 dark:text-zinc-100">
                                                         {appliedDate}
                                                     </span>
                                                 </td>
 
                                                 {/* Status (text only badge) */}
                                                 <td className="py-2 px-3.5 whitespace-nowrap">
-                                                    <span className={`text-sm ${badge.className}`}>
+                                                    <span className={`text-sm sm:text-base ${badge.className}`}>
                                                         {badge.label}
                                                     </span>
                                                 </td>
@@ -894,7 +895,7 @@ function TenantsContent() {
                                                             className="p-2 rounded-lg text-slate-600 hover:text-slate-950 dark:text-zinc-300 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-zinc-800 transition-colors cursor-pointer"
                                                             title="Inspect applicant details"
                                                         >
-                                                            <Eye className="w-4 h-4" />
+                                                            <Eye className="w-4.5 h-4.5" />
                                                         </button>
                                                     </div>
                                                 </td>
@@ -909,16 +910,16 @@ function TenantsContent() {
                                         return (
                                             <tr 
                                                 key={tenant.id} 
-                                                className="h-[54px] hover:bg-slate-50/80 dark:hover:bg-zinc-800/40 transition-colors group"
+                                                className="h-[62px] hover:bg-slate-50/80 dark:hover:bg-zinc-800/40 transition-colors group"
                                             >
                                                 {/* Resident Identity */}
                                                 <td className="py-2 px-4">
                                                     <div className="flex items-center gap-3">
-                                                        <div className="w-9 h-9 rounded-full bg-slate-200 dark:bg-zinc-800 text-slate-900 dark:text-zinc-100 font-extrabold flex items-center justify-center shrink-0 border border-slate-300 dark:border-zinc-700 text-sm">
+                                                        <div className="w-10 h-10 rounded-full bg-slate-200 dark:bg-zinc-800 text-slate-900 dark:text-zinc-100 font-extrabold flex items-center justify-center shrink-0 border border-slate-300 dark:border-zinc-700 text-base">
                                                             {tenant.name.charAt(0).toUpperCase()}
                                                         </div>
                                                         <div className="min-w-0">
-                                                            <span className="font-extrabold text-base text-slate-950 dark:text-white truncate block leading-tight">
+                                                            <span className="font-extrabold text-base sm:text-[17px] text-slate-950 dark:text-white truncate block leading-tight">
                                                                 {tenant.name}
                                                             </span>
                                                             <span className="text-sm text-slate-700 dark:text-zinc-300 font-medium truncate block leading-tight mt-0.5">
@@ -932,7 +933,7 @@ function TenantsContent() {
                                                 <td className="py-2 px-3.5">
                                                     {tenant.room_number ? (
                                                         <div>
-                                                            <span className="font-extrabold text-base text-slate-950 dark:text-white block leading-tight">
+                                                            <span className="font-extrabold text-base sm:text-[17px] text-slate-950 dark:text-white block leading-tight">
                                                                 Room {tenant.room_number}
                                                             </span>
                                                             <span className="text-sm font-medium text-slate-700 dark:text-zinc-300 block leading-tight mt-0.5">
@@ -951,7 +952,7 @@ function TenantsContent() {
                                                     {tenant.phone ? (
                                                         <a 
                                                             href={`tel:${tenant.phone}`} 
-                                                            className="text-base font-mono font-bold text-slate-900 dark:text-zinc-100 hover:text-black dark:hover:text-white hover:underline transition-colors"
+                                                            className="text-base sm:text-[17px] font-mono font-bold text-slate-900 dark:text-zinc-100 hover:text-black dark:hover:text-white hover:underline transition-colors"
                                                         >
                                                             {tenant.phone}
                                                         </a>
@@ -967,11 +968,11 @@ function TenantsContent() {
                                                             ₱{Number(tenant.monthly_rent || 0).toLocaleString()} <span className="text-xs font-sans font-bold text-slate-600 dark:text-zinc-400">/mo</span>
                                                         </span>
                                                         {hasOverdue ? (
-                                                            <span className="text-sm font-mono font-bold text-rose-700 dark:text-rose-400 block leading-tight mt-0.5">
+                                                            <span className="text-sm sm:text-base font-mono font-bold text-rose-700 dark:text-rose-400 block leading-tight mt-0.5">
                                                                 ₱{Number(tenant.balance || 0).toLocaleString()} past due
                                                             </span>
                                                         ) : (
-                                                            <span className="text-sm font-bold font-mono text-emerald-700 dark:text-emerald-400 block leading-tight mt-0.5">
+                                                            <span className="text-sm sm:text-base font-bold font-mono text-emerald-700 dark:text-emerald-400 block leading-tight mt-0.5">
                                                                 Settled
                                                             </span>
                                                         )}
@@ -980,7 +981,7 @@ function TenantsContent() {
 
                                                 {/* Status (text only badge) */}
                                                 <td className="py-2 px-3.5 whitespace-nowrap">
-                                                    <span className={`text-sm ${badge.className}`}>
+                                                    <span className={`text-sm sm:text-base ${badge.className}`}>
                                                         {badge.label}
                                                     </span>
                                                 </td>
@@ -992,7 +993,7 @@ function TenantsContent() {
                                                             onClick={() => handleViewTenant(tenant)}
                                                             className="px-3.5 py-1.5 text-sm font-bold rounded-lg border border-slate-300 dark:border-zinc-700 bg-card hover:bg-slate-100 dark:hover:bg-zinc-800 text-slate-900 dark:text-zinc-100 transition-colors inline-flex items-center gap-1.5 cursor-pointer"
                                                         >
-                                                            <Eye className="w-4 h-4 text-slate-700 dark:text-zinc-300" />
+                                                            <Eye className="w-4.5 h-4.5 text-slate-700 dark:text-zinc-300" />
                                                             <span>View</span>
                                                         </button>
                                                         <button
@@ -1000,7 +1001,7 @@ function TenantsContent() {
                                                             className="p-2 rounded-lg text-slate-700 hover:text-slate-950 dark:text-zinc-300 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-zinc-800 transition-colors cursor-pointer"
                                                             title="Edit resident profile"
                                                         >
-                                                            <Edit className="w-4 h-4" />
+                                                            <Edit className="w-4.5 h-4.5" />
                                                         </button>
                                                     </div>
                                                 </td>
