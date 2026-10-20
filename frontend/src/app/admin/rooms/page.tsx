@@ -385,18 +385,19 @@ export default function AdminRooms() {
                 </div>
 
                 {/*  Main Units Ledger */}
-                <div className="flex-1 min-h-0 bg-card border border-slate-200 dark:border-zinc-800 rounded-xl overflow-hidden shadow-xs flex flex-col">
+                <div className="flex-1 min-h-0 bg-card border border-slate-200 dark:border-zinc-800 rounded-xl overflow-hidden shadow-xs flex flex-col relative">
+                    <div className="absolute top-0 right-0 w-6 h-[40px] bg-slate-100 dark:bg-zinc-900 border-b border-slate-200 dark:border-zinc-800 z-30 pointer-events-none rounded-tr-xl" />
                     <div className="overflow-x-auto overflow-y-auto flex-1 custom-scrollbar">
                         <table className="w-full min-w-full text-left text-xs border-collapse">
-                            <thead className="sticky top-0 z-10 bg-slate-100 dark:bg-zinc-800 shadow-xs">
-                                <tr className="h-10">
-                                    <th className="py-2.5 px-4"><div className="h-3 w-24 bg-slate-200 dark:bg-zinc-700 rounded"></div></th>
-                                    <th className="py-2.5 px-4"><div className="h-3 w-20 bg-slate-200 dark:bg-zinc-700 rounded"></div></th>
-                                    <th className="py-2.5 px-4"><div className="h-3 w-28 bg-slate-200 dark:bg-zinc-700 rounded"></div></th>
-                                    <th className="py-2.5 px-4"><div className="h-3 w-20 bg-slate-200 dark:bg-zinc-700 rounded"></div></th>
-                                    <th className="py-2.5 px-4"><div className="h-3 w-24 bg-slate-200 dark:bg-zinc-700 rounded"></div></th>
-                                    <th className="py-2.5 px-4 text-center"><div className="h-3 w-16 bg-slate-200 dark:bg-zinc-700 rounded mx-auto"></div></th>
-                                    <th className="py-2.5 px-4 text-right"><div className="h-3 w-16 bg-slate-200 dark:bg-zinc-700 rounded ml-auto"></div></th>
+                            <thead className="sticky top-0 z-20 bg-slate-100 dark:bg-zinc-900 shadow-xs border-b border-slate-200 dark:border-zinc-800">
+                                <tr className="h-10 bg-slate-100 dark:bg-zinc-900">
+                                    <th className="py-2.5 px-4 bg-slate-100 dark:bg-zinc-900 border-b border-slate-200 dark:border-zinc-800"><div className="h-3 w-24 bg-slate-200 dark:bg-zinc-700 rounded"></div></th>
+                                    <th className="py-2.5 px-4 bg-slate-100 dark:bg-zinc-900 border-b border-slate-200 dark:border-zinc-800"><div className="h-3 w-20 bg-slate-200 dark:bg-zinc-700 rounded"></div></th>
+                                    <th className="py-2.5 px-4 bg-slate-100 dark:bg-zinc-900 border-b border-slate-200 dark:border-zinc-800"><div className="h-3 w-28 bg-slate-200 dark:bg-zinc-700 rounded"></div></th>
+                                    <th className="py-2.5 px-4 bg-slate-100 dark:bg-zinc-900 border-b border-slate-200 dark:border-zinc-800"><div className="h-3 w-20 bg-slate-200 dark:bg-zinc-700 rounded"></div></th>
+                                    <th className="py-2.5 px-4 bg-slate-100 dark:bg-zinc-900 border-b border-slate-200 dark:border-zinc-800"><div className="h-3 w-24 bg-slate-200 dark:bg-zinc-700 rounded"></div></th>
+                                    <th className="py-2.5 px-4 text-center bg-slate-100 dark:bg-zinc-900 border-b border-slate-200 dark:border-zinc-800"><div className="h-3 w-16 bg-slate-200 dark:bg-zinc-700 rounded mx-auto"></div></th>
+                                    <th className="py-2.5 pl-4 pr-6 text-right bg-slate-100 dark:bg-zinc-900 border-b border-slate-200 dark:border-zinc-800"><div className="h-3 w-16 bg-slate-200 dark:bg-zinc-700 rounded ml-auto"></div></th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-slate-100 dark:divide-zinc-800/60 font-sans">
@@ -656,19 +657,19 @@ export default function AdminRooms() {
             {/* Main Inventory Data: Table or Visual Unit Grid */}
             {viewMode === 'table' ? (
                 <div className="flex-1 min-h-0 bg-card border border-slate-200 dark:border-zinc-800 rounded-xl shadow-xs flex flex-col overflow-hidden relative">
-                    {/* Top-Right scrollbar header filler to eliminate the gap */}
-                    <div className="absolute top-0 right-0 w-8 h-[44px] bg-slate-100 dark:bg-zinc-800 border-b border-slate-200 dark:border-zinc-700 z-30 pointer-events-none rounded-tr-xl" />
+                    {/* Top-Right scrollbar header filler to extend label header width and align scrollbar with 1st data row */}
+                    <div className="absolute top-0 right-0 w-6 h-[44px] bg-slate-100 dark:bg-zinc-900 border-b border-slate-200 dark:border-zinc-800 z-30 pointer-events-none rounded-tr-xl" />
 
                     <div className="flex-1 min-h-0 overflow-y-auto overflow-x-auto custom-scrollbar">
                         <table className="w-full min-w-full text-left text-sm border-collapse">
-                            <thead className="sticky top-0 z-20 bg-slate-100 dark:bg-zinc-800 shadow-xs">
-                                <tr className="h-[44px] bg-slate-100 dark:bg-zinc-800 text-slate-700 dark:text-zinc-300 uppercase tracking-wider text-[13px] font-bold">
-                                    <th className="py-2.5 px-6 bg-slate-100 dark:bg-zinc-800 border-b border-slate-200 dark:border-zinc-700">Room & Location</th>
-                                    <th className="py-2.5 px-4 text-center bg-slate-100 dark:bg-zinc-800 border-b border-slate-200 dark:border-zinc-700">Type & Rental Mode</th>
-                                    <th className="py-2.5 px-4 text-center bg-slate-100 dark:bg-zinc-800 border-b border-slate-200 dark:border-zinc-700">Occupancy Density</th>
-                                    <th className="py-2.5 px-4 text-center bg-slate-100 dark:bg-zinc-800 border-b border-slate-200 dark:border-zinc-700">Monthly Rate</th>
-                                    <th className="py-2.5 px-4 text-center bg-slate-100 dark:bg-zinc-800 border-b border-slate-200 dark:border-zinc-700">Status</th>
-                                    <th className="py-2.5 px-6 text-right bg-slate-100 dark:bg-zinc-800 border-b border-slate-200 dark:border-zinc-700">Actions</th>
+                            <thead className="sticky top-0 z-20 bg-slate-100 dark:bg-zinc-900 shadow-xs border-b border-slate-200 dark:border-zinc-800">
+                                <tr className="h-[44px] bg-slate-100 dark:bg-zinc-900 text-slate-700 dark:text-zinc-300 uppercase tracking-wider text-[13px] font-bold">
+                                    <th className="py-2.5 px-6 bg-slate-100 dark:bg-zinc-900 border-b border-slate-200 dark:border-zinc-800">Room & Location</th>
+                                    <th className="py-2.5 px-4 text-center bg-slate-100 dark:bg-zinc-900 border-b border-slate-200 dark:border-zinc-800">Type & Rental Mode</th>
+                                    <th className="py-2.5 px-4 text-center bg-slate-100 dark:bg-zinc-900 border-b border-slate-200 dark:border-zinc-800">Occupancy Density</th>
+                                    <th className="py-2.5 px-4 text-center bg-slate-100 dark:bg-zinc-900 border-b border-slate-200 dark:border-zinc-800">Monthly Rate</th>
+                                    <th className="py-2.5 px-4 text-center bg-slate-100 dark:bg-zinc-900 border-b border-slate-200 dark:border-zinc-800">Status</th>
+                                    <th className="py-2.5 px-6 text-right bg-slate-100 dark:bg-zinc-900 border-b border-slate-200 dark:border-zinc-800">Actions</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-slate-100 dark:divide-zinc-800/60">
@@ -676,7 +677,7 @@ export default function AdminRooms() {
                                     const occupancyPercent = room.capacity > 0 ? Math.round((room.current_occupants / room.capacity) * 100) : 0;
 
                                     return (
-                                        <tr key={room.id} className="h-[60px] hover:bg-slate-50/50 dark:hover:bg-zinc-900/30 transition-colors">
+                                        <tr key={room.id} className="h-[60px] hover:bg-slate-50/80 dark:hover:bg-zinc-800/40 transition-colors">
                                             {/* Room Number & Floor */}
                                             <td className="py-2.5 px-6">
                                                 <div className="flex items-center gap-3">
