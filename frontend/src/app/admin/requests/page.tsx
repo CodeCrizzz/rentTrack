@@ -10,7 +10,7 @@ import {
     CheckCircle2, Clock, Eye, X, 
     RefreshCw, Droplets, Zap, Wind, Hammer, Wifi, 
     HelpCircle, ZoomIn, UserCheck, Check,
-    List, LayoutGrid, ShieldAlert, TrendingUp, Phone,
+    ShieldAlert, TrendingUp, Phone,
     Send, Building2, Search, Camera
 } from 'lucide-react';
 
@@ -44,7 +44,6 @@ export default function AdminMaintenanceRequests() {
     const [isLoading, setIsLoading] = useState(true);
 
     // View & Filters
-    const [viewMode, setViewMode] = useState<'table' | 'cards'>('table');
     const [searchQuery, setSearchQuery] = useState('');
     const [statusFilter, setStatusFilter] = useState<'All' | 'Pending' | 'In Progress' | 'High Priority' | 'Resolved'>('All');
     const [priorityFilter, setPriorityFilter] = useState('All Priorities');
@@ -299,38 +298,16 @@ export default function AdminMaintenanceRequests() {
             <div className="shrink-0 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
                 <div>
                     <div className="flex items-center gap-2">
-                        <h1 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white tracking-tight">
+                        <h1 className="text-2xl sm:text-3xl font-black text-slate-950 dark:text-white tracking-tight">
                             Maintenance Requests
                         </h1>
-                        <span className="px-2.5 py-0.5 rounded-full text-xs font-mono font-bold bg-slate-100 dark:bg-zinc-800 text-slate-700 dark:text-zinc-300 border border-slate-300 dark:border-zinc-700">
+                        <span className="px-2 py-0.5 rounded-md text-xs font-mono font-bold bg-slate-100 dark:bg-zinc-800 text-slate-800 dark:text-zinc-200 border border-slate-300 dark:border-zinc-700">
                             {filteredRequests.length} of {requests.length} requests
                         </span>
                     </div>
-                    <p className="text-xs sm:text-sm font-semibold text-slate-600 dark:text-zinc-400 mt-0.5">
+                    <p className="text-xs sm:text-sm font-semibold text-slate-700 dark:text-zinc-300 mt-0.5">
                         Maintenance request tracking and resolution timeline auditing.
                     </p>
-                </div>
-
-                <div className="flex items-center gap-2">
-                    {/* View Switcher */}
-                    <div className="flex items-center bg-slate-100 dark:bg-zinc-800/80 p-0.5 rounded-lg border border-slate-300 dark:border-zinc-700 text-xs sm:text-sm font-semibold">
-                        <button
-                            onClick={() => setViewMode('table')}
-                            className={`px-3 py-1.5 rounded-md transition-all flex items-center gap-1.5 cursor-pointer ${viewMode === 'table' ? 'bg-white dark:bg-zinc-900 text-slate-950 dark:text-white shadow-xs font-extrabold' : 'text-slate-700 dark:text-zinc-300 hover:text-slate-950 dark:hover:text-white font-semibold'}`}
-                            title="Table list view"
-                        >
-                            <List className="w-3.5 h-3.5" />
-                            <span>List View</span>
-                        </button>
-                        <button
-                            onClick={() => setViewMode('cards')}
-                            className={`px-3 py-1.5 rounded-md transition-all flex items-center gap-1.5 cursor-pointer ${viewMode === 'cards' ? 'bg-white dark:bg-zinc-900 text-slate-950 dark:text-white shadow-xs font-extrabold' : 'text-slate-700 dark:text-zinc-300 hover:text-slate-950 dark:hover:text-white font-semibold'}`}
-                            title="Work order cards"
-                        >
-                            <LayoutGrid className="w-3.5 h-3.5" />
-                            <span>Cards</span>
-                        </button>
-                    </div>
                 </div>
             </div>
 
@@ -362,10 +339,10 @@ export default function AdminMaintenanceRequests() {
                 >
                     <div>
                         <span className="text-xs sm:text-sm font-extrabold uppercase tracking-wider text-slate-700 dark:text-zinc-300">Needs Review</span>
-                        <div className="text-2xl sm:text-3xl lg:text-4xl font-black font-mono text-slate-950 dark:text-white mt-0.5 flex items-baseline gap-2">
-                            {metrics.pending} <span className="text-sm sm:text-base font-sans font-extrabold text-amber-700 dark:text-amber-400">Pending</span>
+                        <div className={`text-2xl sm:text-3xl lg:text-4xl font-black font-mono mt-0.5 flex items-baseline gap-2 ${metrics.pending > 0 ? 'text-amber-700 dark:text-amber-400' : 'text-slate-950 dark:text-white'}`}>
+                            {metrics.pending} <span className="text-sm sm:text-base font-sans font-extrabold text-slate-700 dark:text-zinc-300">Pending</span>
                         </div>
-                        <p className="text-xs sm:text-sm font-medium text-slate-700 dark:text-zinc-300 mt-0.5">
+                        <p className="text-xs sm:text-sm font-semibold text-slate-700 dark:text-zinc-300 mt-0.5">
                             {metrics.pending > 0 ? 'Awaiting review and action' : 'All requests processed'}
                         </p>
                     </div>
@@ -384,7 +361,7 @@ export default function AdminMaintenanceRequests() {
                     <div>
                         <span className="text-xs sm:text-sm font-extrabold uppercase tracking-wider text-slate-700 dark:text-zinc-300">In Progress</span>
                         <div className="text-2xl sm:text-3xl lg:text-4xl font-black font-mono text-slate-950 dark:text-white mt-0.5 flex items-baseline gap-2">
-                            {metrics.inProgress} <span className="text-sm sm:text-base font-sans font-extrabold text-blue-700 dark:text-blue-400">In Progress</span>
+                            {metrics.inProgress} <span className="text-sm sm:text-base font-sans font-extrabold text-slate-700 dark:text-zinc-300">In Progress</span>
                         </div>
                         <p className="text-xs sm:text-sm font-medium text-slate-700 dark:text-zinc-300 mt-0.5">
                             {metrics.inProgress > 0 ? 'Repairs currently ongoing' : 'Zero ongoing repairs'}
@@ -405,10 +382,10 @@ export default function AdminMaintenanceRequests() {
                     <div>
                         <span className="text-xs sm:text-sm font-extrabold uppercase tracking-wider text-slate-700 dark:text-zinc-300">Resolution Rate</span>
                         <div className="text-2xl sm:text-3xl lg:text-4xl font-black font-mono text-slate-950 dark:text-white mt-0.5 flex items-baseline gap-2">
-                            {metrics.resolutionRate}% <span className="text-sm sm:text-base font-sans font-extrabold text-emerald-700 dark:text-emerald-400">Resolved</span>
+                            {metrics.resolutionRate}% <span className="text-sm sm:text-base font-sans font-extrabold text-slate-700 dark:text-zinc-300">Resolved</span>
                         </div>
                         <p className="text-xs sm:text-sm font-medium text-slate-700 dark:text-zinc-300 mt-0.5 flex items-center gap-1.5">
-                            <TrendingUp className="w-3.5 h-3.5 text-emerald-700 dark:text-emerald-400" />
+                            <TrendingUp className="w-3.5 h-3.5 text-slate-600 dark:text-zinc-400" />
                             <span><span className="font-extrabold text-slate-950 dark:text-white">{metrics.resolved}</span> of <span className="font-bold text-slate-900 dark:text-zinc-100">{metrics.total}</span> requests closed</span>
                         </p>
                     </div>
@@ -494,15 +471,14 @@ export default function AdminMaintenanceRequests() {
                 {/* Header filler to extend label header width and align scrollbar with 1st data row */}
                 <div className="absolute top-0 right-0 w-6 h-[46px] bg-slate-100 dark:bg-zinc-900 border-b border-slate-200 dark:border-zinc-800 z-30 pointer-events-none rounded-tr-xl" />
 
-                {viewMode === 'table' ? (
-                    /* WORK ORDER TABLE */
-                    <div className="overflow-x-auto overflow-y-auto flex-1 custom-scrollbar">
+                {/* WORK ORDER TABLE */}
+                <div className="overflow-x-auto overflow-y-auto flex-1 custom-scrollbar">
                         <table className="w-full min-w-full text-left text-sm border-collapse">
                             <thead className="sticky top-0 z-20 bg-slate-100 dark:bg-zinc-900 shadow-xs border-b border-slate-200 dark:border-zinc-800">
                                 <tr className="h-[46px] bg-slate-100 dark:bg-zinc-900 text-sm sm:text-base font-black text-slate-900 dark:text-white uppercase tracking-wider">
-                                    <th className="py-3 px-4.5 bg-slate-100 dark:bg-zinc-900 border-b border-slate-200 dark:border-zinc-800">Request #</th>
-                                    <th className="py-3 px-4.5 bg-slate-100 dark:bg-zinc-900 border-b border-slate-200 dark:border-zinc-800">Tenant</th>
-                                    <th className="py-3 px-4.5 bg-slate-100 dark:bg-zinc-900 border-b border-slate-200 dark:border-zinc-800">Category</th>
+                                    <th className="py-3 px-4 bg-slate-100 dark:bg-zinc-900 border-b border-slate-200 dark:border-zinc-800">Request #</th>
+                                    <th className="py-3 px-3.5 bg-slate-100 dark:bg-zinc-900 border-b border-slate-200 dark:border-zinc-800">Tenant</th>
+                                    <th className="py-3 px-3.5 bg-slate-100 dark:bg-zinc-900 border-b border-slate-200 dark:border-zinc-800">Category</th>
                                     <th className="py-3 px-3.5 bg-slate-100 dark:bg-zinc-900 border-b border-slate-200 dark:border-zinc-800 text-center">Priority</th>
                                     <th className="py-3 px-3.5 bg-slate-100 dark:bg-zinc-900 border-b border-slate-200 dark:border-zinc-800 text-center">Status</th>
                                     <th className="py-3 pl-3.5 pr-6 text-right bg-slate-100 dark:bg-zinc-900 border-b border-slate-200 dark:border-zinc-800">Actions</th>
@@ -527,24 +503,24 @@ export default function AdminMaintenanceRequests() {
                                             <tr key={req.id} className="h-[62px] hover:bg-slate-50/80 dark:hover:bg-zinc-800/40 transition-colors group">
                                                 
                                                 {/* Request # */}
-                                                <td className="py-2.5 px-4.5 whitespace-nowrap">
-                                                    <span className="font-mono font-bold text-base sm:text-[17px] text-teal-700 dark:text-teal-400">
+                                                <td className="py-2 px-4 whitespace-nowrap">
+                                                    <span className="font-mono font-bold text-base sm:text-[17px] text-slate-900 dark:text-white">
                                                         {formatRequestNumber(req.id, req.request_number)}
                                                     </span>
                                                 </td>
 
                                                 {/* Tenant */}
-                                                <td className="py-2.5 px-4.5 whitespace-nowrap">
+                                                <td className="py-2 px-3.5 whitespace-nowrap">
                                                     <div className="font-extrabold text-base sm:text-[17px] text-slate-950 dark:text-white leading-tight">
                                                         {req.tenant_name}
                                                     </div>
-                                                    <div className="text-xs sm:text-sm font-semibold text-slate-600 dark:text-zinc-400 leading-tight mt-0.5">
+                                                    <div className="text-sm font-medium text-slate-700 dark:text-zinc-300 leading-tight mt-0.5">
                                                         {req.room_number ? `Room ${req.room_number}` : 'Common Property'}
                                                     </div>
                                                 </td>
 
                                                 {/* Category */}
-                                                <td className="py-2.5 px-4.5 whitespace-nowrap">
+                                                <td className="py-2 px-3.5 whitespace-nowrap">
                                                     <div className="flex items-center gap-2.5 font-semibold text-sm sm:text-base text-slate-900 dark:text-zinc-100">
                                                         <CategoryIcon className="w-4.5 h-4.5 text-slate-500 dark:text-zinc-400 shrink-0" />
                                                         <span>{req.category}</span>
@@ -552,27 +528,27 @@ export default function AdminMaintenanceRequests() {
                                                 </td>
 
                                                 {/* Priority */}
-                                                <td className="py-2.5 px-3.5 text-center whitespace-nowrap">
+                                                <td className="py-2 px-3.5 text-center whitespace-nowrap">
                                                     <span className={`text-xs sm:text-sm font-bold uppercase tracking-wider ${priority.className}`}>
                                                         {priority.label}
                                                     </span>
                                                 </td>
 
                                                 {/* Status */}
-                                                <td className="py-2.5 px-3.5 text-center whitespace-nowrap">
+                                                <td className="py-2 px-3.5 text-center whitespace-nowrap">
                                                     <span className={`text-xs sm:text-sm font-bold uppercase tracking-wider ${status.className}`}>
                                                         {status.label}
                                                     </span>
                                                 </td>
 
                                                 {/* Actions */}
-                                                <td className="py-2.5 px-4.5 text-right whitespace-nowrap">
-                                                    <div className="flex items-center justify-end gap-2">
+                                                <td className="py-2 px-4 text-right whitespace-nowrap">
+                                                    <div className="flex items-center justify-end gap-1.5">
                                                         {/* Quick Status Advance Button: Start -> Resolve */}
                                                         {req.status === 'Pending' && (
                                                             <button
                                                                 onClick={() => handleQuickStatus(req.id, 'In Progress')}
-                                                                className="px-3.5 py-1.5 rounded-lg bg-blue-50 dark:bg-blue-500/10 text-blue-700 dark:text-blue-400 border border-blue-200 dark:border-blue-900/40 hover:bg-blue-100 dark:hover:bg-blue-500/20 font-bold text-xs sm:text-sm transition-colors cursor-pointer"
+                                                                className="px-3.5 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm transition-colors cursor-pointer"
                                                                 title="Start Repair (Mark as In Progress)"
                                                             >
                                                                 Start
@@ -581,7 +557,7 @@ export default function AdminMaintenanceRequests() {
                                                         {req.status === 'In Progress' && (
                                                             <button
                                                                 onClick={() => handleQuickStatus(req.id, 'Resolved')}
-                                                                className="px-3.5 py-1.5 rounded-lg bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-900/40 hover:bg-emerald-100 dark:hover:bg-emerald-500/20 font-bold text-xs sm:text-sm transition-colors cursor-pointer"
+                                                                className="px-3.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm transition-colors cursor-pointer"
                                                                 title="Mark as Resolved"
                                                             >
                                                                 Resolve
@@ -591,7 +567,7 @@ export default function AdminMaintenanceRequests() {
                                                         {/* View Details */}
                                                         <button
                                                             onClick={() => setViewingRequest(req)}
-                                                            className="p-2 rounded-lg text-slate-600 hover:text-slate-900 dark:text-zinc-400 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-zinc-800 transition-colors cursor-pointer"
+                                                            className="p-2 rounded-lg text-slate-600 hover:text-slate-950 dark:text-zinc-300 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-zinc-800 transition-colors cursor-pointer"
                                                             title="View Details"
                                                         >
                                                             <Eye className="w-4.5 h-4.5" />
@@ -606,91 +582,7 @@ export default function AdminMaintenanceRequests() {
                             </tbody>
                         </table>
                     </div>
-                ) : (
-                    /* WORK ORDER CARDS VIEW */
-                    <div className="overflow-y-auto flex-1 p-3 custom-scrollbar">
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                            {filteredRequests.length === 0 ? (
-                                <div className="col-span-full py-12 text-center text-slate-400 dark:text-zinc-500">
-                                    <Wrench className="w-8 h-8 mx-auto mb-2 opacity-30" />
-                                    <p className="font-extrabold text-base text-slate-900 dark:text-white">No maintenance requests found.</p>
-                                    <p className="text-sm font-medium text-slate-600 dark:text-zinc-400 mt-0.5">Try adjusting your filters or search keywords.</p>
-                                </div>
-                            ) : (
-                                filteredRequests.map(req => {
-                                    const CategoryIcon = getCategoryIcon(req.category);
-                                    const status = getStatusBadge(req.status);
-                                    const priority = getPriorityBadge(req.priority);
-
-                                    return (
-                                        <div key={req.id} className="bg-card border border-slate-200 dark:border-zinc-800 rounded-xl p-3.5 shadow-xs flex flex-col justify-between hover:border-slate-300 dark:hover:border-zinc-700 transition-all">
-                                            <div>
-                                                <div className="flex items-start justify-between gap-2 mb-2">
-                                                    <div>
-                                                        <span className="inline-block font-mono font-bold text-xs sm:text-sm px-2 py-0.5 rounded-md bg-teal-50 dark:bg-teal-500/10 text-teal-700 dark:text-teal-400 border border-teal-200/60 dark:border-teal-500/20">
-                                                            {formatRequestNumber(req.id, req.request_number)}
-                                                        </span>
-                                                        <div className="font-sans font-extrabold text-slate-950 dark:text-white text-base mt-1">
-                                                            {req.tenant_name}
-                                                        </div>
-                                                        <div className="text-xs sm:text-[13px] font-semibold text-slate-700 dark:text-zinc-300 mt-0.5">
-                                                            {req.room_number ? `Room ${req.room_number}` : 'Common Property'}
-                                                        </div>
-                                                    </div>
-                                                    <span className={`text-xs sm:text-sm ${priority.className}`}>
-                                                        {priority.label}
-                                                    </span>
-                                                </div>
-
-                                                <div className="bg-slate-50 dark:bg-zinc-900/60 rounded-lg p-2.5 border border-slate-200 dark:border-zinc-800 mb-3">
-                                                    <div className="flex items-center gap-2 font-medium text-sm text-slate-900 dark:text-zinc-100">
-                                                        <CategoryIcon className="w-4 h-4 text-slate-500 dark:text-zinc-400" />
-                                                        <span>{req.category}</span>
-                                                    </div>
-                                                </div>
-                                            </div>
-
-                                            <div className="flex items-center justify-between pt-2 border-t border-slate-200 dark:border-zinc-800/80">
-                                                <span className={`text-xs sm:text-sm ${status.className}`}>
-                                                    {status.label}
-                                                </span>
-                                                <div className="flex items-center gap-2">
-                                                    {req.status === 'Pending' && (
-                                                        <button
-                                                            onClick={() => handleQuickStatus(req.id, 'In Progress')}
-                                                            className="text-xs sm:text-sm font-semibold text-blue-700 dark:text-blue-400 hover:text-blue-900 dark:hover:text-blue-300 hover:underline transition-colors cursor-pointer"
-                                                            title="Start Repair (Mark as In Progress)"
-                                                        >
-                                                            Start
-                                                        </button>
-                                                    )}
-                                                    {req.status === 'In Progress' && (
-                                                        <button
-                                                            onClick={() => handleQuickStatus(req.id, 'Resolved')}
-                                                            className="text-xs sm:text-sm font-semibold text-emerald-700 dark:text-emerald-400 hover:text-emerald-900 dark:hover:text-emerald-300 hover:underline transition-colors cursor-pointer"
-                                                            title="Mark as Resolved"
-                                                        >
-                                                            Resolve
-                                                        </button>
-                                                    )}
-                                                    <button
-                                                        onClick={() => setViewingRequest(req)}
-                                                        className="p-1.5 text-slate-600 hover:text-slate-900 dark:text-zinc-400 dark:hover:text-white transition-colors cursor-pointer"
-                                                        title="View Details"
-                                                    >
-                                                        <Eye className="w-4 h-4" />
-                                                    </button>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    );
-                                })
-                            )}
-                        </div>
-                    </div>
-                )}
-
-            </div>
+                </div>
 
             {/* MODALS */}
             <AnimatePresence>
@@ -704,7 +596,7 @@ export default function AdminMaintenanceRequests() {
                                 <div className="p-5 border-b border-slate-100 dark:border-zinc-800 flex justify-between items-start shrink-0 bg-slate-50/50 dark:bg-zinc-900/40">
                                     <div>
                                         <div className="flex items-center gap-2">
-                                            <span className="font-mono text-xs sm:text-sm font-bold text-teal-700 dark:text-teal-400">
+                                            <span className="font-mono text-xs sm:text-sm font-bold text-slate-900 dark:text-white">
                                                 {formatRequestNumber(viewingRequest.id, viewingRequest.request_number)}
                                             </span>
                                             <span className="text-slate-300 dark:text-zinc-700">·</span>
@@ -748,7 +640,7 @@ export default function AdminMaintenanceRequests() {
                                     <div>
                                         <div className="flex items-center justify-between mb-2">
                                             <span className="text-xs sm:text-sm font-extrabold text-slate-900 dark:text-white uppercase tracking-wider flex items-center gap-1.5">
-                                                <Camera className="w-4 h-4 text-teal-600 dark:text-teal-400" />
+                                                <Camera className="w-4 h-4 text-slate-700 dark:text-zinc-300" />
                                                 Proof of Issue
                                             </span>
                                             {proofUrl && (
