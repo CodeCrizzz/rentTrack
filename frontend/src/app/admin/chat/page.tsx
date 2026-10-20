@@ -42,7 +42,12 @@ const QUICK_RESPONSES = [
     { label: "Follow Up Shortly", text: "Noted on this, we'll follow up shortly." }
 ];
 
-const formatRequestNumber = (id: any) => 'RT' + String(id || '').padStart(4, '0');
+const formatRequestNumber = (id: any, reqNum?: string | null) => {
+    if (reqNum) return reqNum;
+    if (typeof id === 'string' && id.startsWith('RT')) return id;
+    if (!id) return '';
+    return 'RT-' + String(id).padStart(6, '0');
+};
 
 export default function AdminChat() {
     const [conversations, setConversations] = useState<Conversation[]>([]);
@@ -336,7 +341,7 @@ export default function AdminChat() {
             if (newStatus === 'Resolved') payload.date_resolved = new Date().toISOString();
             
             await api.put(`/admin/requests/${reqId}`, payload);
-            toast.success(`Request #${formatRequestNumber(reqId)} status set to ${newStatus}`);
+            toast.success(`Request #${formatRequestNumber(reqId, selectedRequest?.request_number)} status set to ${newStatus}`);
             setSelectedRequest((prev: any) => prev ? { ...prev, ...payload } : null);
         } catch (err) {
             console.error("Failed to update status:", err);
@@ -860,7 +865,7 @@ export default function AdminChat() {
                                 <div className="min-w-0">
                                     <div className="flex items-center gap-2 mb-1">
                                         <span className="font-mono text-xs font-black px-2.5 py-0.5 rounded-md bg-teal-50 dark:bg-teal-500/10 text-teal-700 dark:text-teal-400 border border-teal-300/60 dark:border-teal-500/30">
-                                            {selectedRequest.id && selectedRequest.id !== '—' ? formatRequestNumber(selectedRequest.id) : 'WORK ORDER'}
+                                            {selectedRequest.id && selectedRequest.id !== '—' ? formatRequestNumber(selectedRequest.id, selectedRequest.request_number) : 'WORK ORDER'}
                                         </span>
                                         <span className="text-xs font-semibold text-slate-500 dark:text-zinc-400">
                                             {selectedRequest.created_at ? new Date(selectedRequest.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'Recent'}
