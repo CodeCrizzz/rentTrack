@@ -109,7 +109,7 @@ experience in the full software development lifecycle (planning, coding,
 PR review, and issue tracking).
 ================================================================================
 
-commit each file and put a commit message for each file to their specific changes
-now that I have 8 changes that I did not commit, this is the time to apply the github contribution guide
+commit each file and put a commit message for each file to their specific changes and apply the github contribution guide for issues,, pull request, code review and commit
 - git checkout main
 - git pull origin main
+
