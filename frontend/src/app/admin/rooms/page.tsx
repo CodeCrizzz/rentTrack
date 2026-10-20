@@ -4,7 +4,7 @@ import api from '@/lib/api';
 import { 
     Search, Plus, Building2, Users, Info, Wrench, Edit, Trash2, 
     X, CheckCircle, BedDouble, Layers, ArrowUpRight, Check,
-    AlertTriangle, RefreshCw, LayoutGrid, List, Sparkles, Phone,
+    AlertTriangle, RefreshCw, Sparkles, Phone,
     Calendar, DollarSign, ShieldAlert, DoorOpen, Home
 } from 'lucide-react';
 import CustomSelect from '@/components/CustomSelect';
@@ -57,9 +57,6 @@ export default function AdminRooms() {
     const [rooms, setRooms] = useState<Room[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [isSubmitting, setIsSubmitting] = useState(false);
-    
-    // View mode: Table or Visual Unit Grid
-    const [viewMode, setViewMode] = useState<'table' | 'grid'>('table');
 
     // Modals
     const [isModalOpen, setIsModalOpen] = useState(false);
@@ -69,7 +66,7 @@ export default function AdminRooms() {
 
     // Filters
     const [searchQuery, setSearchQuery] = useState('');
-    const [statusFilter, setStatusFilter] = useState<'all' | 'available' | 'partially' | 'occupied' | 'maintenance'>('all');
+    const [statusFilter, setStatusFilter] = useState<'All Units' | 'Vacant' | 'Available Beds' | 'Fully Occupied' | 'Maintenance'>('All Units');
     const [floorFilter, setFloorFilter] = useState('All Floors');
     const [typeFilter, setTypeFilter] = useState('All Types');
     const [rentalTypeFilter, setRentalTypeFilter] = useState('All Rental Types');
@@ -278,13 +275,13 @@ export default function AdminRooms() {
             );
 
             let matchesStatus = true;
-            if (statusFilter === 'available') {
+            if (statusFilter === 'Vacant') {
                 matchesStatus = r.current_occupants === 0 && r.status !== 'Maintenance' && r.status !== 'Unavailable';
-            } else if (statusFilter === 'partially') {
+            } else if (statusFilter === 'Available Beds') {
                 matchesStatus = r.current_occupants > 0 && r.current_occupants < r.capacity && r.status !== 'Maintenance';
-            } else if (statusFilter === 'occupied') {
+            } else if (statusFilter === 'Fully Occupied') {
                 matchesStatus = r.current_occupants >= r.capacity && r.status !== 'Maintenance';
-            } else if (statusFilter === 'maintenance') {
+            } else if (statusFilter === 'Maintenance') {
                 matchesStatus = r.status === 'Maintenance';
             }
 
@@ -325,91 +322,73 @@ export default function AdminRooms() {
         );
     };
 
-    const categoryLabel = useMemo(() => {
-        switch (statusFilter) {
-            case 'available': return 'Vacant';
-            case 'partially': return 'Available Beds';
-            case 'occupied': return 'Fully Occupied';
-            case 'maintenance': return 'Under Maintenance';
-            default: return 'All Units';
-        }
-    }, [statusFilter]);
-
     if (isLoading) {
         return (
-            <div className="w-full h-[calc(100vh-6.2rem)] md:h-[calc(100vh-7.2rem)] lg:h-[calc(100dvh-7.2rem)] flex flex-col font-sans text-slate-900 dark:text-zinc-100 overflow-hidden space-y-2.5 animate-pulse">
+            <div className="w-full h-[calc(100vh-6.2rem)] md:h-[calc(100vh-7.2rem)] lg:h-[calc(100dvh-7.2rem)] flex flex-col font-sans text-slate-900 dark:text-zinc-100 overflow-hidden space-y-2.5 sm:space-y-3 animate-pulse">
                 {/* Header & Executive Controls */}
-                <div className="shrink-0 flex flex-col sm:flex-row sm:items-center justify-between gap-3 py-1 border-b border-slate-200/80 dark:border-zinc-800/80 pb-3">
+                <div className="shrink-0 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
                     <div className="flex items-center gap-3">
                         <div className="h-7 w-52 bg-slate-200 dark:bg-zinc-800 rounded-lg"></div>
-                        <div className="h-5 w-20 bg-slate-200 dark:bg-zinc-800 rounded-full"></div>
+                        <div className="h-5 w-20 bg-slate-200 dark:bg-zinc-800 rounded-md"></div>
                     </div>
 
                     <div className="flex flex-wrap items-center gap-2">
-                        <div className="h-8 w-40 bg-slate-200 dark:bg-zinc-800 rounded-lg"></div>
-                        <div className="h-8 w-20 bg-slate-200 dark:bg-zinc-800 rounded-lg"></div>
-                        <div className="h-8 w-28 bg-slate-200 dark:bg-zinc-800 rounded-lg"></div>
+                        <div className="h-8.5 w-28 bg-slate-200 dark:bg-zinc-800 rounded-lg"></div>
                     </div>
                 </div>
 
                 {/* Executive Metric Ribbon (4 Tiles) */}
-                <div className="shrink-0 grid grid-cols-2 lg:grid-cols-4 gap-2.5">
+                <div className="shrink-0 grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-3">
                     {[...Array(4)].map((_, i) => (
-                        <div key={i} className="bg-card border border-slate-200 dark:border-zinc-800 rounded-xl p-3 shadow-xs flex items-center justify-between">
+                        <div key={i} className="bg-card border border-slate-200 dark:border-zinc-800 rounded-xl p-2.5 sm:p-3 shadow-xs flex items-center justify-between">
                             <div className="space-y-1.5 flex-1">
-                                <div className="h-2.5 w-24 bg-slate-200 dark:bg-zinc-800 rounded"></div>
-                                <div className="h-6 w-32 bg-slate-200 dark:bg-zinc-800 rounded-md"></div>
-                                <div className="h-2.5 w-20 bg-slate-200 dark:bg-zinc-800 rounded"></div>
+                                <div className="h-3 w-24 bg-slate-200 dark:bg-zinc-800 rounded"></div>
+                                <div className="h-8 w-28 bg-slate-200 dark:bg-zinc-800 rounded-md"></div>
+                                <div className="h-3 w-20 bg-slate-200 dark:bg-zinc-800 rounded"></div>
                             </div>
-                            <div className="w-10 h-10 rounded-xl bg-slate-100 dark:bg-zinc-800 shrink-0"></div>
+                            <div className="w-11 h-11 rounded-xl bg-slate-100 dark:bg-zinc-800 shrink-0"></div>
                         </div>
                     ))}
                 </div>
 
-                {/* Category Filtering Strip */}
+                {/* Category Filtering Strip Skeleton */}
                 <div className="shrink-0 bg-card border border-slate-200 dark:border-zinc-800 rounded-xl p-2 shadow-xs">
-                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-2">
-                        {/* Status Pills */}
-                        <div className="flex items-center gap-1 overflow-x-auto">
-                            {[...Array(5)].map((_, i) => (
-                                <div key={i} className="h-7 w-24 bg-slate-100 dark:bg-zinc-800 rounded-md"></div>
-                            ))}
-                        </div>
-                        {/* Search & Dropdowns */}
+                    <div className="flex flex-wrap items-center justify-between gap-2">
                         <div className="flex flex-wrap items-center gap-2">
-                            <div className="h-7 w-48 bg-slate-100 dark:bg-zinc-800 rounded-lg"></div>
-                            <div className="h-7 w-28 bg-slate-100 dark:bg-zinc-800 rounded-lg"></div>
-                            <div className="h-7 w-32 bg-slate-100 dark:bg-zinc-800 rounded-lg"></div>
+                            <div className="h-8.5 w-56 sm:w-64 bg-slate-100 dark:bg-zinc-800 rounded-lg"></div>
+                            <div className="h-8.5 w-32 sm:w-36 bg-slate-100 dark:bg-zinc-800 rounded-lg"></div>
+                            <div className="h-8.5 w-32 sm:w-36 bg-slate-100 dark:bg-zinc-800 rounded-lg"></div>
+                            <div className="h-8.5 w-40 sm:w-44 bg-slate-100 dark:bg-zinc-800 rounded-lg"></div>
+                            <div className="h-8.5 w-40 sm:w-44 bg-slate-100 dark:bg-zinc-800 rounded-lg"></div>
                         </div>
+                        <div className="h-4 w-24 bg-slate-100 dark:bg-zinc-800 rounded"></div>
                     </div>
                 </div>
 
-                {/*  Main Units Ledger */}
-                <div className="flex-1 min-h-0 bg-card border border-slate-200 dark:border-zinc-800 rounded-xl overflow-hidden shadow-xs flex flex-col relative">
-                    <div className="absolute top-0 right-0 w-6 h-[40px] bg-slate-100 dark:bg-zinc-900 border-b border-slate-200 dark:border-zinc-800 z-30 pointer-events-none rounded-tr-xl" />
+                {/* Main Units Ledger */}
+                <div className="flex-1 min-h-0 max-h-[610px] bg-card border border-slate-200 dark:border-zinc-800 rounded-xl overflow-hidden shadow-xs flex flex-col relative">
+                    <div className="absolute top-0 right-0 w-6 h-[46px] bg-slate-100 dark:bg-zinc-900 border-b border-slate-200 dark:border-zinc-800 z-30 pointer-events-none rounded-tr-xl" />
                     <div className="overflow-x-auto overflow-y-auto flex-1 custom-scrollbar">
-                        <table className="w-full min-w-full text-left text-xs border-collapse">
+                        <table className="w-full min-w-full text-left text-sm border-collapse">
                             <thead className="sticky top-0 z-20 bg-slate-100 dark:bg-zinc-900 shadow-xs border-b border-slate-200 dark:border-zinc-800">
-                                <tr className="h-10 bg-slate-100 dark:bg-zinc-900">
-                                    <th className="py-2.5 px-4 bg-slate-100 dark:bg-zinc-900 border-b border-slate-200 dark:border-zinc-800"><div className="h-3 w-24 bg-slate-200 dark:bg-zinc-700 rounded"></div></th>
-                                    <th className="py-2.5 px-4 bg-slate-100 dark:bg-zinc-900 border-b border-slate-200 dark:border-zinc-800"><div className="h-3 w-20 bg-slate-200 dark:bg-zinc-700 rounded"></div></th>
-                                    <th className="py-2.5 px-4 bg-slate-100 dark:bg-zinc-900 border-b border-slate-200 dark:border-zinc-800"><div className="h-3 w-28 bg-slate-200 dark:bg-zinc-700 rounded"></div></th>
-                                    <th className="py-2.5 px-4 bg-slate-100 dark:bg-zinc-900 border-b border-slate-200 dark:border-zinc-800"><div className="h-3 w-20 bg-slate-200 dark:bg-zinc-700 rounded"></div></th>
-                                    <th className="py-2.5 px-4 bg-slate-100 dark:bg-zinc-900 border-b border-slate-200 dark:border-zinc-800"><div className="h-3 w-24 bg-slate-200 dark:bg-zinc-700 rounded"></div></th>
-                                    <th className="py-2.5 px-4 text-center bg-slate-100 dark:bg-zinc-900 border-b border-slate-200 dark:border-zinc-800"><div className="h-3 w-16 bg-slate-200 dark:bg-zinc-700 rounded mx-auto"></div></th>
-                                    <th className="py-2.5 pl-4 pr-6 text-right bg-slate-100 dark:bg-zinc-900 border-b border-slate-200 dark:border-zinc-800"><div className="h-3 w-16 bg-slate-200 dark:bg-zinc-700 rounded ml-auto"></div></th>
+                                <tr className="h-[46px] bg-slate-100 dark:bg-zinc-900">
+                                    <th className="py-2.5 px-4 bg-slate-100 dark:bg-zinc-900 border-b border-slate-200 dark:border-zinc-800"><div className="h-4 w-24 bg-slate-200 dark:bg-zinc-700 rounded"></div></th>
+                                    <th className="py-2.5 px-3.5 bg-slate-100 dark:bg-zinc-900 border-b border-slate-200 dark:border-zinc-800"><div className="h-4 w-20 bg-slate-200 dark:bg-zinc-700 rounded mx-auto"></div></th>
+                                    <th className="py-2.5 px-3.5 bg-slate-100 dark:bg-zinc-900 border-b border-slate-200 dark:border-zinc-800"><div className="h-4 w-28 bg-slate-200 dark:bg-zinc-700 rounded mx-auto"></div></th>
+                                    <th className="py-2.5 px-3.5 bg-slate-100 dark:bg-zinc-900 border-b border-slate-200 dark:border-zinc-800"><div className="h-4 w-20 bg-slate-200 dark:bg-zinc-700 rounded mx-auto"></div></th>
+                                    <th className="py-2.5 px-3.5 bg-slate-100 dark:bg-zinc-900 border-b border-slate-200 dark:border-zinc-800"><div className="h-4 w-24 bg-slate-200 dark:bg-zinc-700 rounded mx-auto"></div></th>
+                                    <th className="py-2.5 pl-3.5 pr-6 text-right bg-slate-100 dark:bg-zinc-900 border-b border-slate-200 dark:border-zinc-800"><div className="h-4 w-16 bg-slate-200 dark:bg-zinc-700 rounded ml-auto"></div></th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-slate-100 dark:divide-zinc-800/60 font-sans">
-                                {[...Array(7)].map((_, i) => (
-                                    <tr key={i} className="h-12">
+                                {[...Array(9)].map((_, i) => (
+                                    <tr key={i} className="h-[62px]">
                                         <td className="py-2 px-4"><div className="h-4 w-28 bg-slate-100 dark:bg-zinc-800/80 rounded"></div></td>
-                                        <td className="py-2 px-4"><div className="h-5 w-20 bg-slate-100 dark:bg-zinc-800/80 rounded-full"></div></td>
-                                        <td className="py-2 px-4"><div className="h-4 w-32 bg-slate-100 dark:bg-zinc-800/80 rounded"></div></td>
-                                        <td className="py-2 px-4"><div className="h-4 w-20 bg-slate-100 dark:bg-zinc-800/80 rounded"></div></td>
-                                        <td className="py-2 px-4"><div className="h-4 w-36 bg-slate-100 dark:bg-zinc-800/80 rounded"></div></td>
-                                        <td className="py-2 px-4"><div className="h-5 w-24 bg-slate-100 dark:bg-zinc-800/80 rounded-full mx-auto"></div></td>
-                                        <td className="py-2 px-4"><div className="h-6 w-20 bg-slate-100 dark:bg-zinc-800/80 rounded-lg ml-auto"></div></td>
+                                        <td className="py-2 px-3.5"><div className="h-5 w-20 bg-slate-100 dark:bg-zinc-800/80 rounded mx-auto"></div></td>
+                                        <td className="py-2 px-3.5"><div className="h-4 w-24 bg-slate-100 dark:bg-zinc-800/80 rounded mx-auto"></div></td>
+                                        <td className="py-2 px-3.5"><div className="h-4 w-20 bg-slate-100 dark:bg-zinc-800/80 rounded mx-auto"></div></td>
+                                        <td className="py-2 px-3.5"><div className="h-5 w-24 bg-slate-100 dark:bg-zinc-800/80 rounded-full mx-auto"></div></td>
+                                        <td className="py-2 px-4"><div className="h-8 w-20 bg-slate-100 dark:bg-zinc-800/80 rounded-lg ml-auto"></div></td>
                                     </tr>
                                 ))}
                             </tbody>
@@ -421,50 +400,30 @@ export default function AdminRooms() {
     }
 
     return (
-        <div className="w-full h-[calc(100vh-6.2rem)] md:h-[calc(100vh-7.2rem)] lg:h-[calc(100dvh-7.2rem)] flex flex-col font-sans text-slate-900 dark:text-zinc-100 overflow-hidden space-y-2.5">
+        <div className="w-full h-[calc(100vh-6.2rem)] md:h-[calc(100vh-7.2rem)] lg:h-[calc(100dvh-7.2rem)] flex flex-col font-sans text-slate-900 dark:text-zinc-100 overflow-hidden space-y-2.5 sm:space-y-3">
             
             {/* Header & Executive Controls */}
-            <div className="shrink-0 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 py-1 border-b border-slate-200/80 dark:border-zinc-800/80 pb-2">
+            <div className="shrink-0 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
                 <div>
-                    <div className="flex items-center gap-2.5">
-                        <h1 className="text-xl sm:text-2xl font-black tracking-tight text-slate-900 dark:text-white">
+                    <div className="flex items-center gap-2">
+                        <h1 className="text-2xl sm:text-3xl font-black text-slate-950 dark:text-white tracking-tight">
                             Rooms Management
                         </h1>
-                        <span className="hidden sm:inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-slate-100 dark:bg-zinc-800 text-slate-700 dark:text-zinc-300 border border-slate-200 dark:border-zinc-700">
+                        <span className="px-2 py-0.5 rounded-md text-xs font-mono font-bold bg-slate-100 dark:bg-zinc-800 text-slate-800 dark:text-zinc-200 border border-slate-300 dark:border-zinc-700">
                             {metrics.total} Units
                         </span>
                     </div>
-                    <p className="text-xs font-semibold text-slate-600 dark:text-zinc-400 mt-0.5">
+                    <p className="text-xs sm:text-sm font-semibold text-slate-700 dark:text-zinc-300 mt-0.5">
                         Manage rooms, bed capacities, amenities, and resident room assignments.
                     </p>
                 </div>
 
                 <div className="flex flex-wrap items-center gap-2">
-                    {/* View Switcher: Table vs Grid */}
-                    <div className="flex items-center p-1 bg-slate-100 dark:bg-zinc-800/80 rounded-lg text-xs font-semibold">
-                        <button
-                            onClick={() => setViewMode('table')}
-                            className={`px-2.5 py-1 rounded-md transition-all flex items-center gap-1.5 ${viewMode === 'table' ? 'bg-white dark:bg-zinc-900 text-slate-900 dark:text-white shadow-xs' : 'text-slate-500 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white'}`}
-                            title="Table list view"
-                        >
-                            <List className="w-3.5 h-3.5" />
-                            <span>List View</span>
-                        </button>
-                        <button
-                            onClick={() => setViewMode('grid')}
-                            className={`px-2.5 py-1 rounded-md transition-all flex items-center gap-1.5 ${viewMode === 'grid' ? 'bg-white dark:bg-zinc-900 text-slate-900 dark:text-white shadow-xs' : 'text-slate-500 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white'}`}
-                            title="Visual room cards"
-                        >
-                            <LayoutGrid className="w-3.5 h-3.5" />
-                            <span>Unit Cards</span>
-                        </button>
-                    </div>
-
                     <button
                         onClick={() => handleOpenModal()}
-                        className="px-3.5 py-1.5 text-xs font-bold rounded-lg bg-slate-900 hover:bg-slate-800 dark:bg-white dark:hover:bg-zinc-200 text-white dark:text-zinc-900 transition-colors flex items-center gap-1.5 shadow-xs"
+                        className="px-3.5 py-1.5 text-sm font-bold rounded-lg bg-slate-900 hover:bg-slate-800 dark:bg-white dark:hover:bg-zinc-200 text-white dark:text-zinc-900 transition-colors flex items-center gap-1.5 shadow-xs"
                     >
-                        <Plus className="w-3.5 h-3.5" strokeWidth={2.5} />
+                        <Plus className="w-4 h-4 stroke-[2.5]" />
                         <span>Add Room</span>
                     </button>
                 </div>
@@ -481,7 +440,7 @@ export default function AdminRooms() {
                             {metrics.total} <span className="text-sm sm:text-base font-sans font-extrabold text-slate-700 dark:text-zinc-300">Rooms</span>
                         </div>
                         <p className="text-xs sm:text-sm font-medium text-slate-700 dark:text-zinc-300 mt-0.5">
-                            <span className="font-bold text-slate-900 dark:text-zinc-100">{metrics.totalBeds}</span> total bedspaces
+                            <span className="font-extrabold text-slate-950 dark:text-white">{metrics.totalBeds}</span> total bedspaces
                         </p>
                     </div>
                     <div className="w-11 h-11 rounded-xl bg-slate-100 dark:bg-zinc-800 text-slate-900 dark:text-white flex items-center justify-center shrink-0 border border-slate-300 dark:border-zinc-700">
@@ -539,96 +498,39 @@ export default function AdminRooms() {
 
             </div>
 
-            {/* Status Filter Bar & Search Controls */}
-            <div className="shrink-0 bg-card border border-slate-200 dark:border-zinc-800 rounded-xl p-2 sm:p-2.5 shadow-xs space-y-2">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                    
-                    {/* Status Pill Filters (The Categories) */}
-                    <div className="flex items-center gap-1.5 overflow-x-auto pb-0.5 sm:pb-0 text-xs font-semibold custom-scrollbar">
-                        <button
-                            onClick={() => setStatusFilter('all')}
-                            className={`px-3 py-1 rounded-lg transition-all shrink-0 flex items-center gap-1.5 ${statusFilter === 'all' ? 'bg-slate-900 text-white dark:bg-white dark:text-zinc-900 shadow-xs' : 'bg-slate-100 dark:bg-zinc-800 text-slate-600 dark:text-zinc-400 hover:bg-slate-200 dark:hover:bg-zinc-700'}`}
-                        >
-                            <span>All Units</span>
-                            <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-mono ${statusFilter === 'all' ? 'bg-white/20 text-white dark:bg-black/20 dark:text-zinc-900' : 'bg-slate-200 dark:bg-zinc-700 text-slate-700 dark:text-zinc-300'}`}>
-                                {rooms.length}
-                            </span>
-                        </button>
-                        <button
-                            onClick={() => setStatusFilter('available')}
-                            className={`px-3 py-1 rounded-lg transition-all shrink-0 flex items-center gap-1.5 ${statusFilter === 'available' ? 'bg-slate-700 dark:bg-zinc-700 text-white shadow-xs' : 'bg-slate-100 dark:bg-zinc-800 text-slate-600 dark:text-zinc-400 hover:bg-slate-200 dark:hover:bg-zinc-700'}`}
-                        >
-                            <span>Vacant</span>
-                            <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-mono ${statusFilter === 'available' ? 'bg-white/20 text-white' : 'bg-slate-200 dark:bg-zinc-700 text-slate-700 dark:text-zinc-300'}`}>
-                                {metrics.vacantRooms}
-                            </span>
-                        </button>
-                        <button
-                            onClick={() => setStatusFilter('partially')}
-                            className={`px-3 py-1 rounded-lg transition-all shrink-0 flex items-center gap-1.5 ${statusFilter === 'partially' ? 'bg-amber-600 text-white shadow-xs' : 'bg-slate-100 dark:bg-zinc-800 text-slate-600 dark:text-zinc-400 hover:bg-slate-200 dark:hover:bg-zinc-700'}`}
-                        >
-                            <span>Available Beds</span>
-                            <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-mono ${statusFilter === 'partially' ? 'bg-white/20 text-white' : 'bg-slate-200 dark:bg-zinc-700 text-slate-700 dark:text-zinc-300'}`}>
-                                {metrics.partiallyOccupiedRooms}
-                            </span>
-                        </button>
-                        <button
-                            onClick={() => setStatusFilter('occupied')}
-                            className={`px-3 py-1 rounded-lg transition-all shrink-0 flex items-center gap-1.5 ${statusFilter === 'occupied' ? 'bg-emerald-600 text-white shadow-xs' : 'bg-slate-100 dark:bg-zinc-800 text-slate-600 dark:text-zinc-400 hover:bg-slate-200 dark:hover:bg-zinc-700'}`}
-                        >
-                            <span>Fully Occupied</span>
-                            <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-mono ${statusFilter === 'occupied' ? 'bg-white/20 text-white' : 'bg-slate-200 dark:bg-zinc-700 text-slate-700 dark:text-zinc-300'}`}>
-                                {metrics.fullyOccupiedRooms}
-                            </span>
-                        </button>
-                        <button
-                            onClick={() => setStatusFilter('maintenance')}
-                            className={`px-3 py-1 rounded-lg transition-all shrink-0 flex items-center gap-1.5 ${statusFilter === 'maintenance' ? 'bg-rose-600 text-white shadow-xs' : 'bg-slate-100 dark:bg-zinc-800 text-slate-600 dark:text-zinc-400 hover:bg-slate-200 dark:hover:bg-zinc-700'}`}
-                        >
-                            <span>Maintenance</span>
-                            <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-mono ${statusFilter === 'maintenance' ? 'bg-white/20 text-white' : 'bg-slate-200 dark:bg-zinc-700 text-slate-700 dark:text-zinc-300'}`}>
-                                {metrics.maintenanceRooms}
-                            </span>
-                        </button>
-                    </div>
-
-                    <span className="text-[11px] text-slate-400 dark:text-zinc-500 font-medium shrink-0">
-                        {filteredRooms.length} of {rooms.length} units listed
-                    </span>
-                </div>
-
-                {/* Secondary Search & Dropdown Filters */}
-                <div className="flex flex-wrap items-center gap-2 pt-1.5 border-t border-slate-100 dark:border-zinc-800/80">
+            {/* Filter Bar & Search Controls */}
+            <div className="shrink-0 bg-card border border-slate-200 dark:border-zinc-800 rounded-xl p-2 shadow-xs flex flex-wrap items-center justify-between gap-2">
+                <div className="flex flex-wrap items-center gap-2">
                     {/* Search */}
-                    <div className="relative w-64 sm:w-72 shrink-0">
-                        <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                    <div className="relative w-56 sm:w-64 shrink-0">
+                        <Search className="w-3.5 h-3.5 text-slate-500 dark:text-zinc-400 absolute left-3 top-1/2 -translate-y-1/2" />
                         <input
                             type="text"
                             placeholder="Search room # or floor..."
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
-                            className="w-full pl-8 pr-7 py-1.5 text-xs font-medium rounded-lg border border-slate-200 dark:border-zinc-800 bg-slate-50/50 dark:bg-zinc-900/40 text-slate-900 dark:text-white placeholder:text-slate-400 outline-none focus:ring-2 focus:ring-slate-400/20 dark:focus:ring-zinc-600/30"
+                            className="w-full pl-8 pr-7 py-1.5 text-sm font-semibold rounded-lg border border-slate-300 dark:border-zinc-700 bg-slate-50/70 dark:bg-zinc-900/60 text-slate-950 dark:text-white placeholder:text-slate-500 dark:placeholder:text-zinc-400 outline-none focus:ring-2 focus:ring-slate-400/30 dark:focus:ring-zinc-600/40"
                         />
                         {searchQuery && (
                             <button
                                 type="button"
                                 onClick={() => setSearchQuery('')}
-                                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-zinc-300"
+                                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-950 dark:hover:text-white cursor-pointer"
                             >
                                 <X className="w-3.5 h-3.5" />
                             </button>
                         )}
                     </div>
 
-                    {/* Shortened Dropdown Filters Beside Search */}
-                    <div className="flex items-center gap-2 shrink-0">
+                    {/* Dropdown Filters */}
+                    <div className="flex flex-wrap items-center gap-2">
                         {/* Floor Dropdown */}
                         <div className="w-32 sm:w-36 shrink-0">
                             <CustomSelect
                                 value={floorFilter}
                                 onChange={(val) => setFloorFilter(val)}
                                 options={["All Floors", ...uniqueFloors]}
-                                className="w-full px-2.5 py-1.5 text-xs font-medium rounded-lg border border-slate-200 dark:border-zinc-800 bg-slate-50/50 dark:bg-zinc-900/40 text-slate-700 dark:text-zinc-300 outline-none focus:ring-2 focus:ring-slate-400/20 dark:focus:ring-zinc-600/30"
+                                className="w-full px-2.5 py-1.5 text-sm font-bold rounded-lg border border-slate-300 dark:border-zinc-700 bg-slate-50/70 dark:bg-zinc-900/60 text-slate-900 dark:text-zinc-100 outline-none focus:ring-2 focus:ring-slate-400/30 dark:focus:ring-zinc-600/40"
                             />
                         </div>
 
@@ -638,7 +540,7 @@ export default function AdminRooms() {
                                 value={typeFilter}
                                 onChange={(val) => setTypeFilter(val)}
                                 options={["All Types", ...uniqueTypes]}
-                                className="w-full px-2.5 py-1.5 text-xs font-medium rounded-lg border border-slate-200 dark:border-zinc-800 bg-slate-50/50 dark:bg-zinc-900/40 text-slate-700 dark:text-zinc-300 outline-none focus:ring-2 focus:ring-slate-400/20 dark:focus:ring-zinc-600/30"
+                                className="w-full px-2.5 py-1.5 text-sm font-bold rounded-lg border border-slate-300 dark:border-zinc-700 bg-slate-50/70 dark:bg-zinc-900/60 text-slate-900 dark:text-zinc-100 outline-none focus:ring-2 focus:ring-slate-400/30 dark:focus:ring-zinc-600/40"
                             />
                         </div>
 
@@ -648,47 +550,60 @@ export default function AdminRooms() {
                                 value={rentalTypeFilter}
                                 onChange={(val) => setRentalTypeFilter(val)}
                                 options={["All Rental Types", "Whole Room", "Per Bed / Bedspace"]}
-                                className="w-full px-2.5 py-1.5 text-xs font-medium rounded-lg border border-slate-200 dark:border-zinc-800 bg-slate-50/50 dark:bg-zinc-900/40 text-slate-700 dark:text-zinc-300 outline-none focus:ring-2 focus:ring-slate-400/20 dark:focus:ring-zinc-600/30"
+                                className="w-full px-2.5 py-1.5 text-sm font-bold rounded-lg border border-slate-300 dark:border-zinc-700 bg-slate-50/70 dark:bg-zinc-900/60 text-slate-900 dark:text-zinc-100 outline-none focus:ring-2 focus:ring-slate-400/30 dark:focus:ring-zinc-600/40"
+                            />
+                        </div>
+
+                        {/* Unit Status Dropdown */}
+                        <div className="w-40 sm:w-44 shrink-0">
+                            <CustomSelect
+                                value={statusFilter}
+                                onChange={(val) => setStatusFilter(val as any)}
+                                options={["All Units", "Vacant", "Available Beds", "Fully Occupied", "Maintenance"]}
+                                className="w-full px-2.5 py-1.5 text-sm font-bold rounded-lg border border-slate-300 dark:border-zinc-700 bg-slate-50/70 dark:bg-zinc-900/60 text-slate-900 dark:text-zinc-100 outline-none focus:ring-2 focus:ring-slate-400/30 dark:focus:ring-zinc-600/40"
                             />
                         </div>
                     </div>
                 </div>
+
+                <span className="text-[11px] text-slate-500 dark:text-zinc-400 font-semibold shrink-0 ml-auto sm:ml-0">
+                    {filteredRooms.length} of {rooms.length} units listed
+                </span>
             </div>
-            {/* Main Inventory Data: Table or Visual Unit Grid */}
-            {viewMode === 'table' ? (
-                <div className="flex-1 min-h-0 bg-card border border-slate-200 dark:border-zinc-800 rounded-xl shadow-xs flex flex-col overflow-hidden relative">
+            {/* Main Inventory Data: Table */}
+            <div className="flex-1 min-h-0 max-h-[610px] bg-card border border-slate-200 dark:border-zinc-800 rounded-xl shadow-xs flex flex-col overflow-hidden relative">
                     {/* Top-Right scrollbar header filler to extend label header width and align scrollbar with 1st data row */}
-                    <div className="absolute top-0 right-0 w-6 h-[44px] bg-slate-100 dark:bg-zinc-900 border-b border-slate-200 dark:border-zinc-800 z-30 pointer-events-none rounded-tr-xl" />
+                    <div className="absolute top-0 right-0 w-6 h-[46px] bg-slate-100 dark:bg-zinc-900 border-b border-slate-200 dark:border-zinc-800 z-30 pointer-events-none rounded-tr-xl" />
 
                     <div className="flex-1 min-h-0 overflow-y-auto overflow-x-auto custom-scrollbar">
                         <table className="w-full min-w-full text-left text-sm border-collapse">
                             <thead className="sticky top-0 z-20 bg-slate-100 dark:bg-zinc-900 shadow-xs border-b border-slate-200 dark:border-zinc-800">
-                                <tr className="h-[44px] bg-slate-100 dark:bg-zinc-900 text-slate-700 dark:text-zinc-300 uppercase tracking-wider text-[13px] font-bold">
-                                    <th className="py-2.5 px-6 bg-slate-100 dark:bg-zinc-900 border-b border-slate-200 dark:border-zinc-800">Room & Location</th>
-                                    <th className="py-2.5 px-4 text-center bg-slate-100 dark:bg-zinc-900 border-b border-slate-200 dark:border-zinc-800">Type & Rental Mode</th>
-                                    <th className="py-2.5 px-4 text-center bg-slate-100 dark:bg-zinc-900 border-b border-slate-200 dark:border-zinc-800">Occupancy Density</th>
-                                    <th className="py-2.5 px-4 text-center bg-slate-100 dark:bg-zinc-900 border-b border-slate-200 dark:border-zinc-800">Monthly Rate</th>
-                                    <th className="py-2.5 px-4 text-center bg-slate-100 dark:bg-zinc-900 border-b border-slate-200 dark:border-zinc-800">Status</th>
-                                    <th className="py-2.5 px-6 text-right bg-slate-100 dark:bg-zinc-900 border-b border-slate-200 dark:border-zinc-800">Actions</th>
+                                <tr className="h-[46px] bg-slate-100 dark:bg-zinc-900 text-sm sm:text-base font-black text-slate-900 dark:text-white uppercase tracking-wider">
+                                    <th className="py-3 px-4 bg-slate-100 dark:bg-zinc-900 border-b border-slate-200 dark:border-zinc-800">Room & Location</th>
+                                    <th className="py-3 px-3.5 text-center bg-slate-100 dark:bg-zinc-900 border-b border-slate-200 dark:border-zinc-800">Type & Rental Mode</th>
+                                    <th className="py-3 px-3.5 text-center bg-slate-100 dark:bg-zinc-900 border-b border-slate-200 dark:border-zinc-800">Occupancy Density</th>
+                                    <th className="py-3 px-3.5 text-center bg-slate-100 dark:bg-zinc-900 border-b border-slate-200 dark:border-zinc-800">Monthly Rate</th>
+                                    <th className="py-3 px-3.5 text-center bg-slate-100 dark:bg-zinc-900 border-b border-slate-200 dark:border-zinc-800">Status</th>
+                                    <th className="py-3 pl-3.5 pr-6 text-right bg-slate-100 dark:bg-zinc-900 border-b border-slate-200 dark:border-zinc-800">Actions</th>
                                 </tr>
                             </thead>
-                            <tbody className="divide-y divide-slate-100 dark:divide-zinc-800/60">
+                            <tbody className="divide-y divide-slate-100 dark:divide-zinc-800/60 font-sans">
                                 {filteredRooms.map((room) => {
                                     const occupancyPercent = room.capacity > 0 ? Math.round((room.current_occupants / room.capacity) * 100) : 0;
 
                                     return (
-                                        <tr key={room.id} className="h-[60px] hover:bg-slate-50/80 dark:hover:bg-zinc-800/40 transition-colors">
+                                        <tr key={room.id} className="h-[62px] hover:bg-slate-50/80 dark:hover:bg-zinc-800/40 transition-colors group">
                                             {/* Room Number & Floor */}
-                                            <td className="py-2.5 px-6">
+                                            <td className="py-2 px-4">
                                                 <div className="flex items-center gap-3">
                                                     <div className="w-10 h-10 rounded-lg bg-slate-100 dark:bg-zinc-800 text-slate-800 dark:text-zinc-200 font-mono font-bold text-base flex items-center justify-center shrink-0 border border-slate-200/80 dark:border-zinc-700">
                                                         {room.room_number}
                                                     </div>
                                                     <div>
-                                                        <span className="font-bold text-base text-slate-900 dark:text-white block leading-tight">
+                                                        <span className="font-extrabold text-base sm:text-[17px] text-slate-950 dark:text-white block leading-tight">
                                                             Room {room.room_number}
                                                         </span>
-                                                        <p className="text-sm text-slate-500 dark:text-zinc-400 block leading-tight mt-0.5">
+                                                        <p className="text-sm font-medium text-slate-700 dark:text-zinc-300 block leading-tight mt-0.5">
                                                             {room.floor || 'Unassigned Floor'}
                                                         </p>
                                                     </div>
@@ -696,83 +611,84 @@ export default function AdminRooms() {
                                             </td>
 
                                             {/* Type & Rental Type */}
-                                            <td className="py-2.5 px-4 text-center">
-                                                <span className="font-semibold text-base text-slate-800 dark:text-zinc-200 block leading-tight">
+                                            <td className="py-2 px-3.5 text-center">
+                                                <span className="font-extrabold text-base text-slate-900 dark:text-zinc-100 block leading-tight">
                                                     {room.type}
                                                 </span>
-                                                <p className="text-sm text-slate-500 dark:text-zinc-400 block leading-tight mt-0.5">
+                                                <p className="text-sm font-medium text-slate-700 dark:text-zinc-300 block leading-tight mt-0.5">
                                                     {room.rental_type || 'Whole Room'}
                                                 </p>
                                             </td>
 
                                             {/* Occupancy Density */}
-                                            <td className="py-2.5 px-4 whitespace-nowrap text-center">
-                                                <span className="font-semibold text-base text-slate-800 dark:text-zinc-200">
+                                            <td className="py-2 px-3.5 whitespace-nowrap text-center">
+                                                <span className="font-bold text-base text-slate-900 dark:text-zinc-100">
                                                     {room.current_occupants} / {room.capacity} Beds
                                                 </span>
                                             </td>
 
                                             {/* Monthly Rate */}
-                                            <td className="py-2.5 px-4 text-center">
-                                                <div className="font-mono font-bold text-base text-slate-900 dark:text-zinc-100 leading-tight">
+                                            <td className="py-2 px-3.5 text-center">
+                                                <div className="font-mono font-extrabold text-base sm:text-lg text-slate-950 dark:text-white leading-tight">
                                                     ₱{Number(room.price).toLocaleString()}
                                                 </div>
-                                                <span className="text-xs text-slate-400 dark:text-zinc-500 font-medium block leading-tight mt-0.5">
+                                                <span className="text-xs text-slate-500 dark:text-zinc-400 font-medium block leading-tight mt-0.5">
                                                     {room.rental_type === 'Per Bed / Bedspace' ? 'per bedspace / mo' : 'whole room / mo'}
                                                 </span>
                                             </td>
 
                                             {/* Status Badge */}
-                                            <td className="py-2.5 px-4 text-center">
+                                            <td className="py-2 px-3.5 text-center">
                                                 <div className="flex justify-center">
                                                     {getStatusPill(room)}
                                                 </div>
                                             </td>
 
                                             {/* Actions */}
-                                            <td className="py-2.5 px-6 text-right">
+                                            <td className="py-2 px-4 text-right">
                                                 <div className="flex items-center justify-end gap-1.5">
                                                     {/* Maintenance Toggle */}
                                                     <button
                                                         onClick={() => handleToggleMaintenance(room)}
-                                                        className={`p-2 rounded-lg border transition-colors ${room.status === 'Maintenance' ? 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 border-emerald-200 dark:border-emerald-500/30 hover:bg-emerald-100' : 'text-slate-400 hover:text-rose-600 border-transparent hover:border-rose-200 dark:hover:border-rose-900/60'}`}
+                                                        className={`p-2 rounded-lg border transition-colors cursor-pointer ${room.status === 'Maintenance' ? 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 border-emerald-200 dark:border-emerald-500/30 hover:bg-emerald-100' : 'text-slate-500 hover:text-rose-600 border-transparent hover:border-rose-200 dark:hover:border-rose-900/60'}`}
                                                         title={room.status === 'Maintenance' ? 'Mark Available' : 'Set to Maintenance'}
                                                     >
-                                                        {room.status === 'Maintenance' ? <CheckCircle className="w-4 h-4" /> : <Wrench className="w-4 h-4" />}
+                                                        {room.status === 'Maintenance' ? <CheckCircle className="w-4.5 h-4.5" /> : <Wrench className="w-4.5 h-4.5" />}
                                                     </button>
 
                                                     {/* View Details */}
                                                     <button
                                                         onClick={() => setViewingRoom(room)}
-                                                        className="p-2 text-slate-400 hover:text-slate-800 dark:hover:text-white border border-transparent hover:border-slate-200 dark:hover:border-zinc-700 rounded-lg transition-colors"
+                                                        className="p-2 text-slate-600 hover:text-slate-950 dark:text-zinc-300 dark:hover:text-white border border-transparent hover:border-slate-200 dark:hover:border-zinc-700 rounded-lg transition-colors cursor-pointer"
                                                         title="View Occupant Roster & Specs"
                                                     >
-                                                        <Info className="w-4 h-4" />
+                                                        <Info className="w-4.5 h-4.5" />
                                                     </button>
 
                                                     {/* Edit */}
                                                     <button
                                                         onClick={() => handleOpenModal(room)}
-                                                        className="p-2 text-slate-400 hover:text-slate-800 dark:hover:text-white border border-transparent hover:border-slate-200 dark:hover:border-zinc-700 rounded-lg transition-colors"
+                                                        className="p-2 text-slate-600 hover:text-slate-950 dark:text-zinc-300 dark:hover:text-white border border-transparent hover:border-slate-200 dark:hover:border-zinc-700 rounded-lg transition-colors cursor-pointer"
                                                         title="Edit Room Configuration"
                                                     >
-                                                        <Edit className="w-4 h-4" />
+                                                        <Edit className="w-4.5 h-4.5" />
                                                     </button>
 
                                                     {/* Delete */}
                                                     <button
                                                         onClick={() => handleDelete(room)}
                                                         disabled={isDeleting === room.id || room.current_occupants > 0}
-                                                        className="p-2 text-slate-400 hover:text-rose-600 disabled:opacity-30 disabled:hover:text-slate-400 border border-transparent hover:border-rose-200 dark:hover:border-rose-900/60 rounded-lg transition-colors"
+                                                        className="p-2 text-slate-600 hover:text-rose-600 disabled:opacity-30 disabled:hover:text-slate-400 border border-transparent hover:border-rose-200 dark:hover:border-rose-900/60 rounded-lg transition-colors cursor-pointer"
                                                         title={room.current_occupants > 0 ? "Cannot delete occupied room" : "Delete Room"}
                                                     >
-                                                        <Trash2 className="w-4 h-4" />
+                                                        <Trash2 className="w-4.5 h-4.5" />
                                                     </button>
                                                 </div>
                                             </td>
                                         </tr>
                                     );
                                 })}
+
 
                                 {filteredRooms.length === 0 && (
                                     <tr>
@@ -787,121 +703,6 @@ export default function AdminRooms() {
                         </table>
                     </div>
                 </div>
-            ) : (
-                /* Visual Unit Cards View */
-                <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
-                    <div className="flex-1 min-h-0 overflow-y-auto custom-scrollbar pr-1">
-                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3.5 pb-2">
-                            {filteredRooms.map((room) => {
-                                const occupancyPercent = room.capacity > 0 ? Math.round((room.current_occupants / room.capacity) * 100) : 0;
-                                return (
-                                    <div key={room.id} className="bg-card border border-slate-200 dark:border-zinc-800 rounded-xl p-4 shadow-xs hover:shadow-sm transition-shadow flex flex-col justify-between space-y-3">
-                                        <div>
-                                            <div className="flex items-start justify-between gap-2">
-                                                <div className="flex items-center gap-2.5">
-                                                    <div className="w-10 h-10 rounded-lg bg-slate-100 dark:bg-zinc-800 text-slate-900 dark:text-white font-mono font-bold text-base flex items-center justify-center shrink-0 border border-slate-200/80 dark:border-zinc-700">
-                                                        {room.room_number}
-                                                    </div>
-                                                    <div>
-                                                        <h3 className="font-bold text-base text-slate-900 dark:text-white">
-                                                            Room {room.room_number}
-                                                        </h3>
-                                                        <p className="text-xs text-slate-500 dark:text-zinc-400">
-                                                            {room.floor || 'Floor N/A'} • {room.type}
-                                                        </p>
-                                                    </div>
-                                                </div>
-                                                {getStatusPill(room)}
-                                            </div>
-
-                                            {/* Financial rate */}
-                                            <div className="mt-3 pt-2.5 border-t border-slate-100 dark:border-zinc-800/80 flex items-center justify-between">
-                                                <span className="text-xs text-slate-500 dark:text-zinc-400 font-medium">
-                                                    {room.rental_type || 'Whole Room'}
-                                                </span>
-                                                <div className="font-mono font-bold text-base text-slate-900 dark:text-zinc-100">
-                                                    ₱{Number(room.price).toLocaleString()}
-                                                </div>
-                                            </div>
-
-                                            {/* Occupancy Count */}
-                                            <div className="mt-2.5 flex items-center justify-between text-sm">
-                                                <span className="text-xs font-medium text-slate-500 dark:text-zinc-400">
-                                                    Occupancy
-                                                </span>
-                                                <span className="font-semibold text-slate-800 dark:text-zinc-200">
-                                                    {room.current_occupants} / {room.capacity} Beds
-                                                </span>
-                                            </div>
-
-                                            {/* Occupants Preview Chips */}
-                                            {room.occupants && room.occupants.length > 0 && (
-                                                <div className="mt-2.5 pt-2.5 border-t border-slate-100 dark:border-zinc-800/80 space-y-1">
-                                                    <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-500">Active Residents</span>
-                                                    <div className="flex flex-wrap gap-1">
-                                                        {room.occupants.slice(0, 3).map(tenant => (
-                                                            <span key={tenant.id} className="px-2 py-0.5 rounded text-[11px] font-medium bg-slate-100 dark:bg-zinc-800 text-slate-700 dark:text-zinc-300">
-                                                                {tenant.name.split(' ')[0]}
-                                                            </span>
-                                                        ))}
-                                                        {room.occupants.length > 3 && (
-                                                            <span className="px-1.5 py-0.5 rounded text-[11px] font-medium bg-slate-100 dark:bg-zinc-800 text-slate-500">
-                                                                +{room.occupants.length - 3}
-                                                            </span>
-                                                        )}
-                                                    </div>
-                                                </div>
-                                            )}
-                                        </div>
-
-                                        {/* Card Actions */}
-                                        <div className="pt-2.5 border-t border-slate-100 dark:border-zinc-800/80 flex items-center justify-between">
-                                            <button
-                                                onClick={() => setViewingRoom(room)}
-                                                className="text-xs font-medium text-slate-600 dark:text-zinc-300 hover:text-slate-900 dark:hover:text-white hover:underline flex items-center gap-1"
-                                            >
-                                                <Info className="w-3.5 h-3.5" /> Details
-                                            </button>
-
-                                            <div className="flex items-center gap-1">
-                                                <button
-                                                    onClick={() => handleToggleMaintenance(room)}
-                                                    className="p-1 text-slate-400 hover:text-amber-500 rounded transition-colors"
-                                                    title="Toggle Maintenance"
-                                                >
-                                                    <Wrench className="w-3.5 h-3.5" />
-                                                </button>
-                                                <button
-                                                    onClick={() => handleOpenModal(room)}
-                                                    className="p-1 text-slate-400 hover:text-slate-800 dark:hover:text-white rounded transition-colors"
-                                                    title="Edit Room"
-                                                >
-                                                    <Edit className="w-3.5 h-3.5" />
-                                                </button>
-                                                <button
-                                                    onClick={() => handleDelete(room)}
-                                                    disabled={room.current_occupants > 0}
-                                                    className="p-1 text-slate-400 hover:text-rose-500 disabled:opacity-30 rounded transition-colors"
-                                                    title="Delete Room"
-                                                >
-                                                    <Trash2 className="w-3.5 h-3.5" />
-                                                </button>
-                                            </div>
-                                        </div>
-                                    </div>
-                                );
-                            })}
-
-                            {filteredRooms.length === 0 && (
-                                <div className="col-span-full py-12 text-center text-slate-500 dark:text-zinc-400 bg-card border border-slate-200 dark:border-zinc-800 rounded-xl">
-                                    <DoorOpen className="w-10 h-10 text-slate-300 dark:text-zinc-700 mx-auto mb-2" />
-                                    <p className="font-bold text-sm text-slate-700 dark:text-zinc-300">No rooms match criteria</p>
-                                </div>
-                            )}
-                        </div>
-                    </div>
-                </div>
-            )}
 
             {/* Add / Edit Room */}
             <AnimatePresence>
