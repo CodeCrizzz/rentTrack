@@ -292,13 +292,13 @@ export default function TenantDashboard() {
                         disabled={isRefreshing}
                         className="px-3 py-1.5 text-xs font-semibold rounded-lg border border-slate-200 dark:border-zinc-800 bg-card hover:bg-slate-50 dark:hover:bg-zinc-800 text-slate-700 dark:text-zinc-300 transition-colors flex items-center gap-1.5 shadow-xs"
                     >
-                        <RefreshCw className={`w-3.5 h-3.5 ${isRefreshing ? 'animate-spin text-teal-600' : 'text-slate-500'}`} />
+                        <RefreshCw className={`w-3.5 h-3.5 ${isRefreshing ? 'animate-spin text-zinc-950 dark:text-white' : 'text-slate-500 dark:text-zinc-400'}`} />
                         <span>Sync</span>
                     </button>
 
                     <Link
                         href="/tenant/payments"
-                        className="px-3.5 py-1.5 text-xs font-bold rounded-lg bg-teal-600 hover:bg-teal-700 text-white transition-all flex items-center gap-1.5 shadow-xs"
+                        className="px-3.5 py-1.5 text-xs font-bold rounded-lg bg-zinc-900 hover:bg-zinc-850 dark:bg-zinc-100 dark:hover:bg-zinc-200 text-white dark:text-zinc-950 transition-all flex items-center gap-1.5 shadow-xs"
                     >
                         <CreditCard className="w-3.5 h-3.5" />
                         <span>Manage Billing</span>
@@ -369,24 +369,24 @@ export default function TenantDashboard() {
                 {/* Tile 1: Outstanding Balance */}
                 <div 
                     onClick={() => router.push('/tenant/payments')}
-                    className="bg-card border border-slate-200 dark:border-zinc-800 rounded-xl p-3.5 shadow-xs flex items-center justify-between cursor-pointer hover:border-teal-500 transition-all group"
+                    className="bg-card border border-slate-200 dark:border-zinc-800 rounded-xl p-3.5 shadow-xs flex items-center justify-between cursor-pointer hover:border-zinc-400 dark:hover:border-zinc-600 transition-all group"
                 >
                     <div>
-                        <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Total Outstanding</span>
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-500">Total Outstanding</span>
                         <div className={`text-xl font-black font-mono mt-0.5 leading-tight ${
-                            tenantData.balanceDue > 0 ? 'text-rose-600 dark:text-rose-400' : 'text-emerald-600 dark:text-emerald-400'
+                            tenantData.balanceDue > 0 ? 'text-rose-600 dark:text-rose-400' : 'text-slate-900 dark:text-white'
                         }`}>
                             <AnimatedBalance value={tenantData.balanceDue} />
                         </div>
-                        <div className="text-[10px] font-semibold text-slate-500 mt-0.5 flex items-center gap-1">
+                        <div className="text-[10px] font-semibold text-slate-500 dark:text-zinc-400 mt-0.5 flex items-center gap-1">
                             {tenantData.balanceDue > 0 ? (
-                                <span className="text-amber-600 font-bold">Due in {daysUntilDue} days</span>
+                                <span className="text-amber-600 dark:text-amber-400 font-bold">Due in {daysUntilDue} days</span>
                             ) : (
-                                <span className="text-emerald-600 font-bold">Account Settled</span>
+                                <span className="text-slate-700 dark:text-zinc-300 font-bold">Account Settled</span>
                             )}
                         </div>
                     </div>
-                    <div className="w-10 h-10 rounded-xl bg-teal-50 dark:bg-teal-500/10 text-teal-600 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
+                    <div className="w-10 h-10 rounded-xl bg-slate-100 dark:bg-zinc-800 text-slate-700 dark:text-zinc-200 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
                         <Wallet className="w-5 h-5" />
                     </div>
                 </div>
@@ -394,18 +394,18 @@ export default function TenantDashboard() {
                 {/* Tile 2: Total Paid This Year */}
                 <div 
                     onClick={() => router.push('/tenant/payments')}
-                    className="bg-card border border-slate-200 dark:border-zinc-800 rounded-xl p-3.5 shadow-xs flex items-center justify-between cursor-pointer hover:border-emerald-500 transition-all group"
+                    className="bg-card border border-slate-200 dark:border-zinc-800 rounded-xl p-3.5 shadow-xs flex items-center justify-between cursor-pointer hover:border-zinc-400 dark:hover:border-zinc-600 transition-all group"
                 >
                     <div>
-                        <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Paid YTD</span>
-                        <div className="text-xl font-black font-mono text-emerald-600 dark:text-emerald-400 mt-0.5 leading-tight">
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-500">Paid YTD</span>
+                        <div className="text-xl font-black font-mono text-slate-900 dark:text-white mt-0.5 leading-tight">
                             ₱{totalPaidThisYear.toLocaleString()}
                         </div>
-                        <div className="text-[10px] font-semibold text-slate-500 mt-0.5">
+                        <div className="text-[10px] font-semibold text-slate-500 dark:text-zinc-400 mt-0.5">
                             Verified on ledger
                         </div>
                     </div>
-                    <div className="w-10 h-10 rounded-xl bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
+                    <div className="w-10 h-10 rounded-xl bg-slate-100 dark:bg-zinc-800 text-slate-700 dark:text-zinc-200 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
                         <TrendingUp className="w-5 h-5" />
                     </div>
                 </div>
@@ -413,18 +413,18 @@ export default function TenantDashboard() {
                 {/* Tile 3: Assigned Suite / Bed Space */}
                 <div 
                     onClick={() => router.push('/tenant/rooms')}
-                    className="bg-card border border-slate-200 dark:border-zinc-800 rounded-xl p-3.5 shadow-xs flex items-center justify-between cursor-pointer hover:border-indigo-500 transition-all group"
+                    className="bg-card border border-slate-200 dark:border-zinc-800 rounded-xl p-3.5 shadow-xs flex items-center justify-between cursor-pointer hover:border-zinc-400 dark:hover:border-zinc-600 transition-all group"
                 >
                     <div>
-                        <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Assigned Suite</span>
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-500">Assigned Suite</span>
                         <div className="text-xl font-black font-mono text-slate-900 dark:text-white mt-0.5 leading-tight">
                             {tenantData.status === 'Active' ? `Room ${tenantData.roomNumber}` : 'Pending'}
                         </div>
-                        <div className="text-[10px] font-semibold text-indigo-600 dark:text-indigo-400 mt-0.5">
+                        <div className="text-[10px] font-semibold text-slate-500 dark:text-zinc-400 mt-0.5">
                             {tenantData.status === 'Active' ? 'Active occupancy' : 'Awaiting room selection'}
                         </div>
                     </div>
-                    <div className="w-10 h-10 rounded-xl bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
+                    <div className="w-10 h-10 rounded-xl bg-slate-100 dark:bg-zinc-800 text-slate-700 dark:text-zinc-200 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
                         <Building2 className="w-5 h-5" />
                     </div>
                 </div>
@@ -432,18 +432,18 @@ export default function TenantDashboard() {
                 {/* Tile 4: Notice Board */}
                 <div 
                     onClick={() => router.push('/tenant/announcements')}
-                    className="bg-card border border-slate-200 dark:border-zinc-800 rounded-xl p-3.5 shadow-xs flex items-center justify-between cursor-pointer hover:border-amber-500 transition-all group"
+                    className="bg-card border border-slate-200 dark:border-zinc-800 rounded-xl p-3.5 shadow-xs flex items-center justify-between cursor-pointer hover:border-zinc-400 dark:hover:border-zinc-600 transition-all group"
                 >
                     <div>
-                        <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Notice Board</span>
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-500">Notice Board</span>
                         <div className="text-xl font-black font-mono text-slate-900 dark:text-white mt-0.5 leading-tight">
                             {tenantData.announcements.length} Bulletin{tenantData.announcements.length !== 1 ? 's' : ''}
                         </div>
-                        <div className="text-[10px] font-semibold text-slate-500 mt-0.5 truncate max-w-[150px]">
+                        <div className="text-[10px] font-semibold text-slate-500 dark:text-zinc-400 mt-0.5 truncate max-w-[150px]">
                             {latestAnnouncement ? latestAnnouncement.title : 'No active alerts'}
                         </div>
                     </div>
-                    <div className="w-10 h-10 rounded-xl bg-amber-50 dark:bg-amber-500/10 text-amber-600 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
+                    <div className="w-10 h-10 rounded-xl bg-slate-100 dark:bg-zinc-800 text-slate-700 dark:text-zinc-200 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
                         <Bell className="w-5 h-5" />
                     </div>
                 </div>
@@ -455,13 +455,13 @@ export default function TenantDashboard() {
                 <div className="bg-card border border-slate-200 dark:border-zinc-800 rounded-xl p-4 sm:p-5 shadow-xs space-y-3">
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-slate-100 dark:border-zinc-800">
                         <div className="flex items-center gap-2.5">
-                            <div className="w-9 h-9 rounded-xl bg-amber-50 dark:bg-amber-500/10 text-amber-600 flex items-center justify-center shrink-0">
+                            <div className="w-9 h-9 rounded-xl bg-slate-100 dark:bg-zinc-800 text-slate-700 dark:text-zinc-200 flex items-center justify-center shrink-0">
                                 <Bell className="w-4 h-4" />
                             </div>
                             <div>
                                 <div className="flex items-center gap-2">
-                                    <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Notice Board</span>
-                                    <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase bg-amber-50 text-amber-700 dark:bg-amber-500/10 dark:text-amber-300 border border-amber-200/60 dark:border-amber-500/20">
+                                    <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-500">Notice Board</span>
+                                    <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase bg-zinc-100 dark:bg-zinc-800 text-zinc-800 dark:text-zinc-200 border border-zinc-200 dark:border-zinc-700/60">
                                         {latestAnnouncement.type || 'Notice'}
                                     </span>
                                     <span className="text-[10px] text-slate-400 font-mono">
@@ -476,7 +476,7 @@ export default function TenantDashboard() {
 
                         <Link 
                             href="/tenant/announcements" 
-                            className="text-xs font-bold text-teal-600 dark:text-teal-400 hover:underline flex items-center gap-1 self-start sm:self-center"
+                            className="text-xs font-bold text-zinc-900 dark:text-white hover:underline flex items-center gap-1 self-start sm:self-center"
                         >
                             <span>View All Bulletins ({tenantData.announcements.length})</span>
                             <ArrowUpRight className="w-3.5 h-3.5" />
@@ -488,9 +488,9 @@ export default function TenantDashboard() {
                         {latestAnnouncement.content}
                     </div>
 
-                    <div className="flex items-center justify-between text-[11px] text-slate-400 font-semibold pt-1">
+                    <div className="flex items-center justify-between text-[11px] text-slate-400 dark:text-zinc-500 font-semibold pt-1">
                         <span>Issued by: {latestAnnouncement.created_by_name || 'Property Management'}</span>
-                        <span className="text-emerald-600 dark:text-emerald-400 font-medium">Official Notice</span>
+                        <span className="text-slate-600 dark:text-zinc-400 font-medium">Official Notice</span>
                     </div>
                 </div>
             )}
@@ -503,10 +503,10 @@ export default function TenantDashboard() {
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-slate-100 dark:border-zinc-800">
                         <div>
                             <h2 className="text-sm font-extrabold text-slate-900 dark:text-white flex items-center gap-2">
-                                <Zap className="w-4 h-4 text-amber-500" />
+                                <Zap className="w-4 h-4 text-slate-600 dark:text-zinc-400" />
                                 <span>Submeter Utility Breakdown</span>
                             </h2>
-                            <p className="text-xs text-slate-500 mt-0.5">
+                            <p className="text-xs text-slate-500 dark:text-zinc-400 mt-0.5">
                                 Monthly Electricity (₱14.50/kWh) and Water (₱150 flat/resident) expenses.
                             </p>
                         </div>
@@ -517,8 +517,8 @@ export default function TenantDashboard() {
                                 onClick={() => setSelectedYear('This Year')}
                                 className={`px-2.5 py-1 rounded-md transition-all ${
                                     selectedYear === 'This Year'
-                                        ? 'bg-white dark:bg-zinc-900 text-teal-600 dark:text-teal-400 font-bold shadow-xs'
-                                        : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'
+                                        ? 'bg-white dark:bg-zinc-900 text-zinc-950 dark:text-white font-bold shadow-xs'
+                                        : 'text-slate-500 hover:text-slate-900 dark:text-zinc-400 dark:hover:text-white'
                                 }`}
                             >
                                 This Year
@@ -527,8 +527,8 @@ export default function TenantDashboard() {
                                 onClick={() => setSelectedYear('Last Year')}
                                 className={`px-2.5 py-1 rounded-md transition-all ${
                                     selectedYear === 'Last Year'
-                                        ? 'bg-white dark:bg-zinc-900 text-teal-600 dark:text-teal-400 font-bold shadow-xs'
-                                        : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'
+                                        ? 'bg-white dark:bg-zinc-900 text-zinc-950 dark:text-white font-bold shadow-xs'
+                                        : 'text-slate-500 hover:text-slate-900 dark:text-zinc-400 dark:hover:text-white'
                                 }`}
                             >
                                 Last Year
@@ -540,18 +540,18 @@ export default function TenantDashboard() {
                         <div className="absolute inset-0">
                             <ChartContainer 
                                 config={{
-                                    water: { label: "Water Tariff", color: "#06b6d4" },
-                                    electricity: { label: "Electric Submeter", color: "#f59e0b" }
+                                    water: { label: "Water Tariff", color: "#a1a1aa" },
+                                    electricity: { label: "Electric Submeter", color: "#ffffff" }
                                 }}
                                 className="h-full w-full"
                             >
                                 <BarChart data={utilityData} margin={{ top: 10, right: 10, left: -15, bottom: 0 }}>
                                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="currentColor" className="opacity-10 dark:opacity-20" />
-                                    <XAxis dataKey="month" tickLine={false} axisLine={false} tickMargin={8} className="text-[10px] font-bold text-slate-500" />
-                                    <YAxis width={45} tickFormatter={(val) => `₱${val}`} tickLine={false} axisLine={false} tickMargin={5} className="text-[10px] font-bold text-slate-500" />
+                                    <XAxis dataKey="month" tickLine={false} axisLine={false} tickMargin={8} className="text-[10px] font-bold text-slate-500 dark:text-zinc-400" />
+                                    <YAxis width={45} tickFormatter={(val) => `₱${val}`} tickLine={false} axisLine={false} tickMargin={5} className="text-[10px] font-bold text-slate-500 dark:text-zinc-400" />
                                     <ChartTooltip content={<ChartTooltipContent />} />
-                                    <Bar dataKey="electricity" fill="#f59e0b" radius={[4, 4, 0, 0]} maxBarSize={32} />
-                                    <Bar dataKey="water" fill="#06b6d4" radius={[4, 4, 0, 0]} maxBarSize={32} />
+                                    <Bar dataKey="electricity" fill="currentColor" className="text-zinc-900 dark:text-white" radius={[4, 4, 0, 0]} maxBarSize={32} />
+                                    <Bar dataKey="water" fill="currentColor" className="text-zinc-400 dark:text-zinc-500" radius={[4, 4, 0, 0]} maxBarSize={32} />
                                 </BarChart>
                             </ChartContainer>
                         </div>
@@ -560,16 +560,16 @@ export default function TenantDashboard() {
                     <div className="flex items-center justify-between pt-2 border-t border-slate-100 dark:border-zinc-800 text-xs">
                         <div className="flex items-center gap-4">
                             <div className="flex items-center gap-1.5">
-                                <span className="w-2.5 h-2.5 rounded-full bg-amber-500"></span>
+                                <span className="w-2.5 h-2.5 rounded-full bg-zinc-900 dark:bg-white"></span>
                                 <span className="text-[11px] font-bold text-slate-600 dark:text-zinc-400">Electricity Submeter</span>
                             </div>
                             <div className="flex items-center gap-1.5">
-                                <span className="w-2.5 h-2.5 rounded-full bg-cyan-500"></span>
+                                <span className="w-2.5 h-2.5 rounded-full bg-zinc-400 dark:bg-zinc-500"></span>
                                 <span className="text-[11px] font-bold text-slate-600 dark:text-zinc-400">Water Tariff</span>
                             </div>
                         </div>
 
-                        <span className="text-[11px] font-mono font-semibold text-slate-400 hidden sm:inline">
+                        <span className="text-[11px] font-mono font-semibold text-slate-400 dark:text-zinc-500 hidden sm:inline">
                             Avg. ₱{(utilityData.reduce((acc, d) => acc + d.water + d.electricity, 0) / utilityData.length).toFixed(0)}/mo
                         </span>
                     </div>
@@ -580,12 +580,12 @@ export default function TenantDashboard() {
                     <div className="flex justify-between items-center pb-3 border-b border-slate-100 dark:border-zinc-800">
                         <div>
                             <h2 className="text-sm font-extrabold text-slate-900 dark:text-white flex items-center gap-1.5">
-                                <Clock className="w-4 h-4 text-slate-500" />
+                                <Clock className="w-4 h-4 text-slate-500 dark:text-zinc-400" />
                                 <span>Recent Ledger</span>
                             </h2>
-                            <p className="text-[11px] text-slate-500 mt-0.5">Payment receipts & billings</p>
+                            <p className="text-[11px] text-slate-500 dark:text-zinc-400 mt-0.5">Payment receipts & billings</p>
                         </div>
-                        <Link href="/tenant/payments" className="text-xs font-bold text-teal-600 dark:text-teal-400 hover:underline flex items-center gap-0.5">
+                        <Link href="/tenant/payments" className="text-xs font-bold text-zinc-900 dark:text-white hover:underline flex items-center gap-0.5">
                             <span>All History</span>
                             <ArrowUpRight className="w-3 h-3" />
                         </Link>
@@ -598,20 +598,20 @@ export default function TenantDashboard() {
                                     <div className="min-w-0 pr-2">
                                         <div className="flex items-center gap-1.5">
                                             <span className={`w-1.5 h-1.5 rounded-full ${
-                                                tx.status === 'Paid' || tx.status === 'Approved' ? 'bg-emerald-500' :
+                                                tx.status === 'Paid' || tx.status === 'Approved' ? 'bg-zinc-900 dark:bg-white' :
                                                 tx.status === 'Pending' ? 'bg-amber-500' : 'bg-rose-500'
                                             }`}></span>
                                             <p className="text-xs font-bold text-slate-900 dark:text-white truncate max-w-[140px]">{tx.description}</p>
                                         </div>
-                                        <p className="text-[10px] text-slate-500 font-mono mt-0.5">{tx.date}</p>
+                                        <p className="text-[10px] text-slate-500 dark:text-zinc-400 font-mono mt-0.5">{tx.date}</p>
                                     </div>
                                     <div className="text-right shrink-0">
                                         <p className="text-xs font-mono font-extrabold text-slate-900 dark:text-white">
                                             ₱{tx.amount.toLocaleString()}
                                         </p>
                                         <span className={`text-[9px] font-bold uppercase ${
-                                            tx.status === 'Paid' || tx.status === 'Approved' ? 'text-emerald-600' :
-                                            tx.status === 'Pending' ? 'text-amber-600' : 'text-slate-500'
+                                            tx.status === 'Paid' || tx.status === 'Approved' ? 'text-zinc-900 dark:text-zinc-300' :
+                                            tx.status === 'Pending' ? 'text-amber-600 dark:text-amber-400' : 'text-slate-500 dark:text-zinc-400'
                                         }`}>
                                             {tx.status}
                                         </span>
@@ -619,17 +619,17 @@ export default function TenantDashboard() {
                                 </div>
                             ))
                         ) : (
-                            <div className="flex flex-col items-center justify-center h-full text-center p-6 text-slate-400">
+                            <div className="flex flex-col items-center justify-center h-full text-center p-6 text-slate-400 dark:text-zinc-500">
                                 <Clock className="w-8 h-8 opacity-40 mb-2" />
                                 <p className="text-xs font-semibold">No recent transactions recorded</p>
-                                <p className="text-[10px] text-slate-500 mt-1">Invoices and payment receipts will display here</p>
+                                <p className="text-[10px] text-slate-500 dark:text-zinc-500 mt-1">Invoices and payment receipts will display here</p>
                             </div>
                         )}
                     </div>
 
-                    <div className="pt-2 border-t border-slate-100 dark:border-zinc-800 flex justify-between items-center text-[11px] text-slate-400 font-mono">
+                    <div className="pt-2 border-t border-slate-100 dark:border-zinc-800 flex justify-between items-center text-[11px] text-slate-400 dark:text-zinc-500 font-mono">
                         <span>Total Records: {tenantData.recentTransactions.length}</span>
-                        <Link href="/tenant/payments" className="text-teal-600 font-bold hover:underline">
+                        <Link href="/tenant/payments" className="text-zinc-900 dark:text-white font-bold hover:underline">
                             Submit Proof &rarr;
                         </Link>
                     </div>
