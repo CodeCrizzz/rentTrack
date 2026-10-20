@@ -41,3 +41,8 @@ coverage/
 *.pem
 *.key
 *.cert
+
+# Serwist / Service Worker
+frontend/public/sw*
+frontend/public/swe-worker*
+
