@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { 
     Shield, Bell, CreditCard, Moon, Sun, 
     Laptop, LogOut, Save, ChevronRight,
@@ -15,39 +15,17 @@ import { useTheme } from 'next-themes';
 import CustomSelect from '@/components/CustomSelect';
 import { toast } from 'sonner';
 
-export default function AdminSettingsPage() {
-    const router = useRouter();
-    const { theme, setTheme } = useTheme();
-
-    const [isLoading, setIsLoading] = useState(true);
-    const [isSaving, setIsSaving] = useState(false);
-    const [isPurging, setIsPurging] = useState(false);
-    const [showPasswords, setShowPasswords] = useState(false);
-
-    // Initial mount loading timer for smooth skeleton transition
-    useEffect(() => {
-        const timer = setTimeout(() => setIsLoading(false), 250);
-        return () => clearTimeout(timer);
-    }, []);
-
-    // Form states - Security & Account
-    const [adminEmail, setAdminEmail] = useState('admin@renttrack.com');
-    const [currentPassword, setCurrentPassword] = useState('');
-    const [newPassword, setNewPassword] = useState('');
-    const [confirmPassword, setConfirmPassword] = useState('');
-    const [twoFactorAuth, setTwoFactorAuth] = useState(true);
-    const [sessionTimeout, setSessionTimeout] = useState('60');
-
-    // Form states - Property Profile
-    const [propertyName, setPropertyName] = useState('RentTrack Elite Residences & Dormitory');
-    const [propertyAddress, setPropertyAddress] = useState('123 Katipunan Ave, Loyola Heights, Quezon City');
-    const [contactPhone, setContactPhone] = useState('+63 917 123 4567');
-    const [landlordName, setLandlordName] = useState('Master Property Administrator');
-    const [taxId, setTaxId] = useState('TIN: 432-891-002-000');
-    const [currency, setCurrency] = useState('PHP (₱)');
-
-    // Form states - Billing & Automated Tariffs
-    const [billing, setBilling] = useState({
+const DEFAULT_SETTINGS = {
+    adminEmail: 'admin@renttrack.com',
+    twoFactorAuth: true,
+    sessionTimeout: '60',
+    propertyName: 'RentTrack Elite Residences & Dormitory',
+    propertyAddress: '123 Katipunan Ave, Loyola Heights, Quezon City',
+    contactPhone: '+63 917 123 4567',
+    landlordName: 'Master Property Administrator',
+    taxId: 'TIN: 432-891-002-000',
+    currency: 'PHP (₱)',
+    billing: {
         defaultDueDate: '5',
         autoMonthlyBilling: true,
         latePaymentFee: '300',
@@ -56,10 +34,8 @@ export default function AdminSettingsPage() {
         electricityKwhRate: '14.50',
         autoReminderDaysBefore: '3',
         sendReceiptsAutomatically: true
-    });
-
-    // Form states - Notifications
-    const [notifications, setNotifications] = useState({
+    },
+    notifications: {
         tenantRegistration: true,
         paymentSubmission: true,
         paymentVerification: true,
@@ -70,25 +46,148 @@ export default function AdminSettingsPage() {
         systemNotifications: true,
         soundAlerts: true,
         emailDailyDigest: false
-    });
-
-    // Form states - System & Maintenance
-    const [systemConfig, setSystemConfig] = useState({
+    },
+    systemConfig: {
         maintenanceMode: false,
         autoBackupDaily: true,
         queryLogRetentionDays: '30',
         apiRateLimitPerMin: '120'
-    });
+    },
+    theme: 'system'
+};
 
-    const [localTheme, setLocalTheme] = useState('system');
+const getSavedSettings = () => {
+    if (typeof window === 'undefined') return DEFAULT_SETTINGS;
+    try {
+        const stored = localStorage.getItem('renttrack_admin_settings');
+        if (stored) {
+            const parsed = JSON.parse(stored);
+            return {
+                ...DEFAULT_SETTINGS,
+                ...parsed,
+                billing: { ...DEFAULT_SETTINGS.billing, ...(parsed.billing || {}) },
+                notifications: { ...DEFAULT_SETTINGS.notifications, ...(parsed.notifications || {}) },
+                systemConfig: { ...DEFAULT_SETTINGS.systemConfig, ...(parsed.systemConfig || {}) }
+            };
+        }
+    } catch (e) {
+        console.error('Error reading renttrack_admin_settings', e);
+    }
+    return DEFAULT_SETTINGS;
+};
 
+export default function AdminSettingsPage() {
+    const router = useRouter();
+    const { theme, setTheme } = useTheme();
+
+    const [isLoading, setIsLoading] = useState(true);
+    const [isSaving, setIsSaving] = useState(false);
+    const [isPurging, setIsPurging] = useState(false);
+    const [showPasswords, setShowPasswords] = useState(false);
+
+    // Initial snapshot of saved settings
+    const savedSettingsRef = useRef(getSavedSettings());
+
+    // Form states - Security & Account
+    const [adminEmail, setAdminEmail] = useState(savedSettingsRef.current.adminEmail);
+    const [currentPassword, setCurrentPassword] = useState('');
+    const [newPassword, setNewPassword] = useState('');
+    const [confirmPassword, setConfirmPassword] = useState('');
+    const [twoFactorAuth, setTwoFactorAuth] = useState(savedSettingsRef.current.twoFactorAuth);
+    const [sessionTimeout, setSessionTimeout] = useState(savedSettingsRef.current.sessionTimeout);
+
+    // Form states - Property Profile
+    const [propertyName, setPropertyName] = useState(savedSettingsRef.current.propertyName);
+    const [propertyAddress, setPropertyAddress] = useState(savedSettingsRef.current.propertyAddress);
+    const [contactPhone, setContactPhone] = useState(savedSettingsRef.current.contactPhone);
+    const [landlordName, setLandlordName] = useState(savedSettingsRef.current.landlordName);
+    const [taxId, setTaxId] = useState(savedSettingsRef.current.taxId);
+    const [currency, setCurrency] = useState(savedSettingsRef.current.currency);
+
+    // Form states - Billing & Automated Tariffs
+    const [billing, setBilling] = useState(savedSettingsRef.current.billing);
+
+    // Form states - Notifications
+    const [notifications, setNotifications] = useState(savedSettingsRef.current.notifications);
+
+    // Form states - System & Maintenance
+    const [systemConfig, setSystemConfig] = useState(savedSettingsRef.current.systemConfig);
+
+    const [localTheme, setLocalTheme] = useState(savedSettingsRef.current.theme || theme || 'system');
+
+    // Function to revert all working form states back to saved settings
+    const revertToSavedSettings = () => {
+        const currentSaved = getSavedSettings();
+        savedSettingsRef.current = currentSaved;
+
+        setAdminEmail(currentSaved.adminEmail);
+        setCurrentPassword('');
+        setNewPassword('');
+        setConfirmPassword('');
+        setTwoFactorAuth(currentSaved.twoFactorAuth);
+        setSessionTimeout(currentSaved.sessionTimeout);
+
+        setPropertyName(currentSaved.propertyName);
+        setPropertyAddress(currentSaved.propertyAddress);
+        setContactPhone(currentSaved.contactPhone);
+        setLandlordName(currentSaved.landlordName);
+        setTaxId(currentSaved.taxId);
+        setCurrency(currentSaved.currency);
+
+        setBilling({ ...currentSaved.billing });
+        setNotifications({ ...currentSaved.notifications });
+        setSystemConfig({ ...currentSaved.systemConfig });
+
+        setLocalTheme(currentSaved.theme || theme || 'system');
+    };
+
+    // Initial mount loading timer for smooth skeleton transition
     useEffect(() => {
-        if (theme) setLocalTheme(theme);
-    }, [theme]);
+        revertToSavedSettings();
+        const timer = setTimeout(() => setIsLoading(false), 250);
+        return () => clearTimeout(timer);
+    }, []);
 
     const handleSaveChanges = () => {
+        if (newPassword) {
+            if (newPassword !== confirmPassword) {
+                toast.error("New passwords do not match!");
+                return;
+            }
+            if (!currentPassword) {
+                toast.error("Please provide your current password to set a new password.");
+                return;
+            }
+        }
+
         setIsSaving(true);
+
+        const newSettings = {
+            adminEmail,
+            twoFactorAuth,
+            sessionTimeout,
+            propertyName,
+            propertyAddress,
+            contactPhone,
+            landlordName,
+            taxId,
+            currency,
+            billing,
+            notifications,
+            systemConfig,
+            theme: localTheme
+        };
+
+        // Theme and settings ONLY apply when user clicks Save Changes
         setTheme(localTheme);
+
+        try {
+            localStorage.setItem('renttrack_admin_settings', JSON.stringify(newSettings));
+            savedSettingsRef.current = newSettings;
+            window.dispatchEvent(new CustomEvent('renttrack-settings-saved', { detail: newSettings }));
+        } catch (err) {
+            console.error("Failed to save settings to localStorage:", err);
+        }
 
         setTimeout(() => {
             setIsSaving(false);
@@ -96,13 +195,11 @@ export default function AdminSettingsPage() {
             setCurrentPassword('');
             setNewPassword('');
             setConfirmPassword('');
-        }, 400);
+        }, 350);
     };
 
     const handleReset = () => {
-        setCurrentPassword('');
-        setNewPassword('');
-        setConfirmPassword('');
+        revertToSavedSettings();
         toast.info("Unsaved configuration modifications reverted");
     };
 
@@ -219,8 +316,8 @@ export default function AdminSettingsPage() {
                     ))}
                 </div>
 
-                {/* Skeleton Cards for each of the 7 Categories */}
-                {[...Array(7)].map((_, i) => (
+                {/* Skeleton Cards for each of the 5 Categories */}
+                {[...Array(5)].map((_, i) => (
                     <div key={i} className="bg-card border border-slate-200 dark:border-zinc-800 rounded-xl p-5 shadow-xs space-y-4">
                         <div className="space-y-1.5 border-b border-slate-100 dark:border-zinc-800 pb-3">
                             <div className="h-5 w-56 bg-slate-200 dark:bg-zinc-800 rounded"></div>
@@ -296,17 +393,17 @@ export default function AdminSettingsPage() {
 
             {/* Telemetry Ribbon (4 Tiles) */}
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5">
-                {/* Security Profile */}
+                {/* Property Facility */}
                 <div className="bg-card border border-slate-200 dark:border-zinc-800 rounded-xl p-3.5 shadow-xs flex items-center justify-between">
                     <div>
-                        <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Security Governance</span>
-                        <div className="text-lg font-extrabold font-mono text-emerald-600 dark:text-emerald-400 mt-0.5 leading-tight">
-                            Enforced 2FA
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Property Facility</span>
+                        <div className="text-sm font-extrabold text-slate-900 dark:text-white mt-0.5 leading-tight truncate max-w-[140px]">
+                            {propertyName || 'RentTrack Elite'}
                         </div>
-                        <div className="text-[10px] font-semibold text-slate-500 mt-0.5">Admin Session Protected</div>
+                        <div className="text-[10px] font-semibold text-teal-600 mt-0.5">Official Facility</div>
                     </div>
-                    <div className="w-10 h-10 rounded-xl bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 flex items-center justify-center shrink-0">
-                        <ShieldCheck className="w-5 h-5" />
+                    <div className="w-10 h-10 rounded-xl bg-teal-50 dark:bg-teal-500/10 text-teal-600 flex items-center justify-center shrink-0">
+                        <Building2 className="w-5 h-5" />
                     </div>
                 </div>
 
@@ -315,7 +412,7 @@ export default function AdminSettingsPage() {
                     <div>
                         <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Auto Billing</span>
                         <div className="text-lg font-extrabold font-mono text-teal-600 dark:text-teal-400 mt-0.5 leading-tight">
-                            1st of Month
+                            {billing.defaultDueDate ? `${billing.defaultDueDate}th of Month` : '1st of Month'}
                         </div>
                         <div className="text-[10px] font-semibold text-slate-500 mt-0.5">Auto-Cron Active (00:00)</div>
                     </div>
@@ -327,162 +424,39 @@ export default function AdminSettingsPage() {
                 {/* Alert Rules */}
                 <div className="bg-card border border-slate-200 dark:border-zinc-800 rounded-xl p-3.5 shadow-xs flex items-center justify-between">
                     <div>
-                        <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Alert Rules</span>
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Notification Rules</span>
                         <div className="text-lg font-extrabold font-mono text-indigo-600 dark:text-indigo-400 mt-0.5 leading-tight">
                             6 Channels
                         </div>
-                        <div className="text-[10px] font-semibold text-slate-500 mt-0.5">E-Receipt & Work Order Push</div>
+                        <div className="text-[10px] font-semibold text-slate-500 mt-0.5">Push & E-Receipt Active</div>
                     </div>
                     <div className="w-10 h-10 rounded-xl bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 flex items-center justify-center shrink-0">
                         <Bell className="w-5 h-5" />
                     </div>
                 </div>
 
-                {/* Database Engine */}
+                {/* Security Profile */}
                 <div className="bg-card border border-slate-200 dark:border-zinc-800 rounded-xl p-3.5 shadow-xs flex items-center justify-between">
                     <div>
-                        <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Database Engine</span>
-                        <div className="text-lg font-extrabold font-mono text-slate-900 dark:text-white mt-0.5 leading-tight">
-                            Postgres 16
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Security & Sessions</span>
+                        <div className="text-lg font-extrabold font-mono text-emerald-600 dark:text-emerald-400 mt-0.5 leading-tight">
+                            {twoFactorAuth ? 'Enforced 2FA' : 'Standard Auth'}
                         </div>
-                        <div className="text-[10px] font-semibold text-emerald-600 mt-0.5">Port 5432 · Latency 14ms</div>
+                        <div className="text-[10px] font-semibold text-slate-500 mt-0.5">1 Active Admin Session</div>
                     </div>
-                    <div className="w-10 h-10 rounded-xl bg-slate-100 dark:bg-zinc-800 text-slate-600 dark:text-zinc-400 flex items-center justify-center shrink-0">
-                        <Server className="w-5 h-5" />
+                    <div className="w-10 h-10 rounded-xl bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 flex items-center justify-center shrink-0">
+                        <ShieldCheck className="w-5 h-5" />
                     </div>
                 </div>
             </div>
 
-            {/* ========================================================================= */}
-            {/* 1 WHOLE PAGE: ALL CATEGORIES WITH CLEAR LABELS                            */}
-            {/* ========================================================================= */}
-
-            {/* CATEGORY 1: SECURITY & PASSWORD */}
+            {/* CATEGORY 1: PROPERTY PROFILE */}
             <div className="bg-card border border-slate-200 dark:border-zinc-800 rounded-xl p-5 md:p-6 shadow-xs space-y-4">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 dark:border-zinc-800/80 pb-3.5">
                     <div>
                         <div className="flex items-center gap-2">
                             <span className="text-[10px] font-mono font-bold tracking-wider uppercase px-2 py-0.5 rounded bg-teal-50 dark:bg-teal-500/10 text-teal-700 dark:text-teal-400 border border-teal-200 dark:border-teal-500/20">
                                 Category 1
-                            </span>
-                            <h2 className="text-base font-extrabold text-slate-900 dark:text-white flex items-center gap-2">
-                                <Shield className="w-4 h-4 text-teal-600" />
-                                <span>Security & Password</span>
-                            </h2>
-                        </div>
-                        <p className="text-xs text-slate-500 dark:text-zinc-400 mt-1">
-                            Manage master admin credentials, encrypted password changes, and two-factor authentication.
-                        </p>
-                    </div>
-                    <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 border border-emerald-200/50">
-                        ENCRYPTED RSA-4096
-                    </span>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-4xl pt-1">
-                    <div className="space-y-1 md:col-span-2">
-                        <label className="text-xs font-bold text-slate-700 dark:text-zinc-300 flex items-center gap-1.5">
-                            <Mail className="w-3.5 h-3.5 text-slate-400" />
-                            <span>Master Admin Email</span>
-                        </label>
-                        <input
-                            type="email"
-                            value={adminEmail}
-                            onChange={(e) => setAdminEmail(e.target.value)}
-                            className="w-full py-2 px-3 text-xs rounded-lg bg-slate-50 dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 text-slate-900 dark:text-white font-semibold focus:border-teal-500 outline-none"
-                        />
-                    </div>
-
-                    <div className="space-y-1">
-                        <label className="text-xs font-bold text-slate-700 dark:text-zinc-300 flex items-center justify-between">
-                            <span className="flex items-center gap-1.5">
-                                <Lock className="w-3.5 h-3.5 text-slate-400" />
-                                <span>Current Password</span>
-                            </span>
-                        </label>
-                        <div className="relative">
-                            <input
-                                type={showPasswords ? "text" : "password"}
-                                placeholder="••••••••••••"
-                                value={currentPassword}
-                                onChange={(e) => setCurrentPassword(e.target.value)}
-                                className="w-full py-2 px-3 pr-9 text-xs rounded-lg bg-slate-50 dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 text-slate-900 dark:text-white font-semibold focus:border-teal-500 outline-none"
-                            />
-                            <button
-                                type="button"
-                                onClick={() => setShowPasswords(!showPasswords)}
-                                className="absolute right-2.5 top-2.5 text-slate-400 hover:text-slate-600"
-                            >
-                                {showPasswords ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
-                            </button>
-                        </div>
-                    </div>
-
-                    <div className="space-y-1">
-                        <label className="text-xs font-bold text-slate-700 dark:text-zinc-300 flex items-center justify-between">
-                            <span className="flex items-center gap-1.5">
-                                <Key className="w-3.5 h-3.5 text-slate-400" />
-                                <span>New Password</span>
-                            </span>
-                            {newPassword && (
-                                <span className={`text-[10px] font-bold ${
-                                    strength === 3 ? 'text-emerald-500' : strength === 2 ? 'text-amber-500' : 'text-rose-500'
-                                }`}>
-                                    {strength === 3 ? 'Strong' : strength === 2 ? 'Fair' : 'Weak'}
-                                </span>
-                            )}
-                        </label>
-                        <input
-                            type={showPasswords ? "text" : "password"}
-                            placeholder="Enter strong password (8+ chars, numbers, uppercase)"
-                            value={newPassword}
-                            onChange={(e) => setNewPassword(e.target.value)}
-                            className="w-full py-2 px-3 text-xs rounded-lg bg-slate-50 dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 text-slate-900 dark:text-white font-semibold focus:border-teal-500 outline-none"
-                        />
-                        {newPassword && (
-                            <div className="flex gap-1.5 pt-1">
-                                <div className={`h-1 flex-1 rounded-full ${strength >= 1 ? 'bg-rose-500' : 'bg-slate-200 dark:bg-zinc-800'}`}></div>
-                                <div className={`h-1 flex-1 rounded-full ${strength >= 2 ? 'bg-amber-500' : 'bg-slate-200 dark:bg-zinc-800'}`}></div>
-                                <div className={`h-1 flex-1 rounded-full ${strength >= 3 ? 'bg-emerald-500' : 'bg-slate-200 dark:bg-zinc-800'}`}></div>
-                            </div>
-                        )}
-                    </div>
-
-                    <div className="space-y-1 md:col-span-2">
-                        <label className="text-xs font-bold text-slate-700 dark:text-zinc-300 flex items-center gap-1.5">
-                            <CheckCircle2 className="w-3.5 h-3.5 text-slate-400" />
-                            <span>Confirm New Password</span>
-                        </label>
-                        <input
-                            type={showPasswords ? "text" : "password"}
-                            placeholder="Re-type new password to confirm"
-                            value={confirmPassword}
-                            onChange={(e) => setConfirmPassword(e.target.value)}
-                            className="w-full py-2 px-3 text-xs rounded-lg bg-slate-50 dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 text-slate-900 dark:text-white font-semibold focus:border-teal-500 outline-none"
-                        />
-                        {confirmPassword && newPassword !== confirmPassword && (
-                            <p className="text-[11px] text-rose-500 font-semibold mt-1">Passwords do not match.</p>
-                        )}
-                    </div>
-                </div>
-
-                <div className="pt-2 space-y-2.5 max-w-4xl">
-                    <ToggleSwitch
-                        checked={twoFactorAuth}
-                        onChange={setTwoFactorAuth}
-                        label="Enforce Two-Factor Authentication (2FA) for Admin Sign-In"
-                        description="Require Authenticator app OTP code upon logging into the platform dashboard."
-                    />
-                </div>
-            </div>
-
-            {/* CATEGORY 2: PROPERTY PROFILE */}
-            <div className="bg-card border border-slate-200 dark:border-zinc-800 rounded-xl p-5 md:p-6 shadow-xs space-y-4">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 dark:border-zinc-800/80 pb-3.5">
-                    <div>
-                        <div className="flex items-center gap-2">
-                            <span className="text-[10px] font-mono font-bold tracking-wider uppercase px-2 py-0.5 rounded bg-teal-50 dark:bg-teal-500/10 text-teal-700 dark:text-teal-400 border border-teal-200 dark:border-teal-500/20">
-                                Category 2
                             </span>
                             <h2 className="text-base font-extrabold text-slate-900 dark:text-white flex items-center gap-2">
                                 <Building2 className="w-4 h-4 text-teal-600" />
@@ -499,7 +473,7 @@ export default function AdminSettingsPage() {
                     </span>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-4xl pt-1">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 w-full pt-1">
                     <div className="space-y-1">
                         <label className="text-xs font-bold text-slate-700 dark:text-zinc-300 flex items-center gap-1.5">
                             <Building2 className="w-3.5 h-3.5 text-slate-400" />
@@ -573,7 +547,7 @@ export default function AdminSettingsPage() {
                     <div>
                         <div className="flex items-center gap-2">
                             <span className="text-[10px] font-mono font-bold tracking-wider uppercase px-2 py-0.5 rounded bg-teal-50 dark:bg-teal-500/10 text-teal-700 dark:text-teal-400 border border-teal-200 dark:border-teal-500/20">
-                                Category 3
+                                Category 2
                             </span>
                             <h2 className="text-base font-extrabold text-slate-900 dark:text-white flex items-center gap-2">
                                 <CreditCard className="w-4 h-4 text-teal-600" />
@@ -589,7 +563,7 @@ export default function AdminSettingsPage() {
                     </span>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-4xl pt-1">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 w-full pt-1">
                     <div className="space-y-1">
                         <label className="text-xs font-bold text-slate-700 dark:text-zinc-300">Default Due Day of Month</label>
                         <CustomSelect
@@ -642,7 +616,7 @@ export default function AdminSettingsPage() {
                 </div>
 
                 {/* Utility Surcharges Box */}
-                <div className="border border-slate-200 dark:border-zinc-800 rounded-xl p-4 space-y-3 bg-slate-50/50 dark:bg-zinc-900/30 max-w-4xl">
+                <div className="border border-slate-200 dark:border-zinc-800 rounded-xl p-4 space-y-3 bg-slate-50/50 dark:bg-zinc-900/30 w-full">
                     <div className="flex items-center justify-between">
                         <span className="text-xs font-bold uppercase tracking-wider text-slate-500">
                             Baseline Utility Tariffs (Philippine Pesos ₱)
@@ -688,7 +662,7 @@ export default function AdminSettingsPage() {
                     </div>
                 </div>
 
-                <div className="space-y-2.5 max-w-4xl">
+                <div className="space-y-2.5 w-full">
                     <ToggleSwitch
                         checked={billing.autoMonthlyBilling}
                         onChange={(c) => setBilling({ ...billing, autoMonthlyBilling: c })}
@@ -705,13 +679,13 @@ export default function AdminSettingsPage() {
                 </div>
             </div>
 
-            {/* CATEGORY 4: NOTIFICATION TRIGGERS */}
+            {/* CATEGORY 3: NOTIFICATION TRIGGERS */}
             <div className="bg-card border border-slate-200 dark:border-zinc-800 rounded-xl p-5 md:p-6 shadow-xs space-y-4">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 dark:border-zinc-800/80 pb-3.5">
                     <div>
                         <div className="flex items-center gap-2">
                             <span className="text-[10px] font-mono font-bold tracking-wider uppercase px-2 py-0.5 rounded bg-teal-50 dark:bg-teal-500/10 text-teal-700 dark:text-teal-400 border border-teal-200 dark:border-teal-500/20">
-                                Category 4
+                                Category 3
                             </span>
                             <h2 className="text-base font-extrabold text-slate-900 dark:text-white flex items-center gap-2">
                                 <Bell className="w-4 h-4 text-teal-600" />
@@ -727,7 +701,7 @@ export default function AdminSettingsPage() {
                     </span>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 max-w-4xl pt-1">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 w-full pt-1">
                     {[
                         { key: 'tenantRegistration', label: 'New Resident Registration Online', desc: 'Instant toast & badge alert when an applicant registers for room assignment' },
                         { key: 'paymentSubmission', label: 'E-Receipt & Payment Proof Submissions', desc: 'Alert when a tenant uploads GCash, Maya, or bank transfer receipt for verification' },
@@ -747,13 +721,13 @@ export default function AdminSettingsPage() {
                 </div>
             </div>
 
-            {/* CATEGORY 5: THEME & DISPLAY */}
+            {/* CATEGORY 4: THEME & DISPLAY */}
             <div className="bg-card border border-slate-200 dark:border-zinc-800 rounded-xl p-5 md:p-6 shadow-xs space-y-4">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 dark:border-zinc-800/80 pb-3.5">
                     <div>
                         <div className="flex items-center gap-2">
                             <span className="text-[10px] font-mono font-bold tracking-wider uppercase px-2 py-0.5 rounded bg-teal-50 dark:bg-teal-500/10 text-teal-700 dark:text-teal-400 border border-teal-200 dark:border-teal-500/20">
-                                Category 5
+                                Category 4
                             </span>
                             <h2 className="text-base font-extrabold text-slate-900 dark:text-white flex items-center gap-2">
                                 <Moon className="w-4 h-4 text-teal-600" />
@@ -769,7 +743,7 @@ export default function AdminSettingsPage() {
                     </span>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5 max-w-4xl pt-1">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5 w-full pt-1">
                     {[
                         { 
                             key: 'light', 
@@ -799,7 +773,6 @@ export default function AdminSettingsPage() {
                                 type="button"
                                 onClick={() => {
                                     setLocalTheme(m.key);
-                                    setTheme(m.key);
                                 }}
                                 className={`p-4 rounded-xl border text-left transition-all flex flex-col justify-between h-36 ${
                                     isSelected
@@ -824,106 +797,30 @@ export default function AdminSettingsPage() {
                 </div>
             </div>
 
-            {/* CATEGORY 6: DATABASE & SYSTEM HEALTH */}
+            {/* CATEGORY 5: SECURITY & SESSIONS */}
             <div className="bg-card border border-slate-200 dark:border-zinc-800 rounded-xl p-5 md:p-6 shadow-xs space-y-4">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 dark:border-zinc-800/80 pb-3.5">
                     <div>
                         <div className="flex items-center gap-2">
                             <span className="text-[10px] font-mono font-bold tracking-wider uppercase px-2 py-0.5 rounded bg-teal-50 dark:bg-teal-500/10 text-teal-700 dark:text-teal-400 border border-teal-200 dark:border-teal-500/20">
-                                Category 6
+                                Category 5
                             </span>
                             <h2 className="text-base font-extrabold text-slate-900 dark:text-white flex items-center gap-2">
-                                <Database className="w-4 h-4 text-teal-600" />
-                                <span>Database & System Health</span>
+                                <ShieldCheck className="w-4 h-4 text-teal-600" />
+                                <span>Security Credentials & Administrative Sessions</span>
                             </h2>
                         </div>
                         <p className="text-xs text-slate-500 dark:text-zinc-400 mt-1">
-                            Real-time telemetry, connection pooling metrics, memory cache controls, and snapshot management.
+                            Inspect active admin sessions, configure idle timeouts, manage encrypted master credentials, and enforce 2FA.
                         </p>
                     </div>
-                    <button
-                        onClick={handlePurgeCache}
-                        disabled={isPurging}
-                        className="px-3 py-1.5 text-xs font-semibold rounded-lg border border-slate-200 dark:border-zinc-800 hover:bg-slate-100 dark:hover:bg-zinc-800 text-slate-700 dark:text-zinc-300 transition-colors flex items-center gap-1.5 shadow-xs"
-                    >
-                        <RefreshCw className={`w-3.5 h-3.5 ${isPurging ? 'animate-spin text-teal-600' : ''}`} />
-                        <span>{isPurging ? 'Purging...' : 'Purge Cache'}</span>
-                    </button>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-3 max-w-4xl pt-1">
-                    <div className="p-3.5 rounded-xl border border-emerald-200/50 dark:border-emerald-500/20 bg-emerald-50/50 dark:bg-emerald-500/10 space-y-1">
-                        <div className="flex items-center justify-between">
-                            <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-800 dark:text-emerald-300">Database Engine</span>
-                            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-                        </div>
-                        <div className="text-sm font-extrabold font-mono text-emerald-950 dark:text-emerald-200">PostgreSQL 16</div>
-                        <div className="text-[10px] text-emerald-700 dark:text-emerald-400 font-mono">rentTrack_db · schema: rentTrack_schema</div>
-                    </div>
-
-                    <div className="p-3.5 rounded-xl border border-slate-200 dark:border-zinc-800 bg-slate-50/50 dark:bg-zinc-900/30 space-y-1">
-                        <div className="flex items-center justify-between">
-                            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">API Gateway</span>
-                            <span className="text-[10px] font-mono font-bold text-teal-600">LIVE</span>
-                        </div>
-                        <div className="text-sm font-extrabold font-mono text-slate-900 dark:text-white">Express 5.2</div>
-                        <div className="text-[10px] text-slate-500 font-mono">http://localhost:5000</div>
-                    </div>
-
-                    <div className="p-3.5 rounded-xl border border-slate-200 dark:border-zinc-800 bg-slate-50/50 dark:bg-zinc-900/30 space-y-1">
-                        <div className="flex items-center justify-between">
-                            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Web Portal Engine</span>
-                            <span className="text-[10px] font-mono font-bold text-teal-600">LIVE</span>
-                        </div>
-                        <div className="text-sm font-extrabold font-mono text-slate-900 dark:text-white">Next.js 15</div>
-                        <div className="text-[10px] text-slate-500 font-mono">React 19 RC · Port 3000</div>
-                    </div>
-                </div>
-
-                <div className="space-y-2.5 pt-2 max-w-4xl">
-                    <ToggleSwitch
-                        checked={systemConfig.autoBackupDaily}
-                        onChange={(c) => setSystemConfig({ ...systemConfig, autoBackupDaily: c })}
-                        label="Automated Daily Nightly Database Snapshots"
-                        description="Create timestamped pg_dump logical backups automatically every midnight at 02:00 AM."
-                    />
-
-                    <ToggleSwitch
-                        checked={systemConfig.maintenanceMode}
-                        onChange={(c) => {
-                            setSystemConfig({ ...systemConfig, maintenanceMode: c });
-                            if (c) toast.warning("Maintenance mode engaged! Tenant portal restricted.");
-                            else toast.success("Maintenance mode lifted.");
-                        }}
-                        label="Facility Management Maintenance Mode"
-                        description="Restrict public resident access and display scheduled maintenance banner across tenant portal."
-                    />
-                </div>
-            </div>
-
-            {/* CATEGORY 7: SESSIONS & ACCOUNT */}
-            <div className="bg-card border border-slate-200 dark:border-zinc-800 rounded-xl p-5 md:p-6 shadow-xs space-y-4">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 dark:border-zinc-800/80 pb-3.5">
-                    <div>
-                        <div className="flex items-center gap-2">
-                            <span className="text-[10px] font-mono font-bold tracking-wider uppercase px-2 py-0.5 rounded bg-teal-50 dark:bg-teal-500/10 text-teal-700 dark:text-teal-400 border border-teal-200 dark:border-teal-500/20">
-                                Category 7
-                            </span>
-                            <h2 className="text-base font-extrabold text-slate-900 dark:text-white flex items-center gap-2">
-                                <Monitor className="w-4 h-4 text-teal-600" />
-                                <span>Sessions & Account</span>
-                            </h2>
-                        </div>
-                        <p className="text-xs text-slate-500 dark:text-zinc-400 mt-1">
-                            Review active administrative console sessions, manage idle timeouts, and execute secure sign-outs.
-                        </p>
-                    </div>
-                    <span className="text-[11px] font-semibold text-emerald-600 dark:text-emerald-400">
-                        1 Active Master Session
+                    <span className="text-[11px] font-semibold text-emerald-600 dark:text-emerald-400 flex items-center gap-1.5">
+                        <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                        <span>1 Active Master Session</span>
                     </span>
                 </div>
 
-                <div className="space-y-4 max-w-4xl pt-1">
+                <div className="space-y-4 w-full pt-1">
                     {/* Active Console Session Card */}
                     <div className="p-3.5 rounded-xl border border-slate-200 dark:border-zinc-800 bg-slate-50/50 dark:bg-zinc-900/30 flex items-center justify-between">
                         <div className="flex items-center gap-3">
@@ -960,6 +857,104 @@ export default function AdminSettingsPage() {
                         <p className="text-[10px] text-slate-400 dark:text-zinc-500">Automatically logs out the master admin when no activity is detected for this duration.</p>
                     </div>
 
+                    {/* Master Admin Credentials */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 w-full pt-1">
+                        <div className="space-y-1 md:col-span-2">
+                            <label className="text-xs font-bold text-slate-700 dark:text-zinc-300 flex items-center gap-1.5">
+                                <Mail className="w-3.5 h-3.5 text-slate-400" />
+                                <span>Master Admin Email</span>
+                            </label>
+                            <input
+                                type="email"
+                                value={adminEmail}
+                                onChange={(e) => setAdminEmail(e.target.value)}
+                                className="w-full py-2 px-3 text-xs rounded-lg bg-slate-50 dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 text-slate-900 dark:text-white font-semibold focus:border-teal-500 outline-none"
+                            />
+                        </div>
+
+                        <div className="space-y-1">
+                            <label className="text-xs font-bold text-slate-700 dark:text-zinc-300 flex items-center justify-between">
+                                <span className="flex items-center gap-1.5">
+                                    <Lock className="w-3.5 h-3.5 text-slate-400" />
+                                    <span>Current Password</span>
+                                </span>
+                            </label>
+                            <div className="relative">
+                                <input
+                                    type={showPasswords ? "text" : "password"}
+                                    placeholder="••••••••••••"
+                                    value={currentPassword}
+                                    onChange={(e) => setCurrentPassword(e.target.value)}
+                                    className="w-full py-2 px-3 pr-9 text-xs rounded-lg bg-slate-50 dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 text-slate-900 dark:text-white font-semibold focus:border-teal-500 outline-none"
+                                />
+                                <button
+                                    type="button"
+                                    onClick={() => setShowPasswords(!showPasswords)}
+                                    className="absolute right-2.5 top-2.5 text-slate-400 hover:text-slate-600"
+                                >
+                                    {showPasswords ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                                </button>
+                            </div>
+                        </div>
+
+                        <div className="space-y-1">
+                            <label className="text-xs font-bold text-slate-700 dark:text-zinc-300 flex items-center justify-between">
+                                <span className="flex items-center gap-1.5">
+                                    <Key className="w-3.5 h-3.5 text-slate-400" />
+                                    <span>New Password</span>
+                                </span>
+                                {newPassword && (
+                                    <span className={`text-[10px] font-bold ${
+                                        strength === 3 ? 'text-emerald-500' : strength === 2 ? 'text-amber-500' : 'text-rose-500'
+                                    }`}>
+                                        {strength === 3 ? 'Strong' : strength === 2 ? 'Fair' : 'Weak'}
+                                    </span>
+                                )}
+                            </label>
+                            <input
+                                type={showPasswords ? "text" : "password"}
+                                placeholder="Enter strong password (8+ chars, numbers, uppercase)"
+                                value={newPassword}
+                                onChange={(e) => setNewPassword(e.target.value)}
+                                className="w-full py-2 px-3 text-xs rounded-lg bg-slate-50 dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 text-slate-900 dark:text-white font-semibold focus:border-teal-500 outline-none"
+                            />
+                            {newPassword && (
+                                <div className="flex gap-1.5 pt-1">
+                                    <div className={`h-1 flex-1 rounded-full ${strength >= 1 ? 'bg-rose-500' : 'bg-slate-200 dark:bg-zinc-800'}`}></div>
+                                    <div className={`h-1 flex-1 rounded-full ${strength >= 2 ? 'bg-amber-500' : 'bg-slate-200 dark:bg-zinc-800'}`}></div>
+                                    <div className={`h-1 flex-1 rounded-full ${strength >= 3 ? 'bg-emerald-500' : 'bg-slate-200 dark:bg-zinc-800'}`}></div>
+                                </div>
+                            )}
+                        </div>
+
+                        <div className="space-y-1 md:col-span-2">
+                            <label className="text-xs font-bold text-slate-700 dark:text-zinc-300 flex items-center gap-1.5">
+                                <CheckCircle2 className="w-3.5 h-3.5 text-slate-400" />
+                                <span>Confirm New Password</span>
+                            </label>
+                            <input
+                                type={showPasswords ? "text" : "password"}
+                                placeholder="Re-type new password to confirm"
+                                value={confirmPassword}
+                                onChange={(e) => setConfirmPassword(e.target.value)}
+                                className="w-full py-2 px-3 text-xs rounded-lg bg-slate-50 dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 text-slate-900 dark:text-white font-semibold focus:border-teal-500 outline-none"
+                            />
+                            {confirmPassword && newPassword !== confirmPassword && (
+                                <p className="text-[11px] text-rose-500 font-semibold mt-1">Passwords do not match.</p>
+                            )}
+                        </div>
+                    </div>
+
+                    {/* 2FA Toggle */}
+                    <div className="pt-2 space-y-2.5 w-full">
+                        <ToggleSwitch
+                            checked={twoFactorAuth}
+                            onChange={setTwoFactorAuth}
+                            label="Enforce Two-Factor Authentication (2FA) for Admin Sign-In"
+                            description="Require Authenticator app OTP code upon logging into the platform dashboard."
+                        />
+                    </div>
+
                     {/* Emergency Sign Out Card */}
                     <div className="p-3.5 rounded-xl border border-rose-200/60 dark:border-rose-900/40 bg-rose-50/50 dark:bg-rose-950/20 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                         <div>
@@ -968,7 +963,7 @@ export default function AdminSettingsPage() {
                         </div>
                         <button
                             onClick={handleLogout}
-                            className="px-3.5 py-1.5 text-xs font-bold rounded-lg bg-rose-600 hover:bg-rose-700 text-white transition-colors flex items-center gap-1.5 self-start sm:self-center shadow-xs"
+                            className="px-3.5 py-1.5 text-xs font-bold rounded-lg bg-rose-600 hover:bg-rose-700 text-white transition-colors flex items-center gap-1.5 self-start sm:self-center shadow-xs cursor-pointer"
                         >
                             <LogOut className="w-3.5 h-3.5" />
                             <span>Sign Out Now</span>
@@ -981,7 +976,7 @@ export default function AdminSettingsPage() {
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 rounded-xl border border-slate-200 dark:border-zinc-800 bg-card shadow-xs">
                 <div>
                     <span className="text-xs font-bold text-slate-900 dark:text-white block">Ready to apply administrative changes?</span>
-                    <span className="text-[11px] text-slate-500 dark:text-zinc-400">All 7 operational categories above will be updated and synchronized across the platform.</span>
+                    <span className="text-[11px] text-slate-500 dark:text-zinc-400">All 5 operational categories above will be updated and synchronized across the platform.</span>
                 </div>
                 <div className="flex items-center gap-2">
                     <button
