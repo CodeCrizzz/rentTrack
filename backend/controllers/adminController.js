@@ -927,6 +927,42 @@ const deleteAnnouncement = async (req, res) => {
     }
 };
 
+// Get Admin Notifications (Offline Activity Log)
+const getAdminNotifications = async (req, res) => {
+    try {
+        const adminNotificationService = require('../services/adminNotificationService');
+        const data = await adminNotificationService.getAdminNotifications(req.user.id);
+        res.json(data);
+    } catch (error) {
+        console.error('Failed to get admin notifications:', error);
+        res.status(500).json({ message: 'Server error fetching notifications' });
+    }
+};
+
+// Mark All Admin Notifications as Read
+const markAllAdminNotificationsRead = async (req, res) => {
+    try {
+        const adminNotificationService = require('../services/adminNotificationService');
+        await adminNotificationService.markAllNotificationsRead(req.user.id);
+        res.json({ message: 'All notifications marked as read' });
+    } catch (error) {
+        console.error('Failed to mark all admin notifications read:', error);
+        res.status(500).json({ message: 'Server error marking notifications read' });
+    }
+};
+
+// Mark Single Admin Notification as Read
+const markAdminNotificationRead = async (req, res) => {
+    try {
+        const adminNotificationService = require('../services/adminNotificationService');
+        await adminNotificationService.markNotificationRead(req.user.id, req.params.id);
+        res.json({ message: 'Notification marked as read' });
+    } catch (error) {
+        console.error('Failed to mark admin notification read:', error);
+        res.status(500).json({ message: 'Server error marking notification read' });
+    }
+};
+
 module.exports = { 
     getDashboardStats, 
     getAllRooms, 
@@ -946,5 +982,8 @@ module.exports = {
     getCashFlowOverview,
     getAnnouncements,
     createAnnouncement,
-    deleteAnnouncement
+    deleteAnnouncement,
+    getAdminNotifications,
+    markAllAdminNotificationsRead,
+    markAdminNotificationRead
 };

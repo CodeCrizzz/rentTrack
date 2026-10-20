@@ -10,7 +10,10 @@ const {
     getCashFlowOverview,
     getAnnouncements,
     createAnnouncement,
-    deleteAnnouncement
+    deleteAnnouncement,
+    getAdminNotifications,
+    markAllAdminNotificationsRead,
+    markAdminNotificationRead
 } = require('../controllers/adminController');
 const { updateRequest, deleteRequest } = require('../controllers/requestController');
 
@@ -47,6 +50,10 @@ router.get('/chat/conversations', getConversations);
 router.get('/chat/unread', getUnreadCount);
 router.get('/chat', getMessages);
 router.post('/chat', sendMessage);
+
+router.get('/notifications', getAdminNotifications);
+router.post('/notifications/read-all', markAllAdminNotificationsRead);
+router.patch('/notifications/:id/read', markAdminNotificationRead);
 
 router.get('/announcements', getAnnouncements);
 router.post('/announcements', createAnnouncement);

@@ -41,7 +41,6 @@ export default function TenantSettingsPage() {
     const [localTheme, setLocalTheme] = useState('system');
 
     useEffect(() => {
-        if (theme) setLocalTheme(theme);
         if (typeof window !== 'undefined') {
             const userStr = localStorage.getItem('user');
             if (userStr) {
@@ -50,6 +49,17 @@ export default function TenantSettingsPage() {
                     if (u.email) setEmail(u.email);
                 } catch (e) {}
             }
+            const savedStr = localStorage.getItem('renttrack_tenant_settings');
+            if (savedStr) {
+                try {
+                    const saved = JSON.parse(savedStr);
+                    if (saved.notifications) setNotifications(prev => ({ ...prev, ...saved.notifications }));
+                    if (saved.theme) setLocalTheme(saved.theme);
+                    else if (theme) setLocalTheme(theme);
+                } catch (e) {}
+            } else if (theme) {
+                setLocalTheme(theme);
+            }
         }
         const timer = setTimeout(() => setIsLoading(false), 250);
         return () => clearTimeout(timer);
@@ -57,7 +67,6 @@ export default function TenantSettingsPage() {
 
     const handleSaveChanges = async () => {
         setIsSaving(true);
-        setTheme(localTheme);
 
         try {
             if (newPassword) {
@@ -77,6 +86,15 @@ export default function TenantSettingsPage() {
                 setNewPassword('');
                 setConfirmPassword('');
             }
+
+            setTheme(localTheme);
+            const updatedSettings = {
+                email,
+                notifications,
+                theme: localTheme
+            };
+            localStorage.setItem('renttrack_tenant_settings', JSON.stringify(updatedSettings));
+            window.dispatchEvent(new CustomEvent('renttrack-tenant-settings-saved', { detail: updatedSettings }));
             
             toast.success("Resident preferences saved successfully!");
         } catch (err: any) {
@@ -497,7 +515,6 @@ export default function TenantSettingsPage() {
                                 type="button"
                                 onClick={() => {
                                     setLocalTheme(m.key);
-                                    setTheme(m.key);
                                 }}
                                 className={`p-4 rounded-xl border text-left transition-all flex flex-col justify-between h-32 ${
                                     isSelected

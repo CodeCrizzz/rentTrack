@@ -202,8 +202,24 @@ const sendTenantMessage = async (req, res) => {
             VALUES ($1, $2, $3, 'tenant', 'sent') 
             RETURNING *;
         `;
-        const result = await db.query(query, [tenantId, adminId, message]);
-        res.status(201).json(result.rows[0]);
+        const sentMsg = result.rows[0];
+
+        // Notify admin if offline when tenant sends message
+        try {
+            const adminNotificationService = require('../services/adminNotificationService');
+            const tenantName = req.user.name || 'A resident';
+            const snippet = message.length > 50 ? message.substring(0, 47) + '...' : message;
+            adminNotificationService.notifyAdminsIfOffline({
+                title: 'New Message',
+                message: `${tenantName} sent: "${snippet}"`,
+                type: 'chat_message',
+                link: '/admin/chat'
+            });
+        } catch (notifErr) {
+            console.error('Error queuing offline chat notification:', notifErr.message);
+        }
+
+        res.status(201).json(sentMsg);
     } catch (error) {
         console.error('Send Message Error:', error);
         res.status(500).json({ message: 'Server error sending message' });
@@ -461,6 +477,20 @@ const submitTenantPayment = async (req, res) => {
             dueDate: updatedBillRaw.due_date,
             status: updatedBillRaw.status
         } : null;
+
+        // Notify admin if offline when payment is submitted
+        try {
+            const adminNotificationService = require('../services/adminNotificationService');
+            const tenantName = req.user.name || 'A resident';
+            adminNotificationService.notifyAdminsIfOffline({
+                title: 'Payment Verification',
+                message: `${tenantName} submitted a ₱${Number(amount_paid).toLocaleString()} payment proof for verification.`,
+                type: 'payment_verification',
+                link: '/admin/billing'
+            });
+        } catch (notifErr) {
+            console.error('Error queuing offline payment notification:', notifErr.message);
+        }
 
         res.status(201).json({ 
             message: 'Payment proof submitted for verification', 

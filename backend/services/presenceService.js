@@ -23,12 +23,16 @@ const recordActivity = (userId) => {
     }
 };
 
-const markOffline = (userId) => {
+const markOffline = async (userId) => {
     if (!userId) return;
     const uid = Number(userId);
-    activeUsers.delete(uid);
-    db.query("UPDATE users SET last_active_at = NOW() - INTERVAL '5 minutes' WHERE id = $1", [uid])
-        .catch(err => console.error('Failed to set offline in DB:', err.message));
+    activeUsers.set(uid, 0); // Explicitly marked offline in memory
+    lastDbUpdate.delete(uid);
+    try {
+        await db.query("UPDATE users SET last_active_at = NOW() - INTERVAL '5 minutes' WHERE id = $1", [uid]);
+    } catch (err) {
+        console.error('Failed to set offline in DB:', err.message);
+    }
 };
 
 const isUserActive = (userId, dbLastActive = null) => {

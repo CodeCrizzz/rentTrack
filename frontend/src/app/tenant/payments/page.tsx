@@ -352,7 +352,7 @@ export default function TenantPayments() {
                             Approved and recorded
                         </div>
                     </div>
-                    <div className="w-11 h-11 rounded-xl bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 flex items-center justify-center shrink-0">
+                    <div className="w-11 h-11 rounded-xl bg-slate-100 dark:bg-zinc-800 text-slate-700 dark:text-zinc-300 flex items-center justify-center shrink-0">
                         <TrendingUp className="w-5.5 h-5.5" />
                     </div>
                 </div>
@@ -364,11 +364,11 @@ export default function TenantPayments() {
                         <div className="text-2xl sm:text-3xl font-black font-mono text-slate-900 dark:text-white mt-0.5 leading-tight">
                             ₱{summary.yearTotal.toLocaleString()}
                         </div>
-                        <div className="text-xs font-semibold text-teal-600 dark:text-teal-400 mt-1">
+                        <div className="text-xs font-semibold text-slate-500 dark:text-zinc-400 mt-1">
                             {summary.txCount} total transaction{summary.txCount !== 1 ? 's' : ''}
                         </div>
                     </div>
-                    <div className="w-11 h-11 rounded-xl bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 flex items-center justify-center shrink-0">
+                    <div className="w-11 h-11 rounded-xl bg-slate-100 dark:bg-zinc-800 text-slate-700 dark:text-zinc-300 flex items-center justify-center shrink-0">
                         <CheckCircle2 className="w-5.5 h-5.5" />
                     </div>
                 </div>
@@ -450,7 +450,7 @@ export default function TenantPayments() {
 
                         {/* In-Person Cash Payment Advisory */}
                         <div className="mb-3 p-3 rounded-xl border border-slate-200/80 dark:border-zinc-800 bg-slate-50/70 dark:bg-zinc-900/40 flex items-start gap-2.5">
-                            <div className="w-7 h-7 rounded-lg bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0 mt-0.5">
+                            <div className="w-7 h-7 rounded-lg bg-slate-100 dark:bg-zinc-800 text-slate-700 dark:text-zinc-300 flex items-center justify-center shrink-0 mt-0.5">
                                 <Building2 className="w-3.5 h-3.5" />
                             </div>
                             <div className="space-y-0.5 text-xs">
@@ -477,8 +477,8 @@ export default function TenantPayments() {
                             disabled={currentBill.remainingBalance <= 0}
                             className={`w-full py-3 rounded-xl text-sm font-bold transition-all flex items-center justify-center gap-2 shadow-xs cursor-pointer ${
                                 currentBill.remainingBalance <= 0
-                                    ? 'bg-slate-100 dark:bg-zinc-800 text-slate-400 cursor-not-allowed'
-                                    : 'bg-teal-600 hover:bg-teal-700 text-white'
+                                    ? 'bg-slate-100 dark:bg-zinc-800 text-slate-400 dark:text-zinc-600 cursor-not-allowed'
+                                    : 'bg-zinc-900 hover:bg-zinc-800 dark:bg-zinc-100 dark:hover:bg-zinc-200 text-white dark:text-zinc-950'
                             }`}
                         >
                             <CreditCard className="w-4.5 h-4.5" />
@@ -507,12 +507,12 @@ export default function TenantPayments() {
                                         placeholder="Search reference #..."
                                         value={searchQuery}
                                         onChange={(e) => setSearchQuery(e.target.value)}
-                                        className="w-full py-2 pl-9 pr-3 text-xs sm:text-sm rounded-lg bg-slate-50 dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 text-slate-900 dark:text-white outline-none focus:border-teal-500 font-medium"
+                                        className="w-full py-2 pl-9 pr-3 text-xs sm:text-sm rounded-lg bg-slate-50 dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 text-slate-900 dark:text-white outline-none focus:border-zinc-400 dark:focus:border-zinc-600 font-medium"
                                     />
                                 </div>
 
-                                <span className="px-2.5 py-1 text-xs font-semibold rounded-lg bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-400 border border-emerald-200/60 dark:border-emerald-800/40 flex items-center gap-1.5 shrink-0">
-                                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                                <span className="px-2.5 py-1 text-xs font-semibold rounded-lg bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-zinc-200 border border-zinc-200 dark:border-zinc-700/60 flex items-center gap-1.5 shrink-0">
+                                    <span className="w-1.5 h-1.5 rounded-full bg-zinc-900 dark:bg-white"></span>
                                     Status: Paid
                                 </span>
                             </div>
@@ -558,8 +558,8 @@ export default function TenantPayments() {
                                                         <div className="flex items-center gap-2">
                                                             <span className={`p-1.5 rounded-lg text-xs font-bold shrink-0 ${
                                                                 isCash
-                                                                    ? 'bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-400'
-                                                                    : 'bg-blue-50 text-blue-600 dark:bg-blue-500/10 dark:text-blue-400'
+                                                                    ? 'bg-slate-100 text-slate-700 dark:bg-zinc-800 dark:text-zinc-300'
+                                                                    : 'bg-slate-100 text-slate-700 dark:bg-zinc-800 dark:text-zinc-300'
                                                             }`}>
                                                                 {isCash ? <Building2 className="w-4 h-4" /> : <QrCode className="w-4 h-4" />}
                                                             </span>
@@ -572,15 +572,15 @@ export default function TenantPayments() {
                                                         ₱{Number(p.amount || 0).toLocaleString()}
                                                     </td>
                                                     <td className="py-1.5 px-3.5 text-center whitespace-nowrap">
-                                                        <span className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide text-emerald-600 dark:text-emerald-400">
-                                                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                                                        <span className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide text-zinc-900 dark:text-zinc-200">
+                                                            <span className="w-1.5 h-1.5 rounded-full bg-zinc-900 dark:bg-white"></span>
                                                             Paid
                                                         </span>
                                                     </td>
                                                     <td className="py-1.5 px-3.5 text-right whitespace-nowrap">
                                                         <button
                                                             onClick={() => setViewingPayment(p)}
-                                                            className="text-xs sm:text-sm font-bold text-teal-600 dark:text-teal-400 hover:underline flex items-center gap-1.5 ml-auto cursor-pointer"
+                                                            className="text-xs sm:text-sm font-bold text-zinc-900 dark:text-white hover:underline flex items-center gap-1.5 ml-auto cursor-pointer"
                                                         >
                                                             {isCash ? <FileText className="w-4 h-4" /> : <ImageIcon className="w-4 h-4" />}
                                                             <span>View</span>
@@ -696,7 +696,7 @@ export default function TenantPayments() {
                                         {/* Remaining balance callout */}
                                         <div className="pt-2.5 border-t border-slate-200/80 dark:border-zinc-800 flex justify-between items-baseline">
                                             <span className="text-xs font-bold text-slate-700 dark:text-zinc-300">Total amount to pay</span>
-                                            <span className="text-xl sm:text-2xl font-black font-mono text-teal-600 dark:text-teal-400">
+                                            <span className="text-xl sm:text-2xl font-black font-mono text-slate-900 dark:text-white">
                                                 ₱{Number(currentBill.remainingBalance || 0).toLocaleString()}
                                             </span>
                                         </div>
@@ -707,9 +707,9 @@ export default function TenantPayments() {
                                         <div className="flex items-center justify-between">
                                             <label className="text-xs font-bold text-slate-700 dark:text-zinc-300">Payment Method</label>
                                         </div>
-                                        <div className="flex items-center justify-between p-2.5 rounded-xl border border-blue-200/80 dark:border-blue-900/50 bg-blue-50/50 dark:bg-blue-950/20">
+                                        <div className="flex items-center justify-between p-2.5 rounded-xl border border-slate-200 dark:border-zinc-800 bg-slate-50/50 dark:bg-zinc-900/40">
                                             <div className="flex items-center gap-2.5">
-                                                <div className="w-8 h-8 rounded-lg bg-blue-600 text-white flex items-center justify-center font-bold text-xs shrink-0 shadow-xs">
+                                                <div className="w-8 h-8 rounded-lg bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-950 flex items-center justify-center font-bold text-xs shrink-0 shadow-xs">
                                                     <QrCode className="w-4.5 h-4.5" />
                                                 </div>
                                                 <div>
@@ -729,7 +729,7 @@ export default function TenantPayments() {
                                                 <button
                                                     type="button"
                                                     onClick={() => setPayAmount(String(currentBill.remainingBalance))}
-                                                    className="text-[11px] font-bold text-teal-600 dark:text-teal-400 hover:underline"
+                                                    className="text-[11px] font-bold text-zinc-900 dark:text-white hover:underline"
                                                 >
                                                     Pay Full (₱{Number(currentBill.remainingBalance).toLocaleString()})
                                                 </button>
@@ -815,18 +815,18 @@ export default function TenantPayments() {
                                                 onDrop={handleDrop}
                                                 className={`group relative flex flex-col items-center justify-center p-5 rounded-xl border-2 border-dashed transition-all cursor-pointer ${
                                                     isDragging
-                                                        ? 'border-teal-500 bg-teal-50/60 dark:bg-teal-950/30 ring-2 ring-teal-500/20'
-                                                        : 'border-slate-200 dark:border-zinc-800 bg-slate-50/60 dark:bg-zinc-900/40 hover:border-teal-500 dark:hover:border-teal-500/80 hover:bg-teal-50/20 dark:hover:bg-teal-950/10'
+                                                        ? 'border-zinc-400 bg-zinc-100 dark:bg-zinc-800 ring-2 ring-zinc-400/20'
+                                                        : 'border-slate-200 dark:border-zinc-800 bg-slate-50/60 dark:bg-zinc-900/40 hover:border-zinc-400 dark:hover:border-zinc-600 hover:bg-slate-100/50 dark:hover:bg-zinc-800/40'
                                                 }`}
                                             >
-                                                <div className="w-10 h-10 rounded-full bg-teal-50 dark:bg-teal-500/10 text-teal-600 dark:text-teal-400 flex items-center justify-center mb-2.5 transition-transform group-hover:scale-110 shadow-xs">
+                                                <div className="w-10 h-10 rounded-full bg-slate-100 dark:bg-zinc-800 text-slate-700 dark:text-zinc-200 flex items-center justify-center mb-2.5 transition-transform group-hover:scale-110 shadow-xs">
                                                     <Upload className="w-5 h-5" />
                                                 </div>
                                                 <p className="text-xs font-bold text-slate-800 dark:text-zinc-200 text-center">
                                                     Upload GCash Receipt Here
                                                 </p>
                                                 <p className="text-[11px] text-slate-500 dark:text-zinc-400 text-center mt-0.5">
-                                                    Drag and drop your screenshot, or <span className="text-teal-600 dark:text-teal-400 font-bold underline underline-offset-2">browse files</span>
+                                                    Drag and drop your screenshot, or <span className="text-zinc-900 dark:text-white font-bold underline underline-offset-2">browse files</span>
                                                 </p>
                                                 <span className="text-[10px] text-slate-400 dark:text-zinc-500 mt-2 font-mono">
                                                     PNG, JPG, JPEG, or WEBP
@@ -834,10 +834,10 @@ export default function TenantPayments() {
                                             </div>
                                         ) : (
                                             /* Attached Receipt Card */
-                                            <div className="p-3 rounded-xl border border-teal-200 dark:border-teal-900/50 bg-teal-50/30 dark:bg-teal-950/20 flex flex-col gap-2.5">
+                                            <div className="p-3 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-900/50 flex flex-col gap-2.5">
                                                 <div className="flex items-center justify-between">
                                                     <div className="flex items-center gap-2 min-w-0">
-                                                        <div className="w-5 h-5 rounded-full bg-teal-600 text-white flex items-center justify-center shrink-0">
+                                                        <div className="w-5 h-5 rounded-full bg-zinc-900 dark:bg-white text-white dark:text-zinc-950 flex items-center justify-center shrink-0">
                                                             <CheckCircle2 className="w-3.5 h-3.5" />
                                                         </div>
                                                         <span className="text-xs font-bold text-slate-800 dark:text-zinc-200 truncate">
@@ -848,7 +848,7 @@ export default function TenantPayments() {
                                                         <button
                                                             type="button"
                                                             onClick={() => fileInputRef.current?.click()}
-                                                            className="text-[11px] font-bold text-teal-600 dark:text-teal-400 hover:underline px-1.5 py-0.5 rounded cursor-pointer"
+                                                            className="text-[11px] font-bold text-zinc-900 dark:text-white hover:underline px-1.5 py-0.5 rounded cursor-pointer"
                                                         >
                                                             Change
                                                         </button>
@@ -883,7 +883,7 @@ export default function TenantPayments() {
                                     <button
                                         type="submit"
                                         disabled={isSubmitting}
-                                        className="w-full py-2.5 rounded-lg text-xs font-bold bg-teal-600 hover:bg-teal-700 text-white transition-all shadow-xs disabled:opacity-50 flex items-center justify-center gap-2 cursor-pointer"
+                                        className="w-full py-2.5 rounded-lg text-xs font-bold bg-zinc-900 hover:bg-zinc-800 dark:bg-zinc-100 dark:hover:bg-zinc-200 text-white dark:text-zinc-950 transition-all shadow-xs disabled:opacity-50 flex items-center justify-center gap-2 cursor-pointer"
                                     >
                                         {isSubmitting ? (
                                             <>
@@ -1000,7 +1000,7 @@ export default function TenantPayments() {
                                                 )}
                                                 <div className="flex justify-between items-baseline pt-1">
                                                     <span className="text-xs font-bold text-slate-800 dark:text-zinc-200">Amount Paid</span>
-                                                    <span className="text-xl font-black font-mono text-teal-600 dark:text-teal-400">
+                                                    <span className="text-xl font-black font-mono text-slate-900 dark:text-white">
                                                         ₱{Number(viewingPayment.amount || 0).toLocaleString()}
                                                     </span>
                                                 </div>
@@ -1010,18 +1010,18 @@ export default function TenantPayments() {
                                         {/* Method & Verification / Receipt */}
                                         {isCash ? (
                                             /* Cash Payment Info - NO UPLOADED IMAGE */
-                                            <div className="p-3.5 rounded-xl border border-emerald-200 dark:border-emerald-900/50 bg-emerald-50/50 dark:bg-emerald-950/20 flex items-start gap-3">
-                                                <div className="w-8 h-8 rounded-lg bg-emerald-600 text-white flex items-center justify-center shrink-0 mt-0.5">
+                                            <div className="p-3.5 rounded-xl border border-slate-200 dark:border-zinc-800 bg-slate-50/50 dark:bg-zinc-900/40 flex items-start gap-3">
+                                                <div className="w-8 h-8 rounded-lg bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-950 flex items-center justify-center shrink-0 mt-0.5">
                                                     <ShieldCheck className="w-4.5 h-4.5" />
                                                 </div>
                                                 <div className="space-y-0.5 text-xs">
-                                                    <span className="font-bold text-emerald-900 dark:text-emerald-200">Official In-Person Cash Payment</span>
-                                                    <p className="text-[11px] text-emerald-700 dark:text-emerald-400 leading-relaxed">
+                                                    <span className="font-bold text-slate-900 dark:text-white">Official In-Person Cash Payment</span>
+                                                    <p className="text-[11px] text-slate-600 dark:text-zinc-400 leading-relaxed">
                                                         Handed in directly at the <strong>Admin / Owner Office</strong>. Official physical receipt was verified and recorded into your account ledger.
                                                     </p>
                                                     {(viewingPayment.reference_number || viewingPayment.referenceNumber) && (
-                                                        <p className="text-[10px] text-emerald-800 dark:text-emerald-300 font-mono mt-1">
-                                                            Ref #: <span className="font-bold">{viewingPayment.reference_number || viewingPayment.referenceNumber}</span>
+                                                        <p className="text-[10px] text-slate-500 dark:text-zinc-400 font-mono mt-1">
+                                                            Ref #: <span className="font-bold text-slate-900 dark:text-white">{viewingPayment.reference_number || viewingPayment.referenceNumber}</span>
                                                         </p>
                                                     )}
                                                 </div>
@@ -1031,7 +1031,7 @@ export default function TenantPayments() {
                                             <div className="space-y-2">
                                                 <div className="flex items-center justify-between">
                                                     <span className="text-xs font-bold text-slate-700 dark:text-zinc-300 flex items-center gap-1.5">
-                                                        <ImageIcon className="w-3.5 h-3.5 text-teal-600" />
+                                                        <ImageIcon className="w-3.5 h-3.5 text-slate-500 dark:text-zinc-400" />
                                                         <span>Uploaded GCash Receipt</span>
                                                     </span>
                                                     {proofImg && (
@@ -1039,7 +1039,7 @@ export default function TenantPayments() {
                                                             href={proofImg.startsWith('http') ? proofImg : `http://localhost:5000${proofImg.startsWith('/') ? proofImg : `/${proofImg}`}`}
                                                             target="_blank"
                                                             rel="noopener noreferrer"
-                                                            className="text-[11px] font-bold text-teal-600 dark:text-teal-400 hover:underline flex items-center gap-1"
+                                                            className="text-[11px] font-bold text-zinc-900 dark:text-white hover:underline flex items-center gap-1"
                                                         >
                                                             <ArrowUpRight className="w-3 h-3" />
                                                             <span>Open Full Size</span>

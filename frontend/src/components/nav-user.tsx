@@ -5,22 +5,7 @@ import {
   AvatarFallback,
   AvatarImage,
 } from "@/components/ui/avatar"
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuGroup,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
-import {
-  SidebarMenu,
-  SidebarMenuButton,
-  SidebarMenuItem,
-  useSidebar,
-} from "@/components/ui/sidebar"
-import { ChevronsUpDownIcon, BadgeCheckIcon, LogOutIcon } from "lucide-react"
+import { LogOut, Settings } from "lucide-react"
 import { useRouter } from "next/navigation"
 
 export function NavUser({
@@ -35,9 +20,8 @@ export function NavUser({
   }
   onLogout: () => void
 }) {
-  const { isMobile } = useSidebar()
   const router = useRouter()
-  const initials = user.name.charAt(0).toUpperCase()
+  const initials = user.name ? user.name.charAt(0).toUpperCase() : "U"
 
   const handleProfileClick = () => {
     const basePath = user.role.toLowerCase().includes('admin') ? '/admin' : '/tenant'
@@ -45,70 +29,59 @@ export function NavUser({
   }
 
   return (
-    <SidebarMenu>
-      <SidebarMenuItem>
-        <DropdownMenu>
-          <DropdownMenuTrigger
-            render={
-              <SidebarMenuButton size="lg" className="aria-expanded:bg-muted aria-expanded:text-muted-foreground transition-colors" />
-            }
-          >
-            <Avatar className="h-8 w-8 rounded-lg">
-              <AvatarImage src={user.avatar} alt={user.name} />
-              <AvatarFallback className="rounded-lg bg-indigo-100 dark:bg-indigo-500/20 text-indigo-700 dark:text-indigo-300 font-bold border border-indigo-200 dark:border-indigo-500/30">
-                {initials}
-              </AvatarFallback>
-            </Avatar>
-            <div className="grid flex-1 text-left text-sm leading-tight">
-              <span className="truncate font-bold">{user.name}</span>
-              <span className="truncate text-[10px] uppercase font-black tracking-widest text-emerald-600 dark:text-emerald-400">
-                {user.role}
-              </span>
-            </div>
-            <ChevronsUpDownIcon className="ml-auto size-4 text-slate-500" />
-          </DropdownMenuTrigger>
-          <DropdownMenuContent
-            className="w-56 rounded-xl border border-slate-200 dark:border-white/10 shadow-lg dark:bg-zinc-950"
-            side={isMobile ? "bottom" : "right"}
-            align="end"
-            sideOffset={4}
-          >
-            <DropdownMenuGroup>
-              <DropdownMenuLabel className="p-0 font-normal">
-                <div className="flex items-center gap-3 px-3 py-2.5 text-left text-sm">
-                  <Avatar className="h-9 w-9 rounded-lg">
-                    <AvatarImage src={user.avatar} alt={user.name} />
-                    <AvatarFallback className="rounded-lg bg-indigo-100 dark:bg-indigo-500/20 text-indigo-700 dark:text-indigo-300 font-bold border border-indigo-200 dark:border-indigo-500/30">
-                      {initials}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div className="grid flex-1 text-left text-sm leading-tight">
-                    <span className="truncate font-bold">{user.name}</span>
-                    <span className="truncate text-[10px] uppercase font-black tracking-widest text-emerald-600 dark:text-emerald-400">
-                      {user.email}
-                    </span>
-                  </div>
-                </div>
-              </DropdownMenuLabel>
-            </DropdownMenuGroup>
-            <DropdownMenuSeparator className="bg-slate-200 dark:bg-white/10" />
-            <DropdownMenuGroup>
-              <DropdownMenuItem onClick={handleProfileClick} className="cursor-pointer hover:bg-slate-100 dark:hover:bg-white/5 rounded-lg">
-                <BadgeCheckIcon className="mr-2 h-4 w-4 text-cyan-500" />
-                Account Settings
-              </DropdownMenuItem>
-            </DropdownMenuGroup>
-            <DropdownMenuSeparator className="bg-slate-200 dark:bg-white/10" />
-            <DropdownMenuItem 
-              onClick={onLogout}
-              className="cursor-pointer text-rose-600 hover:bg-rose-50 dark:text-rose-400 dark:hover:bg-rose-500/10 rounded-lg font-bold transition-colors"
-            >
-              <LogOutIcon className="mr-2 h-4 w-4" />
-              Log out
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-      </SidebarMenuItem>
-    </SidebarMenu>
+    <div className="flex flex-col w-full">
+      {/* Account Name Card */}
+      <div
+        onClick={handleProfileClick}
+        role="button"
+        tabIndex={0}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault()
+            handleProfileClick()
+          }
+        }}
+        title="View Account Profile"
+        className="flex items-center gap-3 p-2 rounded-xl bg-slate-100/70 hover:bg-slate-200/70 dark:bg-zinc-800/50 dark:hover:bg-zinc-800/90 border border-slate-200/70 dark:border-white/5 transition-all duration-200 cursor-pointer group-data-[collapsible=icon]:p-1.5 group-data-[collapsible=icon]:justify-center select-none"
+      >
+        <Avatar className="h-8 w-8 rounded-lg shrink-0">
+          <AvatarImage src={user.avatar} alt={user.name} />
+          <AvatarFallback className="rounded-lg bg-zinc-200 dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 font-bold border border-zinc-300 dark:border-zinc-700 text-xs">
+            {initials}
+          </AvatarFallback>
+        </Avatar>
+        <div className="grid flex-1 text-left text-sm leading-tight min-w-0 group-data-[collapsible=icon]:hidden">
+          <span className="truncate font-bold text-slate-900 dark:text-white text-xs">
+            {user.name}
+          </span>
+          <span className="truncate text-[10px] uppercase font-bold tracking-widest text-slate-500 dark:text-zinc-400">
+            {user.role}
+          </span>
+        </div>
+      </div>
+
+      {/* Actions Row: Log out & Account Settings beside each other */}
+      <div className="grid grid-cols-2 gap-1.5 w-full mt-2 group-data-[collapsible=icon]:grid-cols-1 group-data-[collapsible=icon]:gap-1">
+        <button
+          type="button"
+          onClick={onLogout}
+          title="Log out"
+          className="flex items-center justify-center gap-1 py-1.5 px-1.5 rounded-lg text-[11px] font-semibold text-rose-600 dark:text-rose-400 bg-rose-50/80 hover:bg-rose-100 dark:bg-rose-500/10 dark:hover:bg-rose-500/20 border border-rose-200/70 dark:border-rose-500/20 transition-all duration-200 cursor-pointer shadow-xs active:scale-95 group-data-[collapsible=icon]:size-8 group-data-[collapsible=icon]:p-0 group-data-[collapsible=icon]:justify-center"
+        >
+          <LogOut className="h-3.5 w-3.5 shrink-0" />
+          <span className="truncate group-data-[collapsible=icon]:hidden">Log out</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={handleProfileClick}
+          title="Account Settings"
+          className="flex items-center justify-center gap-1 py-1.5 px-1.5 rounded-lg text-[11px] font-semibold text-slate-700 dark:text-zinc-200 bg-white hover:bg-slate-100 dark:bg-zinc-800 dark:hover:bg-zinc-700 border border-slate-200/80 dark:border-zinc-700/80 transition-all duration-200 cursor-pointer shadow-xs active:scale-95 group-data-[collapsible=icon]:size-8 group-data-[collapsible=icon]:p-0 group-data-[collapsible=icon]:justify-center"
+        >
+          <Settings className="h-3.5 w-3.5 shrink-0 text-slate-500 dark:text-zinc-400" />
+          <span className="truncate group-data-[collapsible=icon]:hidden">Account Settings</span>
+        </button>
+      </div>
+    </div>
   )
 }

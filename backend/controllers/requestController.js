@@ -25,6 +25,20 @@ const createRequest = async (req, res) => {
 
         const createdReq = newRequest.rows[0];
 
+        // Notify admin if offline when maintenance request is submitted
+        try {
+            const adminNotificationService = require('../services/adminNotificationService');
+            const tenantName = req.user.name || 'A resident';
+            adminNotificationService.notifyAdminsIfOffline({
+                title: 'New Maintenance Request',
+                message: `${tenantName} submitted request "${title}" (${createdReq.request_number || request_number}).`,
+                type: 'maintenance_request',
+                link: '/admin/requests'
+            });
+        } catch (notifErr) {
+            console.error('Error queuing offline maintenance notification:', notifErr.message);
+        }
+
         res.status(201).json({ 
             message: 'Request submitted successfully', 
             request: { ...createdReq, request_number: createdReq.request_number || request_number },

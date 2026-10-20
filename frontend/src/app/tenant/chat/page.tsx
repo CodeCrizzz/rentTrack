@@ -198,17 +198,16 @@ export default function TenantChat() {
                 {/* 1. CHAT HEADER */}
                 <div className="flex items-center justify-between p-4 border-b border-slate-200 dark:border-zinc-800 bg-secondary/50 shrink-0">
                     <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-lg bg-indigo-100 dark:bg-indigo-900/30 flex items-center justify-center text-indigo-600 dark:text-indigo-400 font-bold text-lg">
+                        <div className="w-10 h-10 rounded-lg bg-slate-100 dark:bg-zinc-800 flex items-center justify-center text-slate-700 dark:text-zinc-200 font-bold text-lg">
                             BA
                         </div>
                         <div>
                             <h2 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
                                 Boarding Admin
                             </h2>
-                            <p className="text-xs font-medium text-emerald-600 dark:text-emerald-400 flex items-center gap-1.5">
+                            <p className="text-xs font-medium text-slate-600 dark:text-zinc-400 flex items-center gap-1.5">
                                 <span className="relative flex h-2 w-2">
-                                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                                  <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                                  <span className="relative inline-flex rounded-full h-2 w-2 bg-zinc-900 dark:bg-white"></span>
                                 </span>
                                 Online
                             </p>
@@ -249,13 +248,13 @@ export default function TenantChat() {
                                         {/* Message Bubble */}
                                         <div className="relative flex items-end gap-2">
                                             {msg.sender_type === 'admin' && (
-                                                <div className="w-8 h-8 rounded-lg bg-indigo-100 dark:bg-indigo-900/30 flex-shrink-0 flex items-center justify-center text-xs font-bold text-indigo-600 dark:text-indigo-400">
+                                                <div className="w-8 h-8 rounded-lg bg-slate-100 dark:bg-zinc-800 flex-shrink-0 flex items-center justify-center text-xs font-bold text-slate-700 dark:text-zinc-200">
                                                     BA
                                                 </div>
                                             )}
                                             <div className={`px-4 py-3 text-sm leading-relaxed ${
                                                 msg.sender_type === 'tenant' 
-                                                    ? 'bg-teal-700 text-white rounded-2xl rounded-br-sm' 
+                                                    ? 'bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-950 rounded-2xl rounded-br-sm' 
                                                     : 'bg-secondary text-slate-900 dark:text-white rounded-2xl rounded-bl-sm border border-slate-200 dark:border-zinc-800'
                                             }`}>
                                                 {msg.message.startsWith('[MAINTENANCE_REQUEST') ? (
@@ -282,7 +281,7 @@ export default function TenantChat() {
                                             {/* Status Indicator (Only show for sent messages) */}
                                             {msg.sender_type === 'tenant' && (
                                                 <div className="flex items-center">
-                                                    <span className={`flex items-center gap-1.5 ${msg.status?.toLowerCase() === 'seen' ? 'text-teal-700 dark:text-teal-500' : 'text-slate-400'}`}>
+                                                    <span className={`flex items-center gap-1.5 ${msg.status?.toLowerCase() === 'seen' ? 'text-zinc-900 dark:text-white font-bold' : 'text-slate-400'}`}>
                                                         {msg.status?.toLowerCase() === 'sent' && <><span className="text-[10px] font-bold uppercase tracking-wide">Sent</span><svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path></svg></>}
                                                         {msg.status?.toLowerCase() === 'delivered' && <><span className="text-[10px] font-bold uppercase tracking-wide">Delivered</span><div className="flex -space-x-2"><svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path></svg><svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path></svg></div></>}
                                                         {msg.status?.toLowerCase() === 'seen' && <><span className="text-[10px] font-bold uppercase tracking-wide">Seen</span><div className="flex -space-x-2"><svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path></svg><svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path></svg></div></>}
@@ -301,7 +300,7 @@ export default function TenantChat() {
                 <div className="p-4 border-t border-slate-200 dark:border-zinc-800 bg-secondary/50 shrink-0">
                     <form onSubmit={handleSend} className="flex gap-3 items-end w-full">
                         {/* Text Input Container */}
-                        <div className="flex-1 relative bg-white dark:bg-zinc-900 rounded-xl border border-slate-200 dark:border-zinc-800 focus-within:border-indigo-500 transition-colors flex items-center min-h-[48px] overflow-hidden">
+                        <div className="flex-1 relative bg-white dark:bg-zinc-900 rounded-xl border border-slate-200 dark:border-zinc-800 focus-within:border-zinc-400 dark:focus-within:border-zinc-600 transition-colors flex items-center min-h-[48px] overflow-hidden">
                             <input 
                                 type="text"
                                 value={newMessage}
@@ -321,7 +320,7 @@ export default function TenantChat() {
                         <button 
                             type="submit" 
                             disabled={!newMessage.trim() || isLoading}
-                            className="w-12 h-12 flex items-center justify-center bg-teal-700 text-white rounded-xl hover:bg-teal-800 transition-colors disabled:opacity-50 shrink-0"
+                            className="w-12 h-12 flex items-center justify-center bg-zinc-900 hover:bg-zinc-800 dark:bg-zinc-100 dark:hover:bg-zinc-200 text-white dark:text-zinc-950 rounded-xl transition-colors disabled:opacity-50 shrink-0"
                         >
                             <svg className="w-5 h-5 -ml-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"></path></svg>
                         </button>
@@ -341,7 +340,7 @@ export default function TenantChat() {
                         >
                             <div className="p-5 border-b border-slate-200 dark:border-zinc-800 flex justify-between items-center bg-secondary/50">
                                 <h3 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                                    <svg className="w-5 h-5 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+                                    <svg className="w-5 h-5 text-slate-500 dark:text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
                                     Request Maintenance
                                 </h3>
                                 <button onClick={closeMaintenanceModal} className="text-slate-400 hover:text-slate-600 dark:hover:text-zinc-200">
@@ -357,7 +356,7 @@ export default function TenantChat() {
                                             value={maintenanceTitle}
                                             onChange={e => setMaintenanceTitle(e.target.value)}
                                             placeholder="e.g. Leaking Faucet"
-                                            className="w-full px-4 py-2.5 bg-slate-50 dark:bg-zinc-900/50 border border-slate-200 dark:border-zinc-800 rounded-xl text-sm outline-none focus:border-emerald-500"
+                                            className="w-full px-4 py-2.5 bg-slate-50 dark:bg-zinc-900/50 border border-slate-200 dark:border-zinc-800 rounded-xl text-sm outline-none focus:border-zinc-400 dark:focus:border-zinc-600"
                                             required
                                         />
                                     </div>
@@ -368,7 +367,7 @@ export default function TenantChat() {
                                             onChange={e => setMaintenanceDesc(e.target.value)}
                                             placeholder="Describe the issue in detail..."
                                             rows={3}
-                                            className="w-full px-4 py-2.5 bg-slate-50 dark:bg-zinc-900/50 border border-slate-200 dark:border-zinc-800 rounded-xl text-sm outline-none focus:border-emerald-500 resize-none"
+                                            className="w-full px-4 py-2.5 bg-slate-50 dark:bg-zinc-900/50 border border-slate-200 dark:border-zinc-800 rounded-xl text-sm outline-none focus:border-zinc-400 dark:focus:border-zinc-600 resize-none"
                                             required
                                         ></textarea>
                                     </div>
@@ -376,7 +375,7 @@ export default function TenantChat() {
                                         <div>
                                             <label className="block text-sm font-semibold text-slate-700 dark:text-zinc-300 mb-1">Category</label>
                                             <Select value={maintenanceCategory} onValueChange={val => setMaintenanceCategory(val || 'Plumbing')}>
-                                                <SelectTrigger className="w-full px-4 bg-slate-50 dark:bg-zinc-900/50 border border-slate-200 dark:border-zinc-800 rounded-xl text-sm focus:ring-emerald-500 focus:border-emerald-500 h-[42px] outline-none transition-colors hover:bg-slate-100 dark:hover:bg-zinc-800/80">
+                                                <SelectTrigger className="w-full px-4 bg-slate-50 dark:bg-zinc-900/50 border border-slate-200 dark:border-zinc-800 rounded-xl text-sm focus:ring-zinc-400 focus:border-zinc-400 h-[42px] outline-none transition-colors hover:bg-slate-100 dark:hover:bg-zinc-800/80">
                                                     <SelectValue placeholder="Select Category" />
                                                 </SelectTrigger>
                                                 <SelectContent alignItemWithTrigger={false} className="bg-white dark:bg-zinc-900 border-slate-200 dark:border-zinc-800 rounded-xl shadow-lg">
@@ -391,7 +390,7 @@ export default function TenantChat() {
                                         <div>
                                             <label className="block text-sm font-semibold text-slate-700 dark:text-zinc-300 mb-1">Priority</label>
                                             <Select value={maintenancePriority} onValueChange={val => setMaintenancePriority(val || 'Medium')}>
-                                                <SelectTrigger className="w-full px-4 bg-slate-50 dark:bg-zinc-900/50 border border-slate-200 dark:border-zinc-800 rounded-xl text-sm focus:ring-emerald-500 focus:border-emerald-500 h-[42px] outline-none transition-colors hover:bg-slate-100 dark:hover:bg-zinc-800/80">
+                                                <SelectTrigger className="w-full px-4 bg-slate-50 dark:bg-zinc-900/50 border border-slate-200 dark:border-zinc-800 rounded-xl text-sm focus:ring-zinc-400 focus:border-zinc-400 h-[42px] outline-none transition-colors hover:bg-slate-100 dark:hover:bg-zinc-800/80">
                                                     <SelectValue placeholder="Select Priority" />
                                                 </SelectTrigger>
                                                 <SelectContent alignItemWithTrigger={false} className="bg-white dark:bg-zinc-900 border-slate-200 dark:border-zinc-800 rounded-xl shadow-lg">
@@ -409,7 +408,7 @@ export default function TenantChat() {
                                             type="file" 
                                             accept="image/*"
                                             onChange={e => setMaintenanceImage(e.target.files?.[0] || null)}
-                                            className="w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-sm file:font-semibold file:bg-emerald-50 file:text-emerald-700 hover:file:bg-emerald-100 dark:file:bg-emerald-500/10 dark:file:text-emerald-400 cursor-pointer border border-slate-200 dark:border-zinc-800 rounded-xl p-1 bg-slate-50 dark:bg-zinc-900/50"
+                                            className="w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-sm file:font-semibold file:bg-zinc-100 file:text-zinc-900 hover:file:bg-zinc-200 dark:file:bg-zinc-800 dark:file:text-white cursor-pointer border border-slate-200 dark:border-zinc-800 rounded-xl p-1 bg-slate-50 dark:bg-zinc-900/50"
                                         />
                                         {maintenanceImage && (
                                             <div className="mt-3 relative rounded-xl overflow-hidden border border-slate-200 dark:border-zinc-800 w-full h-32 bg-slate-100 dark:bg-zinc-900">
@@ -419,7 +418,7 @@ export default function TenantChat() {
                                                     className="w-full h-full object-cover"
                                                 />
                                                 <button 
-                                                    type="button"
+                                                    type="button" 
                                                     onClick={() => setMaintenanceImage(null)}
                                                     className="absolute top-2 right-2 p-1 bg-black/50 hover:bg-black/70 text-white rounded-full backdrop-blur-sm transition-colors"
                                                 >
@@ -441,7 +440,7 @@ export default function TenantChat() {
                                 <button 
                                     form="maintenanceForm"
                                     type="submit"
-                                    className="px-5 py-2.5 bg-teal-700 hover:bg-teal-800 text-white rounded-xl text-sm font-bold flex items-center gap-2 transition-colors shadow-sm disabled:opacity-50"
+                                    className="px-5 py-2.5 bg-zinc-900 hover:bg-zinc-800 dark:bg-zinc-100 dark:hover:bg-zinc-200 text-white dark:text-zinc-950 rounded-xl text-sm font-bold flex items-center gap-2 transition-colors shadow-xs disabled:opacity-50"
                                     disabled={isSubmittingMaintenance}
                                 >
                                     {isSubmittingMaintenance ? 'Submitting...' : 'Submit Request'}

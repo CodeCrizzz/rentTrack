@@ -15,8 +15,6 @@ import {
   Search,
   Plus,
   RefreshCw,
-  List,
-  LayoutGrid,
   Eye,
   Edit,
   Calendar,
@@ -126,17 +124,16 @@ function BillingContent() {
   const [allPayments, setAllPayments] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Active Tab & View Mode
+  // Active Tab
   const [activeTab, setActiveTab] = useState<"invoices" | "payments">(
     "invoices",
   );
-  const [viewMode, setViewMode] = useState<"table" | "cards">("table");
 
   // Filters
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<
-    "All" | "Pending Verification" | "Overdue" | "Partial" | "Unpaid"
-  >("All");
+    "All Invoices" | "Verification" | "Overdue" | "Partial" | "Unpaid" | "All" | "Pending Verification"
+  >("All Invoices");
   const [monthFilter, setMonthFilter] = useState("All");
   const [roomFilter, setRoomFilter] = useState("All Rooms");
   const [sortFilter, setSortFilter] = useState("Newest First");
@@ -172,13 +169,14 @@ function BillingContent() {
       setHighlightedBillId(Number(billIdParam));
     }
 
-    if (
-      statusParam &&
-      ["All", "Pending Verification", "Overdue", "Partial", "Unpaid"].includes(
-        statusParam,
-      )
-    ) {
-      setStatusFilter(statusParam as any);
+    if (statusParam) {
+      if (statusParam === "Pending Verification" || statusParam === "Verification") {
+        setStatusFilter("Verification");
+      } else if (statusParam === "All" || statusParam === "All Invoices") {
+        setStatusFilter("All Invoices");
+      } else if (["Overdue", "Partial", "Unpaid"].includes(statusParam)) {
+        setStatusFilter(statusParam as any);
+      }
     }
     if (tabParam === "payments" || tabParam === "invoices") {
       setActiveTab(tabParam);
@@ -194,9 +192,7 @@ function BillingContent() {
     const timer = setTimeout(() => {
       let el: HTMLElement | null = null;
       if (highlightedBillId) {
-        el =
-          document.getElementById(`bill-row-${highlightedBillId}`) ||
-          document.getElementById(`bill-card-${highlightedBillId}`);
+        el = document.getElementById(`bill-row-${highlightedBillId}`);
       }
       if (!el && highlightedTenant) {
         const matched = bills.find((b) =>
@@ -205,9 +201,7 @@ function BillingContent() {
             .includes(highlightedTenant.toLowerCase()),
         );
         if (matched) {
-          el =
-            document.getElementById(`bill-row-${matched.id}`) ||
-            document.getElementById(`bill-card-${matched.id}`);
+          el = document.getElementById(`bill-row-${matched.id}`);
           if (!highlightedBillId) setHighlightedBillId(matched.id);
         }
       }
@@ -397,8 +391,13 @@ function BillingContent() {
     return dueBills
       .filter((bill) => {
         // Status Category
-        if (statusFilter !== "All" && bill.status !== statusFilter)
-          return false;
+        if (statusFilter !== "All" && statusFilter !== "All Invoices") {
+          if (statusFilter === "Verification" || statusFilter === "Pending Verification") {
+            if (bill.status !== "Pending Verification") return false;
+          } else if (bill.status !== statusFilter) {
+            return false;
+          }
+        }
 
         // Month Filter
         if (monthFilter !== "All" && bill.billing_month !== monthFilter)
@@ -715,105 +714,105 @@ function BillingContent() {
         </div>
 
         {/* Executive Financial Metric Ribbon (4 Tiles) */}
-        <div className="shrink-0 grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-3.5">
+        <div className="shrink-0 grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-3">
           {[...Array(4)].map((_, i) => (
             <div
               key={i}
-              className="bg-card border border-slate-200 dark:border-zinc-800 rounded-xl p-4 shadow-xs flex items-center justify-between"
+              className="bg-card border border-slate-200 dark:border-zinc-800 rounded-xl p-2.5 sm:p-3 shadow-xs flex items-center justify-between"
             >
-              <div className="space-y-2 flex-1">
+              <div className="space-y-1.5 flex-1">
                 <div className="h-3 w-28 bg-slate-200 dark:bg-zinc-800 rounded"></div>
-                <div className="h-8 w-36 bg-slate-200 dark:bg-zinc-800 rounded-md"></div>
+                <div className="h-8 w-32 bg-slate-200 dark:bg-zinc-800 rounded-md"></div>
                 <div className="h-3 w-24 bg-slate-200 dark:bg-zinc-800 rounded"></div>
               </div>
-              <div className="w-12 h-12 rounded-xl bg-slate-100 dark:bg-zinc-800 shrink-0"></div>
+              <div className="w-11 h-11 rounded-xl bg-slate-100 dark:bg-zinc-800 shrink-0"></div>
             </div>
           ))}
         </div>
 
         {/* Navigation Tab Bar & Quick Filters */}
-        <div className="shrink-0 bg-card border border-slate-200 dark:border-zinc-800 rounded-xl p-3 shadow-xs space-y-3">
-          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-2.5">
+        <div className="shrink-0 bg-card border border-slate-200 dark:border-zinc-800 rounded-xl p-2 shadow-xs space-y-2">
+          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-2">
             <div className="flex items-center gap-1.5 overflow-x-auto">
               {[...Array(2)].map((_, i) => (
                 <div
                   key={i}
-                  className="h-9 w-36 bg-slate-100 dark:bg-zinc-800 rounded-lg"
+                  className="h-8.5 w-36 bg-slate-100 dark:bg-zinc-800 rounded-lg"
                 ></div>
               ))}
             </div>
-            <div className="flex flex-wrap items-center gap-2.5">
-              <div className="h-9.5 w-52 bg-slate-100 dark:bg-zinc-800 rounded-xl"></div>
-              <div className="h-9.5 w-36 bg-slate-100 dark:bg-zinc-800 rounded-xl"></div>
-              <div className="h-9.5 w-36 bg-slate-100 dark:bg-zinc-800 rounded-xl"></div>
+            <div className="flex flex-wrap items-center gap-2">
+              <div className="h-8.5 w-52 bg-slate-100 dark:bg-zinc-800 rounded-lg"></div>
+              <div className="h-8.5 w-36 bg-slate-100 dark:bg-zinc-800 rounded-lg"></div>
+              <div className="h-8.5 w-36 bg-slate-100 dark:bg-zinc-800 rounded-lg"></div>
             </div>
           </div>
         </div>
 
         {/* Main Ledger Table */}
-        <div className="flex-1 min-h-0 bg-card border border-slate-200 dark:border-zinc-800 rounded-xl overflow-hidden shadow-xs flex flex-col relative">
-          <div className="absolute top-0 right-0 w-6 h-[48px] bg-slate-100 dark:bg-zinc-900 border-b border-slate-200 dark:border-zinc-800 z-30 pointer-events-none rounded-tr-xl" />
+        <div className="flex-1 min-h-0 max-h-[610px] bg-card border border-slate-200 dark:border-zinc-800 rounded-xl overflow-hidden shadow-xs flex flex-col relative">
+          <div className="absolute top-0 right-0 w-6 h-[46px] bg-slate-100 dark:bg-zinc-900 border-b border-slate-200 dark:border-zinc-800 z-30 pointer-events-none rounded-tr-xl" />
           <div className="overflow-x-auto overflow-y-auto flex-1 custom-scrollbar">
             <table className="w-full min-w-full text-left text-sm border-collapse">
               <thead className="sticky top-0 z-10 bg-slate-100 dark:bg-zinc-900 border-b border-slate-200 dark:border-zinc-800 shadow-xs">
-                <tr className="h-[48px] bg-slate-100 dark:bg-zinc-900 text-slate-700 dark:text-zinc-300 uppercase tracking-wider text-[13px] font-bold">
+                <tr className="h-[46px] bg-slate-100 dark:bg-zinc-900 text-slate-700 dark:text-zinc-300 uppercase tracking-wider text-sm sm:text-base font-black">
                   <th className="py-2.5 px-4 bg-slate-100 dark:bg-zinc-900 border-b border-slate-200 dark:border-zinc-800">
-                    <div className="h-3.5 w-32 bg-slate-200 dark:bg-zinc-700 rounded"></div>
+                    <div className="h-4 w-32 bg-slate-200 dark:bg-zinc-700 rounded"></div>
                   </th>
                   <th className="py-2.5 px-3.5 bg-slate-100 dark:bg-zinc-900 border-b border-slate-200 dark:border-zinc-800">
-                    <div className="h-3.5 w-24 bg-slate-200 dark:bg-zinc-700 rounded"></div>
+                    <div className="h-4 w-24 bg-slate-200 dark:bg-zinc-700 rounded"></div>
                   </th>
                   <th className="py-2.5 px-3.5 text-right bg-slate-100 dark:bg-zinc-900 border-b border-slate-200 dark:border-zinc-800">
-                    <div className="h-3.5 w-16 bg-slate-200 dark:bg-zinc-700 rounded ml-auto"></div>
+                    <div className="h-4 w-16 bg-slate-200 dark:bg-zinc-700 rounded ml-auto"></div>
                   </th>
                   <th className="py-2.5 px-3.5 text-right bg-slate-100 dark:bg-zinc-900 border-b border-slate-200 dark:border-zinc-800">
-                    <div className="h-3.5 w-16 bg-slate-200 dark:bg-zinc-700 rounded ml-auto"></div>
+                    <div className="h-4 w-16 bg-slate-200 dark:bg-zinc-700 rounded ml-auto"></div>
                   </th>
                   <th className="py-2.5 px-3.5 text-right bg-slate-100 dark:bg-zinc-900 border-b border-slate-200 dark:border-zinc-800">
-                    <div className="h-3.5 w-16 bg-slate-200 dark:bg-zinc-700 rounded ml-auto"></div>
+                    <div className="h-4 w-16 bg-slate-200 dark:bg-zinc-700 rounded ml-auto"></div>
                   </th>
                   <th className="py-2.5 px-3.5 text-right bg-slate-100 dark:bg-zinc-900 border-b border-slate-200 dark:border-zinc-800">
-                    <div className="h-3.5 w-20 bg-slate-200 dark:bg-zinc-700 rounded ml-auto"></div>
+                    <div className="h-4 w-20 bg-slate-200 dark:bg-zinc-700 rounded ml-auto"></div>
                   </th>
                   <th className="py-2.5 px-3.5 text-center bg-slate-100 dark:bg-zinc-900 border-b border-slate-200 dark:border-zinc-800">
-                    <div className="h-3.5 w-20 bg-slate-200 dark:bg-zinc-700 rounded mx-auto"></div>
+                    <div className="h-4 w-20 bg-slate-200 dark:bg-zinc-700 rounded mx-auto"></div>
                   </th>
                   <th className="py-2.5 px-4 text-right bg-slate-100 dark:bg-zinc-900 border-b border-slate-200 dark:border-zinc-800">
-                    <div className="h-3.5 w-24 bg-slate-200 dark:bg-zinc-700 rounded ml-auto"></div>
+                    <div className="h-4 w-24 bg-slate-200 dark:bg-zinc-700 rounded ml-auto"></div>
                   </th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 dark:divide-zinc-800/60 font-sans">
-                {[...Array(7)].map((_, i) => (
-                  <tr key={i} className="h-[60px]">
-                    <td className="py-2.5 px-4">
+                {[...Array(9)].map((_, i) => (
+                  <tr key={i} className="h-[62px]">
+                    <td className="py-2 px-4">
                       <div className="space-y-1">
                         <div className="h-4 w-32 bg-slate-200 dark:bg-zinc-800 rounded"></div>
                         <div className="h-3 w-20 bg-slate-100 dark:bg-zinc-800/60 rounded"></div>
                       </div>
                     </td>
-                    <td className="py-2.5 px-3.5">
+                    <td className="py-2 px-3.5">
                       <div className="space-y-1">
                         <div className="h-4 w-24 bg-slate-200 dark:bg-zinc-800 rounded"></div>
                         <div className="h-3 w-16 bg-slate-100 dark:bg-zinc-800/60 rounded"></div>
                       </div>
                     </td>
-                    <td className="py-2.5 px-3.5 text-right">
+                    <td className="py-2 px-3.5 text-right">
                       <div className="h-4 w-16 bg-slate-100 dark:bg-zinc-800 rounded ml-auto"></div>
                     </td>
-                    <td className="py-2.5 px-3.5 text-right">
+                    <td className="py-2 px-3.5 text-right">
                       <div className="h-4 w-16 bg-slate-100 dark:bg-zinc-800 rounded ml-auto"></div>
                     </td>
-                    <td className="py-2.5 px-3.5 text-right">
+                    <td className="py-2 px-3.5 text-right">
                       <div className="h-4 w-16 bg-slate-100 dark:bg-zinc-800 rounded ml-auto"></div>
                     </td>
-                    <td className="py-2.5 px-3.5 text-right">
+                    <td className="py-2 px-3.5 text-right">
                       <div className="h-4.5 w-20 bg-slate-200 dark:bg-zinc-800 rounded ml-auto"></div>
                     </td>
-                    <td className="py-2.5 px-3.5 text-center">
+                    <td className="py-2 px-3.5 text-center">
                       <div className="h-6 w-20 bg-slate-100 dark:bg-zinc-800 rounded-md mx-auto"></div>
                     </td>
-                    <td className="py-2.5 px-4 text-right">
+                    <td className="py-2 px-4 text-right">
                       <div className="h-7 w-24 bg-slate-100 dark:bg-zinc-800 rounded-lg ml-auto"></div>
                     </td>
                   </tr>
@@ -827,79 +826,57 @@ function BillingContent() {
   }
 
   return (
-    <div className="w-full h-[calc(100vh-6.2rem)] md:h-[calc(100vh-7.2rem)] lg:h-[calc(100dvh-7.2rem)] flex flex-col font-sans text-slate-900 dark:text-zinc-100 overflow-hidden space-y-3 sm:space-y-3.5">
+    <div className="w-full h-[calc(100vh-6.2rem)] md:h-[calc(100vh-7.2rem)] lg:h-[calc(100dvh-7.2rem)] flex flex-col font-sans text-slate-900 dark:text-zinc-100 overflow-hidden space-y-2.5 sm:space-y-3">
       {/* Header Toolbar */}
-      <div className="shrink-0 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+      <div className="shrink-0 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
         <div>
           <div className="flex items-center gap-2">
-            <h1 className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white tracking-tight">
+            <h1 className="text-2xl sm:text-3xl font-black text-slate-950 dark:text-white tracking-tight">
               Bills and Payments
             </h1>
           </div>
-          <p className="text-sm font-medium text-slate-500 dark:text-zinc-400 mt-1">
+          <p className="text-xs sm:text-sm font-semibold text-slate-700 dark:text-zinc-300 mt-0.5">
             Track rent invoices and Payments.
           </p>
         </div>
 
         <div className="flex items-center gap-2.5">
-          {/* View Switcher for Invoices Tab */}
-          {activeTab === "invoices" && (
-            <div className="flex items-center bg-slate-100 dark:bg-zinc-800/80 p-1 rounded-xl border border-slate-200 dark:border-zinc-700/80 text-sm font-semibold">
-              <button
-                onClick={() => setViewMode("table")}
-                className={`px-3 py-1.5 rounded-lg transition-all flex items-center gap-2 ${viewMode === "table" ? "bg-white dark:bg-zinc-900 text-slate-900 dark:text-white shadow-xs font-bold" : "text-slate-500 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white"}`}
-                title="Ledger table view"
-              >
-                <List className="w-4 h-4" />
-                <span>Table</span>
-              </button>
-              <button
-                onClick={() => setViewMode("cards")}
-                className={`px-3 py-1.5 rounded-lg transition-all flex items-center gap-2 ${viewMode === "cards" ? "bg-white dark:bg-zinc-900 text-slate-900 dark:text-white shadow-xs font-bold" : "text-slate-500 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white"}`}
-                title="Statement cards view"
-              >
-                <LayoutGrid className="w-4 h-4" />
-                <span>Cards</span>
-              </button>
-            </div>
-          )}
-
           {/* Create Single Bill Button */}
           <button
             onClick={() => {
               setBillForm(initialBillForm);
               setIsCreateOpen(true);
             }}
-            className="px-4 py-2 text-sm font-bold rounded-xl bg-slate-900 hover:bg-slate-800 dark:bg-white dark:hover:bg-zinc-200 text-white dark:text-zinc-900 transition-all flex items-center gap-2 shadow-xs"
+            className="px-3.5 py-1.5 text-sm font-bold rounded-lg bg-slate-900 hover:bg-slate-800 dark:bg-white dark:hover:bg-zinc-200 text-white dark:text-zinc-900 transition-colors flex items-center gap-1.5 shadow-xs"
           >
-            <Plus className="w-4 h-4" />
+            <Plus className="w-4 h-4 stroke-[2.5]" />
             <span>Issue Bill</span>
           </button>
         </div>
       </div>
 
       {/* Executive Metric Ribbon */}
-      <div className="shrink-0 grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-3.5">
+      <div className="shrink-0 grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-3">
         {/* Total Receivables */}
         <motion.div
           variants={cardVariants}
           initial="hidden"
           animate="show"
-          className="bg-card border border-slate-200 dark:border-zinc-800 rounded-xl p-3.5 sm:p-4.5 shadow-xs flex items-center justify-between"
+          className="bg-card border border-slate-200 dark:border-zinc-800 rounded-xl p-2.5 sm:p-3 shadow-xs flex items-center justify-between select-none"
         >
           <div>
-            <span className="text-xs sm:text-sm font-bold uppercase tracking-wider text-slate-500 dark:text-zinc-400">
+            <span className="text-xs sm:text-sm font-extrabold uppercase tracking-wider text-slate-700 dark:text-zinc-300">
               Gross Receivables
             </span>
-            <div className="text-2xl sm:text-3xl lg:text-4xl font-extrabold font-mono text-slate-900 dark:text-zinc-100 mt-1 flex items-baseline gap-2">
+            <div className="text-2xl sm:text-3xl lg:text-4xl font-black font-mono text-slate-950 dark:text-white mt-0.5 flex items-baseline gap-2">
               ₱{metrics.totalInvoiced.toLocaleString()}
             </div>
-            <div className="text-xs sm:text-sm font-medium text-slate-500 dark:text-zinc-400 mt-1">
-              {bills.length} total bills issued
-            </div>
+            <p className="text-xs sm:text-sm font-medium text-slate-700 dark:text-zinc-300 mt-0.5">
+              <span className="font-extrabold text-slate-950 dark:text-white">{bills.length}</span> total bills issued
+            </p>
           </div>
-          <div className="w-12 h-12 rounded-xl bg-slate-100 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 flex items-center justify-center text-slate-700 dark:text-zinc-300 shrink-0">
-            <Receipt className="w-6 h-6" />
+          <div className="w-11 h-11 rounded-xl bg-slate-100 dark:bg-zinc-800 text-slate-900 dark:text-white flex items-center justify-center shrink-0 border border-slate-300 dark:border-zinc-700">
+            <Receipt className="w-5 h-5" />
           </div>
         </motion.div>
 
@@ -908,22 +885,22 @@ function BillingContent() {
           variants={cardVariants}
           initial="hidden"
           animate="show"
-          className="bg-card border border-slate-200 dark:border-zinc-800 rounded-xl p-3.5 sm:p-4.5 shadow-xs flex items-center justify-between"
+          className="bg-card border border-slate-200 dark:border-zinc-800 rounded-xl p-2.5 sm:p-3 shadow-xs flex items-center justify-between select-none"
         >
           <div>
-            <span className="text-xs sm:text-sm font-bold uppercase tracking-wider text-slate-500 dark:text-zinc-400">
+            <span className="text-xs sm:text-sm font-extrabold uppercase tracking-wider text-slate-700 dark:text-zinc-300">
               Total Collected
             </span>
-            <div className="text-2xl sm:text-3xl lg:text-4xl font-extrabold font-mono text-slate-900 dark:text-zinc-100 mt-1 flex items-baseline gap-2">
+            <div className="text-2xl sm:text-3xl lg:text-4xl font-black font-mono text-slate-950 dark:text-white mt-0.5 flex items-baseline gap-2">
               ₱{metrics.totalCollected.toLocaleString()}
             </div>
-            <div className="text-xs sm:text-sm font-medium text-emerald-600 dark:text-emerald-400/80 mt-1 flex items-center gap-1.5">
-              <TrendingUp className="w-4 h-4" />
-              <span>{metrics.collectionRate}% collected</span>
-            </div>
+            <p className="text-xs sm:text-sm font-medium text-slate-700 dark:text-zinc-300 mt-0.5 flex items-center gap-1.5">
+              <TrendingUp className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+              <span><span className="font-extrabold text-emerald-600 dark:text-emerald-400">{metrics.collectionRate}%</span> collected</span>
+            </p>
           </div>
-          <div className="w-12 h-12 rounded-xl bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200/50 dark:border-emerald-500/20 flex items-center justify-center text-emerald-600 dark:text-emerald-400/80 shrink-0">
-            <DollarSign className="w-6 h-6" />
+          <div className="w-11 h-11 rounded-xl bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 flex items-center justify-center shrink-0 border border-emerald-300/60 dark:border-emerald-500/30">
+            <DollarSign className="w-5 h-5" />
           </div>
         </motion.div>
 
@@ -932,26 +909,26 @@ function BillingContent() {
           variants={cardVariants}
           initial="hidden"
           animate="show"
-          className="bg-card border border-slate-200 dark:border-zinc-800 rounded-xl p-3.5 sm:p-4.5 shadow-xs flex items-center justify-between"
+          className="bg-card border border-slate-200 dark:border-zinc-800 rounded-xl p-2.5 sm:p-3 shadow-xs flex items-center justify-between select-none"
         >
           <div>
-            <span className="text-xs sm:text-sm font-bold uppercase tracking-wider text-slate-500 dark:text-zinc-400">
+            <span className="text-xs sm:text-sm font-extrabold uppercase tracking-wider text-slate-700 dark:text-zinc-300">
               GCash Proof of Payment
             </span>
-            <div className="text-2xl sm:text-3xl lg:text-4xl font-extrabold font-mono text-slate-900 dark:text-zinc-100 mt-1 flex items-baseline gap-2">
+            <div className={`text-2xl sm:text-3xl lg:text-4xl font-black font-mono mt-0.5 flex items-baseline gap-2 ${metrics.pendingVerificationCount > 0 ? "text-amber-700 dark:text-amber-400" : "text-slate-950 dark:text-white"}`}>
               {metrics.pendingVerificationCount}{" "}
-              <span className="text-sm sm:text-base font-sans font-semibold text-slate-500">
+              <span className="text-sm sm:text-base font-sans font-extrabold text-slate-700 dark:text-zinc-300">
                 Pending
               </span>
             </div>
-            <div className="text-xs sm:text-sm font-medium text-amber-600 dark:text-amber-400/80 mt-1">
+            <p className="text-xs sm:text-sm font-semibold text-slate-700 dark:text-zinc-300 mt-0.5">
               {metrics.pendingVerificationCount > 0
                 ? "Awaiting verification"
                 : "All digital receipts verified"}
-            </div>
+            </p>
           </div>
-          <div className="w-12 h-12 rounded-xl bg-amber-50 dark:bg-amber-500/10 border border-amber-200/50 dark:border-amber-500/20 flex items-center justify-center text-amber-600 dark:text-amber-400/80 shrink-0">
-            <Clock className="w-6 h-6" />
+          <div className="w-11 h-11 rounded-xl bg-amber-50 dark:bg-amber-500/10 text-amber-700 dark:text-amber-400 flex items-center justify-center shrink-0 border border-amber-300/60 dark:border-amber-500/30">
+            <Clock className="w-5 h-5" />
           </div>
         </motion.div>
 
@@ -960,164 +937,110 @@ function BillingContent() {
           variants={cardVariants}
           initial="hidden"
           animate="show"
-          className="bg-card border border-slate-200 dark:border-zinc-800 rounded-xl p-3.5 sm:p-4.5 shadow-xs flex items-center justify-between"
+          className="bg-card border border-slate-200 dark:border-zinc-800 rounded-xl p-2.5 sm:p-3 shadow-xs flex items-center justify-between select-none"
         >
           <div>
-            <span className="text-xs sm:text-sm font-bold uppercase tracking-wider text-slate-500 dark:text-zinc-400">
+            <span className="text-xs sm:text-sm font-extrabold uppercase tracking-wider text-slate-700 dark:text-zinc-300">
               Outstanding Arrears
             </span>
-            <div className="text-2xl sm:text-3xl lg:text-4xl font-extrabold font-mono text-slate-900 dark:text-zinc-100 mt-1 flex items-baseline gap-2">
+            <div className={`text-2xl sm:text-3xl lg:text-4xl font-black font-mono mt-0.5 flex items-baseline gap-2 ${metrics.overdueCount > 0 ? "text-rose-700 dark:text-rose-400" : "text-slate-950 dark:text-white"}`}>
               ₱{metrics.totalBalance.toLocaleString()}
             </div>
-            <div className="text-xs sm:text-sm font-medium text-rose-600 dark:text-rose-400/80 mt-1 flex items-center gap-1.5">
-              <AlertTriangle className="w-4 h-4" />
-              <span>{metrics.overdueCount} bills overdue</span>
-            </div>
+            <p className="text-xs sm:text-sm font-semibold text-slate-700 dark:text-zinc-300 mt-0.5 flex items-center gap-1.5">
+              <AlertTriangle className="w-3.5 h-3.5 text-rose-600 dark:text-rose-400" />
+              <span>{metrics.overdueCount > 0 ? `${metrics.overdueCount} bills overdue` : "Zero delinquent bills"}</span>
+            </p>
           </div>
-          <div className="w-12 h-12 rounded-xl bg-rose-50 dark:bg-rose-500/10 border border-rose-200/50 dark:border-rose-500/20 flex items-center justify-center text-rose-600 dark:text-rose-400/80 shrink-0">
-            <AlertTriangle className="w-6 h-6" />
+          <div className="w-11 h-11 rounded-xl bg-rose-50 dark:bg-rose-500/10 text-rose-700 dark:text-rose-400 flex items-center justify-center shrink-0 border border-rose-300/60 dark:border-rose-500/30">
+            <AlertTriangle className="w-5 h-5" />
           </div>
         </motion.div>
       </div>
 
       {/* Category Tabs & Filter */}
-      <div className="shrink-0 bg-card border border-slate-200 dark:border-zinc-800 rounded-xl p-2.5 sm:p-3 shadow-xs space-y-2.5">
-        {/* Top Row: Main Tab Navigation (Invoices vs Payments) & Filters */}
-        <div className="flex flex-wrap items-center justify-between gap-2.5 border-b border-slate-100 dark:border-zinc-800/80 pb-2.5">
-          {/* Tabs */}
-          <div className="flex items-center bg-slate-100 dark:bg-zinc-800/90 p-1 rounded-xl border border-slate-200 dark:border-zinc-700/80 text-sm font-bold">
+      <div className="shrink-0 bg-card border border-slate-200 dark:border-zinc-800 rounded-xl p-2 shadow-xs flex flex-wrap items-center justify-between gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          {/* Primary Tab Navigation: Invoices & Dues vs Payment Journal */}
+          <div className="flex items-center bg-slate-100 dark:bg-zinc-800/90 p-0.5 rounded-lg border border-slate-300 dark:border-zinc-700 text-xs font-semibold shrink-0">
             <button
               onClick={() => setActiveTab("invoices")}
-              className={`px-3.5 py-2 rounded-lg transition-all flex items-center gap-2 ${
+              className={`px-3 py-1.5 rounded-md transition-all flex items-center gap-1.5 ${
                 activeTab === "invoices"
-                  ? "bg-white dark:bg-zinc-900 text-slate-900 dark:text-white shadow-xs font-bold"
-                  : "text-slate-500 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white"
+                  ? "bg-white dark:bg-zinc-900 text-slate-950 dark:text-white shadow-2xs font-extrabold"
+                  : "text-slate-700 dark:text-zinc-300 hover:text-slate-950 dark:hover:text-white font-semibold"
               }`}
             >
-              <Receipt className="w-4 h-4" />
+              <Receipt className="w-3.5 h-3.5" />
               <span>Invoices & Dues</span>
-              <span className="text-xs px-2 py-0.5 bg-slate-200/80 dark:bg-zinc-700 text-slate-700 dark:text-zinc-300 rounded-full font-mono font-bold">
+              <span className="text-[11px] px-1.5 py-0.2 rounded font-mono font-bold bg-slate-200 dark:bg-zinc-700 text-slate-900 dark:text-zinc-100">
                 {dueBills.length}
               </span>
             </button>
             <button
               onClick={() => setActiveTab("payments")}
-              className={`px-3.5 py-2 rounded-lg transition-all flex items-center gap-2 ${
+              className={`px-3 py-1.5 rounded-md transition-all flex items-center gap-1.5 ${
                 activeTab === "payments"
-                  ? "bg-white dark:bg-zinc-900 text-slate-900 dark:text-white shadow-xs font-bold"
-                  : "text-slate-500 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white"
+                  ? "bg-white dark:bg-zinc-900 text-slate-950 dark:text-white shadow-2xs font-extrabold"
+                  : "text-slate-700 dark:text-zinc-300 hover:text-slate-950 dark:hover:text-white font-semibold"
               }`}
             >
-              <CreditCard className="w-4 h-4" />
+              <CreditCard className="w-3.5 h-3.5" />
               <span>Payment Journal</span>
-              <span className="text-xs px-2 py-0.5 bg-slate-200/80 dark:bg-zinc-700 text-slate-700 dark:text-zinc-300 rounded-full font-mono font-bold">
+              <span className="text-[11px] px-1.5 py-0.2 rounded font-mono font-bold bg-slate-200 dark:bg-zinc-700 text-slate-900 dark:text-zinc-100">
                 {paidPaymentsCount}
               </span>
             </button>
           </div>
 
-          {/* Status Filter */}
-          {activeTab === "invoices" && (
-            <div className="flex items-center gap-1.5 overflow-x-auto custom-scrollbar text-xs sm:text-sm">
-              {[
-                { key: "All", label: "All Invoices", count: dueBills.length },
-                {
-                  key: "Pending Verification",
-                  label: "Verification",
-                  count: metrics.pendingVerificationCount,
-                  alert: metrics.pendingVerificationCount > 0,
-                },
-                {
-                  key: "Overdue",
-                  label: "Overdue",
-                  count: metrics.overdueCount,
-                  alert: metrics.overdueCount > 0,
-                },
-                {
-                  key: "Partial",
-                  label: "Partial",
-                  count: metrics.partialCount,
-                },
-                { key: "Unpaid", label: "Unpaid", count: metrics.unpaidCount },
-              ].map((tab) => (
-                <button
-                  key={tab.key}
-                  onClick={() => setStatusFilter(tab.key as any)}
-                  className={`px-3 py-1.5 rounded-lg text-xs sm:text-sm font-semibold transition-all flex items-center gap-2 shrink-0 ${
-                    statusFilter === tab.key
-                      ? "bg-slate-900 dark:bg-white text-white dark:text-zinc-900 font-bold shadow-xs"
-                      : "bg-slate-100 dark:bg-zinc-800/60 text-slate-600 dark:text-zinc-400 hover:bg-slate-200 dark:hover:bg-zinc-800"
-                  }`}
-                >
-                  <span>{tab.label}</span>
-                  <span
-                    className={`px-2 py-0.5 rounded-full text-xs font-mono font-bold ${
-                      statusFilter === tab.key
-                        ? "bg-white/20 text-white dark:bg-black/20 dark:text-zinc-900"
-                        : tab.alert
-                          ? "bg-rose-500/80 text-white"
-                          : "bg-slate-200 dark:bg-zinc-700 text-slate-700 dark:text-zinc-300"
-                    }`}
-                  >
-                    {tab.count}
-                  </span>
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
-
-        {/* Bottom Row: Search & Filters */}
-        <div className="flex flex-wrap items-center justify-between gap-2.5">
-          {/* Search Field */}
-          <div className="relative min-w-[220px] flex-1 sm:max-w-md">
-            <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 dark:text-zinc-500" />
+          {/* Compact Search Input */}
+          <div className="relative w-56 sm:w-64 shrink-0">
+            <Search className="w-3.5 h-3.5 text-slate-500 dark:text-zinc-400 absolute left-3 top-1/2 -translate-y-1/2" />
             <input
               type="text"
               placeholder={
                 activeTab === "invoices"
-                  ? "Filter tenant name, room, or notes..."
+                  ? "Search tenant, room..."
                   : "Search payment records..."
               }
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full py-2 pl-9 pr-3.5 text-sm rounded-xl bg-slate-50 dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-zinc-500 focus:outline-none focus:ring-1.5 focus:ring-slate-400/30 dark:focus:ring-zinc-600/40"
+              className="w-full pl-8 pr-7 py-1.5 text-sm font-semibold rounded-lg border border-slate-300 dark:border-zinc-700 bg-slate-50/70 dark:bg-zinc-900/60 text-slate-950 dark:text-white placeholder:text-slate-500 dark:placeholder:text-zinc-400 outline-none focus:ring-2 focus:ring-slate-400/30 dark:focus:ring-zinc-600/40"
             />
             {searchQuery && (
               <button
                 onClick={() => setSearchQuery("")}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-zinc-300"
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-950 dark:hover:text-white cursor-pointer"
               >
                 <X className="w-3.5 h-3.5" />
               </button>
             )}
           </div>
 
-          {/* Invoice Selectors */}
+          {/* Invoice Selectors (located after search bar) */}
           {activeTab === "invoices" && (
-            <div className="flex flex-wrap items-center gap-2.5">
-              {/* Month Selector */}
-              <div className="w-40 sm:w-44">
+            <>
+              {/* All Months Dropdown */}
+              <div className="w-36 sm:w-40 shrink-0">
                 <CustomSelect
                   value={monthFilter}
                   onChange={(val) => setMonthFilter(val)}
                   options={monthOptions}
-                  className="py-2 px-3.5 rounded-xl bg-slate-50 dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 text-sm font-semibold text-slate-700 dark:text-zinc-300"
+                  className="w-full px-2.5 py-1.5 text-sm font-bold rounded-lg border border-slate-300 dark:border-zinc-700 bg-slate-50/70 dark:bg-zinc-900/60 text-slate-900 dark:text-zinc-100 outline-none focus:ring-2 focus:ring-slate-400/30 dark:focus:ring-zinc-600/40"
                 />
               </div>
 
-              {/* Room Selector */}
-              <div className="w-36 sm:w-40">
+              {/* All Rooms Dropdown */}
+              <div className="w-32 sm:w-36 shrink-0">
                 <CustomSelect
                   value={roomFilter}
                   onChange={(val) => setRoomFilter(val)}
                   options={uniqueRooms}
-                  className="py-2 px-3.5 rounded-xl bg-slate-50 dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 text-sm font-semibold text-slate-700 dark:text-zinc-300"
+                  className="w-full px-2.5 py-1.5 text-sm font-bold rounded-lg border border-slate-300 dark:border-zinc-700 bg-slate-50/70 dark:bg-zinc-900/60 text-slate-900 dark:text-zinc-100 outline-none focus:ring-2 focus:ring-slate-400/30 dark:focus:ring-zinc-600/40"
                 />
               </div>
 
-              {/* Sort Selector */}
-              <div className="w-40 sm:w-44">
+              {/* Newest First Sort Dropdown */}
+              <div className="w-36 sm:w-40 shrink-0">
                 <CustomSelect
                   value={sortFilter}
                   onChange={(val) => setSortFilter(val)}
@@ -1127,55 +1050,80 @@ function BillingContent() {
                     "Highest Balance",
                     "Highest Total",
                   ]}
-                  className="py-2 px-3.5 rounded-xl bg-slate-50 dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 text-sm font-semibold text-slate-700 dark:text-zinc-300"
+                  className="w-full px-2.5 py-1.5 text-sm font-bold rounded-lg border border-slate-300 dark:border-zinc-700 bg-slate-50/70 dark:bg-zinc-900/60 text-slate-900 dark:text-zinc-100 outline-none focus:ring-2 focus:ring-slate-400/30 dark:focus:ring-zinc-600/40"
                 />
               </div>
-            </div>
+
+              {/* Status Dropdown (after Newest First) */}
+              <div className="w-36 sm:w-40 shrink-0">
+                <CustomSelect
+                  value={
+                    statusFilter === "All"
+                      ? "All Invoices"
+                      : statusFilter === "Pending Verification"
+                        ? "Verification"
+                        : statusFilter
+                  }
+                  onChange={(val) => setStatusFilter(val as any)}
+                  options={[
+                    "All Invoices",
+                    "Verification",
+                    "Overdue",
+                    "Partial",
+                    "Unpaid",
+                  ]}
+                  className="w-full px-2.5 py-1.5 text-sm font-bold rounded-lg border border-slate-300 dark:border-zinc-700 bg-slate-50/70 dark:bg-zinc-900/60 text-slate-900 dark:text-zinc-100 outline-none focus:ring-2 focus:ring-slate-400/30 dark:focus:ring-zinc-600/40"
+                />
+              </div>
+            </>
           )}
         </div>
+
+        {/* Counter Summary */}
+        <span className="text-[11px] sm:text-xs text-slate-500 dark:text-zinc-400 font-semibold shrink-0 ml-auto sm:ml-0">
+          {activeTab === "invoices"
+            ? `${filteredBills.length} of ${dueBills.length} invoices`
+            : `${filteredPayments.length} of ${paidPaymentsCount} payments`}
+        </span>
       </div>
 
       {/* Main Content Area */}
-      <div className="flex-1 min-h-0 bg-card border border-slate-200 dark:border-zinc-800 rounded-xl overflow-hidden shadow-xs flex flex-col relative">
-        {" "}
-        {(activeTab === "payments" || viewMode === "table") && (
-          <div className="absolute top-0 right-0 w-6 h-[48px] bg-slate-100 dark:bg-zinc-900 border-b border-slate-200 dark:border-zinc-800 z-30 pointer-events-none rounded-tr-xl" />
-        )}
+      <div className="flex-1 min-h-0 max-h-[610px] bg-card border border-slate-200 dark:border-zinc-800 rounded-xl overflow-hidden shadow-xs flex flex-col relative">
+        <div className="absolute top-0 right-0 w-6 h-[46px] bg-slate-100 dark:bg-zinc-900 border-b border-slate-200 dark:border-zinc-800 z-30 pointer-events-none rounded-tr-xl" />
         {activeTab === "invoices" ? (
-          viewMode === "table" ? (
             /* INVOICES TABLE */
             <div className="overflow-x-auto overflow-y-auto flex-1 custom-scrollbar">
               <table className="w-full min-w-full text-left text-sm border-collapse">
                 <thead className="sticky top-0 z-20 bg-slate-100 dark:bg-zinc-900 shadow-xs border-b border-slate-200 dark:border-zinc-800">
-                  <tr className="h-[48px] bg-slate-100 dark:bg-zinc-900 text-slate-700 dark:text-zinc-300 uppercase tracking-wider text-[13px] sm:text-sm font-bold">
-                    <th className="py-2.5 px-4 bg-slate-100 dark:bg-zinc-900 border-b border-slate-200 dark:border-zinc-800">
+                  <tr className="h-[46px] bg-slate-100 dark:bg-zinc-900 text-sm sm:text-base font-black text-slate-900 dark:text-white uppercase tracking-wider">
+                    <th className="py-3 px-4 bg-slate-100 dark:bg-zinc-900 border-b border-slate-200 dark:border-zinc-800">
                       Tenant & Room
                     </th>
-                    <th className="py-2.5 px-3.5 bg-slate-100 dark:bg-zinc-900 border-b border-slate-200 dark:border-zinc-800">
+                    <th className="py-3 px-3.5 bg-slate-100 dark:bg-zinc-900 border-b border-slate-200 dark:border-zinc-800">
                       Period & Due
                     </th>
-                    <th className="py-2.5 px-3.5 text-right bg-slate-100 dark:bg-zinc-900 border-b border-slate-200 dark:border-zinc-800">
+                    <th className="py-3 px-3.5 text-right bg-slate-100 dark:bg-zinc-900 border-b border-slate-200 dark:border-zinc-800">
                       Rent
                     </th>
-                    <th className="py-2.5 px-3.5 text-right bg-slate-100 dark:bg-zinc-900 border-b border-slate-200 dark:border-zinc-800">
+                    <th className="py-3 px-3.5 text-right bg-slate-100 dark:bg-zinc-900 border-b border-slate-200 dark:border-zinc-800">
                       Water
                     </th>
-                    <th className="py-2.5 px-3.5 text-right bg-slate-100 dark:bg-zinc-900 border-b border-slate-200 dark:border-zinc-800">
+                    <th className="py-3 px-3.5 text-right bg-slate-100 dark:bg-zinc-900 border-b border-slate-200 dark:border-zinc-800">
                       Power
                     </th>
-                    <th className="py-2.5 px-3.5 text-right bg-slate-100 dark:bg-zinc-900 border-b border-slate-200 dark:border-zinc-800">
+                    <th className="py-3 px-3.5 text-right bg-slate-100 dark:bg-zinc-900 border-b border-slate-200 dark:border-zinc-800">
                       Gross Total
                     </th>
-                    <th className="py-2.5 px-3.5 text-right bg-slate-100 dark:bg-zinc-900 border-b border-slate-200 dark:border-zinc-800">
+                    <th className="py-3 px-3.5 text-right bg-slate-100 dark:bg-zinc-900 border-b border-slate-200 dark:border-zinc-800">
                       Paid
                     </th>
-                    <th className="py-2.5 px-3.5 text-right bg-slate-100 dark:bg-zinc-900 border-b border-slate-200 dark:border-zinc-800">
+                    <th className="py-3 px-3.5 text-right bg-slate-100 dark:bg-zinc-900 border-b border-slate-200 dark:border-zinc-800">
                       Balance
                     </th>
-                    <th className="py-2.5 px-3.5 text-center bg-slate-100 dark:bg-zinc-900 border-b border-slate-200 dark:border-zinc-800">
+                    <th className="py-3 px-3.5 text-center bg-slate-100 dark:bg-zinc-900 border-b border-slate-200 dark:border-zinc-800">
                       Status
                     </th>
-                    <th className="py-2.5 pl-3.5 pr-6 text-right bg-slate-100 dark:bg-zinc-900 border-b border-slate-200 dark:border-zinc-800">
+                    <th className="py-3 pl-3.5 pr-6 text-right bg-slate-100 dark:bg-zinc-900 border-b border-slate-200 dark:border-zinc-800">
                       Actions
                     </th>
                   </tr>
@@ -1214,18 +1162,18 @@ function BillingContent() {
                             setHighlightedBillId(bill.id);
                             setHighlightedTenant(bill.tenant_name);
                           }}
-                          className={`h-[60px] transition-colors cursor-pointer group ${
+                          className={`h-[62px] transition-colors cursor-pointer group ${
                             isHighlighted
                               ? "bg-slate-200/80 hover:bg-slate-200 dark:bg-zinc-800/90 dark:hover:bg-zinc-800 font-semibold"
                               : "hover:bg-slate-50/80 dark:hover:bg-zinc-800/40"
                           }`}
                         >
                           {/* Tenant & Room */}
-                          <td className="py-2.5 px-4 whitespace-nowrap">
-                            <div className="font-bold text-slate-900 dark:text-white text-base sm:text-[17px] flex items-center gap-2 leading-tight">
+                          <td className="py-2 px-4 whitespace-nowrap">
+                            <div className="font-extrabold text-slate-950 dark:text-white text-base sm:text-[17px] flex items-center gap-2 leading-tight">
                               <span>{bill.tenant_name}</span>
                             </div>
-                            <div className="text-xs sm:text-sm font-semibold text-slate-500 dark:text-zinc-400 mt-0.5 leading-tight">
+                            <div className="text-sm font-medium text-slate-700 dark:text-zinc-300 mt-0.5 leading-tight">
                               {bill.room_number
                                 ? `Room ${bill.room_number}`
                                 : "No Room Assigned"}
@@ -1233,12 +1181,12 @@ function BillingContent() {
                           </td>
 
                           {/* Period & Due Date */}
-                          <td className="py-2.5 px-3.5 whitespace-nowrap">
-                            <div className="font-bold text-slate-800 dark:text-zinc-200 text-sm sm:text-base leading-tight">
+                          <td className="py-2 px-3.5 whitespace-nowrap">
+                            <div className="font-extrabold text-slate-900 dark:text-zinc-100 text-sm sm:text-base leading-tight">
                               {bill.billing_month}
                             </div>
                             <div
-                              className={`text-xs sm:text-sm font-mono mt-0.5 leading-tight ${isOverdue ? "text-rose-600 dark:text-rose-400/80 font-bold" : "text-slate-400 dark:text-zinc-500 font-medium"}`}
+                              className={`text-xs sm:text-sm font-mono mt-0.5 leading-tight ${isOverdue ? "text-rose-600 dark:text-rose-400/85 font-bold" : "text-slate-500 dark:text-zinc-400 font-medium"}`}
                             >
                               Due{" "}
                               {bill.due_date
@@ -1251,32 +1199,32 @@ function BillingContent() {
                           </td>
 
                           {/* Base Rent */}
-                          <td className="py-2.5 px-3.5 text-right font-mono text-sm sm:text-base font-medium text-slate-700 dark:text-zinc-300">
+                          <td className="py-2 px-3.5 text-right font-mono text-sm sm:text-base font-medium text-slate-700 dark:text-zinc-300">
                             ₱{Number(bill.rent_amount).toLocaleString()}
                           </td>
 
                           {/* Water */}
-                          <td className="py-2.5 px-3.5 text-right font-mono text-sm sm:text-base font-medium text-slate-600 dark:text-zinc-400">
+                          <td className="py-2 px-3.5 text-right font-mono text-sm sm:text-base font-medium text-slate-600 dark:text-zinc-400">
                             ₱{Number(bill.water_charges).toLocaleString()}
                           </td>
 
                           {/* Power */}
-                          <td className="py-2.5 px-3.5 text-right font-mono text-sm sm:text-base font-medium text-slate-600 dark:text-zinc-400">
+                          <td className="py-2 px-3.5 text-right font-mono text-sm sm:text-base font-medium text-slate-600 dark:text-zinc-400">
                             ₱{Number(bill.electricity_charges).toLocaleString()}
                           </td>
 
                           {/* Total Due */}
-                          <td className="py-2.5 px-3.5 text-right font-mono font-extrabold text-base sm:text-lg text-slate-900 dark:text-zinc-100">
+                          <td className="py-2 px-3.5 text-right font-mono font-extrabold text-base sm:text-lg text-slate-950 dark:text-white">
                             ₱{Number(bill.total_amount).toLocaleString()}
                           </td>
 
                           {/* Amount Paid */}
-                          <td className="py-2.5 px-3.5 text-right font-mono font-bold text-base sm:text-lg text-slate-900 dark:text-zinc-100">
+                          <td className="py-2 px-3.5 text-right font-mono font-bold text-base sm:text-lg text-slate-900 dark:text-zinc-100">
                             ₱{Number(bill.amount_paid).toLocaleString()}
                           </td>
 
                           {/* Outstanding Balance */}
-                          <td className="py-2.5 px-3.5 text-right font-mono text-base sm:text-lg whitespace-nowrap">
+                          <td className="py-2 px-3.5 text-right font-mono text-base sm:text-lg whitespace-nowrap">
                             <span
                               className={
                                 Number(bill.balance) > 0
@@ -1291,7 +1239,7 @@ function BillingContent() {
                           </td>
 
                           {/* Status */}
-                          <td className="py-2.5 px-3.5 text-center whitespace-nowrap">
+                          <td className="py-2 px-3.5 text-center whitespace-nowrap">
                             <span
                               className={`text-xs sm:text-[13px] font-bold uppercase tracking-wider ${status.className}`}
                             >
@@ -1300,7 +1248,7 @@ function BillingContent() {
                           </td>
 
                           {/* Actions */}
-                          <td className="py-2.5 px-4 text-right whitespace-nowrap">
+                          <td className="py-2 px-4 text-right whitespace-nowrap">
                             <div className="flex items-center justify-end gap-1.5">
                               {/* Verify Receipt */}
                               {bill.status === "Pending Verification" && (
@@ -1317,7 +1265,7 @@ function BillingContent() {
                                     setHighlightedBillId(bill.id);
                                     setHighlightedTenant(bill.tenant_name);
                                   }}
-                                  className="px-3 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold transition-all flex items-center gap-1.5 shadow-xs cursor-pointer shrink-0"
+                                  className="px-3.5 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-600 text-white text-sm font-bold transition-all flex items-center gap-1.5 shadow-xs cursor-pointer shrink-0"
                                   title="Review proof of payment receipt"
                                 >
                                   <Clock className="w-3.5 h-3.5" />
@@ -1334,7 +1282,7 @@ function BillingContent() {
                                     setHighlightedTenant(bill.tenant_name);
                                     openPayModal(bill);
                                   }}
-                                  className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition-all flex items-center gap-1.5 shadow-xs cursor-pointer shrink-0"
+                                  className="px-3.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-bold transition-all flex items-center gap-1.5 shadow-xs cursor-pointer shrink-0"
                                   title="Process cash payment and mark as paid"
                                 >
                                   <CheckCircle2 className="w-4 h-4" />
@@ -1350,7 +1298,7 @@ function BillingContent() {
                                   setHighlightedTenant(bill.tenant_name);
                                   openViewModal(bill);
                                 }}
-                                className="p-2 rounded-lg hover:bg-slate-200 dark:hover:bg-zinc-700 text-slate-500 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white transition-colors cursor-pointer"
+                                className="p-2 rounded-lg hover:bg-slate-200 dark:hover:bg-zinc-700 text-slate-600 dark:text-zinc-300 hover:text-slate-900 dark:hover:text-white transition-colors cursor-pointer"
                                 title="View Statement"
                               >
                                 <Eye className="w-4.5 h-4.5" />
@@ -1364,7 +1312,7 @@ function BillingContent() {
                                   setHighlightedTenant(bill.tenant_name);
                                   openEditModal(bill);
                                 }}
-                                className="p-2 rounded-lg hover:bg-slate-200 dark:hover:bg-zinc-700 text-slate-500 dark:text-zinc-400 hover:text-indigo-600 transition-colors cursor-pointer"
+                                className="p-2 rounded-lg hover:bg-slate-200 dark:hover:bg-zinc-700 text-slate-600 dark:text-zinc-300 hover:text-indigo-600 transition-colors cursor-pointer"
                                 title="Edit Charges"
                               >
                                 <Edit className="w-4.5 h-4.5" />
@@ -1378,193 +1326,34 @@ function BillingContent() {
                 </tbody>
               </table>
             </div>
-          ) : (
-            /* billing statement card grid */
-            <div className="overflow-y-auto flex-1 p-3.5 sm:p-4 custom-scrollbar">
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5 sm:gap-4">
-                {filteredBills.length === 0 ? (
-                  <div className="col-span-full py-14 text-center text-slate-400 dark:text-zinc-500">
-                    <Receipt className="w-10 h-10 mx-auto mb-2 opacity-30" />
-                    <p className="font-semibold text-base">
-                      No billing records found.
-                    </p>
-                  </div>
-                ) : (
-                  filteredBills.map((bill) => {
-                    const status = getStatusBadge(bill.status);
-                    const isHighlighted = Boolean(
-                      (highlightedBillId && bill.id === highlightedBillId) ||
-                      (!highlightedBillId &&
-                        highlightedTenant &&
-                        bill.tenant_name
-                          ?.toLowerCase()
-                          .includes(highlightedTenant.toLowerCase())),
-                    );
-
-                    return (
-                      <div
-                        key={bill.id}
-                        id={`bill-card-${bill.id}`}
-                        onClick={() => {
-                          setHighlightedBillId(bill.id);
-                          setHighlightedTenant(bill.tenant_name);
-                        }}
-                        className={`border rounded-xl p-4 sm:p-5 shadow-xs transition-all flex flex-col justify-between cursor-pointer ${
-                          isHighlighted
-                            ? "border-slate-300 dark:border-zinc-700 bg-slate-200/80 dark:bg-zinc-800/90 shadow-xs"
-                            : "bg-card border-slate-200 dark:border-zinc-800 hover:border-slate-300 dark:hover:border-zinc-700 hover:bg-slate-50/50 dark:hover:bg-zinc-800/30"
-                        }`}
-                      >
-                        <div>
-                          <div className="flex items-start justify-between gap-2 mb-3">
-                            <div>
-                              <div className="flex items-center gap-2">
-                                <span className="font-extrabold text-slate-900 dark:text-white text-base sm:text-lg">
-                                  {bill.tenant_name}
-                                </span>
-                              </div>
-                              <div className="text-xs sm:text-sm font-semibold text-slate-500 dark:text-zinc-400 mt-0.5">
-                                {bill.room_number
-                                  ? `Room ${bill.room_number}`
-                                  : "No Room"}{" "}
-                                · {bill.billing_month}
-                              </div>
-                            </div>
-                            <span
-                              className={`text-xs font-bold uppercase tracking-wider ${status.className}`}
-                            >
-                              {status.label}
-                            </span>
-                          </div>
-
-                          {/* Cost breakdown pill */}
-                          <div className="bg-slate-50 dark:bg-zinc-900/60 rounded-xl p-3 border border-slate-100 dark:border-zinc-800 space-y-1.5 mb-3.5 text-sm">
-                            <div className="flex justify-between text-slate-600 dark:text-zinc-400">
-                              <span>Base Rent</span>
-                              <span className="font-mono font-bold text-slate-900 dark:text-white">
-                                ₱{Number(bill.rent_amount).toLocaleString()}
-                              </span>
-                            </div>
-                            {(Number(bill.water_charges) > 0 ||
-                              Number(bill.electricity_charges) > 0) && (
-                              <div className="flex justify-between text-slate-500 dark:text-zinc-500 text-xs">
-                                <span>Utilities (Water+Elec)</span>
-                                <span className="font-mono">
-                                  ₱
-                                  {(
-                                    Number(bill.water_charges) +
-                                    Number(bill.electricity_charges)
-                                  ).toLocaleString()}
-                                </span>
-                              </div>
-                            )}
-                            <div className="pt-1.5 border-t border-slate-200 dark:border-zinc-800 flex justify-between font-bold">
-                              <span className="text-slate-700 dark:text-zinc-300">
-                                Remaining Balance
-                              </span>
-                              <span
-                                className={`font-mono text-base ${Number(bill.balance) > 0 ? "text-rose-600 dark:text-rose-400/85 font-bold" : "text-slate-900 dark:text-zinc-100 font-semibold"}`}
-                              >
-                                ₱{Number(bill.balance).toLocaleString()}
-                              </span>
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* Card Footer Actions */}
-                        <div className="flex items-center justify-between pt-3 border-t border-slate-100 dark:border-zinc-800/80">
-                          <span className="text-xs text-slate-400 font-mono font-medium">
-                            Due:{" "}
-                            {bill.due_date
-                              ? new Date(bill.due_date).toLocaleDateString()
-                              : "N/A"}
-                          </span>
-                          <div className="flex items-center gap-1.5">
-                            {bill.status === "Pending Verification" && (
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  const matchIdx = pendingPayments.findIndex(
-                                    (p) => p.bill_id === bill.id,
-                                  );
-                                  setCurrentVerifyIndex(
-                                    matchIdx >= 0 ? matchIdx : 0,
-                                  );
-                                  setIsVerifyModalOpen(true);
-                                  setHighlightedBillId(bill.id);
-                                  setHighlightedTenant(bill.tenant_name);
-                                }}
-                                className="px-2.5 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold transition-all flex items-center gap-1.5 shadow-xs cursor-pointer shrink-0"
-                                title="Review proof of payment receipt"
-                              >
-                                <Clock className="w-3.5 h-3.5" />
-                                <span>Verify</span>
-                              </button>
-                            )}
-                            {bill.status !== "Paid" && (
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setHighlightedBillId(bill.id);
-                                  setHighlightedTenant(bill.tenant_name);
-                                  openPayModal(bill);
-                                }}
-                                className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold flex items-center gap-1.5 cursor-pointer shadow-xs"
-                                title="Process cash payment and mark as paid"
-                              >
-                                <CheckCircle2 className="w-3.5 h-3.5" />
-                                <span>Mark as Paid</span>
-                              </button>
-                            )}
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setHighlightedBillId(bill.id);
-                                setHighlightedTenant(bill.tenant_name);
-                                openViewModal(bill);
-                              }}
-                              className="p-1.5 rounded-lg text-slate-500 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-zinc-800 transition-colors"
-                              title="View Statement"
-                            >
-                              <Eye className="w-4 h-4" />
-                            </button>
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })
-                )}
-              </div>
-            </div>
-          )
         ) : (
           /* PAYMENTS AUDIT JOURNAL TABLE */
           <div className="overflow-x-auto overflow-y-auto flex-1 custom-scrollbar">
             <table className="w-full min-w-full text-left text-sm border-collapse">
               <thead className="sticky top-0 z-20 bg-slate-100 dark:bg-zinc-900 shadow-xs border-b border-slate-200 dark:border-zinc-800">
-                <tr className="h-[48px] bg-slate-100 dark:bg-zinc-900 text-slate-700 dark:text-zinc-300 uppercase tracking-wider text-[13px] sm:text-sm font-bold">
-                  <th className="py-2.5 px-4 bg-slate-100 dark:bg-zinc-900 border-b border-slate-200 dark:border-zinc-800">
+                <tr className="h-[46px] bg-slate-100 dark:bg-zinc-900 text-sm sm:text-base font-black text-slate-900 dark:text-white uppercase tracking-wider">
+                  <th className="py-3 px-4 bg-slate-100 dark:bg-zinc-900 border-b border-slate-200 dark:border-zinc-800">
                     Payment Date
                   </th>
-                  <th className="py-2.5 px-4 bg-slate-100 dark:bg-zinc-900 border-b border-slate-200 dark:border-zinc-800">
+                  <th className="py-3 px-4 bg-slate-100 dark:bg-zinc-900 border-b border-slate-200 dark:border-zinc-800">
                     Resident Name
                   </th>
-                  <th className="py-2.5 px-3.5 bg-slate-100 dark:bg-zinc-900 border-b border-slate-200 dark:border-zinc-800">
+                  <th className="py-3 px-3.5 bg-slate-100 dark:bg-zinc-900 border-b border-slate-200 dark:border-zinc-800">
                     Room
                   </th>
-                  <th className="py-2.5 px-3.5 bg-slate-100 dark:bg-zinc-900 border-b border-slate-200 dark:border-zinc-800">
+                  <th className="py-3 px-3.5 bg-slate-100 dark:bg-zinc-900 border-b border-slate-200 dark:border-zinc-800">
                     Billing Period
                   </th>
-                  <th className="py-2.5 px-3.5 bg-slate-100 dark:bg-zinc-900 border-b border-slate-200 dark:border-zinc-800">
+                  <th className="py-3 px-3.5 bg-slate-100 dark:bg-zinc-900 border-b border-slate-200 dark:border-zinc-800">
                     Payment Method
                   </th>
-                  <th className="py-2.5 px-4 text-right bg-slate-100 dark:bg-zinc-900 border-b border-slate-200 dark:border-zinc-800">
+                  <th className="py-3 px-4 text-right bg-slate-100 dark:bg-zinc-900 border-b border-slate-200 dark:border-zinc-800">
                     Amount Paid
                   </th>
-                  <th className="py-2.5 px-3.5 text-center bg-slate-100 dark:bg-zinc-900 border-b border-slate-200 dark:border-zinc-800">
+                  <th className="py-3 px-3.5 text-center bg-slate-100 dark:bg-zinc-900 border-b border-slate-200 dark:border-zinc-800">
                     Payment Status
                   </th>
-                  <th className="py-2.5 pl-3.5 pr-6 bg-slate-100 dark:bg-zinc-900 border-b border-slate-200 dark:border-zinc-800">
+                  <th className="py-3 pl-3.5 pr-6 text-right bg-slate-100 dark:bg-zinc-900 border-b border-slate-200 dark:border-zinc-800">
                     Reference
                   </th>
                 </tr>
@@ -1597,14 +1386,14 @@ function BillingContent() {
                         onClick={() => {
                           setHighlightedTenant(payment.tenant_name);
                         }}
-                        className={`h-[60px] transition-colors cursor-pointer ${
+                        className={`h-[62px] transition-colors cursor-pointer group ${
                           isPaymentHighlighted
                             ? "bg-slate-200/80 hover:bg-slate-200 dark:bg-zinc-800/90 dark:hover:bg-zinc-800 font-semibold"
                             : "hover:bg-slate-50/80 dark:hover:bg-zinc-800/40"
                         }`}
                       >
                         {/* Date */}
-                        <td className="py-2.5 px-4 whitespace-nowrap font-mono text-sm sm:text-base font-semibold text-slate-800 dark:text-zinc-200">
+                        <td className="py-2 px-4 whitespace-nowrap font-mono text-sm sm:text-base font-semibold text-slate-800 dark:text-zinc-200">
                           {payment.payment_date
                             ? new Date(payment.payment_date).toLocaleDateString(
                                 "en-US",
@@ -1618,44 +1407,44 @@ function BillingContent() {
                         </td>
 
                         {/* Tenant Name */}
-                        <td className="py-2.5 px-4 whitespace-nowrap font-bold text-slate-900 dark:text-white text-base sm:text-[17px]">
+                        <td className="py-2 px-4 whitespace-nowrap font-extrabold text-slate-950 dark:text-white text-base sm:text-[17px]">
                           {payment.tenant_name}
                         </td>
 
                         {/* Room */}
-                        <td className="py-2.5 px-3.5 whitespace-nowrap text-slate-600 dark:text-zinc-400 font-semibold text-sm sm:text-base">
+                        <td className="py-2 px-3.5 whitespace-nowrap text-slate-700 dark:text-zinc-300 font-medium text-sm sm:text-base">
                           {payment.room_number
                             ? `Room ${payment.room_number}`
                             : "N/A"}
                         </td>
 
                         {/* Month */}
-                        <td className="py-2.5 px-3.5 whitespace-nowrap text-slate-700 dark:text-zinc-300 font-medium text-sm sm:text-base">
+                        <td className="py-2 px-3.5 whitespace-nowrap text-slate-700 dark:text-zinc-300 font-medium text-sm sm:text-base">
                           {payment.billing_month}
                         </td>
 
                         {/* Method */}
-                        <td className="py-2.5 px-3.5 whitespace-nowrap">
-                          <span className="px-3 py-1 rounded-md text-xs sm:text-sm font-semibold bg-slate-100 dark:bg-zinc-800 text-slate-700 dark:text-zinc-300 border border-slate-200 dark:border-zinc-700">
+                        <td className="py-2 px-3.5 whitespace-nowrap">
+                          <span className="px-2.5 py-0.5 rounded-md text-xs sm:text-sm font-semibold bg-slate-100 dark:bg-zinc-800 text-slate-700 dark:text-zinc-300 border border-slate-300 dark:border-zinc-700">
                             {payment.payment_method || "Cash"}
                           </span>
                         </td>
 
                         {/* Amount Paid */}
-                        <td className="py-2.5 px-4 text-right whitespace-nowrap font-mono font-extrabold text-base sm:text-lg text-slate-900 dark:text-zinc-100">
+                        <td className="py-2 px-4 text-right whitespace-nowrap font-mono font-extrabold text-base sm:text-lg text-slate-900 dark:text-zinc-100">
                           ₱{Number(payment.amount_paid).toLocaleString()}
                         </td>
 
                         {/* Status */}
-                        <td className="py-2.5 px-3.5 text-center whitespace-nowrap">
+                        <td className="py-2 px-3.5 text-center whitespace-nowrap">
                           <span className="text-xs sm:text-[13px] font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400">
                             Paid
                           </span>
                         </td>
 
                         {/* Reference */}
-                        <td className="py-2.5 px-4 whitespace-nowrap">
-                          <span className="font-mono text-xs sm:text-sm font-bold text-slate-800 dark:text-zinc-200 bg-slate-100 dark:bg-zinc-800/80 px-3 py-1 rounded-md border border-slate-200 dark:border-zinc-700">
+                        <td className="py-2 pl-3.5 pr-6 text-right whitespace-nowrap">
+                          <span className="font-mono text-xs sm:text-sm font-bold text-slate-800 dark:text-zinc-200 bg-slate-100 dark:bg-zinc-800/80 px-2.5 py-0.5 rounded-md border border-slate-300 dark:border-zinc-700">
                             {payment.reference_number ||
                               payment.referenceNumber ||
                               (payment.notes
@@ -2440,20 +2229,6 @@ function BillingContent() {
                   </div>
                 </div>
 
-                <div className="space-y-1">
-                  <label className="text-xs font-bold text-slate-700 dark:text-zinc-300">
-                    Notes / Remarks
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="e.g. Submeter kWh meter reading attached..."
-                    value={billForm.notes}
-                    onChange={(e) =>
-                      setBillForm({ ...billForm, notes: e.target.value })
-                    }
-                    className="w-full py-2 px-3 text-xs rounded-lg bg-slate-50 dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 font-semibold text-slate-900 dark:text-white"
-                  />
-                </div>
 
                 <div className="flex justify-end gap-2 pt-2">
                   <button
@@ -2628,19 +2403,6 @@ function BillingContent() {
                   </div>
                 </div>
 
-                <div className="space-y-1">
-                  <label className="text-xs font-bold text-slate-700 dark:text-zinc-300">
-                    Notes / Remarks
-                  </label>
-                  <input
-                    type="text"
-                    value={billForm.notes}
-                    onChange={(e) =>
-                      setBillForm({ ...billForm, notes: e.target.value })
-                    }
-                    className="w-full py-2 px-3 text-xs rounded-lg bg-slate-50 dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 font-semibold"
-                  />
-                </div>
 
                 <div className="flex justify-end gap-2 pt-2">
                   <button

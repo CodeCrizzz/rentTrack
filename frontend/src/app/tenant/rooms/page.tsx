@@ -246,11 +246,11 @@ export default function TenantRooms() {
                             <div className="text-xl sm:text-2xl font-black font-mono text-slate-900 dark:text-white mt-0.5 leading-tight truncate max-w-[140px]">
                                 {room.type || 'Standard Room'}
                             </div>
-                            <div className="text-xs font-semibold text-teal-600 dark:text-teal-400 mt-1">
+                            <div className="text-xs font-semibold text-slate-500 dark:text-zinc-400 mt-1">
                                 Floor {room.floor || '1'} Wing
                             </div>
                         </div>
-                        <div className="w-11 h-11 rounded-xl bg-teal-50 dark:bg-teal-500/10 text-teal-600 flex items-center justify-center shrink-0">
+                        <div className="w-11 h-11 rounded-xl bg-slate-100 dark:bg-zinc-800 text-slate-700 dark:text-zinc-300 flex items-center justify-center shrink-0">
                             <Building2 className="w-5.5 h-5.5" />
                         </div>
                     </div>
@@ -283,7 +283,7 @@ export default function TenantRooms() {
                         <div className="bg-card border border-slate-200 dark:border-zinc-800 rounded-xl p-4 sm:p-4.5 shadow-xs shrink-0">
                             <div className="flex items-center justify-between mb-3">
                                 <h2 className="text-xs sm:text-sm font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-400 flex items-center gap-2">
-                                    <Sparkles className="w-4 h-4 text-teal-600" />
+                                    <Sparkles className="w-4 h-4 text-slate-500 dark:text-zinc-400" />
                                     <span>Room Inclusions & Amenities</span>
                                 </h2>
                                 {realAmenities.length >= 5 && (
@@ -301,12 +301,12 @@ export default function TenantRooms() {
                                             key={idx} 
                                             className="h-[58px] p-3 rounded-xl border border-slate-100 dark:border-zinc-800/80 bg-slate-50/50 dark:bg-zinc-900/30 flex items-center gap-2.5 shrink-0 min-w-[140px] sm:min-w-[calc((100%-36px)/4)] w-[calc((100%-36px)/4)]"
                                         >
-                                            <div className="w-8 h-8 rounded-lg bg-teal-50 dark:bg-teal-500/10 text-teal-600 flex items-center justify-center shrink-0">
+                                            <div className="w-8 h-8 rounded-lg bg-slate-100 dark:bg-zinc-800 text-slate-700 dark:text-zinc-300 flex items-center justify-center shrink-0">
                                                 <Icon className="w-4 h-4" />
                                             </div>
                                             <div className="min-w-0">
                                                 <p className="text-xs sm:text-sm font-bold text-slate-900 dark:text-zinc-100 truncate">{item.label}</p>
-                                                <p className="text-xs text-teal-600 dark:text-teal-400 font-semibold">{item.status}</p>
+                                                <p className="text-xs text-slate-500 dark:text-zinc-400 font-semibold">{item.status}</p>
                                             </div>
                                         </div>
                                     );
@@ -349,26 +349,26 @@ export default function TenantRooms() {
                                             <div 
                                                 key={idx}
                                                 onClick={() => setSelectedMaintenance(reqItem)}
-                                                className="h-[68px] px-3.5 py-2.5 rounded-xl border border-slate-100 dark:border-zinc-800/80 bg-slate-50/50 dark:bg-zinc-900/30 hover:border-teal-500/50 transition-all cursor-pointer flex items-center justify-between gap-3 group shrink-0"
+                                                className="h-[68px] px-3.5 py-2.5 rounded-xl border border-slate-100 dark:border-zinc-800/80 bg-slate-50/50 dark:bg-zinc-900/30 hover:border-zinc-400 dark:hover:border-zinc-700 transition-all cursor-pointer flex items-center justify-between gap-3 group shrink-0"
                                             >
                                                 <div className="min-w-0 pr-2">
                                                     <div className="flex items-center gap-2">
                                                         <span className={`w-2.5 h-2.5 rounded-full shrink-0 ${
-                                                            reqItem.status === 'Resolved' ? 'bg-emerald-500' :
-                                                            reqItem.status === 'In Progress' ? 'bg-indigo-500' : 'bg-amber-500'
+                                                            reqItem.status === 'Resolved' ? 'bg-zinc-900 dark:bg-white' :
+                                                            reqItem.status === 'In Progress' ? 'bg-zinc-400 dark:bg-zinc-500' : 'bg-amber-500'
                                                         }`}></span>
-                                                        <span className="font-mono text-xs font-bold text-teal-600 dark:text-teal-400 shrink-0">
+                                                        <span className="font-mono text-xs font-bold text-slate-900 dark:text-white shrink-0">
                                                             {formatRequestNumber(reqItem.id, reqItem.request_number)}
                                                         </span>
-                                                        <p className="text-sm sm:text-base font-bold text-slate-900 dark:text-white truncate group-hover:text-teal-500 transition-colors">{reqItem.title}</p>
+                                                        <p className="text-sm sm:text-base font-bold text-slate-900 dark:text-white truncate group-hover:text-zinc-600 dark:group-hover:text-zinc-300 transition-colors">{reqItem.title}</p>
                                                     </div>
                                                     <p className="text-xs text-slate-500 dark:text-zinc-400 font-mono mt-0.5 truncate">
                                                         {reqItem.category || 'General'} · Submitted {new Date(reqItem.created_at).toLocaleDateString()}
                                                     </p>
                                                 </div>
                                                 <span className={`text-xs font-bold uppercase shrink-0 ${
-                                                    reqItem.status === 'Resolved' ? 'text-emerald-600 dark:text-emerald-400' :
-                                                    reqItem.status === 'In Progress' ? 'text-indigo-600 dark:text-indigo-400' :
+                                                    reqItem.status === 'Resolved' ? 'text-zinc-900 dark:text-white' :
+                                                    reqItem.status === 'In Progress' ? 'text-zinc-500 dark:text-zinc-400' :
                                                     'text-amber-600 dark:text-amber-400'
                                                 }`}>
                                                     {reqItem.status}
@@ -378,7 +378,7 @@ export default function TenantRooms() {
                                     </div>
                                 ) : (
                                     <div className="h-[382px] p-6 rounded-xl border border-dashed border-slate-200 dark:border-zinc-800 text-center flex flex-col items-center justify-center">
-                                        <CheckCircle2 className="w-9 h-9 text-emerald-500 mx-auto mb-2 opacity-80" />
+                                        <CheckCircle2 className="w-9 h-9 text-slate-500 dark:text-zinc-400 mx-auto mb-2 opacity-80" />
                                         <p className="text-sm font-bold text-slate-700 dark:text-zinc-300">All Systems Functional</p>
                                         <p className="text-xs text-slate-500 mt-1">Zero outstanding repair requests logged for your room.</p>
                                     </div>
@@ -387,7 +387,7 @@ export default function TenantRooms() {
 
                             <div className="pt-2.5 border-t border-slate-100 dark:border-zinc-800/80 mt-3 flex items-center justify-between text-xs text-slate-400">
                                 <span>Recent maintenance activity</span>
-                                <span className="font-mono text-teal-600 dark:text-teal-400 font-semibold">Active Monitoring</span>
+                                <span className="font-mono text-slate-900 dark:text-white font-semibold">Active Monitoring</span>
                             </div>
                         </div>
 
@@ -415,8 +415,8 @@ export default function TenantRooms() {
                                         <div key={i} className="h-[68px] px-3.5 py-2.5 rounded-xl border border-slate-100 dark:border-zinc-800/80 bg-slate-50/50 dark:bg-zinc-900/40 flex items-center gap-3.5 shrink-0">
                                             <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm shrink-0 ${
                                                 mate.is_me 
-                                                    ? 'bg-teal-600 text-white shadow-xs' 
-                                                    : 'bg-indigo-100 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400'
+                                                    ? 'bg-zinc-900 dark:bg-white text-white dark:text-zinc-950 shadow-xs' 
+                                                    : 'bg-slate-100 dark:bg-zinc-800 text-slate-700 dark:text-zinc-300'
                                             }`}>
                                                 {mate.name?.charAt(0) || 'R'}
                                             </div>
@@ -424,7 +424,7 @@ export default function TenantRooms() {
                                                 <div className="flex items-center gap-2">
                                                     <p className="text-sm sm:text-base font-bold text-slate-900 dark:text-white truncate">{mate.name}</p>
                                                     {mate.is_me && (
-                                                        <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase bg-teal-50 dark:bg-teal-500/10 text-teal-600 border border-teal-200/50 dark:border-teal-500/20">
+                                                        <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-zinc-200 border border-zinc-200 dark:border-zinc-700/60">
                                                             You
                                                         </span>
                                                     )}
@@ -456,7 +456,7 @@ export default function TenantRooms() {
 
                             <div className="pt-2.5 border-t border-slate-100 dark:border-zinc-800 text-xs sm:text-sm text-slate-400 font-mono flex items-center justify-between">
                                 <span>Bedspace Inventory</span>
-                                <span className="text-emerald-600 dark:text-emerald-400 font-bold">Good Standing</span>
+                                <span className="text-zinc-900 dark:text-white font-bold">Good Standing</span>
                             </div>
                         </div>
                     </div>
@@ -475,7 +475,7 @@ export default function TenantRooms() {
                                 <div className="w-full max-w-lg bg-card rounded-2xl shadow-xl border border-slate-200 dark:border-zinc-800 overflow-hidden pointer-events-auto flex flex-col max-h-[85vh]">
                                     <div className="p-4 border-b border-slate-100 dark:border-zinc-800 flex justify-between items-center bg-slate-50/50 dark:bg-zinc-900/40">
                                         <h2 className="text-base font-extrabold text-slate-900 dark:text-white flex items-center gap-2">
-                                            <Wrench className="w-4.5 h-4.5 text-teal-600" />
+                                            <Wrench className="w-4.5 h-4.5 text-slate-500 dark:text-zinc-400" />
                                             <span>Request #{formatRequestNumber(selectedMaintenance.id, selectedMaintenance.request_number)} Details</span>
                                         </h2>
                                         <button onClick={() => setSelectedMaintenance(null)} className="p-1 rounded-lg hover:bg-slate-200 dark:hover:bg-zinc-800 text-slate-500">
@@ -521,10 +521,10 @@ export default function TenantRooms() {
                 <div>
                     <div className="flex items-center gap-2.5">
                         <h1 className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white tracking-tight flex items-center gap-2.5">
-                            <DoorOpen className="w-6 h-6 text-teal-600 shrink-0" />
+                            <DoorOpen className="w-6 h-6 text-slate-900 dark:text-white shrink-0" />
                             <span>Available Rooms & Bedspaces</span>
                         </h1>
-                        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-mono font-bold bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-200/60 dark:border-indigo-500/20">
+                        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-mono font-bold bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-zinc-200 border border-zinc-200 dark:border-zinc-700/60">
                             <span>{rooms.length} Units Listed</span>
                         </span>
                     </div>
@@ -543,8 +543,8 @@ export default function TenantRooms() {
                             onClick={() => setTypeFilter(t)}
                             className={`px-3.5 py-2 rounded-lg text-xs sm:text-sm font-semibold transition-all ${
                                 typeFilter === t
-                                    ? 'bg-teal-600 text-white font-bold shadow-xs'
-                                    : 'bg-slate-100 dark:bg-zinc-800/60 text-slate-600 dark:text-zinc-400 hover:bg-slate-200 dark:hover:bg-zinc-700'
+                                    ? 'bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-950 font-bold shadow-xs'
+                                    : 'bg-slate-100 dark:bg-zinc-800/60 text-slate-600 dark:text-zinc-400 hover:bg-slate-200 dark:hover:bg-zinc-750'
                             }`}
                         >
                             {t}
@@ -559,7 +559,7 @@ export default function TenantRooms() {
                         placeholder="Search room # or floor..."
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
-                        className="w-full py-2 pl-9 pr-3 text-sm rounded-lg bg-slate-50 dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 text-slate-900 dark:text-white outline-none focus:border-teal-500"
+                        className="w-full py-2 pl-9 pr-3 text-sm rounded-lg bg-slate-50 dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 text-slate-900 dark:text-white outline-none focus:border-zinc-400 dark:focus:border-zinc-600"
                     />
                 </div>
             </div>
@@ -573,7 +573,7 @@ export default function TenantRooms() {
                         return (
                             <div 
                                 key={room.id}
-                                className={`rounded-xl bg-card border border-slate-200 dark:border-zinc-800 p-4 sm:p-5 shadow-xs flex flex-col justify-between hover:border-teal-500 transition-all ${
+                                className={`rounded-xl bg-card border border-slate-200 dark:border-zinc-800 p-4 sm:p-5 shadow-xs flex flex-col justify-between hover:border-zinc-400 dark:hover:border-zinc-700 transition-all ${
                                     isFull ? 'opacity-60' : ''
                                 }`}
                             >
@@ -585,7 +585,7 @@ export default function TenantRooms() {
                                         </div>
                                         <span className={`px-2.5 py-1 rounded text-xs font-mono font-bold uppercase ${
                                             isFull ? 'bg-rose-50 text-rose-600 dark:bg-rose-500/10' :
-                                            'bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10'
+                                            'bg-zinc-100 text-zinc-900 dark:bg-zinc-800 dark:text-zinc-200'
                                         }`}>
                                             {isFull ? 'Unavailable' : `${room.available_slots || (room.capacity - room.current_occupants)} Bed(s) Free`}
                                         </span>
@@ -594,7 +594,7 @@ export default function TenantRooms() {
                                     <div className="grid grid-cols-2 gap-2 my-3.5 py-3 border-y border-slate-100 dark:border-zinc-800/80 text-xs sm:text-sm">
                                         <div>
                                             <span className="text-xs text-slate-400 font-semibold block">Monthly Rent</span>
-                                            <span className="font-extrabold font-mono text-emerald-600 dark:text-emerald-400 text-base">₱{Number(room.price).toLocaleString()}</span>
+                                            <span className="font-extrabold font-mono text-slate-900 dark:text-white text-base">₱{Number(room.price).toLocaleString()}</span>
                                         </div>
                                         <div>
                                             <span className="text-xs text-slate-400 font-semibold block">Capacity</span>
@@ -608,8 +608,8 @@ export default function TenantRooms() {
                                     onClick={() => setSelectedRoom(room)}
                                     className={`w-full py-2.5 rounded-lg text-sm font-bold transition-all flex items-center justify-center gap-2 ${
                                         isFull
-                                            ? 'bg-slate-100 dark:bg-zinc-800 text-slate-400 cursor-not-allowed'
-                                            : 'bg-teal-600 hover:bg-teal-700 text-white shadow-xs'
+                                            ? 'bg-slate-100 dark:bg-zinc-800 text-slate-400 dark:text-zinc-600 cursor-not-allowed'
+                                            : 'bg-zinc-900 hover:bg-zinc-800 dark:bg-zinc-100 dark:hover:bg-zinc-200 text-white dark:text-zinc-950 shadow-xs'
                                     }`}
                                 >
                                     <span>{isFull ? 'Suite Full' : 'Select Suite'}</span>
@@ -638,7 +638,7 @@ export default function TenantRooms() {
                             <div className="w-full max-w-md bg-card rounded-2xl shadow-xl border border-slate-200 dark:border-zinc-800 overflow-hidden pointer-events-auto flex flex-col">
                                 <div className="p-4 border-b border-slate-100 dark:border-zinc-800 flex justify-between items-center bg-slate-50/50 dark:bg-zinc-900/40">
                                     <h2 className="text-base font-extrabold text-slate-900 dark:text-white flex items-center gap-2">
-                                        <Building2 className="w-4.5 h-4.5 text-teal-600" />
+                                        <Building2 className="w-4.5 h-4.5 text-slate-500 dark:text-zinc-400" />
                                         <span>Confirm Room Assignment</span>
                                     </h2>
                                     <button onClick={() => !isSubmitting && setSelectedRoom(null)} className="p-1 rounded-lg hover:bg-slate-200 dark:hover:bg-zinc-800 text-slate-500">
@@ -655,14 +655,14 @@ export default function TenantRooms() {
                                         You are about to select <strong className="text-slate-900 dark:text-white">Room {selectedRoom.room_number}</strong>. You will be assigned to this suite and your resident profile will be activated.
                                     </p>
                                     <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-zinc-900/50 border border-slate-100 dark:border-zinc-800 space-y-2 text-xs sm:text-sm">
-                                        <div className="flex justify-between"><span className="text-slate-400 font-semibold">Classification:</span><span className="font-bold">{selectedRoom.type}</span></div>
-                                        <div className="flex justify-between"><span className="text-slate-400 font-semibold">Monthly Rate:</span><span className="font-bold font-mono text-emerald-600">₱{Number(selectedRoom.price).toLocaleString()} / mo</span></div>
-                                        <div className="flex justify-between"><span className="text-slate-400 font-semibold">Suite Capacity:</span><span className="font-bold font-mono">{selectedRoom.capacity} Beds</span></div>
+                                        <div className="flex justify-between"><span className="text-slate-400 font-semibold">Classification:</span><span className="font-bold text-slate-900 dark:text-white">{selectedRoom.type}</span></div>
+                                        <div className="flex justify-between"><span className="text-slate-400 font-semibold">Monthly Rate:</span><span className="font-bold font-mono text-slate-900 dark:text-white">₱{Number(selectedRoom.price).toLocaleString()} / mo</span></div>
+                                        <div className="flex justify-between"><span className="text-slate-400 font-semibold">Suite Capacity:</span><span className="font-bold font-mono text-slate-900 dark:text-white">{selectedRoom.capacity} Beds</span></div>
                                     </div>
                                     <button
                                         onClick={handleChooseRoom}
                                         disabled={isSubmitting}
-                                        className="w-full py-3 rounded-lg text-sm font-bold bg-teal-600 hover:bg-teal-700 text-white transition-all shadow-xs disabled:opacity-50"
+                                        className="w-full py-3 rounded-lg text-sm font-bold bg-zinc-900 hover:bg-zinc-800 dark:bg-zinc-100 dark:hover:bg-zinc-200 text-white dark:text-zinc-950 transition-all shadow-xs disabled:opacity-50"
                                     >
                                         {isSubmitting ? 'Confirming Suite...' : 'Confirm Suite Assignment'}
                                     </button>

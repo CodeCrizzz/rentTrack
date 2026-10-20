@@ -2,7 +2,7 @@
 import { useState, useEffect, useMemo, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import api from '@/lib/api';
-import { motion, AnimatePresence, type Variants } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
 import {
     Users,
@@ -12,8 +12,6 @@ import {
     Search,
     Building2,
     DoorOpen,
-    List,
-    LayoutGrid,
     Phone,
     Mail,
     Calendar,
@@ -61,11 +59,6 @@ interface Room {
     capacity: number;
 }
 
-const cardVariants: Variants = {
-    hidden: { opacity: 0, y: 10 },
-    show: { opacity: 1, y: 0, transition: { duration: 0.25, ease: "easeOut" } }
-};
-
 function TenantsContent() {
     const searchParams = useSearchParams();
     const [tenants, setTenants] = useState<Tenant[]>([]);
@@ -73,10 +66,9 @@ function TenantsContent() {
     const [isLoading, setIsLoading] = useState(true);
     const [activeTab, setActiveTab] = useState<'directory' | 'approvals'>('directory');
     const [searchQuery, setSearchQuery] = useState('');
-    const [statusFilter, setStatusFilter] = useState<'All' | 'Active' | 'Overdue' | 'Moved Out'>('All');
+    const [statusFilter, setStatusFilter] = useState<'All' | 'Active' | 'Overdue' | 'Departed'>('All');
     const [roomFilter, setRoomFilter] = useState('All Rooms');
     const [sortFilter, setSortFilter] = useState('Newest First');
-    const [viewMode, setViewMode] = useState<'table' | 'cards'>('table');
     const [error, setError] = useState('');
 
     // Handle URL search parameters from Action Center
@@ -287,7 +279,7 @@ function TenantsContent() {
 
                 // Status Category Filter
                 if (statusFilter === 'Active' && t.status !== 'Active') return false;
-                if (statusFilter === 'Moved Out' && t.status !== 'Moved Out') return false;
+                if ((statusFilter === 'Departed' || (statusFilter as string) === 'Moved Out') && t.status !== 'Moved Out') return false;
                 if (statusFilter === 'Overdue') {
                     if (t.payment_status !== 'Overdue' && (Number(t.balance) || 0) <= 0) return false;
                 }
@@ -438,16 +430,13 @@ function TenantsContent() {
                 </div>
 
                 {/* Status Tabs & Search Strip */}
-                <div className="shrink-0 bg-card border border-slate-200 dark:border-zinc-800 rounded-xl p-2 shadow-xs space-y-1.5">
-                    <div className="flex items-center gap-1.5 overflow-x-auto pb-0.5">
-                        {[...Array(4)].map((_, i) => (
-                            <div key={i} className="h-8 w-24 bg-slate-100 dark:bg-zinc-800 rounded-lg"></div>
-                        ))}
-                    </div>
-                    <div className="flex flex-wrap items-center gap-2 pt-1.5 border-t border-slate-100 dark:border-zinc-800/80">
-                        <div className="h-8.5 w-64 sm:w-72 bg-slate-100 dark:bg-zinc-800 rounded-lg"></div>
+                <div className="shrink-0 bg-card border border-slate-200 dark:border-zinc-800 rounded-xl p-2 shadow-xs flex flex-wrap items-center justify-between gap-2">
+                    <div className="flex flex-wrap items-center gap-2">
+                        <div className="h-8.5 w-60 bg-slate-100 dark:bg-zinc-800 rounded-lg"></div>
+                        <div className="h-8.5 w-56 sm:w-64 bg-slate-100 dark:bg-zinc-800 rounded-lg"></div>
                         <div className="h-8.5 w-32 sm:w-36 bg-slate-100 dark:bg-zinc-800 rounded-lg"></div>
                         <div className="h-8.5 w-36 sm:w-40 bg-slate-100 dark:bg-zinc-800 rounded-lg"></div>
+                        <div className="h-8.5 w-32 sm:w-36 bg-slate-100 dark:bg-zinc-800 rounded-lg"></div>
                     </div>
                 </div>
 
@@ -525,28 +514,6 @@ function TenantsContent() {
                             : 'Resident registry, bedspace allocations, onboarding review, and rent ledger balances.'}
                     </p>
                 </div>
-
-                <div className="flex items-center gap-2">
-                    {/* View Switcher */}
-                    <div className="flex items-center bg-slate-100 dark:bg-zinc-800/90 p-0.5 rounded-lg border border-slate-300 dark:border-zinc-700 text-xs font-semibold">
-                        <button
-                            onClick={() => setViewMode('table')}
-                            className={`px-3 py-1.5 rounded-md transition-all flex items-center gap-1.5 ${viewMode === 'table' ? 'bg-white dark:bg-zinc-900 text-slate-950 dark:text-white shadow-2xs font-extrabold' : 'text-slate-700 dark:text-zinc-300 hover:text-slate-950 dark:hover:text-white font-bold'}`}
-                            title="Table ledger view"
-                        >
-                            <List className="w-3.5 h-3.5" />
-                            <span>Table</span>
-                        </button>
-                        <button
-                            onClick={() => setViewMode('cards')}
-                            className={`px-3 py-1.5 rounded-md transition-all flex items-center gap-1.5 ${viewMode === 'cards' ? 'bg-white dark:bg-zinc-900 text-slate-950 dark:text-white shadow-2xs font-extrabold' : 'text-slate-700 dark:text-zinc-300 hover:text-slate-950 dark:hover:text-white font-bold'}`}
-                            title="Resident cards view"
-                        >
-                            <LayoutGrid className="w-3.5 h-3.5" />
-                            <span>Cards</span>
-                        </button>
-                    </div>
-                </div>
             </div>
 
             {/* 2. Executive Metric Ribbon (4 Tiles) */}
@@ -619,11 +586,10 @@ function TenantsContent() {
             </div>
 
             {/* 3. Primary Tab Switcher & Filters */}
-            <div className="shrink-0 bg-card border border-slate-200 dark:border-zinc-800 rounded-xl p-2 shadow-xs space-y-1.5">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                    
+            <div className="shrink-0 bg-card border border-slate-200 dark:border-zinc-800 rounded-xl p-2 shadow-xs flex flex-wrap items-center justify-between gap-2">
+                <div className="flex flex-wrap items-center gap-2">
                     {/* Primary Tab Navigation: Resident Directory vs Account Approvals */}
-                    <div className="flex items-center bg-slate-100 dark:bg-zinc-800/90 p-0.5 rounded-lg border border-slate-300 dark:border-zinc-700 text-xs font-semibold">
+                    <div className="flex items-center bg-slate-100 dark:bg-zinc-800/90 p-0.5 rounded-lg border border-slate-300 dark:border-zinc-700 text-xs font-semibold shrink-0">
                         <button
                             onClick={() => setActiveTab('directory')}
                             className={`px-3 py-1.5 rounded-md transition-all flex items-center gap-1.5 ${
@@ -660,74 +626,8 @@ function TenantsContent() {
                         </button>
                     </div>
 
-                    {/* Sub-Filters: Directory Status Pills */}
-                    {activeTab === 'directory' ? (
-                        <div className="flex items-center gap-1 overflow-x-auto pb-0.5 sm:pb-0 text-xs font-semibold custom-scrollbar">
-                            <button
-                                onClick={() => setStatusFilter('All')}
-                                className={`px-2.5 py-1 rounded-lg transition-all shrink-0 flex items-center gap-1.5 border ${
-                                    statusFilter === 'All' 
-                                        ? 'bg-slate-950 text-white border-slate-950 dark:bg-white dark:text-zinc-900 dark:border-white shadow-2xs font-extrabold' 
-                                        : 'bg-slate-100 dark:bg-zinc-800/90 border-slate-300 dark:border-zinc-700 text-slate-800 dark:text-zinc-200 hover:bg-slate-200 dark:hover:bg-zinc-700 hover:text-slate-950 dark:hover:text-white font-bold'
-                                }`}
-                            >
-                                <span>All</span>
-                                <span className={`px-1.5 py-0.2 rounded text-[10px] font-mono font-bold ${statusFilter === 'All' ? 'bg-white/20 text-white dark:bg-black/20 dark:text-zinc-900' : 'bg-slate-200 dark:bg-zinc-700 text-slate-900 dark:text-zinc-100'}`}>
-                                    {metrics.total}
-                                </span>
-                            </button>
-                            <button
-                                onClick={() => setStatusFilter('Active')}
-                                className={`px-2.5 py-1 rounded-lg transition-all shrink-0 flex items-center gap-1.5 border ${
-                                    statusFilter === 'Active' 
-                                        ? 'bg-emerald-700 text-white border-emerald-700 dark:bg-emerald-500 dark:text-zinc-950 dark:border-emerald-500 shadow-2xs font-extrabold' 
-                                        : 'bg-slate-100 dark:bg-zinc-800/90 border-slate-300 dark:border-zinc-700 text-slate-800 dark:text-zinc-200 hover:bg-slate-200 dark:hover:bg-zinc-700 hover:text-slate-950 dark:hover:text-white font-bold'
-                                }`}
-                            >
-                                <span>Active</span>
-                                <span className={`px-1.5 py-0.2 rounded text-[10px] font-mono font-bold ${statusFilter === 'Active' ? 'bg-white/20 text-white dark:bg-black/20 dark:text-zinc-950' : 'bg-slate-200 dark:bg-zinc-700 text-slate-900 dark:text-zinc-100'}`}>
-                                    {metrics.activeCount}
-                                </span>
-                            </button>
-                            <button
-                                onClick={() => setStatusFilter('Overdue')}
-                                className={`px-2.5 py-1 rounded-lg transition-all shrink-0 flex items-center gap-1.5 border ${
-                                    statusFilter === 'Overdue' 
-                                        ? 'bg-rose-700 text-white border-rose-700 dark:bg-rose-500 dark:text-zinc-950 dark:border-rose-500 shadow-2xs font-extrabold' 
-                                        : 'bg-slate-100 dark:bg-zinc-800/90 border-slate-300 dark:border-zinc-700 text-slate-800 dark:text-zinc-200 hover:bg-slate-200 dark:hover:bg-zinc-700 hover:text-slate-950 dark:hover:text-white font-bold'
-                                }`}
-                            >
-                                <span>Overdue</span>
-                                <span className={`px-1.5 py-0.2 rounded text-[10px] font-mono font-bold ${statusFilter === 'Overdue' ? 'bg-white/20 text-white dark:bg-black/20 dark:text-zinc-950' : 'bg-slate-200 dark:bg-zinc-700 text-slate-900 dark:text-zinc-100'}`}>
-                                    {metrics.overdueCount}
-                                </span>
-                            </button>
-                            <button
-                                onClick={() => setStatusFilter('Moved Out')}
-                                className={`px-2.5 py-1 rounded-lg transition-all shrink-0 flex items-center gap-1.5 border ${
-                                    statusFilter === 'Moved Out' 
-                                        ? 'bg-slate-900 text-white border-slate-900 dark:bg-zinc-200 dark:text-zinc-950 dark:border-zinc-200 shadow-2xs font-extrabold' 
-                                        : 'bg-slate-100 dark:bg-zinc-800/90 border-slate-300 dark:border-zinc-700 text-slate-800 dark:text-zinc-200 hover:bg-slate-200 dark:hover:bg-zinc-700 hover:text-slate-950 dark:hover:text-white font-bold'
-                                }`}
-                            >
-                                <span>Departed</span>
-                                <span className={`px-1.5 py-0.2 rounded text-[10px] font-mono font-bold ${statusFilter === 'Moved Out' ? 'bg-white/20 text-white dark:bg-black/20 dark:text-zinc-950' : 'bg-slate-200 dark:bg-zinc-700 text-slate-900 dark:text-zinc-100'}`}>
-                                    {metrics.movedOutCount}
-                                </span>
-                            </button>
-                        </div>
-                    ) : (
-                        <div className="text-xs text-amber-800 dark:text-amber-300 font-bold flex items-center gap-1.5">
-                            <Clock className="w-3.5 h-3.5 stroke-[2.5]" />
-                            <span>{filteredTenants.length} applicant{filteredTenants.length === 1 ? '' : 's'} awaiting admin verification</span>
-                        </div>
-                    )}
-                </div>
-
-                {/* Secondary Search & Dropdown Filters */}
-                <div className="flex flex-wrap items-center gap-2 pt-1.5 border-t border-slate-200 dark:border-zinc-800">
                     {/* Compact Search Input */}
-                    <div className="relative w-64 sm:w-72 shrink-0">
+                    <div className="relative w-56 sm:w-64 shrink-0">
                         <Search className="w-3.5 h-3.5 text-slate-500 dark:text-zinc-400 absolute left-3 top-1/2 -translate-y-1/2" />
                         <input
                             type="text"
@@ -770,12 +670,34 @@ function TenantsContent() {
                             className="w-full px-2.5 py-1.5 text-sm font-bold rounded-lg border border-slate-300 dark:border-zinc-700 bg-slate-50/70 dark:bg-zinc-900/60 text-slate-900 dark:text-zinc-100 outline-none focus:ring-2 focus:ring-slate-400/30 dark:focus:ring-zinc-600/40"
                         />
                     </div>
+
+                    {/* Status Filter Dropdown (after Newest First sort dropdown) */}
+                    {activeTab === 'directory' && (
+                        <div className="w-32 sm:w-36 shrink-0">
+                            <CustomSelect
+                                value={statusFilter}
+                                onChange={(val) => setStatusFilter(val as any)}
+                                options={["All", "Active", "Overdue", "Departed"]}
+                                className="w-full px-2.5 py-1.5 text-sm font-bold rounded-lg border border-slate-300 dark:border-zinc-700 bg-slate-50/70 dark:bg-zinc-900/60 text-slate-900 dark:text-zinc-100 outline-none focus:ring-2 focus:ring-slate-400/30 dark:focus:ring-zinc-600/40"
+                            />
+                        </div>
+                    )}
                 </div>
+
+                {activeTab === 'approvals' ? (
+                    <div className="text-xs text-amber-800 dark:text-amber-300 font-bold flex items-center gap-1.5 ml-auto sm:ml-0">
+                        <Clock className="w-3.5 h-3.5 stroke-[2.5]" />
+                        <span>{filteredTenants.length} applicant{filteredTenants.length === 1 ? '' : 's'} awaiting admin verification</span>
+                    </div>
+                ) : (
+                    <span className="text-[11px] text-slate-500 dark:text-zinc-400 font-semibold shrink-0 ml-auto sm:ml-0">
+                        {filteredTenants.length} of {metrics.total} residents
+                    </span>
+                )}
             </div>
 
-            {/* 4. Main Inventory Data: Operations Table or Directory Cards */}
-            {viewMode === 'table' ? (
-                <div className="flex-1 min-h-0 max-h-[610px] bg-card border border-slate-200 dark:border-zinc-800 rounded-xl shadow-xs flex flex-col overflow-hidden relative">
+            {/* 4. Main Inventory Data: Operations Table */}
+            <div className="flex-1 min-h-0 max-h-[610px] bg-card border border-slate-200 dark:border-zinc-800 rounded-xl shadow-xs flex flex-col overflow-hidden relative">
                     {/* Header filler to extend label header width and align scrollbar with 1st data row */}
                     <div className="absolute top-0 right-0 w-6 h-[46px] bg-slate-100 dark:bg-zinc-900 border-b border-slate-200 dark:border-zinc-800 z-30 pointer-events-none rounded-tr-xl" />
 
@@ -1041,211 +963,6 @@ function TenantsContent() {
                         </table>
                     </div>
                 </div>
-            ) : (
-                /* Directory Cards (Grid View) */
-                <div className="flex-1 min-h-0 overflow-y-auto custom-scrollbar pr-0.5">
-                    {filteredTenants.length === 0 ? (
-                        <div className="bg-card border border-slate-200/90 dark:border-zinc-800/90 rounded-lg p-12 text-center">
-                            {activeTab === 'approvals' ? (
-                                <>
-                                    <CheckCircle2 className="w-8 h-8 text-emerald-500/80 mx-auto mb-2" />
-                                    <p className="text-xs font-semibold text-slate-700 dark:text-zinc-300">
-                                        No pending account approvals
-                                    </p>
-                                    <p className="text-xs font-medium text-slate-700 dark:text-zinc-300 mt-0.5">
-                                        All resident account applications have been processed and reviewed.
-                                    </p>
-                                </>
-                            ) : (
-                                <>
-                                    <Users className="w-8 h-8 text-slate-400 dark:text-zinc-600 mx-auto mb-2" />
-                                    <p className="text-sm font-extrabold text-slate-900 dark:text-white">
-                                        No residents found
-                                    </p>
-                                    <p className="text-xs font-medium text-slate-700 dark:text-zinc-300 mt-0.5">
-                                        Try adjusting your filter category or search keywords.
-                                    </p>
-                                </>
-                            )}
-                        </div>
-                    ) : (
-                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2.5">
-                            {filteredTenants.map((tenant) => {
-                                const badge = getStatusBadge(tenant.status);
-                                const hasOverdue = (Number(tenant.balance) || 0) > 0;
-
-                                if (activeTab === 'approvals') {
-                                    return (
-                                        <motion.div
-                                            key={tenant.id}
-                                            variants={cardVariants}
-                                            initial="hidden"
-                                            animate="show"
-                                            className="bg-card border border-amber-300/80 dark:border-amber-700/60 rounded-xl p-3 shadow-xs hover:border-amber-400 dark:hover:border-amber-500 transition-all flex flex-col justify-between space-y-3"
-                                        >
-                                            <div>
-                                                {/* Top Bar: Applied date & Status */}
-                                                <div className="flex items-center justify-between pb-1.5 border-b border-slate-200 dark:border-zinc-800">
-                                                    <span className="text-xs font-mono font-bold text-slate-700 dark:text-zinc-300">
-                                                        Applied {tenant.created_at ? new Date(tenant.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '—'}
-                                                    </span>
-                                                    <span className={`text-sm ${badge.className}`}>
-                                                        {badge.label}
-                                                    </span>
-                                                </div>
-
-                                                {/* Applicant Identity */}
-                                                <div className="flex items-center gap-2.5 mt-2.5">
-                                                    <div className="w-9 h-9 rounded-full bg-amber-100 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 font-extrabold flex items-center justify-center shrink-0 border border-amber-300 dark:border-amber-700 text-sm">
-                                                        {tenant.name.charAt(0).toUpperCase()}
-                                                    </div>
-                                                    <div className="min-w-0">
-                                                        <span className="font-extrabold text-base text-slate-950 dark:text-white truncate block">
-                                                            {tenant.name}
-                                                        </span>
-                                                        <span className="text-sm font-medium text-slate-700 dark:text-zinc-300 truncate block mt-0.5">
-                                                            {tenant.email}
-                                                        </span>
-                                                    </div>
-                                                </div>
-
-                                                {/* Applicant Info Box */}
-                                                <div className="mt-3 p-2.5 rounded-lg bg-amber-50/50 dark:bg-amber-950/20 border border-amber-200/80 dark:border-amber-900/50 space-y-2">
-                                                    <div className="flex justify-between items-center">
-                                                        <span className="text-xs font-bold text-slate-700 dark:text-zinc-300 uppercase tracking-wide">Phone</span>
-                                                        <span className="font-mono font-bold text-slate-950 dark:text-zinc-100 text-sm">
-                                                            {tenant.phone || '—'}
-                                                        </span>
-                                                    </div>
-                                                    <div className="flex justify-between items-center">
-                                                        <span className="text-xs font-bold text-slate-700 dark:text-zinc-300 uppercase tracking-wide">Gender</span>
-                                                        <span className="text-slate-900 dark:text-zinc-100 font-medium text-sm">
-                                                            {tenant.gender || 'Unspecified'}
-                                                        </span>
-                                                    </div>
-                                                    <div className="flex justify-between items-center">
-                                                        <span className="text-xs font-bold text-slate-700 dark:text-zinc-300 uppercase tracking-wide">Address</span>
-                                                        <span className="text-slate-900 dark:text-zinc-100 font-medium text-sm truncate max-w-[170px]" title={tenant.address}>
-                                                            {tenant.address || '—'}
-                                                        </span>
-                                                    </div>
-                                                </div>
-                                            </div>
-
-                                            {/* Card Footer Actions */}
-                                            <div className="pt-2 border-t border-slate-200 dark:border-zinc-800 flex items-center gap-1.5">
-                                                <button
-                                                    onClick={() => handleUpdateStatusClick(tenant, 'Approve')}
-                                                    disabled={isStatusUpdating === tenant.id}
-                                                    className="flex-1 py-1.5 text-sm font-bold rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white transition-colors flex items-center justify-center gap-1 shadow-2xs cursor-pointer"
-                                                >
-                                                    <Check className="w-4 h-4 stroke-[2.5]" />
-                                                    <span>Approve</span>
-                                                </button>
-                                                <button
-                                                    onClick={() => handleUpdateStatusClick(tenant, 'Reject')}
-                                                    disabled={isStatusUpdating === tenant.id}
-                                                    className="px-3 py-1.5 text-sm font-bold rounded-lg border border-slate-300 dark:border-zinc-700 hover:bg-slate-100 dark:hover:bg-zinc-800 text-slate-800 dark:text-zinc-200 transition-colors cursor-pointer"
-                                                >
-                                                    Decline
-                                                </button>
-                                                <button
-                                                    onClick={() => handleViewTenant(tenant)}
-                                                    className="p-2 rounded-lg border border-slate-300 dark:border-zinc-700 hover:bg-slate-100 dark:hover:bg-zinc-800 text-slate-700 dark:text-zinc-300 transition-colors cursor-pointer"
-                                                    title="Inspect applicant details"
-                                                >
-                                                    <Eye className="w-4 h-4" />
-                                                </button>
-                                            </div>
-                                        </motion.div>
-                                    );
-                                }
-
-                                return (
-                                    <motion.div
-                                        key={tenant.id}
-                                        variants={cardVariants}
-                                        initial="hidden"
-                                        animate="show"
-                                        className="bg-card border border-slate-300/80 dark:border-zinc-700/80 rounded-xl p-3 shadow-xs hover:border-slate-400 dark:hover:border-zinc-600 transition-all flex flex-col justify-between space-y-3"
-                                    >
-                                        <div>
-                                            {/* Top Bar: Status */}
-                                            <div className="flex items-center justify-end pb-1.5 border-b border-slate-200 dark:border-zinc-800">
-                                                <span className={`text-sm ${badge.className}`}>
-                                                    {badge.label}
-                                                </span>
-                                            </div>
-
-                                            {/* Resident Identity */}
-                                            <div className="flex items-center gap-2.5 mt-2.5">
-                                                <div className="w-9 h-9 rounded-full bg-slate-200 dark:bg-zinc-800 text-slate-900 dark:text-zinc-100 font-extrabold flex items-center justify-center shrink-0 border border-slate-300 dark:border-zinc-700 text-sm">
-                                                    {tenant.name.charAt(0).toUpperCase()}
-                                                </div>
-                                                <div className="min-w-0">
-                                                    <span className="font-extrabold text-base text-slate-950 dark:text-white truncate block">
-                                                        {tenant.name}
-                                                    </span>
-                                                    <span className="text-sm font-medium text-slate-700 dark:text-zinc-300 truncate block mt-0.5">
-                                                        {tenant.email}
-                                                    </span>
-                                                </div>
-                                            </div>
-
-                                            {/* Placement & Financial Info */}
-                                            <div className="mt-3 p-2.5 rounded-lg bg-slate-50 dark:bg-zinc-900/60 border border-slate-200 dark:border-zinc-800 space-y-2">
-                                                <div className="flex justify-between items-center">
-                                                    <span className="text-xs font-bold text-slate-700 dark:text-zinc-300 uppercase tracking-wide">Room</span>
-                                                    <span className="font-extrabold text-sm text-slate-950 dark:text-white">
-                                                        {tenant.room_number ? `Room ${tenant.room_number}` : 'Unassigned'}
-                                                        {tenant.bed_space && tenant.bed_space !== 'N/A' && ` • ${tenant.bed_space}`}
-                                                    </span>
-                                                </div>
-                                                <div className="flex justify-between items-center">
-                                                    <span className="text-xs font-bold text-slate-700 dark:text-zinc-300 uppercase tracking-wide">Rent</span>
-                                                    <span className="font-mono font-black text-sm text-slate-950 dark:text-white">
-                                                        ₱{Number(tenant.monthly_rent || 0).toLocaleString()}
-                                                    </span>
-                                                </div>
-                                                <div className="flex justify-between items-center">
-                                                    <span className="text-xs font-bold text-slate-700 dark:text-zinc-300 uppercase tracking-wide">Balance</span>
-                                                    {hasOverdue ? (
-                                                        <span className="font-mono font-bold text-rose-700 dark:text-rose-400 text-sm">
-                                                            ₱{Number(tenant.balance).toLocaleString()} due
-                                                        </span>
-                                                    ) : (
-                                                        <span className="text-emerald-700 dark:text-emerald-400 font-bold font-mono text-sm">
-                                                            Settled
-                                                        </span>
-                                                    )}
-                                                </div>
-                                            </div>
-                                        </div>
-
-                                        {/* Card Footer Actions */}
-                                        <div className="pt-2 border-t border-slate-200 dark:border-zinc-800 flex items-center gap-1.5">
-                                            <button
-                                                onClick={() => handleViewTenant(tenant)}
-                                                className="flex-1 py-1.5 text-sm font-bold rounded-lg border border-slate-300 dark:border-zinc-700 bg-card hover:bg-slate-100 dark:hover:bg-zinc-800 text-slate-900 dark:text-zinc-100 transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
-                                            >
-                                                <Eye className="w-4 h-4 text-slate-700 dark:text-zinc-300" />
-                                                <span>View Details</span>
-                                            </button>
-                                            <button
-                                                onClick={() => handleOpenModal(tenant, 'edit')}
-                                                className="px-3 py-1.5 text-sm font-bold rounded-lg border border-slate-300 dark:border-zinc-700 hover:bg-slate-100 dark:hover:bg-zinc-800 text-slate-900 dark:text-zinc-100 transition-colors flex items-center gap-1.5 cursor-pointer"
-                                            >
-                                                <Edit className="w-4 h-4 text-slate-700 dark:text-zinc-300" />
-                                                <span>Edit</span>
-                                            </button>
-                                        </div>
-                                    </motion.div>
-                                );
-                            })}
-                        </div>
-                    )}
-                </div>
-            )}
 
             {/* 5. RESIDENT DETAIL MODAL (Clean, High-Contrast Executive Drawer) */}
             <AnimatePresence>

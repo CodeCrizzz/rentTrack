@@ -28,9 +28,26 @@ const registerUser = async (req, res) => {
             [name, email, hashedPassword, roleToSet, phone || null, gender || 'Not Specified', address || null, statusToSet]
         );
 
+        const registeredUser = newUser.rows[0];
+
+        // If a new tenant submitted an account for approval, notify admin only if admin is offline
+        if (roleToSet === 'tenant' && statusToSet === 'Pending') {
+            try {
+                const adminNotificationService = require('../services/adminNotificationService');
+                adminNotificationService.notifyAdminsIfOffline({
+                    title: 'Account Approval Request',
+                    message: `Tenant ${name} submitted an account registration and is waiting for your approval.`,
+                    type: 'account_approval',
+                    link: '/admin/tenants'
+                });
+            } catch (notifErr) {
+                console.error('Error queuing offline registration notification:', notifErr.message);
+            }
+        }
+
         res.status(201).json({
             message: 'User registered successfully',
-            user: newUser.rows[0]
+            user: registeredUser
         });
     } catch (error) {
         console.error('Registration Error:', error);
