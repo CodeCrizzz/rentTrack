@@ -21,6 +21,12 @@ const initDb = async () => {
 
         await db.query(createNotificationsTable);
 
+        // Ensure notifications table has link column for routing admin/tenant notifications
+        await db.query(`
+            ALTER TABLE "rentTrack_schema".notifications 
+            ADD COLUMN IF NOT EXISTS link VARCHAR(255);
+        `);
+
         // Ensure payments table has reference_number column
         await db.query(`
             ALTER TABLE "rentTrack_schema".payments 
