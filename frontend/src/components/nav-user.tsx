@@ -66,9 +66,9 @@ export function NavUser({
           type="button"
           onClick={onLogout}
           title="Log out"
-          className="flex items-center justify-center gap-1 py-1.5 px-1.5 rounded-lg text-[11px] font-semibold text-rose-600 dark:text-rose-400 bg-rose-50/80 hover:bg-rose-100 dark:bg-rose-500/10 dark:hover:bg-rose-500/20 border border-rose-200/70 dark:border-rose-500/20 transition-all duration-200 cursor-pointer shadow-xs active:scale-95 group-data-[collapsible=icon]:size-8 group-data-[collapsible=icon]:p-0 group-data-[collapsible=icon]:justify-center"
+          className="flex items-center justify-center gap-1.5 py-1.5 px-2 rounded-lg text-xs font-bold text-white bg-red-800 hover:bg-red-900 dark:bg-red-800/90 dark:hover:bg-red-700 border border-red-900/80 dark:border-red-700 transition-all duration-200 cursor-pointer shadow-xs active:scale-95 group-data-[collapsible=icon]:size-8 group-data-[collapsible=icon]:p-0 group-data-[collapsible=icon]:justify-center"
         >
-          <LogOut className="h-3.5 w-3.5 shrink-0" />
+          <LogOut className="h-3.5 w-3.5 shrink-0 text-white stroke-[2.5]" />
           <span className="truncate group-data-[collapsible=icon]:hidden">Log out</span>
         </button>
 
