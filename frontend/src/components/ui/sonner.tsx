@@ -2,7 +2,7 @@
 
 import { useTheme } from "next-themes"
 import { Toaster as Sonner, type ToasterProps } from "sonner"
-import { CircleCheckIcon, InfoIcon, TriangleAlertIcon, OctagonXIcon, Loader2Icon } from "lucide-react"
+import { Check, X, AlertTriangle, Info, Loader2 } from "lucide-react"
 
 const Toaster = ({ ...props }: ToasterProps) => {
   const { theme = "system" } = useTheme()
@@ -12,35 +12,52 @@ const Toaster = ({ ...props }: ToasterProps) => {
       theme={theme as ToasterProps["theme"]}
       className="toaster group"
       position="bottom-right"
-      richColors
       closeButton
-      duration={4000}
-      visibleToasts={4}
+      duration={3500}
+      visibleToasts={3}
       icons={{
         success: (
-          <CircleCheckIcon className="size-4.5 text-emerald-400 shrink-0" />
-        ),
-        info: (
-          <InfoIcon className="size-4.5 text-cyan-400 shrink-0" />
-        ),
-        warning: (
-          <TriangleAlertIcon className="size-4.5 text-amber-400 shrink-0" />
+          <span className="flex size-6 shrink-0 items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-600 ring-1 ring-emerald-500/20 dark:bg-emerald-500/15 dark:text-emerald-400 dark:ring-emerald-500/30">
+            <Check className="size-3.5 stroke-[2.5]" />
+          </span>
         ),
         error: (
-          <OctagonXIcon className="size-4.5 text-rose-400 shrink-0" />
+          <span className="flex size-6 shrink-0 items-center justify-center rounded-lg bg-rose-500/10 text-rose-600 ring-1 ring-rose-500/20 dark:bg-rose-500/15 dark:text-rose-400 dark:ring-rose-500/30">
+            <X className="size-3.5 stroke-[2.5]" />
+          </span>
+        ),
+        warning: (
+          <span className="flex size-6 shrink-0 items-center justify-center rounded-lg bg-amber-500/10 text-amber-600 ring-1 ring-amber-500/20 dark:bg-amber-500/15 dark:text-amber-400 dark:ring-amber-500/30">
+            <AlertTriangle className="size-3.5 stroke-[2.5]" />
+          </span>
+        ),
+        info: (
+          <span className="flex size-6 shrink-0 items-center justify-center rounded-lg bg-sky-500/10 text-sky-600 ring-1 ring-sky-500/20 dark:bg-sky-500/15 dark:text-sky-400 dark:ring-sky-500/30">
+            <Info className="size-3.5 stroke-[2.5]" />
+          </span>
         ),
         loading: (
-          <Loader2Icon className="size-4.5 animate-spin text-teal-400 shrink-0" />
+          <span className="flex size-6 shrink-0 items-center justify-center rounded-lg bg-slate-500/10 text-slate-600 ring-1 ring-slate-500/20 dark:bg-zinc-500/15 dark:text-zinc-300 dark:ring-zinc-500/30">
+            <Loader2 className="size-3.5 animate-spin" />
+          </span>
         ),
       }}
       toastOptions={{
         classNames: {
-          toast: "cn-toast font-sans font-semibold text-xs shadow-2xl rounded-xl border backdrop-blur-md",
-          success: "!bg-emerald-950/95 !text-emerald-300 !border-emerald-800/80 shadow-emerald-950/50",
-          error: "!bg-rose-950/95 !text-rose-300 !border-rose-800/80 shadow-rose-950/50",
-          warning: "!bg-amber-950/95 !text-amber-300 !border-amber-800/80 shadow-amber-950/50",
-          info: "!bg-cyan-950/95 !text-cyan-300 !border-cyan-800/80 shadow-cyan-950/50",
-          closeButton: "!bg-emerald-950 !border-emerald-700/80 !text-emerald-400 hover:!bg-emerald-900",
+          toast:
+            "group toast font-sans text-xs flex items-center gap-3 p-3.5 pr-9 rounded-xl border border-slate-200/90 bg-white/95 text-slate-900 shadow-[0_10px_30px_-5px_rgba(0,0,0,0.1),0_0_0_1px_rgba(0,0,0,0.03)] backdrop-blur-md dark:border-zinc-800/90 dark:bg-[#141518]/95 dark:text-zinc-100 dark:shadow-[0_14px_35px_-5px_rgba(0,0,0,0.55),0_0_0_1px_rgba(255,255,255,0.06)] transition-all duration-300",
+          title: "text-[13px] font-bold text-slate-950 dark:text-white leading-tight tracking-tight",
+          description: "text-xs font-medium text-slate-500 dark:text-zinc-400 leading-tight mt-0.5",
+          actionButton:
+            "!bg-slate-900 !text-white hover:!bg-slate-800 dark:!bg-white dark:!text-zinc-950 dark:hover:!bg-zinc-200 text-xs font-bold px-3 py-1.5 rounded-lg transition-all shadow-xs",
+          cancelButton:
+            "!bg-slate-100 !text-slate-600 hover:!bg-slate-200 dark:!bg-zinc-800 dark:!text-zinc-300 dark:hover:!bg-zinc-700 text-xs font-medium px-3 py-1.5 rounded-lg transition-all",
+          closeButton:
+            "!border-none !bg-transparent hover:!bg-slate-100 dark:hover:!bg-zinc-800 !text-slate-400 hover:!text-slate-800 dark:!text-zinc-400 dark:hover:!text-zinc-100 !rounded-md !size-6 !top-3 !right-2.5 transition-colors",
+          success: "!border-l-4 !border-l-emerald-600 dark:!border-l-emerald-400",
+          error: "!border-l-4 !border-l-rose-600 dark:!border-l-rose-400",
+          warning: "!border-l-4 !border-l-amber-500 dark:!border-l-amber-400",
+          info: "!border-l-4 !border-l-sky-600 dark:!border-l-sky-400",
         },
       }}
       {...props}
