@@ -221,10 +221,12 @@ input[type="number"] {
     @apply border-border outline-ring/50;
   }
   body {
-    @apply bg-background text-foreground selection:bg-zinc-200 selection:text-zinc-900 dark:selection:bg-zinc-800 dark:selection:text-white;
+    @apply bg-background text-foreground font-sans selection:bg-zinc-200 selection:text-zinc-900 dark:selection:bg-zinc-800 dark:selection:text-white;
+    font-family: var(--font-sans);
   }
   html {
     @apply font-sans;
+    font-family: var(--font-sans);
   }
 }
 
