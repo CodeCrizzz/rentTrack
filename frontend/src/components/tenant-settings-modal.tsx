@@ -623,9 +623,9 @@ export default function TenantSettingsModal({ isOpen, onClose }: TenantSettingsM
                                             </div>
                                             <button
                                                 onClick={handleLogout}
-                                                className="px-3.5 py-1.5 text-xs font-bold rounded-lg bg-rose-600 hover:bg-rose-700 text-white transition-colors flex items-center gap-1.5 self-start sm:self-center cursor-pointer shadow-xs"
+                                                className="px-3.5 py-1.5 text-xs font-bold rounded-lg bg-red-800 hover:bg-red-900 dark:bg-red-800/90 dark:hover:bg-red-700 text-white border border-red-900/80 dark:border-red-700 transition-colors flex items-center gap-1.5 self-start sm:self-center cursor-pointer shadow-xs"
                                             >
-                                                <LogOut className="w-3.5 h-3.5" />
+                                                <LogOut className="w-3.5 h-3.5 stroke-[2.5] text-white" />
                                                 <span>Sign Out</span>
                                             </button>
                                         </div>
