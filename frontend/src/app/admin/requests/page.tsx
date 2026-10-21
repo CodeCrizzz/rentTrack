@@ -48,6 +48,7 @@ export default function AdminMaintenanceRequests() {
     const [statusFilter, setStatusFilter] = useState<'All' | 'Pending' | 'In Progress' | 'High Priority' | 'Resolved'>('All');
     const [priorityFilter, setPriorityFilter] = useState('All Priorities');
     const [categoryFilter, setCategoryFilter] = useState('All Categories');
+    const [highlightedRequestId, setHighlightedRequestId] = useState<number | null>(null);
 
     // Modals
     const [viewingRequest, setViewingRequest] = useState<MaintenanceRequest | null>(null);
@@ -499,12 +500,22 @@ export default function AdminMaintenanceRequests() {
                                         const status = getStatusBadge(req.status);
                                         const priority = getPriorityBadge(req.priority);
 
+                                        const isHighlighted = highlightedRequestId === req.id;
+
                                         return (
-                                            <tr key={req.id} className="h-[62px] hover:bg-slate-50/80 dark:hover:bg-zinc-800/40 transition-colors group">
+                                            <tr 
+                                                key={req.id} 
+                                                onClick={() => setHighlightedRequestId(prev => prev === req.id ? null : req.id)}
+                                                className={`h-[62px] transition-colors cursor-pointer group ${
+                                                    isHighlighted
+                                                        ? "bg-slate-200/80 hover:bg-slate-200 dark:bg-zinc-800/90 dark:hover:bg-zinc-800 font-semibold"
+                                                        : "hover:bg-slate-50/80 dark:hover:bg-zinc-800/40"
+                                                }`}
+                                            >
                                                 
                                                 {/* Request # */}
                                                 <td className="py-2 px-4 whitespace-nowrap">
-                                                    <span className="font-mono font-bold text-base sm:text-[17px] text-slate-900 dark:text-white">
+                                                    <span className="font-extrabold text-base sm:text-[17px] text-slate-900 dark:text-white">
                                                         {formatRequestNumber(req.id, req.request_number)}
                                                     </span>
                                                 </td>
@@ -547,7 +558,10 @@ export default function AdminMaintenanceRequests() {
                                                         {/* Quick Status Advance Button: Start -> Resolve */}
                                                         {req.status === 'Pending' && (
                                                             <button
-                                                                onClick={() => handleQuickStatus(req.id, 'In Progress')}
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    handleQuickStatus(req.id, 'In Progress');
+                                                                }}
                                                                 className="px-3.5 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm transition-colors cursor-pointer"
                                                                 title="Start Repair (Mark as In Progress)"
                                                             >
@@ -556,7 +570,10 @@ export default function AdminMaintenanceRequests() {
                                                         )}
                                                         {req.status === 'In Progress' && (
                                                             <button
-                                                                onClick={() => handleQuickStatus(req.id, 'Resolved')}
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    handleQuickStatus(req.id, 'Resolved');
+                                                                }}
                                                                 className="px-3.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm transition-colors cursor-pointer"
                                                                 title="Mark as Resolved"
                                                             >
@@ -566,7 +583,10 @@ export default function AdminMaintenanceRequests() {
 
                                                         {/* View Details */}
                                                         <button
-                                                            onClick={() => setViewingRequest(req)}
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                setViewingRequest(req);
+                                                            }}
                                                             className="p-2 rounded-lg text-slate-600 hover:text-slate-950 dark:text-zinc-300 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-zinc-800 transition-colors cursor-pointer"
                                                             title="View Details"
                                                         >
@@ -596,7 +616,7 @@ export default function AdminMaintenanceRequests() {
                                 <div className="p-5 border-b border-slate-100 dark:border-zinc-800 flex justify-between items-start shrink-0 bg-slate-50/50 dark:bg-zinc-900/40">
                                     <div>
                                         <div className="flex items-center gap-2">
-                                            <span className="font-mono text-xs sm:text-sm font-bold text-slate-900 dark:text-white">
+                                            <span className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white">
                                                 {formatRequestNumber(viewingRequest.id, viewingRequest.request_number)}
                                             </span>
                                             <span className="text-slate-300 dark:text-zinc-700">·</span>
