@@ -69,6 +69,7 @@ function TenantsContent() {
     const [statusFilter, setStatusFilter] = useState<'All' | 'Active' | 'Overdue' | 'Departed'>('All');
     const [roomFilter, setRoomFilter] = useState('All Rooms');
     const [sortFilter, setSortFilter] = useState('Newest First');
+    const [highlightedTenantId, setHighlightedTenantId] = useState<number | null>(null);
     const [error, setError] = useState('');
 
     // Handle URL search parameters from Action Center
@@ -600,7 +601,7 @@ function TenantsContent() {
                         >
                             <Users className="w-3.5 h-3.5" />
                             <span>Resident Directory</span>
-                            <span className="text-[11px] px-1.5 py-0.2 rounded font-mono font-bold bg-slate-200 dark:bg-zinc-700 text-slate-900 dark:text-zinc-100">
+                            <span className="text-[11px] px-1.5 py-0.2 rounded font-bold bg-slate-200 dark:bg-zinc-700 text-slate-900 dark:text-zinc-100">
                                 {metrics.total}
                             </span>
                         </button>
@@ -615,11 +616,11 @@ function TenantsContent() {
                             <UserCheck className="w-3.5 h-3.5" />
                             <span>Account Approvals</span>
                             {metrics.pendingCount > 0 ? (
-                                <span className="text-[11px] px-1.5 py-0.2 rounded font-mono font-bold bg-amber-600 text-white">
+                                <span className="text-[11px] px-1.5 py-0.2 rounded font-bold bg-amber-600 text-white">
                                     {metrics.pendingCount}
                                 </span>
                             ) : (
-                                <span className="text-[11px] px-1.5 py-0.2 rounded font-mono font-bold bg-slate-200 dark:bg-zinc-700 text-slate-800 dark:text-zinc-200">
+                                <span className="text-[11px] px-1.5 py-0.2 rounded font-bold bg-slate-200 dark:bg-zinc-700 text-slate-800 dark:text-zinc-200">
                                     0
                                 </span>
                             )}
@@ -734,10 +735,17 @@ function TenantsContent() {
                                             year: 'numeric'
                                         }) : '—';
 
+                                        const isHighlighted = highlightedTenantId === tenant.id;
+
                                         return (
                                             <tr 
                                                 key={tenant.id} 
-                                                className="h-[62px] hover:bg-slate-50/80 dark:hover:bg-zinc-800/40 transition-colors group"
+                                                onClick={() => setHighlightedTenantId(prev => prev === tenant.id ? null : tenant.id)}
+                                                className={`h-[62px] transition-colors cursor-pointer group ${
+                                                    isHighlighted
+                                                        ? "bg-slate-200/80 hover:bg-slate-200 dark:bg-zinc-800/90 dark:hover:bg-zinc-800 font-semibold"
+                                                        : "hover:bg-slate-50/80 dark:hover:bg-zinc-800/40"
+                                                }`}
                                             >
                                                 {/* Applicant Identity */}
                                                 <td className="py-2 px-4">
@@ -761,7 +769,8 @@ function TenantsContent() {
                                                     {tenant.phone ? (
                                                         <a 
                                                             href={`tel:${tenant.phone}`} 
-                                                            className="text-base sm:text-[17px] font-mono font-bold text-slate-900 dark:text-zinc-100 hover:text-black dark:hover:text-white hover:underline transition-colors"
+                                                            onClick={(e) => e.stopPropagation()}
+                                                            className="text-base sm:text-[17px] font-bold text-slate-900 dark:text-zinc-100 hover:text-black dark:hover:text-white hover:underline transition-colors"
                                                         >
                                                             {tenant.phone}
                                                         </a>
@@ -782,7 +791,7 @@ function TenantsContent() {
 
                                                 {/* Applied Date */}
                                                 <td className="py-2 px-3.5 whitespace-nowrap">
-                                                    <span className="text-sm sm:text-base font-mono font-bold text-slate-900 dark:text-zinc-100">
+                                                    <span className="text-sm sm:text-base font-bold text-slate-900 dark:text-zinc-100">
                                                         {appliedDate}
                                                     </span>
                                                 </td>
@@ -798,7 +807,10 @@ function TenantsContent() {
                                                 <td className="py-2 px-4 text-right whitespace-nowrap">
                                                     <div className="flex items-center justify-end gap-1.5">
                                                         <button
-                                                            onClick={() => handleUpdateStatusClick(tenant, 'Approve')}
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                handleUpdateStatusClick(tenant, 'Approve');
+                                                            }}
                                                             disabled={isStatusUpdating === tenant.id}
                                                             className="px-3.5 py-1.5 text-sm font-bold rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white transition-colors flex items-center gap-1.5 shadow-2xs cursor-pointer"
                                                         >
@@ -806,14 +818,20 @@ function TenantsContent() {
                                                             <span>Approve</span>
                                                         </button>
                                                         <button
-                                                            onClick={() => handleUpdateStatusClick(tenant, 'Reject')}
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                handleUpdateStatusClick(tenant, 'Reject');
+                                                            }}
                                                             disabled={isStatusUpdating === tenant.id}
                                                             className="px-3.5 py-1.5 text-sm font-bold rounded-lg border border-slate-300 dark:border-zinc-700 hover:bg-slate-100 dark:hover:bg-zinc-800 text-slate-800 dark:text-zinc-200 transition-colors cursor-pointer"
                                                         >
                                                             <span>Decline</span>
                                                         </button>
                                                         <button
-                                                            onClick={() => handleViewTenant(tenant)}
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                handleViewTenant(tenant);
+                                                            }}
                                                             className="p-2 rounded-lg text-slate-600 hover:text-slate-950 dark:text-zinc-300 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-zinc-800 transition-colors cursor-pointer"
                                                             title="Inspect applicant details"
                                                         >
@@ -828,11 +846,17 @@ function TenantsContent() {
                                     filteredTenants.map((tenant) => {
                                         const badge = getStatusBadge(tenant.status);
                                         const hasOverdue = (Number(tenant.balance) || 0) > 0;
+                                        const isHighlighted = highlightedTenantId === tenant.id;
 
                                         return (
                                             <tr 
                                                 key={tenant.id} 
-                                                className="h-[62px] hover:bg-slate-50/80 dark:hover:bg-zinc-800/40 transition-colors group"
+                                                onClick={() => setHighlightedTenantId(prev => prev === tenant.id ? null : tenant.id)}
+                                                className={`h-[62px] transition-colors cursor-pointer group ${
+                                                    isHighlighted
+                                                        ? "bg-slate-200/80 hover:bg-slate-200 dark:bg-zinc-800/90 dark:hover:bg-zinc-800 font-semibold"
+                                                        : "hover:bg-slate-50/80 dark:hover:bg-zinc-800/40"
+                                                }`}
                                             >
                                                 {/* Resident Identity */}
                                                 <td className="py-2 px-4">
@@ -874,7 +898,8 @@ function TenantsContent() {
                                                     {tenant.phone ? (
                                                         <a 
                                                             href={`tel:${tenant.phone}`} 
-                                                            className="text-base sm:text-[17px] font-mono font-bold text-slate-900 dark:text-zinc-100 hover:text-black dark:hover:text-white hover:underline transition-colors"
+                                                            onClick={(e) => e.stopPropagation()}
+                                                            className="text-base sm:text-[17px] font-bold text-slate-900 dark:text-zinc-100 hover:text-black dark:hover:text-white hover:underline transition-colors"
                                                         >
                                                             {tenant.phone}
                                                         </a>
@@ -890,11 +915,11 @@ function TenantsContent() {
                                                             ₱{Number(tenant.monthly_rent || 0).toLocaleString()} <span className="text-xs font-sans font-bold text-slate-600 dark:text-zinc-400">/mo</span>
                                                         </span>
                                                         {hasOverdue ? (
-                                                            <span className="text-sm sm:text-base font-mono font-bold text-rose-700 dark:text-rose-400 block leading-tight mt-0.5">
+                                                            <span className="text-sm sm:text-base font-bold text-rose-700 dark:text-rose-400 block leading-tight mt-0.5">
                                                                 ₱{Number(tenant.balance || 0).toLocaleString()} past due
                                                             </span>
                                                         ) : (
-                                                            <span className="text-sm sm:text-base font-bold font-mono text-emerald-700 dark:text-emerald-400 block leading-tight mt-0.5">
+                                                            <span className="text-sm sm:text-base font-bold text-emerald-700 dark:text-emerald-400 block leading-tight mt-0.5">
                                                                 Settled
                                                             </span>
                                                         )}
@@ -912,14 +937,20 @@ function TenantsContent() {
                                                 <td className="py-2 px-4 text-right whitespace-nowrap">
                                                     <div className="flex items-center justify-end gap-1.5">
                                                         <button
-                                                            onClick={() => handleViewTenant(tenant)}
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                handleViewTenant(tenant);
+                                                            }}
                                                             className="px-3.5 py-1.5 text-sm font-bold rounded-lg border border-slate-300 dark:border-zinc-700 bg-card hover:bg-slate-100 dark:hover:bg-zinc-800 text-slate-900 dark:text-zinc-100 transition-colors inline-flex items-center gap-1.5 cursor-pointer"
                                                         >
                                                             <Eye className="w-4.5 h-4.5 text-slate-700 dark:text-zinc-300" />
                                                             <span>View</span>
                                                         </button>
                                                         <button
-                                                            onClick={() => handleOpenModal(tenant, 'edit')}
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                handleOpenModal(tenant, 'edit');
+                                                            }}
                                                             className="p-2 rounded-lg text-slate-700 hover:text-slate-950 dark:text-zinc-300 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-zinc-800 transition-colors cursor-pointer"
                                                             title="Edit resident profile"
                                                         >
@@ -1050,7 +1081,7 @@ function TenantsContent() {
                                             </div>
                                             <div>
                                                 <span className="text-[10px] font-extrabold uppercase text-slate-700 dark:text-zinc-300 block">Phone Number</span>
-                                                <span className="font-mono font-bold text-slate-950 dark:text-white">
+                                                <span className="font-bold text-slate-950 dark:text-white">
                                                     {viewingTenant.phone || 'None provided'}
                                                 </span>
                                             </div>
@@ -1078,7 +1109,7 @@ function TenantsContent() {
                                         <div className="space-y-2 text-xs">
                                             <div>
                                                 <span className="text-[10px] font-extrabold uppercase text-slate-700 dark:text-zinc-300 block">Assigned Room</span>
-                                                <span className="font-black text-slate-950 dark:text-white font-mono">
+                                                <span className="font-extrabold text-slate-950 dark:text-white">
                                                     {viewingTenant.room_number ? `Room ${viewingTenant.room_number}` : 'Unassigned'}
                                                 </span>
                                             </div>
@@ -1219,7 +1250,7 @@ function TenantsContent() {
                                                 type="text"
                                                 value={formData.phone}
                                                 onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                                                className="w-full px-3 py-2 text-xs font-semibold rounded-lg border border-slate-300 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-900 text-slate-950 dark:text-white outline-none focus:ring-2 focus:ring-slate-400/30 dark:focus:ring-zinc-600/40 font-mono"
+                                                className="w-full px-3 py-2 text-xs font-semibold rounded-lg border border-slate-300 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-900 text-slate-950 dark:text-white outline-none focus:ring-2 focus:ring-slate-400/30 dark:focus:ring-zinc-600/40"
                                                 placeholder="+63 900 000 0000"
                                             />
                                         </div>
@@ -1298,7 +1329,7 @@ function TenantsContent() {
                                                     step="0.01"
                                                     value={formData.monthly_rent}
                                                     onChange={(e) => setFormData({ ...formData, monthly_rent: e.target.value })}
-                                                    className="w-full px-3 py-2 text-xs font-semibold rounded-lg border border-slate-300 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-900 text-slate-950 dark:text-white outline-none focus:ring-2 focus:ring-slate-400/30 dark:focus:ring-zinc-600/40 font-mono"
+                                                    className="w-full px-3 py-2 text-xs font-semibold rounded-lg border border-slate-300 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-900 text-slate-950 dark:text-white outline-none focus:ring-2 focus:ring-slate-400/30 dark:focus:ring-zinc-600/40"
                                                     placeholder="e.g. 3500"
                                                 />
                                             </div>
