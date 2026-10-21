@@ -730,9 +730,9 @@ export default function AdminSettingsModal({ isOpen, onClose }: AdminSettingsMod
                                             <button
                                                 type="button"
                                                 onClick={handleLogout}
-                                                className="px-3 py-1.5 text-xs font-bold rounded-lg bg-rose-50 hover:bg-rose-100 dark:bg-rose-500/10 dark:hover:bg-rose-500/20 text-rose-600 dark:text-rose-400 border border-rose-200/60 dark:border-rose-500/30 transition-colors flex items-center justify-center gap-1.5 cursor-pointer shadow-2xs self-start sm:self-center"
+                                                className="px-3.5 py-1.5 text-xs font-bold rounded-lg bg-red-800 hover:bg-red-900 dark:bg-red-800/90 dark:hover:bg-red-700 text-white border border-red-900/80 dark:border-red-700 transition-colors flex items-center justify-center gap-1.5 cursor-pointer shadow-xs self-start sm:self-center"
                                             >
-                                                <LogOut className="w-3.5 h-3.5" />
+                                                <LogOut className="w-3.5 h-3.5 stroke-[2.5] text-white" />
                                                 <span>Terminate & Log Out</span>
                                             </button>
                                         </div>
