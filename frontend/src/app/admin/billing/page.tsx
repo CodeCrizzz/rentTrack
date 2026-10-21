@@ -972,7 +972,7 @@ function BillingContent() {
             >
               <Receipt className="w-3.5 h-3.5" />
               <span>Invoices & Dues</span>
-              <span className="text-[11px] px-1.5 py-0.2 rounded font-mono font-bold bg-slate-200 dark:bg-zinc-700 text-slate-900 dark:text-zinc-100">
+              <span className="text-[11px] px-1.5 py-0.2 rounded font-bold bg-slate-200 dark:bg-zinc-700 text-slate-900 dark:text-zinc-100">
                 {dueBills.length}
               </span>
             </button>
@@ -986,7 +986,7 @@ function BillingContent() {
             >
               <CreditCard className="w-3.5 h-3.5" />
               <span>Payment Journal</span>
-              <span className="text-[11px] px-1.5 py-0.2 rounded font-mono font-bold bg-slate-200 dark:bg-zinc-700 text-slate-900 dark:text-zinc-100">
+              <span className="text-[11px] px-1.5 py-0.2 rounded font-bold bg-slate-200 dark:bg-zinc-700 text-slate-900 dark:text-zinc-100">
                 {paidPaymentsCount}
               </span>
             </button>
@@ -1186,7 +1186,7 @@ function BillingContent() {
                               {bill.billing_month}
                             </div>
                             <div
-                              className={`text-xs sm:text-sm font-mono mt-0.5 leading-tight ${isOverdue ? "text-rose-600 dark:text-rose-400/85 font-bold" : "text-slate-500 dark:text-zinc-400 font-medium"}`}
+                              className={`text-xs sm:text-sm mt-0.5 leading-tight ${isOverdue ? "text-rose-600 dark:text-rose-400/85 font-bold" : "text-slate-500 dark:text-zinc-400 font-medium"}`}
                             >
                               Due{" "}
                               {bill.due_date
@@ -1199,17 +1199,17 @@ function BillingContent() {
                           </td>
 
                           {/* Base Rent */}
-                          <td className="py-2 px-3.5 text-right font-mono text-sm sm:text-base font-medium text-slate-700 dark:text-zinc-300">
+                          <td className="py-2 px-3.5 text-right text-sm sm:text-base font-bold text-slate-800 dark:text-zinc-200">
                             ₱{Number(bill.rent_amount).toLocaleString()}
                           </td>
 
                           {/* Water */}
-                          <td className="py-2 px-3.5 text-right font-mono text-sm sm:text-base font-medium text-slate-600 dark:text-zinc-400">
+                          <td className="py-2 px-3.5 text-right text-sm sm:text-base font-medium text-slate-600 dark:text-zinc-400">
                             ₱{Number(bill.water_charges).toLocaleString()}
                           </td>
 
                           {/* Power */}
-                          <td className="py-2 px-3.5 text-right font-mono text-sm sm:text-base font-medium text-slate-600 dark:text-zinc-400">
+                          <td className="py-2 px-3.5 text-right text-sm sm:text-base font-medium text-slate-600 dark:text-zinc-400">
                             ₱{Number(bill.electricity_charges).toLocaleString()}
                           </td>
 
@@ -1393,7 +1393,7 @@ function BillingContent() {
                         }`}
                       >
                         {/* Date */}
-                        <td className="py-2 px-4 whitespace-nowrap font-mono text-sm sm:text-base font-semibold text-slate-800 dark:text-zinc-200">
+                        <td className="py-2 px-4 whitespace-nowrap text-sm sm:text-base font-bold text-slate-800 dark:text-zinc-200">
                           {payment.payment_date
                             ? new Date(payment.payment_date).toLocaleDateString(
                                 "en-US",
@@ -1444,7 +1444,7 @@ function BillingContent() {
 
                         {/* Reference */}
                         <td className="py-2 pl-3.5 pr-6 text-right whitespace-nowrap">
-                          <span className="font-mono text-xs sm:text-sm font-bold text-slate-800 dark:text-zinc-200 bg-slate-100 dark:bg-zinc-800/80 px-2.5 py-0.5 rounded-md border border-slate-300 dark:border-zinc-700">
+                          <span className="text-xs sm:text-sm font-bold text-slate-800 dark:text-zinc-200 bg-slate-100 dark:bg-zinc-800/80 px-2.5 py-0.5 rounded-md border border-slate-300 dark:border-zinc-700">
                             {payment.reference_number ||
                               payment.referenceNumber ||
                               (payment.notes
@@ -1484,11 +1484,11 @@ function BillingContent() {
               <div className="px-6 py-4 border-b border-slate-100 dark:border-zinc-800/80 flex justify-between items-start bg-slate-50/60 dark:bg-zinc-900/40 shrink-0">
                 <div className="space-y-1">
                   <div className="flex items-center gap-2.5">
-                    <span className="text-[10px] font-mono uppercase tracking-widest text-slate-400 dark:text-zinc-500 font-semibold">
+                    <span className="text-[10px] uppercase font-extrabold tracking-wider text-slate-400 dark:text-zinc-500">
                       Official Statement
                     </span>
                     <span className="text-slate-300 dark:text-zinc-700">·</span>
-                    <span className="font-mono text-xs font-bold text-slate-700 dark:text-zinc-300">
+                    <span className="text-xs font-bold text-slate-700 dark:text-zinc-300">
                       INV-#{String(selectedBill.id).padStart(4, "0")}
                     </span>
                   </div>
@@ -1541,7 +1541,7 @@ function BillingContent() {
                 {!billDetails ? (
                   <div className="py-16 flex flex-col items-center justify-center gap-3">
                     <div className="w-6 h-6 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin"></div>
-                    <span className="text-xs text-slate-400 font-mono">
+                    <span className="text-xs text-slate-400 font-medium">
                       Loading statement data...
                     </span>
                   </div>
@@ -1551,7 +1551,7 @@ function BillingContent() {
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pb-5 border-b border-slate-100 dark:border-zinc-800/80 text-xs">
                       {/* Billed To */}
                       <div className="space-y-1">
-                        <span className="text-[10px] font-mono uppercase tracking-widest text-slate-400 dark:text-zinc-500 font-semibold">
+                        <span className="text-[10px] uppercase font-extrabold tracking-wider text-slate-400 dark:text-zinc-500">
                           Billed To
                         </span>
                         <div className="text-sm font-bold text-slate-900 dark:text-zinc-100">
@@ -1569,7 +1569,7 @@ function BillingContent() {
                               <span className="text-slate-300 dark:text-zinc-700">
                                 ·
                               </span>
-                              <span className="font-mono text-[11px] text-slate-500 dark:text-zinc-400">
+                              <span className="text-[11px] text-slate-500 dark:text-zinc-400 font-medium">
                                 {billDetails.tenant_email ||
                                   billDetails.tenant_phone}
                               </span>
@@ -1580,13 +1580,13 @@ function BillingContent() {
 
                       {/* Statement Metadata */}
                       <div className="sm:text-right space-y-1 sm:justify-self-end">
-                        <span className="text-[10px] font-mono uppercase tracking-widest text-slate-400 dark:text-zinc-500 font-semibold">
+                        <span className="text-[10px] uppercase font-extrabold tracking-wider text-slate-400 dark:text-zinc-500">
                           Statement Period
                         </span>
                         <div className="text-sm font-bold text-slate-900 dark:text-zinc-100">
                           {billDetails.billing_month}
                         </div>
-                        <div className="text-xs text-slate-500 dark:text-zinc-400 font-mono">
+                        <div className="text-xs text-slate-500 dark:text-zinc-400 font-medium">
                           Due:{" "}
                           {billDetails.due_date
                             ? new Date(billDetails.due_date).toLocaleDateString(
@@ -1604,7 +1604,7 @@ function BillingContent() {
 
                     {/* Itemized Charges Ledger Table */}
                     <div className="space-y-2">
-                      <div className="text-[10px] font-mono uppercase tracking-widest text-slate-400 dark:text-zinc-500 font-semibold">
+                      <div className="text-[10px] uppercase font-extrabold tracking-wider text-slate-400 dark:text-zinc-500">
                         Itemized Charges
                       </div>
                       <div className="border border-slate-200/80 dark:border-zinc-800/80 rounded-xl overflow-hidden">
@@ -1639,7 +1639,7 @@ function BillingContent() {
                               <td className="py-2.5 px-3.5 text-center text-[11px] text-slate-500 dark:text-zinc-400 hidden sm:table-cell">
                                 Base Rent
                               </td>
-                              <td className="py-2.5 px-3.5 text-right font-mono font-bold text-slate-800 dark:text-zinc-200">
+                              <td className="py-2.5 px-3.5 text-right font-bold text-slate-800 dark:text-zinc-200">
                                 ₱
                                 {(
                                   Number(billDetails.rent_amount) || 0
@@ -1660,7 +1660,7 @@ function BillingContent() {
                               <td className="py-2.5 px-3.5 text-center text-[11px] text-slate-500 dark:text-zinc-400 hidden sm:table-cell">
                                 Fixed Utility
                               </td>
-                              <td className="py-2.5 px-3.5 text-right font-mono font-bold text-slate-800 dark:text-zinc-200">
+                              <td className="py-2.5 px-3.5 text-right font-bold text-slate-800 dark:text-zinc-200">
                                 ₱
                                 {(
                                   Number(billDetails.water_charges) || 0
@@ -1681,7 +1681,7 @@ function BillingContent() {
                               <td className="py-2.5 px-3.5 text-center text-[11px] text-slate-500 dark:text-zinc-400 hidden sm:table-cell">
                                 Submeter Reading
                               </td>
-                              <td className="py-2.5 px-3.5 text-right font-mono font-bold text-slate-800 dark:text-zinc-200">
+                              <td className="py-2.5 px-3.5 text-right font-bold text-slate-800 dark:text-zinc-200">
                                 ₱
                                 {(
                                   Number(billDetails.electricity_charges) || 0
@@ -1703,7 +1703,7 @@ function BillingContent() {
                                 <td className="py-2.5 px-3.5 text-center text-[11px] text-slate-500 dark:text-zinc-400 hidden sm:table-cell">
                                   Incidental
                                 </td>
-                                <td className="py-2.5 px-3.5 text-right font-mono font-bold text-slate-800 dark:text-zinc-200">
+                                <td className="py-2.5 px-3.5 text-right font-bold text-slate-800 dark:text-zinc-200">
                                   ₱
                                   {(
                                     Number(billDetails.other_fees) || 0
@@ -1721,7 +1721,7 @@ function BillingContent() {
                       <div className="w-full sm:w-72 space-y-2 text-xs">
                         <div className="flex justify-between text-slate-500 dark:text-zinc-400">
                           <span>Gross Invoiced Total</span>
-                          <span className="font-mono font-bold text-slate-800 dark:text-zinc-200">
+                          <span className="font-bold text-slate-800 dark:text-zinc-200">
                             ₱
                             {(
                               Number(billDetails.total_amount) || 0
@@ -1732,7 +1732,7 @@ function BillingContent() {
                         {(Number(billDetails.amount_paid) || 0) > 0 && (
                           <div className="flex justify-between text-slate-600 dark:text-zinc-400">
                             <span>Less: Payments Applied</span>
-                            <span className="font-mono font-bold text-slate-800 dark:text-zinc-200">
+                            <span className="font-bold text-slate-800 dark:text-zinc-200">
                               -₱
                               {(
                                 Number(billDetails.amount_paid) || 0
@@ -1746,7 +1746,7 @@ function BillingContent() {
                             Total Ammount
                           </span>
                           <span
-                            className={`font-mono text-base font-bold ${
+                            className={`text-base font-bold ${
                               Number(billDetails.balance) === 0
                                 ? "text-slate-900 dark:text-zinc-100"
                                 : "text-rose-600 dark:text-rose-400/80"
@@ -1866,7 +1866,7 @@ function BillingContent() {
                   <div className="space-y-1.5 text-xs">
                     <div className="flex justify-between items-center text-slate-600 dark:text-zinc-400">
                       <span>Room Rent</span>
-                      <span className="font-mono font-bold text-slate-900 dark:text-zinc-100">
+                      <span className="font-bold text-slate-900 dark:text-zinc-100">
                         ₱
                         {(
                           Number(selectedBill.rent_amount) || 0
@@ -1875,7 +1875,7 @@ function BillingContent() {
                     </div>
                     <div className="flex justify-between items-center text-slate-600 dark:text-zinc-400">
                       <span>Water Charges</span>
-                      <span className="font-mono font-bold text-slate-900 dark:text-zinc-100">
+                      <span className="font-bold text-slate-900 dark:text-zinc-100">
                         ₱
                         {(
                           Number(selectedBill.water_charges) || 0
@@ -1884,7 +1884,7 @@ function BillingContent() {
                     </div>
                     <div className="flex justify-between items-center text-slate-600 dark:text-zinc-400">
                       <span>Electricity Charges</span>
-                      <span className="font-mono font-bold text-slate-900 dark:text-zinc-100">
+                      <span className="font-bold text-slate-900 dark:text-zinc-100">
                         ₱
                         {(
                           Number(selectedBill.electricity_charges) || 0
@@ -1894,7 +1894,7 @@ function BillingContent() {
                     {(Number(selectedBill.other_fees) || 0) > 0 && (
                       <div className="flex justify-between items-center text-rose-600 dark:text-rose-400 font-semibold">
                         <span>Other Fees / Surcharges</span>
-                        <span className="font-mono font-bold">
+                        <span className="font-bold">
                           +₱
                           {(
                             Number(selectedBill.other_fees) || 0
@@ -1908,7 +1908,7 @@ function BillingContent() {
                   <div className="pt-2.5 border-t border-slate-200/80 dark:border-zinc-800 space-y-1.5">
                     <div className="flex justify-between items-center text-xs text-slate-500 dark:text-zinc-400">
                       <span>Total Statement Amount</span>
-                      <span className="font-mono font-bold text-slate-700 dark:text-zinc-300">
+                      <span className="font-bold text-slate-700 dark:text-zinc-300">
                         ₱
                         {(
                           Number(selectedBill.total_amount) || 0
@@ -1918,7 +1918,7 @@ function BillingContent() {
                     {(Number(selectedBill.amount_paid) || 0) > 0 && (
                       <div className="flex justify-between items-center text-xs text-emerald-600 dark:text-emerald-400 font-semibold">
                         <span>Previously Paid</span>
-                        <span className="font-mono font-bold">
+                        <span className="font-bold">
                           -₱
                           {(
                             Number(selectedBill.amount_paid) || 0
@@ -1930,7 +1930,7 @@ function BillingContent() {
                       <span className="text-xs font-bold text-slate-800 dark:text-zinc-200">
                         Outstanding Balance
                       </span>
-                      <span className="text-xl font-black font-mono text-emerald-600 dark:text-emerald-400">
+                      <span className="text-xl font-black text-emerald-600 dark:text-emerald-400">
                         ₱{Number(selectedBill.balance).toLocaleString()}
                       </span>
                     </div>
@@ -1976,7 +1976,7 @@ function BillingContent() {
                               : parseFloat(e.target.value),
                         })
                       }
-                      className="w-full px-3 py-2 text-sm font-mono font-bold rounded-lg bg-slate-50 dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 text-slate-900 dark:text-white focus:outline-none focus:border-slate-400 dark:focus:border-zinc-500 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                      className="w-full px-3 py-2 text-sm font-bold rounded-lg bg-slate-50 dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 text-slate-900 dark:text-white focus:outline-none focus:border-slate-400 dark:focus:border-zinc-500 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                     />
                   </div>
 
@@ -2152,7 +2152,7 @@ function BillingContent() {
                             rent_amount: parseFloat(e.target.value) || 0,
                           })
                         }
-                        className="w-full py-1.5 px-2 text-xs font-mono font-bold rounded-md bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-700 text-right"
+                        className="w-full py-1.5 px-2 text-xs font-bold rounded-md bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-700 text-right"
                       />
                     </div>
                     <div className="space-y-1">
@@ -2170,7 +2170,7 @@ function BillingContent() {
                             water_charges: parseFloat(e.target.value) || 0,
                           })
                         }
-                        className="w-full py-1.5 px-2 text-xs font-mono font-bold rounded-md bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-700 text-right"
+                        className="w-full py-1.5 px-2 text-xs font-bold rounded-md bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-700 text-right"
                       />
                     </div>
                     <div className="space-y-1">
@@ -2189,7 +2189,7 @@ function BillingContent() {
                               parseFloat(e.target.value) || 0,
                           })
                         }
-                        className="w-full py-1.5 px-2 text-xs font-mono font-bold rounded-md bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-700 text-right"
+                        className="w-full py-1.5 px-2 text-xs font-bold rounded-md bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-700 text-right"
                       />
                     </div>
                     <div className="space-y-1">
@@ -2207,7 +2207,7 @@ function BillingContent() {
                             other_fees: parseFloat(e.target.value) || 0,
                           })
                         }
-                        className="w-full py-1.5 px-2 text-xs font-mono font-bold rounded-md bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-700 text-right"
+                        className="w-full py-1.5 px-2 text-xs font-bold rounded-md bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-700 text-right"
                       />
                     </div>
                   </div>
@@ -2217,7 +2217,7 @@ function BillingContent() {
                     <span className="font-bold text-slate-700 dark:text-zinc-300">
                       Calculated Invoice Total:
                     </span>
-                    <span className="text-base font-mono font-bold text-slate-900 dark:text-zinc-100">
+                    <span className="text-base font-bold text-slate-900 dark:text-zinc-100">
                       ₱
                       {(
                         (Number(billForm.rent_amount) || 0) +
@@ -2342,7 +2342,7 @@ function BillingContent() {
                             rent_amount: parseFloat(e.target.value) || 0,
                           })
                         }
-                        className="w-full py-1.5 px-2 text-xs font-mono font-bold rounded-md bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-700 text-right"
+                        className="w-full py-1.5 px-2 text-xs font-bold rounded-md bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-700 text-right"
                       />
                     </div>
                     <div className="space-y-1">
@@ -2360,7 +2360,7 @@ function BillingContent() {
                             water_charges: parseFloat(e.target.value) || 0,
                           })
                         }
-                        className="w-full py-1.5 px-2 text-xs font-mono font-bold rounded-md bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-700 text-right"
+                        className="w-full py-1.5 px-2 text-xs font-bold rounded-md bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-700 text-right"
                       />
                     </div>
                     <div className="space-y-1">
@@ -2379,7 +2379,7 @@ function BillingContent() {
                               parseFloat(e.target.value) || 0,
                           })
                         }
-                        className="w-full py-1.5 px-2 text-xs font-mono font-bold rounded-md bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-700 text-right"
+                        className="w-full py-1.5 px-2 text-xs font-bold rounded-md bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-700 text-right"
                       />
                     </div>
                     <div className="space-y-1">
@@ -2397,7 +2397,7 @@ function BillingContent() {
                             other_fees: parseFloat(e.target.value) || 0,
                           })
                         }
-                        className="w-full py-1.5 px-2 text-xs font-mono font-bold rounded-md bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-700 text-right"
+                        className="w-full py-1.5 px-2 text-xs font-bold rounded-md bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-700 text-right"
                       />
                     </div>
                   </div>
@@ -2555,7 +2555,7 @@ function BillingContent() {
                                 <span className="text-[10px] uppercase font-bold text-slate-400">
                                   Amount Claimed
                                 </span>
-                                <div className="text-2xl font-mono font-black text-emerald-600 dark:text-emerald-400">
+                                <div className="text-2xl font-black text-emerald-600 dark:text-emerald-400">
                                   ₱
                                   {Number(payment.amount_paid).toLocaleString()}
                                 </div>
@@ -2570,7 +2570,7 @@ function BillingContent() {
                                   <span className="text-[10px] uppercase font-bold text-slate-400">
                                     GCash Reference Number
                                   </span>
-                                  <div className="font-mono font-bold text-slate-900 dark:text-white mt-0.5">
+                                  <div className="font-bold text-slate-900 dark:text-white mt-0.5">
                                     {payment.reference_number ||
                                       (payment.notes
                                         ? payment.notes.replace(
