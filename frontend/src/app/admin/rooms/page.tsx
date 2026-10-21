@@ -65,6 +65,7 @@ export default function AdminRooms() {
     const [isDeleting, setIsDeleting] = useState<number | null>(null);
 
     // Filters
+    const [highlightedRoomId, setHighlightedRoomId] = useState<number | null>(null);
     const [searchQuery, setSearchQuery] = useState('');
     const [statusFilter, setStatusFilter] = useState<'All Units' | 'Vacant' | 'Available Beds' | 'Fully Occupied' | 'Maintenance'>('All Units');
     const [floorFilter, setFloorFilter] = useState('All Floors');
@@ -591,8 +592,18 @@ export default function AdminRooms() {
                                 {filteredRooms.map((room) => {
                                     const occupancyPercent = room.capacity > 0 ? Math.round((room.current_occupants / room.capacity) * 100) : 0;
 
+                                    const isHighlighted = highlightedRoomId === room.id;
+
                                     return (
-                                        <tr key={room.id} className="h-[62px] hover:bg-slate-50/80 dark:hover:bg-zinc-800/40 transition-colors group">
+                                        <tr 
+                                            key={room.id}
+                                            onClick={() => setHighlightedRoomId(prev => prev === room.id ? null : room.id)}
+                                            className={`h-[62px] transition-colors cursor-pointer group ${
+                                                isHighlighted
+                                                    ? "bg-slate-200/80 hover:bg-slate-200 dark:bg-zinc-800/90 dark:hover:bg-zinc-800 font-semibold"
+                                                    : "hover:bg-slate-50/80 dark:hover:bg-zinc-800/40"
+                                            }`}
+                                        >
                                             {/* Room Number & Floor */}
                                             <td className="py-2 px-4">
                                                 <div className="flex items-center gap-3">
@@ -649,7 +660,10 @@ export default function AdminRooms() {
                                                 <div className="flex items-center justify-end gap-1.5">
                                                     {/* Maintenance Toggle */}
                                                     <button
-                                                        onClick={() => handleToggleMaintenance(room)}
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            handleToggleMaintenance(room);
+                                                        }}
                                                         className={`p-2 rounded-lg border transition-colors cursor-pointer ${room.status === 'Maintenance' ? 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 border-emerald-200 dark:border-emerald-500/30 hover:bg-emerald-100' : 'text-slate-500 hover:text-rose-600 border-transparent hover:border-rose-200 dark:hover:border-rose-900/60'}`}
                                                         title={room.status === 'Maintenance' ? 'Mark Available' : 'Set to Maintenance'}
                                                     >
@@ -658,7 +672,10 @@ export default function AdminRooms() {
 
                                                     {/* View Details */}
                                                     <button
-                                                        onClick={() => setViewingRoom(room)}
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            setViewingRoom(room);
+                                                        }}
                                                         className="p-2 text-slate-600 hover:text-slate-950 dark:text-zinc-300 dark:hover:text-white border border-transparent hover:border-slate-200 dark:hover:border-zinc-700 rounded-lg transition-colors cursor-pointer"
                                                         title="View Occupant Roster & Specs"
                                                     >
@@ -667,7 +684,10 @@ export default function AdminRooms() {
 
                                                     {/* Edit */}
                                                     <button
-                                                        onClick={() => handleOpenModal(room)}
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            handleOpenModal(room);
+                                                        }}
                                                         className="p-2 text-slate-600 hover:text-slate-950 dark:text-zinc-300 dark:hover:text-white border border-transparent hover:border-slate-200 dark:hover:border-zinc-700 rounded-lg transition-colors cursor-pointer"
                                                         title="Edit Room Configuration"
                                                     >
@@ -676,7 +696,10 @@ export default function AdminRooms() {
 
                                                     {/* Delete */}
                                                     <button
-                                                        onClick={() => handleDelete(room)}
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            handleDelete(room);
+                                                        }}
                                                         disabled={isDeleting === room.id || room.current_occupants > 0}
                                                         className="p-2 text-slate-600 hover:text-rose-600 disabled:opacity-30 disabled:hover:text-slate-400 border border-transparent hover:border-rose-200 dark:hover:border-rose-900/60 rounded-lg transition-colors cursor-pointer"
                                                         title={room.current_occupants > 0 ? "Cannot delete occupied room" : "Delete Room"}
