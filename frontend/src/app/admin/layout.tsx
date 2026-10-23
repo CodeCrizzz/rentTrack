@@ -15,7 +15,7 @@ import {
 import { AppSidebar } from '@/components/app-sidebar';
 import { FullscreenToggle } from '@/components/fullscreen-toggle';
 import AdminSettingsModal from '@/components/admin-settings-modal';
-import { LayoutDashboard, Building2, Users, CreditCard, Wrench, MessageSquare, Bell, Settings, User, RefreshCw, Calendar, Video, UserPlus, CheckCheck, Clock, BedDouble, Megaphone, FileSpreadsheet } from 'lucide-react';
+import { LayoutDashboard, Building2, Users, Receipt, Wrench, MessageSquareMore, Bell, Settings, User, RefreshCw, Calendar, Cctv, UserPlus, CheckCheck, Clock, Bed, Megaphone, BarChart3 } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -209,14 +209,14 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
     const rawNavItems = [
         { name: 'Dashboard', path: '/admin/dashboard', icon: LayoutDashboard },
-        { name: 'Rooms', path: '/admin/rooms', icon: BedDouble },
+        { name: 'Rooms', path: '/admin/rooms', icon: Bed },
         { name: 'Tenants', path: '/admin/tenants', icon: Users },
-        { name: 'Billing & Collections', path: '/admin/billing', icon: CreditCard },
+        { name: 'Billing & Collections', path: '/admin/billing', icon: Receipt },
         { name: 'Maintenance Requests', path: '/admin/requests', icon: Wrench },
-        { name: 'Messages', path: '/admin/chat', icon: MessageSquare },
+        { name: 'Messages', path: '/admin/chat', icon: MessageSquareMore },
         { name: 'Announcements', path: '/admin/announcements', icon: Megaphone },
-        { name: 'CCTV Monitoring', path: '/admin/cctv', icon: Video },
-        { name: 'Reports', path: '/admin/reports', icon: FileSpreadsheet },
+        { name: 'CCTV Monitoring', path: '/admin/cctv', icon: Cctv },
+        { name: 'Reports', path: '/admin/reports', icon: BarChart3 },
         { name: 'Settings', path: '/admin/settings', icon: Settings },
     ];
 
@@ -268,7 +268,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                 />
 
                 <SidebarInset className="flex-1 flex flex-col relative w-full h-[100dvh] overflow-hidden bg-transparent">
-                    {/* Modern Top Header */}
+                    {/* Modern Top Header (Hidden on Dashboard to prevent duplicate header) */}
+                    {pathname !== '/admin/dashboard' && (
                     <header className="flex h-16 shrink-0 items-center justify-between gap-4 border-b border-border bg-background/95 backdrop-blur-2xl px-4 sm:px-6 lg:px-8 sticky top-0 z-20 shadow-none">
                         <div className="flex items-center gap-3 sm:gap-4 flex-1">
                             <SidebarTrigger className="-ml-2 text-slate-500 hover:text-slate-900 dark:text-zinc-400 dark:hover:text-white" />
@@ -362,9 +363,9 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                                                             : 'bg-slate-100 dark:bg-zinc-800 text-slate-600 dark:text-zinc-300'
                                                     }`}>
                                                         {notif.type === 'account_approval' && <UserPlus className="w-4 h-4" />}
-                                                        {notif.type === 'payment_verification' && <CreditCard className="w-4 h-4" />}
+                                                        {notif.type === 'payment_verification' && <Receipt className="w-4 h-4" />}
                                                         {notif.type === 'maintenance_request' && <Wrench className="w-4 h-4" />}
-                                                        {notif.type === 'chat_message' && <MessageSquare className="w-4 h-4" />}
+                                                        {notif.type === 'chat_message' && <MessageSquareMore className="w-4 h-4" />}
                                                         {!['account_approval', 'payment_verification', 'maintenance_request', 'chat_message'].includes(notif.type) && <Bell className="w-4 h-4" />}
                                                     </div>
                                                     <div className="flex-1 min-w-0">
@@ -413,10 +414,11 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
                         </div>
                     </header>
+                    )}
 
                     {/* Main Content Area */}
-                    <div className="flex-1 flex flex-col overflow-y-auto overflow-x-hidden custom-scrollbar bg-background">
-                        <div className="px-3 py-4 md:px-4 md:py-6 lg:px-5 lg:py-6 relative z-10">
+                    <div className="flex-1 flex flex-col overflow-y-auto overflow-x-hidden custom-scrollbar bg-[#f4f7fb] dark:bg-zinc-950">
+                        <div className="p-4 sm:p-6 lg:p-7 relative z-10">
                             <AnimatePresence mode="wait">
                                 <PageTransition key={`${pathname}-${refreshKey}`}>
                                     {children}
