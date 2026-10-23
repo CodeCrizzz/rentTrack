@@ -26,7 +26,6 @@ const DEFAULT_SETTINGS = {
     taxId: 'TIN: 432-891-002-000',
     currency: 'PHP (₱)',
     billing: {
-        defaultDueDate: '5',
         autoMonthlyBilling: true,
         latePaymentFee: '300',
         gracePeriodDays: '3',
@@ -407,14 +406,14 @@ export default function AdminSettingsPage() {
                     </div>
                 </div>
 
-                {/* Auto Billing Status */}
+                {/* Billing Cycle Status */}
                 <div className="bg-card border border-slate-200 dark:border-zinc-800 rounded-xl p-3.5 shadow-xs flex items-center justify-between">
                     <div>
-                        <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Auto Billing</span>
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Billing Initiation</span>
                         <div className="text-lg font-extrabold font-mono text-teal-600 dark:text-teal-400 mt-0.5 leading-tight">
-                            {billing.defaultDueDate ? `${billing.defaultDueDate}th of Month` : '1st of Month'}
+                            Start Billing
                         </div>
-                        <div className="text-[10px] font-semibold text-slate-500 mt-0.5">Auto-Cron Active (00:00)</div>
+                        <div className="text-[10px] font-semibold text-slate-500 mt-0.5">Activated on Tenant Approval</div>
                     </div>
                     <div className="w-10 h-10 rounded-xl bg-teal-50 dark:bg-teal-500/10 text-teal-600 flex items-center justify-center shrink-0">
                         <CreditCard className="w-5 h-5" />
@@ -564,20 +563,6 @@ export default function AdminSettingsPage() {
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 w-full pt-1">
-                    <div className="space-y-1">
-                        <label className="text-xs font-bold text-slate-700 dark:text-zinc-300">Default Due Day of Month</label>
-                        <CustomSelect
-                            value={billing.defaultDueDate}
-                            onChange={(val) => setBilling({ ...billing, defaultDueDate: val })}
-                            options={[
-                                { value: '1', label: '1st of the month' },
-                                { value: '5', label: '5th of the month (Standard)' },
-                                { value: '10', label: '10th of the month' },
-                                { value: '15', label: '15th of the month' }
-                            ]}
-                            className="py-2 px-3 text-xs rounded-lg bg-slate-50 dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 font-semibold"
-                        />
-                    </div>
 
                     <div className="space-y-1">
                         <label className="text-xs font-bold text-slate-700 dark:text-zinc-300">Late Payment Penalty Fee (₱)</label>

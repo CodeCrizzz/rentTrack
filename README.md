@@ -78,4 +78,6 @@ A real-time repair request system. Tenants can report issues directly from their
 - **Admin Portal**: Comprehensive control panel for property managers to oversee residents, billing, and maintenance.
 - **Tenant Portal**: User-friendly dashboard for residents to pay rent, check room details, and request repairs.
 
+run ollama: ollama launch opencode --model qwen3.5:4b
+
 _Built by CodeCrizzz._

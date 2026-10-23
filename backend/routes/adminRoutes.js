@@ -13,7 +13,8 @@ const {
     deleteAnnouncement,
     getAdminNotifications,
     markAllAdminNotificationsRead,
-    markAdminNotificationRead
+    markAdminNotificationRead,
+    getReportData
 } = require('../controllers/adminController');
 const { updateRequest, deleteRequest } = require('../controllers/requestController');
 
@@ -58,5 +59,7 @@ router.patch('/notifications/:id/read', markAdminNotificationRead);
 router.get('/announcements', getAnnouncements);
 router.post('/announcements', createAnnouncement);
 router.delete('/announcements/:id', deleteAnnouncement);
+
+router.get('/reports', getReportData);
 
 module.exports = router;

@@ -7,6 +7,8 @@ import Link from "next/link";
 import api from "@/lib/api";
 import CustomSelect from "@/components/CustomSelect";
 import { toast } from "sonner";
+import AdminReportModal from "@/components/admin-report-modal";
+import VisualRoomMatrix, { RoomMatrixItem } from "@/components/visual-room-matrix";
 import {
   ComposedChart,
   Bar,
@@ -49,6 +51,7 @@ import {
   Trash2,
   Send,
   RefreshCw,
+  FileSpreadsheet,
 } from "lucide-react";
 
 interface Announcement {
@@ -130,6 +133,14 @@ interface DashboardStats {
     request_number?: string | null;
     tenant_name: string;
     title: string;
+    description?: string;
+    category?: string;
+    priority?: string;
+    status?: string;
+    assigned_to?: string | null;
+    room_number?: string | null;
+    scheduled_date?: string | null;
+    date_resolved?: string | null;
     created_at: string;
   }[];
   expiringContracts: ExpiringContract[];
@@ -146,6 +157,7 @@ interface DashboardStats {
     balance: number;
     due_date: string;
   }[];
+  roomMatrix?: RoomMatrixItem[];
   pendingPaymentVerifications: {
     id: number;
     bill_id?: number;
@@ -218,13 +230,13 @@ export default function AdminDashboard() {
   const [isLoading, setIsLoading] = useState(true);
   const [adminName, setAdminName] = useState("Admin");
 
-  // Interactive Tab States
+  // Interactive Filter States
   const [urgentFilter, setUrgentFilter] = useState<
     "all" | "verifications" | "applications" | "overdue"
   >("all");
-  const [activeLedgerTab, setActiveLedgerTab] = useState<
-    "payments" | "overdue" | "maintenance" | "audit"
-  >("payments");
+
+  // Report Modal State
+  const [showReportModal, setShowReportModal] = useState(false);
 
   // Announcement Modal State
   const [showAnnouncementModal, setShowAnnouncementModal] = useState(false);
@@ -576,6 +588,15 @@ export default function AdminDashboard() {
         </div>
 
         <div className="flex items-center gap-3">
+          <button
+            type="button"
+            onClick={() => setShowReportModal(true)}
+            className="px-3.5 py-2 text-xs sm:text-sm font-semibold rounded-lg bg-white dark:bg-zinc-800 hover:bg-slate-50 dark:hover:bg-zinc-750 text-slate-700 dark:text-zinc-200 border border-slate-200 dark:border-zinc-700 transition-colors flex items-center gap-2 shadow-xs cursor-pointer"
+          >
+            <FileSpreadsheet className="w-4 h-4 text-teal-600 dark:text-teal-400" />
+            <span>Generate Report</span>
+          </button>
+
           <button
             type="button"
             onClick={() => {
@@ -1134,313 +1155,8 @@ export default function AdminDashboard() {
         </div>
       </div>
 
-      {/* Operational Ledger Hub (Interactive Workspace Tabs) */}
-      <div className="bg-card border border-slate-200 dark:border-zinc-800 rounded-xl shadow-sm overflow-hidden">
-        {/* Ledger Header & Tab Selector */}
-        <div className="p-5 border-b border-slate-200/80 dark:border-zinc-800/80 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div>
-            <h2 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white">
-              Operational Activity Ledger
-            </h2>
-            <p className="text-xs text-slate-500 dark:text-zinc-400 mt-0.5">
-              Real-time records for collections, delinquent accounts,
-              maintenance requests, and activity log
-            </p>
-          </div>
-
-          <div className="flex items-center gap-1 bg-slate-100 dark:bg-zinc-800/80 p-1 rounded-lg text-xs font-semibold overflow-x-auto">
-            <button
-              onClick={() => setActiveLedgerTab("payments")}
-              className={`px-3 py-1.5 rounded-md transition-all flex items-center gap-1.5 ${activeLedgerTab === "payments" ? "bg-white dark:bg-zinc-900 text-slate-900 dark:text-white shadow-sm" : "text-slate-500 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white"}`}
-            >
-              <CreditCard className="w-3.5 h-3.5 text-emerald-500" />
-              <span>Recent Payments ({stats.recentPayments.length})</span>
-            </button>
-            <button
-              onClick={() => setActiveLedgerTab("overdue")}
-              className={`px-3 py-1.5 rounded-md transition-all flex items-center gap-1.5 ${activeLedgerTab === "overdue" ? "bg-white dark:bg-zinc-900 text-slate-900 dark:text-white shadow-sm" : "text-slate-500 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white"}`}
-            >
-              <AlertCircle className="w-3.5 h-3.5 text-rose-500" />
-              <span>Overdue Accounts ({stats.overdueAccounts.length})</span>
-            </button>
-            <button
-              onClick={() => setActiveLedgerTab("maintenance")}
-              className={`px-3 py-1.5 rounded-md transition-all flex items-center gap-1.5 ${activeLedgerTab === "maintenance" ? "bg-white dark:bg-zinc-900 text-slate-900 dark:text-white shadow-sm" : "text-slate-500 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white"}`}
-            >
-              <Wrench className="w-3.5 h-3.5 text-cyan-500" />
-              <span>Work Orders ({stats.recentRequests.length})</span>
-            </button>
-            <button
-              onClick={() => setActiveLedgerTab("audit")}
-              className={`px-3 py-1.5 rounded-md transition-all flex items-center gap-1.5 ${activeLedgerTab === "audit" ? "bg-white dark:bg-zinc-900 text-slate-900 dark:text-white shadow-sm" : "text-slate-500 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white"}`}
-            >
-              <Activity className="w-3.5 h-3.5 text-slate-400" />
-              <span>Activity Log ({stats.recentActivities.length})</span>
-            </button>
-          </div>
-        </div>
-
-        {/* Ledger Body Content */}
-        <div className="p-0 relative">
-          {/* Top-Right scrollbar header filler for table tabs */}
-          {activeLedgerTab !== "audit" && (
-            <div className="absolute top-0 right-0 w-6 h-[42px] bg-slate-100 dark:bg-zinc-900 border-b border-slate-200 dark:border-zinc-800 z-30 pointer-events-none rounded-tr-xl" />
-          )}
-
-          {/* Recent Payments Table */}
-          {activeLedgerTab === "payments" && (
-            <div className="overflow-x-auto overflow-y-auto max-h-[282px] custom-scrollbar">
-              <table className="w-full min-w-full text-left text-xs border-collapse">
-                <thead className="sticky top-0 z-20 bg-slate-100 dark:bg-zinc-900 shadow-xs border-b border-slate-200 dark:border-zinc-800">
-                  <tr className="h-[42px] bg-slate-100 dark:bg-zinc-900 text-slate-700 dark:text-zinc-300 uppercase tracking-wider text-[11px] font-bold">
-                    <th className="py-2.5 px-6 bg-slate-100 dark:bg-zinc-900 border-b border-slate-200 dark:border-zinc-800">
-                      Tenant Name
-                    </th>
-                    <th className="py-2.5 px-4 bg-slate-100 dark:bg-zinc-900 border-b border-slate-200 dark:border-zinc-800">
-                      Amount Paid
-                    </th>
-                    <th className="py-2.5 px-4 bg-slate-100 dark:bg-zinc-900 border-b border-slate-200 dark:border-zinc-800">
-                      Transaction Date
-                    </th>
-                    <th className="py-2.5 px-4 bg-slate-100 dark:bg-zinc-900 border-b border-slate-200 dark:border-zinc-800">
-                      Status
-                    </th>
-                    <th className="py-2.5 pl-4 pr-6 text-right bg-slate-100 dark:bg-zinc-900 border-b border-slate-200 dark:border-zinc-800">
-                      Action
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100 dark:divide-zinc-800/60">
-                  {stats.recentPayments.map((payment) => (
-                    <tr
-                      key={payment.id}
-                      className="h-[48px] hover:bg-slate-50/80 dark:hover:bg-zinc-800/40 transition-colors"
-                    >
-                      <td className="py-2.5 px-6 font-bold text-slate-900 dark:text-white">
-                        {payment.tenant_name}
-                      </td>
-                      <td className="py-2.5 px-4 font-mono font-bold text-emerald-600 dark:text-emerald-400">
-                        ₱{Number(payment.amount_paid).toLocaleString()}
-                      </td>
-                      <td className="py-2.5 px-4 text-slate-500 dark:text-zinc-400">
-                        {new Date(payment.payment_date).toLocaleDateString(
-                          undefined,
-                          { month: "short", day: "numeric", year: "numeric" },
-                        )}
-                      </td>
-                      <td className="py-2.5 px-4">
-                        <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-600 dark:text-emerald-400">
-                          <CheckCircle2 className="w-3 h-3" /> Recorded
-                        </span>
-                      </td>
-                      <td className="py-2.5 px-6 text-right">
-                        <Link
-                          href="/admin/billing"
-                          className="text-cyan-600 dark:text-cyan-400 font-semibold hover:underline"
-                        >
-                          View Receipt
-                        </Link>
-                      </td>
-                    </tr>
-                  ))}
-                  {stats.recentPayments.length === 0 && (
-                    <tr>
-                      <td
-                        colSpan={5}
-                        className="py-8 text-center text-slate-500 dark:text-zinc-400"
-                      >
-                        No recorded payments found.
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
-          )}
-
-          {/*Overdue Accounts Ledger */}
-          {activeLedgerTab === "overdue" && (
-            <div className="overflow-x-auto overflow-y-auto max-h-[282px] custom-scrollbar">
-              <table className="w-full min-w-full text-left text-xs border-collapse">
-                <thead className="sticky top-0 z-20 bg-slate-100 dark:bg-zinc-900 shadow-xs border-b border-slate-200 dark:border-zinc-800">
-                  <tr className="h-[42px] bg-slate-100 dark:bg-zinc-900 text-slate-700 dark:text-zinc-300 uppercase tracking-wider text-[11px] font-bold">
-                    <th className="py-2.5 px-6 bg-slate-100 dark:bg-zinc-900 border-b border-slate-200 dark:border-zinc-800">
-                      Tenant Name
-                    </th>
-                    <th className="py-2.5 px-4 bg-slate-100 dark:bg-zinc-900 border-b border-slate-200 dark:border-zinc-800">
-                      Room No.
-                    </th>
-                    <th className="py-2.5 px-4 bg-slate-100 dark:bg-zinc-900 border-b border-slate-200 dark:border-zinc-800">
-                      Total Overdue
-                    </th>
-                    <th className="py-2.5 px-4 bg-slate-100 dark:bg-zinc-900 border-b border-slate-200 dark:border-zinc-800">
-                      Aging Flag
-                    </th>
-                    <th className="py-2.5 pl-4 pr-6 text-right bg-slate-100 dark:bg-zinc-900 border-b border-slate-200 dark:border-zinc-800">
-                      Action
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100 dark:divide-zinc-800/60">
-                  {stats.overdueAccounts.map((account) => (
-                    <tr
-                      key={account.tenant_id}
-                      className="h-[48px] hover:bg-slate-50/80 dark:hover:bg-zinc-800/40 transition-colors"
-                    >
-                      <td className="py-2.5 px-6 font-bold text-slate-900 dark:text-white">
-                        {account.tenant_name}
-                      </td>
-                      <td className="py-2.5 px-4 font-semibold text-slate-600 dark:text-zinc-300">
-                        Room {account.room_number || "N/A"}
-                      </td>
-                      <td className="py-2.5 px-4 font-mono font-bold text-rose-600 dark:text-rose-400">
-                        ₱{Number(account.total_overdue).toLocaleString()}
-                      </td>
-                      <td className="py-2.5 px-4">
-                        <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-rose-600 dark:text-rose-400">
-                          <AlertTriangle className="w-3 h-3" /> Past Due Date
-                        </span>
-                      </td>
-                      <td className="py-2.5 px-6 text-right">
-                        <button
-                          onClick={() =>
-                            toast.success(
-                              `Payment overdue notice sent to ${account.tenant_name}`,
-                            )
-                          }
-                          className="text-rose-600 dark:text-rose-400 font-semibold hover:underline"
-                        >
-                          Send Reminder
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                  {stats.overdueAccounts.length === 0 && (
-                    <tr>
-                      <td
-                        colSpan={5}
-                        className="py-8 text-center text-slate-500 dark:text-zinc-400"
-                      >
-                        No delinquent or overdue accounts.
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
-          )}
-
-          {/* Maintenance Requests */}
-          {activeLedgerTab === "maintenance" && (
-            <div className="overflow-x-auto overflow-y-auto max-h-[282px] custom-scrollbar">
-              <table className="w-full min-w-full text-left text-xs border-collapse">
-                <thead className="sticky top-0 z-20 bg-slate-100 dark:bg-zinc-900 shadow-xs border-b border-slate-200 dark:border-zinc-800">
-                  <tr className="h-[42px] bg-slate-100 dark:bg-zinc-900 text-slate-700 dark:text-zinc-300 uppercase tracking-wider text-[11px] font-bold">
-                    <th className="py-2.5 px-6 bg-slate-100 dark:bg-zinc-900 border-b border-slate-200 dark:border-zinc-800">
-                      Request # & Title
-                    </th>
-                    <th className="py-2.5 px-4 bg-slate-100 dark:bg-zinc-900 border-b border-slate-200 dark:border-zinc-800">
-                      Tenant
-                    </th>
-                    <th className="py-2.5 px-4 bg-slate-100 dark:bg-zinc-900 border-b border-slate-200 dark:border-zinc-800">
-                      Created Date
-                    </th>
-                    <th className="py-2.5 px-4 bg-slate-100 dark:bg-zinc-900 border-b border-slate-200 dark:border-zinc-800">
-                      Status
-                    </th>
-                    <th className="py-2.5 pl-4 pr-6 text-right bg-slate-100 dark:bg-zinc-900 border-b border-slate-200 dark:border-zinc-800">
-                      Action
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100 dark:divide-zinc-800/60">
-                  {stats.recentRequests.map((req) => (
-                    <tr
-                      key={req.id}
-                      className="h-[48px] hover:bg-slate-50/80 dark:hover:bg-zinc-800/40 transition-colors"
-                    >
-                      <td className="py-2.5 px-6 font-bold text-slate-900 dark:text-white">
-                        <div className="flex items-center gap-2">
-                          <span className="font-mono text-[11px] font-semibold text-teal-600 dark:text-teal-400">
-                            {formatRequestNumber(req.id, req.request_number)}
-                          </span>
-                          <span className="truncate">{req.title}</span>
-                        </div>
-                      </td>
-                      <td className="py-2.5 px-4 text-slate-600 dark:text-zinc-300">
-                        {req.tenant_name}
-                      </td>
-                      <td className="py-2.5 px-4 text-slate-500 dark:text-zinc-400">
-                        {new Date(req.created_at).toLocaleDateString(
-                          undefined,
-                          { month: "short", day: "numeric", year: "numeric" },
-                        )}
-                      </td>
-                      <td className="py-2.5 px-4">
-                        <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-amber-600 dark:text-amber-400">
-                          <Clock className="w-3 h-3" /> Active Request
-                        </span>
-                      </td>
-                      <td className="py-2.5 px-6 text-right">
-                        <Link
-                          href="/admin/requests"
-                          className="text-cyan-600 dark:text-cyan-400 font-semibold hover:underline"
-                        >
-                          Manage Request
-                        </Link>
-                      </td>
-                    </tr>
-                  ))}
-                  {stats.recentRequests.length === 0 && (
-                    <tr>
-                      <td
-                        colSpan={5}
-                        className="py-8 text-center text-slate-500 dark:text-zinc-400"
-                      >
-                        No active maintenance requests.
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
-          )}
-
-          {/*Activity Log */}
-          {activeLedgerTab === "audit" && (
-            <div className="overflow-x-auto overflow-y-auto max-h-[282px] custom-scrollbar divide-y divide-slate-100 dark:divide-zinc-800/60">
-              {stats.recentActivities.map((act) => (
-                <div
-                  key={act.id}
-                  className="h-[54px] flex items-center justify-between px-6 hover:bg-slate-50/50 dark:hover:bg-zinc-900/30 transition-colors"
-                >
-                  <div className="flex items-center gap-3 min-w-0">
-                    <div className="w-8 h-8 rounded-lg bg-slate-100 dark:bg-zinc-800 text-slate-600 dark:text-zinc-300 flex items-center justify-center shrink-0">
-                      <Activity className="w-4 h-4" />
-                    </div>
-                    <div className="min-w-0">
-                      <p className="text-xs font-bold text-slate-900 dark:text-white truncate">
-                        {act.title}
-                      </p>
-                      <p className="text-[11px] text-slate-500 dark:text-zinc-400 truncate">
-                        {act.description}
-                      </p>
-                    </div>
-                  </div>
-                  <span className="text-[11px] font-medium text-slate-400 dark:text-zinc-500 shrink-0 ml-4">
-                    {new Date(act.date).toLocaleString()}
-                  </span>
-                </div>
-              ))}
-              {stats.recentActivities.length === 0 && (
-                <p className="text-center text-slate-500 dark:text-zinc-400 py-8 text-xs">
-                  No recent activities logged.
-                </p>
-              )}
-            </div>
-          )}
-        </div>
-      </div>
+      {/* Visual Floor & Room Matrix (Property Digital Twin) */}
+      <VisualRoomMatrix rooms={stats.roomMatrix || []} />
 
       {/* ANNOUNCEMENT POP-UP MODAL */}
       <AnimatePresence>
@@ -1703,6 +1419,12 @@ export default function AdminDashboard() {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Operational & Financial Report Modal */}
+      <AdminReportModal
+        isOpen={showReportModal}
+        onClose={() => setShowReportModal(false)}
+      />
     </div>
   );
 }

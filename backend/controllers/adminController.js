@@ -12,15 +12,27 @@ const getDashboardStats = async (req, res) => {
             expiringContractsResult, totalBilledResult, historicalIncomeResult,
             overdueAccountsResult, upcomingRentResult, recentMessagesResult, pendingTenantsListResult, pendingPaymentVerificationsResult, lastMonthIncomeResult
         ] = await Promise.all([
-            // Rooms Overview
+            // Rooms Overview (Enriched with Room Matrix details & tenants)
             db.query('SELECT COUNT(*) FROM rooms'),
             db.query(`
                 SELECT 
-                    r.id, r.status, r.capacity, 
-                    CAST(COUNT(u.id) AS INTEGER) as current_occupants 
+                    r.id, r.room_number, r.type, r.rental_type, r.capacity, r.price, r.floor, r.status,
+                    CAST(COUNT(u.id) AS INTEGER) as current_occupants,
+                    COALESCE(
+                        json_agg(
+                            json_build_object(
+                                'id', u.id,
+                                'name', u.name,
+                                'phone', u.phone,
+                                'email', u.email
+                            )
+                        ) FILTER (WHERE u.id IS NOT NULL),
+                        '[]'
+                    ) as tenants
                 FROM rooms r 
                 LEFT JOIN users u ON r.id = u.room_id AND u.role = 'tenant' AND u.status != 'Moved Out' 
                 GROUP BY r.id
+                ORDER BY r.floor ASC, r.room_number ASC
             `),
             
             // Tenants Overview (Total & Status)
@@ -44,10 +56,13 @@ const getDashboardStats = async (req, res) => {
                 ORDER BY p.payment_date DESC LIMIT 50
             `),
             db.query(`
-                SELECT r.id, r.request_number, u.name as tenant_name, r.title, r.created_at 
+                SELECT r.id, r.request_number, r.title, r.description, r.category, r.priority, r.status, r.created_at, r.assigned_to, r.date_resolved, r.scheduled_date,
+                       u.name as tenant_name,
+                       rm.room_number
                 FROM requests r 
                 JOIN users u ON r.tenant_id = u.id 
-                ORDER BY r.created_at DESC LIMIT 50
+                LEFT JOIN rooms rm ON u.room_id = rm.id
+                ORDER BY r.created_at DESC LIMIT 100
             `),
 
             // Expiring Contracts (within next 30 days)
@@ -154,6 +169,7 @@ const getDashboardStats = async (req, res) => {
                     status = 'Partially Occupied';
                 }
             }
+            room.computed_status = status;
             
             if (status === 'Occupied') occupiedRooms++;
             else if (status === 'Available') availableRooms++;
@@ -274,12 +290,20 @@ const getDashboardStats = async (req, res) => {
             payment_date: p.payment_date
         }));
 
-        // Recent Requests List
+        // Recent Requests List (Enriched for Kanban & Work Order Management)
         const recentRequests = recentRequestsResult.rows.map(r => ({
             id: r.id,
             request_number: r.request_number || `RT-${String(r.id).padStart(6, '0')}`,
             tenant_name: r.tenant_name,
             title: r.title,
+            description: r.description,
+            category: r.category || 'Other',
+            priority: r.priority || 'Normal',
+            status: r.status || 'Pending',
+            assigned_to: r.assigned_to || null,
+            room_number: r.room_number || null,
+            scheduled_date: r.scheduled_date || null,
+            date_resolved: r.date_resolved || null,
             created_at: r.created_at
         }));
 
@@ -334,7 +358,8 @@ const getDashboardStats = async (req, res) => {
             expiringContracts,
             overdueAccounts,
             upcomingRent,
-            pendingPaymentVerifications: pendingPaymentVerificationsResult.rows
+            pendingPaymentVerifications: pendingPaymentVerificationsResult.rows,
+            roomMatrix: roomStatusResult.rows
         });
 
     } catch (error) {
@@ -963,6 +988,200 @@ const markAdminNotificationRead = async (req, res) => {
     }
 };
 
+// @desc    Generate comprehensive operational and financial report data
+// @route   GET /api/admin/reports
+const getReportData = async (req, res) => {
+    try {
+        const { range = 'this_month' } = req.query;
+
+        // Build date filter clauses
+        let paymentDateClause = '1=1';
+        let billDateClause = '1=1';
+        let rangeLabel = 'All-Time Record';
+
+        if (range === 'this_month') {
+            paymentDateClause = `p.payment_date >= DATE_TRUNC('month', CURRENT_DATE)`;
+            billDateClause = `b.due_date >= DATE_TRUNC('month', CURRENT_DATE)`;
+            rangeLabel = 'Current Month';
+        } else if (range === 'last_month') {
+            paymentDateClause = `p.payment_date >= DATE_TRUNC('month', CURRENT_DATE - INTERVAL '1 month') AND p.payment_date < DATE_TRUNC('month', CURRENT_DATE)`;
+            billDateClause = `b.due_date >= DATE_TRUNC('month', CURRENT_DATE - INTERVAL '1 month') AND b.due_date < DATE_TRUNC('month', CURRENT_DATE)`;
+            rangeLabel = 'Previous Month';
+        } else if (range === 'this_year') {
+            paymentDateClause = `p.payment_date >= DATE_TRUNC('year', CURRENT_DATE)`;
+            billDateClause = `b.due_date >= DATE_TRUNC('year', CURRENT_DATE)`;
+            rangeLabel = 'Year-to-Date (' + new Date().getFullYear() + ')';
+        }
+
+        const [
+            paymentsResult,
+            billsResult,
+            methodBreakdownResult,
+            recentPaymentsResult,
+            roomsResult,
+            overdueResult,
+            maintenanceSummaryResult,
+            maintenanceTicketsResult
+        ] = await Promise.all([
+            // Total Collections in period
+            db.query(`SELECT COALESCE(SUM(p.amount_paid), 0) as total_collected, COUNT(*) as count FROM payments p WHERE ${paymentDateClause}`),
+            
+            // Total Invoices & Utility breakdown in period
+            db.query(`
+                SELECT 
+                    COALESCE(SUM(b.total_amount), 0) as total_billed,
+                    COALESCE(SUM(b.amount_paid), 0) as amount_paid,
+                    COALESCE(SUM(b.balance), 0) as outstanding_balance,
+                    COALESCE(SUM(b.rent_amount), 0) as rent_total,
+                    COALESCE(SUM(b.water_charges), 0) as water_total,
+                    COALESCE(SUM(b.electricity_charges), 0) as electricity_total,
+                    COALESCE(SUM(b.other_fees), 0) as other_total,
+                    COUNT(*) as invoice_count
+                FROM bills b
+                WHERE ${billDateClause}
+            `),
+
+            // Payment Methods Breakdown
+            db.query(`
+                SELECT COALESCE(p.payment_method, 'Cash') as method, COUNT(*) as count, SUM(p.amount_paid) as total
+                FROM payments p
+                WHERE ${paymentDateClause}
+                GROUP BY COALESCE(p.payment_method, 'Cash')
+                ORDER BY total DESC
+            `),
+
+            // Individual Payment Ledger
+            db.query(`
+                SELECT p.id, p.reference_number, p.payment_date, p.payment_method, p.amount_paid, p.status,
+                       u.name as tenant_name, r.room_number, b.billing_month
+                FROM payments p
+                JOIN bills b ON p.bill_id = b.id
+                JOIN users u ON b.tenant_id = u.id
+                LEFT JOIN rooms r ON b.room_id = r.id
+                WHERE ${paymentDateClause}
+                ORDER BY p.payment_date DESC
+                LIMIT 100
+            `),
+
+            // Room Occupancy & Rent Roll
+            db.query(`
+                SELECT 
+                    r.id, r.room_number, r.type, r.rental_type, r.capacity, r.price, r.floor, r.status,
+                    CAST(COUNT(u.id) AS INTEGER) as current_occupants,
+                    COALESCE(string_agg(u.name, ', '), 'Vacant') as occupants_list
+                FROM rooms r
+                LEFT JOIN users u ON r.id = u.room_id AND u.role = 'tenant' AND u.status != 'Moved Out'
+                GROUP BY r.id
+                ORDER BY r.room_number ASC
+            `),
+
+            // Delinquent / Overdue Accounts
+            db.query(`
+                SELECT 
+                    b.id as bill_id, u.name as tenant_name, u.phone, r.room_number, 
+                    b.billing_month, b.due_date, b.total_amount, b.amount_paid, b.balance,
+                    CAST((CURRENT_DATE - b.due_date) AS INTEGER) as days_overdue
+                FROM bills b
+                JOIN users u ON b.tenant_id = u.id
+                LEFT JOIN rooms r ON b.room_id = r.id
+                WHERE b.status IN ('Unpaid', 'Partial', 'Overdue') AND b.due_date < CURRENT_DATE
+                ORDER BY days_overdue DESC, b.balance DESC
+                LIMIT 100
+            `),
+
+            // Maintenance Status & Category Breakdown
+            db.query(`
+                SELECT 
+                    COUNT(*) as total,
+                    SUM(CASE WHEN status = 'Resolved' THEN 1 ELSE 0 END) as resolved_count,
+                    SUM(CASE WHEN status = 'In Progress' THEN 1 ELSE 0 END) as in_progress_count,
+                    SUM(CASE WHEN status = 'Pending' THEN 1 ELSE 0 END) as pending_count,
+                    SUM(CASE WHEN status = 'Cancelled' THEN 1 ELSE 0 END) as cancelled_count
+                FROM requests
+            `),
+
+            // Maintenance Tickets
+            db.query(`
+                SELECT req.id, req.request_number, req.title, req.category, req.priority, req.status,
+                       req.created_at, req.date_resolved, req.assigned_to,
+                       u.name as tenant_name, rm.room_number
+                FROM requests req
+                JOIN users u ON req.tenant_id = u.id
+                LEFT JOIN rooms rm ON u.room_id = rm.id
+                ORDER BY req.created_at DESC
+                LIMIT 50
+            `)
+        ]);
+
+        const totalBilled = parseFloat(billsResult.rows[0]?.total_billed || 0);
+        const totalCollected = parseFloat(paymentsResult.rows[0]?.total_collected || 0);
+        const collectionRate = totalBilled > 0 ? Math.min(100, Math.round((totalCollected / totalBilled) * 100)) : 100;
+
+        // Occupancy metrics
+        const rooms = roomsResult.rows;
+        const totalRooms = rooms.length;
+        const totalCapacity = rooms.reduce((acc, r) => acc + parseInt(r.capacity || 0), 0);
+        const totalOccupants = rooms.reduce((acc, r) => acc + parseInt(r.current_occupants || 0), 0);
+        const overallOccupancyRate = totalCapacity > 0 ? Math.round((totalOccupants / totalCapacity) * 100) : 0;
+        const occupiedRooms = rooms.filter(r => parseInt(r.current_occupants) >= parseInt(r.capacity)).length;
+        const partiallyOccupiedRooms = rooms.filter(r => parseInt(r.current_occupants) > 0 && parseInt(r.current_occupants) < parseInt(r.capacity)).length;
+        const availableRooms = rooms.filter(r => parseInt(r.current_occupants) === 0 && r.status !== 'Maintenance').length;
+        const maintenanceRooms = rooms.filter(r => r.status === 'Maintenance').length;
+
+        // Overdue metrics
+        const overdueAccounts = overdueResult.rows;
+        const totalOverdueBalance = overdueAccounts.reduce((acc, a) => acc + parseFloat(a.balance || 0), 0);
+
+        const reportData = {
+            meta: {
+                propertyName: 'RentTrack Residences & Dormitory',
+                generatedAt: new Date().toISOString(),
+                generatedBy: req.user?.name || 'Administrator',
+                dateRange: rangeLabel,
+                rangeKey: range
+            },
+            financials: {
+                totalBilled,
+                totalCollected,
+                outstandingBalance: parseFloat(billsResult.rows[0]?.outstanding_balance || 0),
+                collectionRate,
+                rentTotal: parseFloat(billsResult.rows[0]?.rent_total || 0),
+                waterTotal: parseFloat(billsResult.rows[0]?.water_total || 0),
+                electricityTotal: parseFloat(billsResult.rows[0]?.electricity_total || 0),
+                otherTotal: parseFloat(billsResult.rows[0]?.other_total || 0),
+                paymentCount: parseInt(paymentsResult.rows[0]?.count || 0),
+                methodBreakdown: methodBreakdownResult.rows,
+                ledger: recentPaymentsResult.rows
+            },
+            occupancy: {
+                totalRooms,
+                totalCapacity,
+                totalOccupants,
+                occupancyRate: overallOccupancyRate,
+                occupiedRooms,
+                partiallyOccupiedRooms,
+                availableRooms,
+                maintenanceRooms,
+                rooms
+            },
+            overdue: {
+                count: overdueAccounts.length,
+                totalOverdueBalance,
+                accounts: overdueAccounts
+            },
+            maintenance: {
+                stats: maintenanceSummaryResult.rows[0] || {},
+                tickets: maintenanceTicketsResult.rows
+            }
+        };
+
+        res.status(200).json(reportData);
+    } catch (error) {
+        console.error('Get Report Data Error:', error);
+        res.status(500).json({ message: 'Server error generating report data' });
+    }
+};
+
 module.exports = { 
     getDashboardStats, 
     getAllRooms, 
@@ -985,5 +1204,6 @@ module.exports = {
     deleteAnnouncement,
     getAdminNotifications,
     markAllAdminNotificationsRead,
-    markAdminNotificationRead
+    markAdminNotificationRead,
+    getReportData
 };
