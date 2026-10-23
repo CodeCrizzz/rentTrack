@@ -44,10 +44,10 @@ export function NavMain({
                 render={<Link href={item.url} className="flex items-center gap-3" />}
                 isActive={item.isActive}
                 tooltip={item.title}
-                className={`rounded-xl transition-colors ${
+                className={`rounded-xl transition-all ${
                   item.isActive 
-                    ? 'bg-zinc-100 dark:bg-zinc-800 text-zinc-950 dark:text-white font-bold border border-zinc-200 dark:border-zinc-700/60 shadow-xs' 
-                    : 'text-slate-600 dark:text-zinc-400 hover:bg-slate-100/80 dark:hover:bg-zinc-900/60 hover:text-slate-900 dark:hover:text-white font-medium'
+                    ? 'bg-[#0284c7] text-white font-bold shadow-sm' 
+                    : 'text-slate-300 hover:bg-white/10 hover:text-white font-medium'
                 }`}
               >
                 {item.icon}
