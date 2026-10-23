@@ -14,6 +14,7 @@ import {
   HardDrive,
   Radio,
   X,
+  AlertTriangle,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -224,7 +225,52 @@ export default function CCTVPage() {
     );
   }, [selectedZone]);
 
-  const onlineCount = CAMERAS.filter((c) => c.status === "online").length;
+  // --- DYNAMIC TELEMETRY CALCULATIONS ---
+  const totalCameras = CAMERAS.length;
+  const onlineCameras = useMemo(() => CAMERAS.filter((c) => c.status === "online"), []);
+  const offlineCameras = useMemo(() => CAMERAS.filter((c) => c.status === "offline"), []);
+  const onlineCount = onlineCameras.length;
+  const offlineCount = offlineCameras.length;
+  const uptimePercent = Math.round((onlineCount / totalCameras) * 100);
+
+  // 1. Perimeter Coverage Calculations
+  const perimeterCameras = useMemo(() => CAMERAS.filter((c) => c.zone === "Perimeter"), []);
+  const onlinePerimeterCount = useMemo(
+    () => perimeterCameras.filter((c) => c.status === "online").length,
+    [perimeterCameras],
+  );
+  const perimeterCoverage = Math.round(
+    (onlinePerimeterCount / perimeterCameras.length) * 100,
+  );
+
+  // 2. Storage & Retention Calculations (derived from active stream resolutions)
+  const count4K = useMemo(() => onlineCameras.filter((c) => c.resolution === "4K").length, [onlineCameras]);
+  const count1080p = useMemo(() => onlineCameras.filter((c) => c.resolution === "1080p").length, [onlineCameras]);
+  // 4K stream ~ 15.8 GB/day, 1080p ~ 4.2 GB/day (standard H.265 compression)
+  const dailyIngestGB = Math.round(count4K * 15.8 + count1080p * 4.2);
+  const nvrCapacityGB = 4096; // 4.0 TB RAID-5 array
+  const estimatedUsedGB = Math.min(nvrCapacityGB, Math.round(dailyIngestGB * 26)); // 26 days of rolling buffer
+  const storageUsedPercent = Math.round((estimatedUsedGB / nvrCapacityGB) * 100);
+  const storageUsedTB = (estimatedUsedGB / 1024).toFixed(1);
+  const storageTotalTB = (nvrCapacityGB / 1024).toFixed(1);
+
+  // 3. Security & Night Vision Calculations
+  const activeNightVisionCount = useMemo(
+    () => Object.values(nightVisionMap).filter(Boolean).length,
+    [nightVisionMap],
+  );
+
+  // 4. Bandwidth & Frame Rate Calculations
+  // 4K stream @ 15 Mbps, 1080p stream @ 4 Mbps
+  const totalBandwidthMbps = count4K * 15 + count1080p * 4;
+  const totalIngestFPS = useMemo(
+    () => onlineCameras.reduce((acc, c) => acc + c.fps, 0),
+    [onlineCameras],
+  );
+  // Dynamic UDP latency jitter
+  const dynamicLatencyMs = useMemo(() => {
+    return 15 + (currentTime.getSeconds() % 4);
+  }, [currentTime]);
   const cardHeight = useMemo(() => {
     const gap = 10;
     const totalGaps = 10;
@@ -346,87 +392,171 @@ export default function CCTVPage() {
 
         <div className="flex items-center gap-2">
           <div className="flex items-center gap-2 px-3 py-1 rounded-lg border border-slate-200 dark:border-zinc-800 bg-slate-50/70 dark:bg-zinc-900/60 text-xs font-mono font-bold text-slate-700 dark:text-zinc-300">
-            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+            <span
+              className={`w-2 h-2 rounded-full ${
+                offlineCount > 0 ? "bg-amber-500 animate-pulse" : "bg-emerald-500 animate-pulse"
+              }`}
+            ></span>
             <span>
-              {onlineCount} OF {CAMERAS.length} CHANNELS ONLINE
+              {onlineCount} OF {totalCameras} CHANNELS ONLINE ({uptimePercent}%)
             </span>
           </div>
         </div>
       </div>
 
-      {/* 2. Compact Telemetry Ribbon (Saves vertical room for camera feeds) */}
+      {/* 2. Compact Telemetry Ribbon (Interactive & Computed Dynamically) */}
       <div className="shrink-0 grid grid-cols-2 lg:grid-cols-4 gap-2">
-        <div className="bg-card border border-slate-200 dark:border-zinc-800 rounded-xl px-3 py-2 shadow-xs flex items-center justify-between">
+        {/* Card 1: Camera Matrix */}
+        <div
+          onClick={() => {
+            setSelectedZone("All");
+            toast.info(`Camera Matrix: ${onlineCount} active, ${offlineCount} signal loss out of ${totalCameras} total feeds`);
+          }}
+          className={`bg-card border rounded-xl px-3 py-2 shadow-xs flex items-center justify-between cursor-pointer transition-all hover:shadow-md hover:border-emerald-500/50 active:scale-[0.99] group ${
+            selectedZone === "All"
+              ? "border-emerald-500/60 ring-1 ring-emerald-500/20"
+              : "border-slate-200 dark:border-zinc-800"
+          }`}
+          title="Click to view all camera channels"
+        >
           <div>
-            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
-              Camera Matrix
-            </span>
-            <div className="text-lg font-extrabold font-mono text-emerald-600 mt-0.5 leading-tight">
-              {onlineCount} / {CAMERAS.length}{" "}
-              <span className="text-xs font-semibold text-slate-500">
+            <div className="flex items-center gap-1.5">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 group-hover:text-emerald-500 transition-colors">
+                Camera Matrix
+              </span>
+              <span className="px-1 py-0.2 rounded text-[9px] font-mono font-bold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
+                {uptimePercent}% Active
+              </span>
+            </div>
+            <div className="text-lg font-extrabold font-mono text-emerald-600 dark:text-emerald-400 mt-0.5 leading-tight">
+              {onlineCount} / {totalCameras}{" "}
+              <span className="text-xs font-semibold text-slate-500 dark:text-zinc-400">
                 Online
               </span>
             </div>
-            <div className="text-[10px] font-semibold text-emerald-600 mt-0.5">
-              92% perimeter coverage
+            <div className="text-[10px] font-semibold text-slate-500 dark:text-zinc-400 mt-0.5 flex items-center gap-1">
+              <span>{count4K} 4K · {count1080p} 1080p</span>
+              <span className="text-slate-300 dark:text-zinc-700">·</span>
+              <span className={offlineCount > 0 ? "text-rose-500 font-bold" : "text-emerald-600"}>
+                {offlineCount > 0 ? `${offlineCount} Alert` : "All Signals OK"}
+              </span>
             </div>
           </div>
-          <div className="w-8 h-8 rounded-lg bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 flex items-center justify-center shrink-0">
+          <div className="w-8 h-8 rounded-lg bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
             <Radio className="w-4 h-4" />
           </div>
         </div>
 
-        <div className="bg-card border border-slate-200 dark:border-zinc-800 rounded-xl px-3 py-2 shadow-xs flex items-center justify-between">
+        {/* Card 2: RAID Storage Ring */}
+        <div
+          onClick={() => {
+            toast.info(
+              `NVR Storage: ${storageUsedTB} TB used of ${storageTotalTB} TB (${storageUsedPercent}%) · Recording Rate: ~${dailyIngestGB} GB/day · 30-day buffer loop active`,
+            );
+          }}
+          className="bg-card border border-slate-200 dark:border-zinc-800 hover:border-teal-500/50 rounded-xl px-3 py-2 shadow-xs flex items-center justify-between cursor-pointer transition-all hover:shadow-md active:scale-[0.99] group"
+          title="Click to view NVR storage breakdown"
+        >
           <div>
-            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
-              RAID Storage Ring
-            </span>
-            <div className="text-lg font-extrabold font-mono text-teal-600 mt-0.5 leading-tight">
-              88%{" "}
-              <span className="text-xs font-semibold text-slate-500">
+            <div className="flex items-center gap-1.5">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 group-hover:text-teal-500 transition-colors">
+                RAID Storage Pool
+              </span>
+              <span className="px-1 py-0.2 rounded text-[9px] font-mono font-bold bg-teal-500/10 text-teal-600 dark:text-teal-400">
+                {storageUsedTB} / {storageTotalTB} TB
+              </span>
+            </div>
+            <div className="text-lg font-extrabold font-mono text-teal-600 dark:text-teal-400 mt-0.5 leading-tight">
+              {storageUsedPercent}%{" "}
+              <span className="text-xs font-semibold text-slate-500 dark:text-zinc-400">
                 Capacity
               </span>
             </div>
-            <div className="text-[10px] font-semibold text-slate-500 mt-0.5">
-              30-day rolling loop buffer
+            <div className="text-[10px] font-semibold text-slate-500 dark:text-zinc-400 mt-0.5">
+              ~{dailyIngestGB} GB/day · 30-day rolling loop
             </div>
           </div>
-          <div className="w-8 h-8 rounded-lg bg-teal-50 dark:bg-teal-500/10 text-teal-600 flex items-center justify-center shrink-0">
+          <div className="w-8 h-8 rounded-lg bg-teal-50 dark:bg-teal-500/10 text-teal-600 dark:text-teal-400 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
             <HardDrive className="w-4 h-4" />
           </div>
         </div>
 
-        <div className="bg-card border border-slate-200 dark:border-zinc-800 rounded-xl px-3 py-2 shadow-xs flex items-center justify-between">
+        {/* Card 3: Perimeter Status */}
+        <div
+          onClick={() => {
+            setSelectedZone("Perimeter");
+            toast.info(`Filtered view to Perimeter Zone (${onlinePerimeterCount}/${perimeterCameras.length} armed)`);
+          }}
+          className={`bg-card border rounded-xl px-3 py-2 shadow-xs flex items-center justify-between cursor-pointer transition-all hover:shadow-md hover:border-indigo-500/50 active:scale-[0.99] group ${
+            selectedZone === "Perimeter"
+              ? "border-indigo-500/60 ring-1 ring-indigo-500/20"
+              : "border-slate-200 dark:border-zinc-800"
+          }`}
+          title="Click to filter camera grid to Perimeter zone"
+        >
           <div>
-            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
-              Perimeter Status
-            </span>
-            <div className="text-lg font-extrabold font-mono text-indigo-600 mt-0.5 leading-tight">
-              Armed
+            <div className="flex items-center gap-1.5">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 group-hover:text-indigo-500 transition-colors">
+                Perimeter Defense
+              </span>
+              <span
+                className={`px-1 py-0.2 rounded text-[9px] font-mono font-bold ${
+                  perimeterCoverage === 100
+                    ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
+                    : "bg-amber-500/10 text-amber-600 dark:text-amber-400"
+                }`}
+              >
+                {perimeterCoverage}% Coverage
+              </span>
             </div>
-            <div className="text-[10px] font-semibold text-indigo-600 mt-0.5">
-              Optical motion detection on
+            <div className="text-lg font-extrabold font-mono text-indigo-600 dark:text-indigo-400 mt-0.5 leading-tight">
+              {onlinePerimeterCount} / {perimeterCameras.length}{" "}
+              <span className="text-xs font-semibold text-slate-500 dark:text-zinc-400">
+                Armed
+              </span>
+            </div>
+            <div className="text-[10px] font-semibold text-slate-500 dark:text-zinc-400 mt-0.5">
+              {activeNightVisionCount > 0 ? `${activeNightVisionCount} IR active · ` : ""}
+              {perimeterCameras.some((c) => c.status === "offline")
+                ? "1 Sector Signal Loss"
+                : "All Sectors Monitored"}
             </div>
           </div>
-          <div className="w-8 h-8 rounded-lg bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 flex items-center justify-center shrink-0">
+          <div className="w-8 h-8 rounded-lg bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
             <ShieldCheck className="w-4 h-4" />
           </div>
         </div>
 
-        <div className="bg-card border border-slate-200 dark:border-zinc-800 rounded-xl px-3 py-2 shadow-xs flex items-center justify-between">
+        {/* Card 4: Stream Latency & Throughput */}
+        <div
+          onClick={() => {
+            toast.info(
+              `Network Diagnostics: ${totalBandwidthMbps} Mbps aggregate throughput across ${totalIngestFPS} total FPS ingest. Latency: ${dynamicLatencyMs}ms UDP.`,
+            );
+          }}
+          className="bg-card border border-slate-200 dark:border-zinc-800 hover:border-cyan-500/50 rounded-xl px-3 py-2 shadow-xs flex items-center justify-between cursor-pointer transition-all hover:shadow-md active:scale-[0.99] group"
+          title="Click to view network throughput diagnostics"
+        >
           <div>
-            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
-              Stream Latency
-            </span>
-            <div className="text-lg font-extrabold font-mono text-slate-900 dark:text-white mt-0.5 leading-tight">
-              16ms{" "}
-              <span className="text-xs font-semibold text-slate-500">UDP</span>
+            <div className="flex items-center gap-1.5">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 group-hover:text-cyan-500 transition-colors">
+                Stream Throughput
+              </span>
+              <span className="px-1 py-0.2 rounded text-[9px] font-mono font-bold bg-cyan-500/10 text-cyan-600 dark:text-cyan-400">
+                {totalBandwidthMbps} Mbps
+              </span>
             </div>
-            <div className="text-[10px] font-semibold text-slate-500 mt-0.5">
-              Zero dropped frames
+            <div className="text-lg font-extrabold font-mono text-slate-900 dark:text-white mt-0.5 leading-tight">
+              {dynamicLatencyMs}ms{" "}
+              <span className="text-xs font-semibold text-slate-500 dark:text-zinc-400">
+                UDP
+              </span>
+            </div>
+            <div className="text-[10px] font-semibold text-slate-500 dark:text-zinc-400 mt-0.5">
+              {totalIngestFPS} FPS ingest · {offlineCount > 0 ? "1 Stream Standby" : "0 dropped frames"}
             </div>
           </div>
-          <div className="w-8 h-8 rounded-lg bg-slate-100 dark:bg-zinc-800 text-slate-600 dark:text-zinc-400 flex items-center justify-center shrink-0">
+          <div className="w-8 h-8 rounded-lg bg-slate-100 dark:bg-zinc-800 text-slate-600 dark:text-zinc-400 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
             <Eye className="w-4 h-4" />
           </div>
         </div>
@@ -496,12 +626,12 @@ export default function CCTVPage() {
                 key={cam.id}
                 onClick={() => setFocusedCam(cam)}
                 style={{ height: cardHeight ? `${cardHeight}px` : undefined }}
-                className={`group relative rounded-xl overflow-hidden border cursor-pointer transition-all flex flex-col justify-between shrink-0 ${
+                className={`group relative rounded-xl overflow-hidden border border-red-600 hover:border-red-500 cursor-pointer transition-all flex flex-col justify-between shrink-0 ${
                   cam.status === "offline"
-                    ? "bg-zinc-950 border-rose-900/60"
+                    ? "bg-zinc-950"
                     : isNightVision
-                      ? "bg-emerald-950/60 border-emerald-600"
-                      : "bg-black border-zinc-800 hover:border-teal-500"
+                      ? "bg-emerald-950/60"
+                      : "bg-black"
                 }`}
               >
                 {/* Surveillance CRT Scanline Overlay */}
@@ -612,13 +742,13 @@ export default function CCTVPage() {
               initial={{ scale: 0.96 }}
               animate={{ scale: 1 }}
               exit={{ scale: 0.96 }}
-              className="w-full max-w-5xl bg-zinc-950 border border-zinc-800 rounded-2xl overflow-hidden shadow-2xl flex flex-col"
+              className="w-full max-w-5xl bg-zinc-950 border border-red-600/70 rounded-2xl overflow-hidden shadow-2xl flex flex-col"
             >
               {/* Modal Header */}
               <div className="p-3.5 border-b border-zinc-800 bg-zinc-900/80 flex items-center justify-between text-white font-mono text-xs">
                 <div className="flex items-center gap-2">
-                  <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-                  <span className="font-bold text-sm text-teal-400">
+                  <span className="w-2 h-2 rounded-full bg-rose-500 animate-pulse"></span>
+                  <span className="font-bold text-sm text-rose-400">
                     {focusedCam.channel}
                   </span>
                   <span>·</span>
@@ -630,8 +760,11 @@ export default function CCTVPage() {
                   </span>
                 </div>
                 <div className="flex items-center gap-2">
+                  <span className="px-2 py-0.5 rounded bg-rose-950/80 border border-rose-800 text-rose-300 font-bold">
+                    NO SIGNAL
+                  </span>
                   <span className="px-2 py-0.5 rounded bg-zinc-800 border border-zinc-700 font-bold">
-                    {focusedCam.resolution} 60FPS
+                    {focusedCam.resolution}
                   </span>
                   <button
                     onClick={() => setFocusedCam(null)}
@@ -645,14 +778,17 @@ export default function CCTVPage() {
               {/* Main Video Stage */}
               <div className="relative aspect-video bg-black flex items-center justify-center overflow-hidden">
                 <div className="absolute inset-0 pointer-events-none opacity-20 bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(0,0,0,0.5)_50%)] bg-[length:100%_4px] z-10"></div>
-                <div className="text-center text-zinc-600 font-mono text-sm z-20">
-                  <Radio className="w-12 h-12 mx-auto mb-2 text-teal-500 animate-pulse" />
-                  <p className="font-bold text-white tracking-wider">
-                    LIVE HIGH-DEFINITION FEED ACTIVE
+                
+                {/* Warning Sign and No Signal Content */}
+                <div className="text-center font-mono z-20 select-none px-4">
+                  <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-amber-500/10 border border-amber-500/30 flex items-center justify-center mx-auto mb-3 shadow-[0_0_25px_rgba(245,158,11,0.2)]">
+                    <AlertTriangle className="w-8 h-8 sm:w-10 sm:h-10 text-amber-500 animate-pulse" />
+                  </div>
+                  <p className="text-lg sm:text-2xl font-bold tracking-widest uppercase text-zinc-400">
+                    NO SIGNAL
                   </p>
-                  <p className="text-xs text-zinc-400 mt-1">
-                    Bitrate: 6,450 kbps · Codec: H.265/HEVC · Encryption:
-                    AES-256
+                  <p className="text-xs text-zinc-500 mt-1 font-mono">
+                    Video loss detected · Camera feed is offline or disconnected
                   </p>
                 </div>
 
@@ -662,9 +798,9 @@ export default function CCTVPage() {
                   <div>TIME: {currentTime.toISOString()}</div>
                 </div>
 
-                <div className="absolute bottom-4 left-4 z-20 font-mono text-xs text-emerald-400 flex items-center gap-2">
-                  <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-ping"></span>
-                  <span>OPTICAL TARGET TRACKING ARMED</span>
+                <div className="absolute bottom-4 left-4 z-20 font-mono text-xs text-rose-400 flex items-center gap-2">
+                  <span className="w-2.5 h-2.5 rounded-full bg-rose-500 animate-ping"></span>
+                  <span>SIGNAL LOSS DETECTED · STANDBY</span>
                 </div>
               </div>
 
