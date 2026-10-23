@@ -38,7 +38,6 @@ const DEFAULT_SETTINGS = {
     taxId: 'TIN: 432-891-002-000',
     currency: 'PHP (₱)',
     billing: {
-        defaultDueDate: '5',
         autoMonthlyBilling: true,
         latePaymentFee: '300',
         gracePeriodDays: '3',
@@ -525,20 +524,6 @@ export default function AdminSettingsModal({ isOpen, onClose }: AdminSettingsMod
                                     </div>
 
                                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 w-full">
-                                        <div className="space-y-1">
-                                            <label className="text-xs font-bold text-slate-700 dark:text-zinc-300">Default Due Day of Month</label>
-                                            <CustomSelect
-                                                value={billing.defaultDueDate}
-                                                onChange={(val) => setBilling({ ...billing, defaultDueDate: val })}
-                                                options={[
-                                                    { value: '1', label: '1st of the month' },
-                                                    { value: '5', label: '5th of the month (Standard)' },
-                                                    { value: '10', label: '10th of the month' },
-                                                    { value: '15', label: '15th of the month' }
-                                                ]}
-                                                className="py-2 px-3 text-xs rounded-lg bg-slate-50 dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 font-semibold"
-                                            />
-                                        </div>
 
                                         <div className="space-y-1">
                                             <label className="text-xs font-bold text-slate-700 dark:text-zinc-300">Late Payment Penalty Fee (₱)</label>
