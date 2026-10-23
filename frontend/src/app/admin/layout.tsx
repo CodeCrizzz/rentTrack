@@ -15,7 +15,7 @@ import {
 import { AppSidebar } from '@/components/app-sidebar';
 import { FullscreenToggle } from '@/components/fullscreen-toggle';
 import AdminSettingsModal from '@/components/admin-settings-modal';
-import { LayoutDashboard, Building2, Users, CreditCard, Wrench, MessageSquare, Bell, Settings, User, RefreshCw, Calendar, Video, UserPlus, CheckCheck, Clock } from 'lucide-react';
+import { LayoutDashboard, Building2, Users, CreditCard, Wrench, MessageSquare, Bell, Settings, User, RefreshCw, Calendar, Video, UserPlus, CheckCheck, Clock, BedDouble, Megaphone, FileSpreadsheet } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -209,25 +209,28 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
     const rawNavItems = [
         { name: 'Dashboard', path: '/admin/dashboard', icon: LayoutDashboard },
-        { name: 'Manage Rooms', path: '/admin/rooms', icon: Building2 },
-        { name: 'Manage Tenants', path: '/admin/tenants', icon: Users },
-        { name: 'Bills and Payments', path: '/admin/billing', icon: CreditCard },
-        { name: 'Maintenance Request', path: '/admin/requests', icon: Wrench },
-        { name: 'Chat with Tenants', path: '/admin/chat', icon: MessageSquare },
-        { name: 'Security CCTV', path: '/admin/cctv', icon: Video },
+        { name: 'Rooms', path: '/admin/rooms', icon: BedDouble },
+        { name: 'Tenants', path: '/admin/tenants', icon: Users },
+        { name: 'Billing & Collections', path: '/admin/billing', icon: CreditCard },
+        { name: 'Maintenance Requests', path: '/admin/requests', icon: Wrench },
+        { name: 'Messages', path: '/admin/chat', icon: MessageSquare },
+        { name: 'Announcements', path: '/admin/announcements', icon: Megaphone },
+        { name: 'CCTV Monitoring', path: '/admin/cctv', icon: Video },
+        { name: 'Reports', path: '/admin/reports', icon: FileSpreadsheet },
+        { name: 'Settings', path: '/admin/settings', icon: Settings },
     ];
 
     const mappedNavItems = rawNavItems.map(item => {
         const isActive = pathname === item.path;
         let badgeCount = 0;
 
-        if (item.name === 'Manage Tenants' && pendingTenantsCount > 0) {
+        if (item.name === 'Tenants' && pendingTenantsCount > 0) {
             badgeCount = pendingTenantsCount;
         }
-        if (item.name === 'Chat with Tenants' && unreadCount > 0) {
+        if (item.name === 'Messages' && unreadCount > 0) {
             badgeCount = unreadCount;
         }
-        if (item.name === 'Bills and Payments' && pendingPaymentsCount > 0) {
+        if (item.name === 'Billing & Collections' && pendingPaymentsCount > 0) {
             badgeCount = pendingPaymentsCount;
         }
 
@@ -238,7 +241,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             badgeCount,
             badgeColor: "rose" as const,
             icon: (
-                <item.icon className={`w-5 h-5 shrink-0 ${isActive ? 'text-zinc-950 dark:text-white' : 'text-slate-400 dark:text-zinc-500'}`} strokeWidth={isActive ? 2.5 : 2} />
+                <item.icon className={`w-5 h-5 shrink-0 ${isActive ? 'text-white' : 'text-slate-400 group-hover:text-white'}`} strokeWidth={isActive ? 2.5 : 2} />
             )
         }
     });

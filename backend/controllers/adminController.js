@@ -10,7 +10,8 @@ const getDashboardStats = async (req, res) => {
             incomeResult, duesResult,
             requestsResult, recentPaymentsResult, recentRequestsResult,
             expiringContractsResult, totalBilledResult, historicalIncomeResult,
-            overdueAccountsResult, upcomingRentResult, recentMessagesResult, pendingTenantsListResult, pendingPaymentVerificationsResult, lastMonthIncomeResult
+            overdueAccountsResult, upcomingRentResult, recentMessagesResult, pendingTenantsListResult, pendingPaymentVerificationsResult, lastMonthIncomeResult,
+            announcementsResult
         ] = await Promise.all([
             // Rooms Overview (Enriched with Room Matrix details & tenants)
             db.query('SELECT COUNT(*) FROM rooms'),
@@ -49,7 +50,7 @@ const getDashboardStats = async (req, res) => {
             
             // Recent Payments & Requests for Activity Feed
             db.query(`
-                SELECT p.id, u.name as tenant_name, p.amount_paid, p.payment_date 
+                SELECT p.id, u.name as tenant_name, p.amount_paid, p.payment_date, p.reference_number 
                 FROM payments p 
                 JOIN bills b ON p.bill_id = b.id 
                 JOIN users u ON b.tenant_id = u.id 
@@ -151,14 +152,22 @@ const getDashboardStats = async (req, res) => {
             `),
             
             // Last Month Income
-            db.query("SELECT SUM(amount_paid) FROM payments WHERE EXTRACT(MONTH FROM payment_date) = EXTRACT(MONTH FROM CURRENT_DATE - INTERVAL '1 month') AND EXTRACT(YEAR FROM payment_date) = EXTRACT(YEAR FROM CURRENT_DATE - INTERVAL '1 month')")
+            db.query("SELECT SUM(amount_paid) FROM payments WHERE EXTRACT(MONTH FROM payment_date) = EXTRACT(MONTH FROM CURRENT_DATE - INTERVAL '1 month') AND EXTRACT(YEAR FROM payment_date) = EXTRACT(YEAR FROM CURRENT_DATE - INTERVAL '1 month')"),
+
+            // Recent Announcements
+            db.query("SELECT id, title, content, type, created_at FROM announcements ORDER BY created_at DESC LIMIT 10")
         ]);
 
-        // --- Process Room Stats ---
+        // --- Process Room Stats & Bed Capacities ---
         const totalRooms = roomStatusResult.rows.length;
         let occupiedRooms = 0, availableRooms = 0, partiallyOccupiedRooms = 0, maintenanceRooms = 0, unavailableRooms = 0;
+        let totalBeds = 0, occupiedBeds = 0, availableBeds = 0, maintenanceBeds = 0;
         
         roomStatusResult.rows.forEach(room => {
+            const cap = parseInt(room.capacity) || 1;
+            const occ = Math.min(parseInt(room.current_occupants) || 0, cap);
+            totalBeds += cap;
+
             let status = room.status;
             if (status !== 'Maintenance' && status !== 'Unavailable') {
                 if (room.current_occupants === 0) {
@@ -168,6 +177,10 @@ const getDashboardStats = async (req, res) => {
                 } else {
                     status = 'Partially Occupied';
                 }
+                occupiedBeds += occ;
+                availableBeds += Math.max(0, cap - occ);
+            } else {
+                maintenanceBeds += cap;
             }
             room.computed_status = status;
             
@@ -177,6 +190,8 @@ const getDashboardStats = async (req, res) => {
             else if (status === 'Maintenance') maintenanceRooms++;
             else if (status === 'Unavailable') unavailableRooms++;
         });
+
+        const bedOccupancyRate = totalBeds > 0 ? Math.round((occupiedBeds / totalBeds) * 100) : 0;
 
         // --- Process Tenant Stats ---
         const totalTenants = parseInt(tenantsResult.rows[0].count);
@@ -223,8 +238,9 @@ const getDashboardStats = async (req, res) => {
                 id: `t_${t.id}`,
                 type: 'tenant',
                 title: 'New tenant registered',
-                description: `${t.name} joined the system`,
-                date: t.created_at
+                description: `${t.name} joined the property`,
+                date: t.created_at,
+                link: `/admin/tenants?search=${encodeURIComponent(t.name)}`
             });
         });
 
@@ -233,9 +249,10 @@ const getDashboardStats = async (req, res) => {
             activities.push({
                 id: `p_${p.id}`,
                 type: 'payment',
-                title: 'Payment received',
-                description: `₱${parseFloat(p.amount_paid).toLocaleString()} from ${p.tenant_name}`,
-                date: p.payment_date
+                title: 'Payment verified',
+                description: `${p.tenant_name} paid ₱${parseFloat(p.amount_paid).toLocaleString()}${p.reference_number ? ` (Ref: #${p.reference_number})` : ''}`,
+                date: p.payment_date,
+                link: `/admin/billing?tenant=${encodeURIComponent(p.tenant_name)}`
             });
         });
 
@@ -244,20 +261,36 @@ const getDashboardStats = async (req, res) => {
             activities.push({
                 id: `r_${req.id}`,
                 type: 'maintenance',
-                title: 'Maintenance request',
-                description: `"${req.title}" by ${req.tenant_name}`,
-                date: req.created_at
+                title: 'Maintenance update',
+                description: `Request #${req.request_number || 'RT-' + req.id} - ${req.title} (${req.status || 'Pending'})`,
+                date: req.created_at,
+                link: `/admin/requests`
             });
         });
 
-        // Add recent messages to activities (optional, but requested separately)
+        // Add recent announcements
+        if (announcementsResult && announcementsResult.rows) {
+            announcementsResult.rows.forEach(a => {
+                activities.push({
+                    id: `a_${a.id}`,
+                    type: 'announcement',
+                    title: 'New announcement',
+                    description: `${a.title}: ${a.content ? a.content.slice(0, 50) + (a.content.length > 50 ? '...' : '') : ''}`,
+                    date: a.created_at,
+                    link: `/admin/dashboard`
+                });
+            });
+        }
+
+        // Add recent messages to activities
         recentMessagesResult.rows.forEach(m => {
             activities.push({
                 id: `m_${m.id}`,
                 type: 'message',
-                title: 'New message',
-                description: `From ${m.tenant_name}`,
-                date: m.created_at
+                title: 'Message received',
+                description: `From ${m.tenant_name} — ${m.message ? m.message.slice(0, 45) + (m.message.length > 45 ? '...' : '') : ''}`,
+                date: m.created_at,
+                link: `/admin/chat`
             });
         });
 
@@ -347,6 +380,7 @@ const getDashboardStats = async (req, res) => {
         // --- Final Response Object ---
         res.status(200).json({
             rooms: { totalRooms, occupiedRooms, availableRooms, partiallyOccupiedRooms, maintenanceRooms, unavailableRooms },
+            beds: { totalBeds, occupiedBeds, availableBeds, maintenanceBeds, bedOccupancyRate },
             tenants: { totalTenants, activeTenants, pendingTenants, inactiveTenants },
             billing: { monthlyIncome, pendingDues, overduePayments, unpaidBillsCount, revenueIncrease, totalBilled, collectionRate, historicalIncome },
             maintenance: { totalRequests, pendingRequests, inProgressRequests, resolvedRequests },
@@ -801,12 +835,15 @@ const getCashFlowOverview = async (req, res) => {
         let start, end;
         const now = new Date();
         
-        if (range === 'this_year' || !range) {
+        if (range === 'this_year' || range === 'this_month' || !range) {
             start = new Date(now.getFullYear(), 0, 1);
             end = new Date(now.getFullYear(), 11, 31);
         } else if (range === 'last_year') {
             start = new Date(now.getFullYear() - 1, 0, 1);
             end = new Date(now.getFullYear() - 1, 11, 31);
+        } else if (range === 'last_month') {
+            start = new Date(now.getFullYear(), 0, 1);
+            end = new Date(now.getFullYear(), 11, 31);
         } else if (range === 'last_6_months') {
             start = new Date(now.getFullYear(), now.getMonth() - 5, 1);
             end = new Date(now.getFullYear(), now.getMonth() + 1, 0);
