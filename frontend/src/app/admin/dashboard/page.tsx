@@ -13,6 +13,7 @@ import {
   ComposedChart,
   Bar,
   Line,
+  Area,
   XAxis,
   YAxis,
   Tooltip,
@@ -1208,6 +1209,21 @@ export default function AdminDashboard() {
                       content={
                         <ChartLegendContent className="justify-start gap-5 pt-2 text-[11px] font-semibold text-slate-700 dark:text-zinc-300" />
                       }
+                    />
+                    <defs>
+                      <linearGradient id="invoicedGradient" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="#0284c7" stopOpacity={0.32} />
+                        <stop offset="50%" stopColor="#0284c7" stopOpacity={0.12} />
+                        <stop offset="100%" stopColor="#0284c7" stopOpacity={0.01} />
+                      </linearGradient>
+                    </defs>
+                    <Area
+                      type="monotone"
+                      dataKey="billed"
+                      fill="url(#invoicedGradient)"
+                      stroke="none"
+                      legendType="none"
+                      tooltipType="none"
                     />
                     <Bar
                       dataKey="collected"
