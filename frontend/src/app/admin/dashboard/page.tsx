@@ -1104,16 +1104,16 @@ export default function AdminDashboard() {
               </div>
             </div>
 
-            {/* Split: Chart on Left (7 Cols), 4 Stacked Cards on Right (5 Cols - Increased Height & Width) */}
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-stretch">
-              {/* Chart Subpanel (7 Cols, Height increased to 340px) */}
-              <div className="lg:col-span-7 h-[320px] sm:h-[350px]">
+            {/* Split: Chart on Left (Expanded Width), 4 Stacked Cards on Right (Decreased Width) */}
+            <div className="flex flex-col lg:flex-row gap-4 items-stretch">
+              {/* Chart Subpanel (Flex-1: Takes all available expanded width) */}
+              <div className="flex-1 min-w-0 h-[320px] sm:h-[350px]">
                 <ResponsiveContainer width="100%" height="100%">
                   <ComposedChart
                     data={cashflowDataToRender}
                     margin={{ top: 10, right: 10, left: 10, bottom: 0 }}
                     barGap={4}
-                    barSize={11}
+                    barSize={12}
                   >
                     <CartesianGrid
                       strokeDasharray="3 3"
@@ -1173,66 +1173,66 @@ export default function AdminDashboard() {
                 </ResponsiveContainer>
               </div>
 
-              {/* 4 Stacked Right KPI Badges (5 Cols - Increased Height & Width) */}
-              <div className="lg:col-span-5 flex flex-col justify-between gap-3 h-full min-h-[320px] sm:min-h-[350px]">
+              {/* 4 Stacked Right KPI Badges (Decreased width, perfectly compact) */}
+              <div className="w-full lg:w-48 xl:w-52 shrink-0 flex flex-col justify-between gap-2.5 h-full min-h-[320px] sm:min-h-[350px]">
                 {/* 1. Total Invoiced */}
-                <div className="p-3 sm:p-3.5 rounded-xl bg-slate-50 dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 flex items-center gap-3 hover:border-blue-300 dark:hover:border-blue-800/60 transition-colors shadow-2xs">
-                  <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-blue-50 dark:bg-blue-500/10 text-blue-600 flex items-center justify-center shrink-0 border border-blue-200/50 dark:border-blue-500/20">
-                    <FileText className="w-4 h-4 sm:w-5 sm:h-5" />
+                <div className="p-2.5 sm:p-3 rounded-xl bg-slate-50 dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 flex items-center gap-2.5 hover:border-blue-300 dark:hover:border-blue-800/60 transition-colors shadow-2xs">
+                  <div className="w-8 h-8 rounded-lg bg-blue-50 dark:bg-blue-500/10 text-blue-600 flex items-center justify-center shrink-0 border border-blue-200/50 dark:border-blue-500/20">
+                    <FileText className="w-4 h-4" />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-zinc-400 block leading-tight">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-zinc-400 block leading-tight">
                       Total Invoiced
                     </span>
-                    <p className="font-mono font-extrabold text-sm sm:text-base text-slate-900 dark:text-white mt-0.5">
+                    <p className="font-mono font-extrabold text-xs sm:text-sm text-slate-900 dark:text-white mt-0.5">
                       ₱{cashflowTotals.billed.toLocaleString()}
                     </p>
                   </div>
                 </div>
 
                 {/* 2. Collected */}
-                <div className="p-3 sm:p-3.5 rounded-xl bg-slate-50 dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 flex items-center gap-3 hover:border-emerald-300 dark:hover:border-emerald-800/60 transition-colors shadow-2xs">
-                  <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 flex items-center justify-center shrink-0 border border-emerald-200/50 dark:border-emerald-500/20">
-                    <CheckCircle2 className="w-4 h-4 sm:w-5 sm:h-5" />
+                <div className="p-2.5 sm:p-3 rounded-xl bg-slate-50 dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 flex items-center gap-2.5 hover:border-emerald-300 dark:hover:border-emerald-800/60 transition-colors shadow-2xs">
+                  <div className="w-8 h-8 rounded-lg bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 flex items-center justify-center shrink-0 border border-emerald-200/50 dark:border-emerald-500/20">
+                    <CheckCircle2 className="w-4 h-4" />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-zinc-400 block leading-tight">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-zinc-400 block leading-tight">
                       Collected
                     </span>
-                    <p className="font-mono font-extrabold text-sm sm:text-base text-emerald-600 dark:text-emerald-400 mt-0.5">
+                    <p className="font-mono font-extrabold text-xs sm:text-sm text-emerald-600 dark:text-emerald-400 mt-0.5">
                       ₱{cashflowTotals.collected.toLocaleString()}
                     </p>
                   </div>
                 </div>
 
                 {/* 3. Outstanding */}
-                <div className="p-3 sm:p-3.5 rounded-xl bg-slate-50 dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 flex items-center gap-3 hover:border-rose-300 dark:hover:border-rose-800/60 transition-colors shadow-2xs">
-                  <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-rose-50 dark:bg-rose-500/10 text-rose-600 flex items-center justify-center shrink-0 border border-rose-200/50 dark:border-rose-500/20">
-                    <AlertTriangle className="w-4 h-4 sm:w-5 sm:h-5" />
+                <div className="p-2.5 sm:p-3 rounded-xl bg-slate-50 dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 flex items-center gap-2.5 hover:border-rose-300 dark:hover:border-rose-800/60 transition-colors shadow-2xs">
+                  <div className="w-8 h-8 rounded-lg bg-rose-50 dark:bg-rose-500/10 text-rose-600 flex items-center justify-center shrink-0 border border-rose-200/50 dark:border-rose-500/20">
+                    <AlertTriangle className="w-4 h-4" />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-zinc-400 block leading-tight">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-zinc-400 block leading-tight">
                       Outstanding
                     </span>
-                    <p className="font-mono font-extrabold text-sm sm:text-base text-rose-600 dark:text-rose-400 mt-0.5">
+                    <p className="font-mono font-extrabold text-xs sm:text-sm text-rose-600 dark:text-rose-400 mt-0.5">
                       ₱{cashflowTotals.outstanding.toLocaleString()}
                     </p>
                   </div>
                 </div>
 
                 {/* 4. Collection Rate */}
-                <div className="p-3 sm:p-3.5 rounded-xl bg-slate-50 dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 flex items-center gap-3 hover:border-teal-300 dark:hover:border-teal-800/60 transition-colors shadow-2xs">
-                  <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-teal-50 dark:bg-teal-500/10 text-teal-600 flex items-center justify-center shrink-0 border border-teal-200/50 dark:border-teal-500/20">
-                    <Percent className="w-4 h-4 sm:w-5 sm:h-5" />
+                <div className="p-2.5 sm:p-3 rounded-xl bg-slate-50 dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 flex items-center gap-2.5 hover:border-teal-300 dark:hover:border-teal-800/60 transition-colors shadow-2xs">
+                  <div className="w-8 h-8 rounded-lg bg-teal-50 dark:bg-teal-500/10 text-teal-600 flex items-center justify-center shrink-0 border border-teal-200/50 dark:border-teal-500/20">
+                    <Percent className="w-4 h-4" />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-zinc-400 block leading-tight">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-zinc-400 block leading-tight">
                       Collection Rate
                     </span>
-                    <p className="font-mono font-extrabold text-sm sm:text-base text-teal-600 dark:text-teal-400 mt-0.5">
+                    <p className="font-mono font-extrabold text-xs sm:text-sm text-teal-600 dark:text-teal-400 mt-0.5">
                       {cashflowTotals.rate}%
                     </p>
-                    <div className="w-full bg-slate-200 dark:bg-zinc-700 h-2 rounded-full mt-1.5 overflow-hidden">
+                    <div className="w-full bg-slate-200 dark:bg-zinc-700 h-1.5 rounded-full mt-1 overflow-hidden">
                       <div
                         className="bg-emerald-500 h-full rounded-full transition-all duration-300"
                         style={{ width: `${Math.min(100, Math.max(0, cashflowTotals.rate))}%` }}
