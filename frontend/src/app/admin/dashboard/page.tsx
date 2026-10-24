@@ -1225,13 +1225,19 @@ export default function AdminDashboard() {
                   <div className="w-7 h-7 rounded-lg bg-teal-50 dark:bg-teal-500/10 text-teal-600 flex items-center justify-center shrink-0">
                     <Percent className="w-3.5 h-3.5" />
                   </div>
-                  <div>
+                  <div className="flex-1 min-w-0">
                     <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block leading-tight">
                       Collection Rate
                     </span>
                     <p className="font-mono font-bold text-xs sm:text-sm text-teal-600 dark:text-teal-400">
                       {cashflowTotals.rate}%
                     </p>
+                    <div className="w-full bg-slate-200 dark:bg-zinc-700 h-1.5 rounded-full mt-1 overflow-hidden">
+                      <div
+                        className="bg-emerald-500 h-full rounded-full transition-all duration-300"
+                        style={{ width: `${Math.min(100, Math.max(0, cashflowTotals.rate))}%` }}
+                      />
+                    </div>
                   </div>
                 </div>
               </div>
