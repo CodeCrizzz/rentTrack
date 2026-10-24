@@ -1176,12 +1176,12 @@ export default function AdminDashboard() {
                 </ResponsiveContainer>
               </div>
 
-              {/* 4 Stacked Right KPI Badges (Decreased width, perfectly compact) */}
-              <div className="w-full lg:w-48 xl:w-52 shrink-0 flex flex-col justify-between gap-2.5 h-full min-h-[320px] sm:min-h-[350px]">
+              {/* 4 Stacked Right KPI Badges (Decreased width to expand graph) */}
+              <div className="w-full lg:w-40 xl:w-44 shrink-0 flex flex-col justify-between gap-2 h-full min-h-[320px] sm:min-h-[350px]">
                 {/* 1. Total Invoiced */}
-                <div className="p-2.5 sm:p-3 rounded-xl bg-slate-50 dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 flex items-center gap-2.5 hover:border-blue-300 dark:hover:border-blue-800/60 transition-colors shadow-2xs">
-                  <div className="w-8 h-8 rounded-lg bg-blue-50 dark:bg-blue-500/10 text-blue-600 flex items-center justify-center shrink-0 border border-blue-200/50 dark:border-blue-500/20">
-                    <FileText className="w-4 h-4" />
+                <div className="p-2 sm:p-2.5 rounded-xl bg-slate-50 dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 flex items-center gap-2 hover:border-blue-300 dark:hover:border-blue-800/60 transition-colors shadow-2xs">
+                  <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-blue-50 dark:bg-blue-500/10 text-blue-600 flex items-center justify-center shrink-0 border border-blue-200/50 dark:border-blue-500/20">
+                    <FileText className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                   </div>
                   <div className="flex-1 min-w-0">
                     <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-zinc-400 block leading-tight">
@@ -1194,9 +1194,9 @@ export default function AdminDashboard() {
                 </div>
 
                 {/* 2. Collected */}
-                <div className="p-2.5 sm:p-3 rounded-xl bg-slate-50 dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 flex items-center gap-2.5 hover:border-emerald-300 dark:hover:border-emerald-800/60 transition-colors shadow-2xs">
-                  <div className="w-8 h-8 rounded-lg bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 flex items-center justify-center shrink-0 border border-emerald-200/50 dark:border-emerald-500/20">
-                    <CheckCircle2 className="w-4 h-4" />
+                <div className="p-2 sm:p-2.5 rounded-xl bg-slate-50 dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 flex items-center gap-2 hover:border-emerald-300 dark:hover:border-emerald-800/60 transition-colors shadow-2xs">
+                  <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 flex items-center justify-center shrink-0 border border-emerald-200/50 dark:border-emerald-500/20">
+                    <CheckCircle2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                   </div>
                   <div className="flex-1 min-w-0">
                     <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-zinc-400 block leading-tight">
@@ -1209,9 +1209,9 @@ export default function AdminDashboard() {
                 </div>
 
                 {/* 3. Outstanding */}
-                <div className="p-2.5 sm:p-3 rounded-xl bg-slate-50 dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 flex items-center gap-2.5 hover:border-rose-300 dark:hover:border-rose-800/60 transition-colors shadow-2xs">
-                  <div className="w-8 h-8 rounded-lg bg-rose-50 dark:bg-rose-500/10 text-rose-600 flex items-center justify-center shrink-0 border border-rose-200/50 dark:border-rose-500/20">
-                    <AlertTriangle className="w-4 h-4" />
+                <div className="p-2 sm:p-2.5 rounded-xl bg-slate-50 dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 flex items-center gap-2 hover:border-rose-300 dark:hover:border-rose-800/60 transition-colors shadow-2xs">
+                  <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-rose-50 dark:bg-rose-500/10 text-rose-600 flex items-center justify-center shrink-0 border border-rose-200/50 dark:border-rose-500/20">
+                    <AlertTriangle className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                   </div>
                   <div className="flex-1 min-w-0">
                     <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-zinc-400 block leading-tight">
@@ -1224,9 +1224,9 @@ export default function AdminDashboard() {
                 </div>
 
                 {/* 4. Collection Rate */}
-                <div className="p-2.5 sm:p-3 rounded-xl bg-slate-50 dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 flex items-center gap-2.5 hover:border-teal-300 dark:hover:border-teal-800/60 transition-colors shadow-2xs">
-                  <div className="w-8 h-8 rounded-lg bg-teal-50 dark:bg-teal-500/10 text-teal-600 flex items-center justify-center shrink-0 border border-teal-200/50 dark:border-teal-500/20">
-                    <Percent className="w-4 h-4" />
+                <div className="p-2 sm:p-2.5 rounded-xl bg-slate-50 dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 flex items-center gap-2 hover:border-teal-300 dark:hover:border-teal-800/60 transition-colors shadow-2xs">
+                  <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-teal-50 dark:bg-teal-500/10 text-teal-600 flex items-center justify-center shrink-0 border border-teal-200/50 dark:border-teal-500/20">
+                    <Percent className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                   </div>
                   <div className="flex-1 min-w-0">
                     <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-zinc-400 block leading-tight">
