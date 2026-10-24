@@ -1040,9 +1040,12 @@ export default function AdminDashboard() {
       </div>
 
       {/* 3. CORE ANALYTICS, ACTION QUEUE & RECENT ACTIVITY (3-Column Desktop Grid) */}
-      <div className="grid grid-cols-1 xl:grid-cols-12 gap-5">
-        {/* Left Column: Cash Flow Overview (Recharts + 4 Stacked KPI Badges, 7 Cols - Aligned with Billing in Card 3) */}
-        <div className="xl:col-span-7 bg-card border border-slate-200 dark:border-zinc-800 rounded-2xl p-5 sm:p-6 shadow-2xs flex flex-col justify-between min-h-[480px]">
+      <div
+        className="grid grid-cols-1 xl:grid-cols-[var(--cashflow-col)_minmax(0,1.35fr)_minmax(0,1fr)] gap-5"
+        style={{ ['--cashflow-col' as any]: 'minmax(0, calc(50% + 40px))' }}
+      >
+        {/* Left Column: Cash Flow Overview (Aligned with 'View' in Card 3) */}
+        <div className="bg-card border border-slate-200 dark:border-zinc-800 rounded-2xl p-5 sm:p-6 shadow-2xs flex flex-col justify-between min-h-[480px]">
           <div>
             {/* Title & 4 Pill Filters */}
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
@@ -1249,8 +1252,8 @@ export default function AdminDashboard() {
           </p>
         </div>
 
-        {/* Middle Column: Urgent Action Center (3 Cols) */}
-        <div className="xl:col-span-3 bg-card border border-slate-200 dark:border-zinc-800 rounded-2xl p-4 sm:p-5 shadow-2xs flex flex-col h-[480px]">
+        {/* Middle Column: Urgent Action Center */}
+        <div className="bg-card border border-slate-200 dark:border-zinc-800 rounded-2xl p-4 sm:p-5 shadow-2xs flex flex-col h-[480px]">
           {/* Header */}
           <div className="flex items-center justify-between mb-3 shrink-0">
             <div className="flex items-center gap-2">
@@ -1374,8 +1377,8 @@ export default function AdminDashboard() {
           </div>
         </div>
 
-        {/* Right Column: Recent Activity (2 Cols) */}
-        <div className="xl:col-span-2 bg-card border border-slate-200 dark:border-zinc-800 rounded-2xl p-4 sm:p-5 shadow-2xs flex flex-col h-[480px]">
+        {/* Right Column: Recent Activity */}
+        <div className="bg-card border border-slate-200 dark:border-zinc-800 rounded-2xl p-4 sm:p-5 shadow-2xs flex flex-col h-[480px]">
           {/* Header */}
           <div className="flex items-center justify-between mb-3 shrink-0">
             <h2 className="text-sm font-bold text-slate-900 dark:text-white">
