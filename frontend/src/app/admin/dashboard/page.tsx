@@ -21,6 +21,14 @@ import {
   Legend,
 } from "recharts";
 import {
+  ChartContainer,
+  ChartTooltip,
+  ChartTooltipContent,
+  ChartLegend,
+  ChartLegendContent,
+  type ChartConfig,
+} from "@/components/ui/chart";
+import {
   Building2,
   Users,
   Wallet,
@@ -203,6 +211,21 @@ const DEFAULT_CASHFLOW = [
   { month: "Nov", billed: 109000, collected: 89000, outstanding: 20000 },
   { month: "Dec", billed: 114000, collected: 92000, outstanding: 22000 },
 ];
+
+const cashflowChartConfig = {
+  collected: {
+    label: "Collected",
+    color: "#10b981",
+  },
+  outstanding: {
+    label: "Outstanding",
+    color: "#f43f5e",
+  },
+  billed: {
+    label: "Invoiced (Total Amount)",
+    color: "#0284c7",
+  },
+} satisfies ChartConfig;
 
 const CustomChartTooltip = ({ active, payload, label }: any) => {
   if (active && payload && payload.length) {
@@ -1109,9 +1132,12 @@ export default function AdminDashboard() {
 
             {/* Split: Chart on Left (Expanded Width), 4 Stacked Cards on Right (Decreased Width) */}
             <div className="flex flex-col lg:flex-row gap-4 items-stretch">
-              {/* Chart Subpanel (Flex-1: Takes all available expanded width) */}
+              {/* Chart Subpanel (shadcn UI ChartContainer) */}
               <div className="flex-1 min-w-0 h-[320px] sm:h-[350px]">
-                <ResponsiveContainer width="100%" height="100%">
+                <ChartContainer
+                  config={cashflowChartConfig}
+                  className="aspect-auto h-[320px] sm:h-[350px] w-full"
+                >
                   <ComposedChart
                     data={cashflowDataToRender}
                     margin={{ top: 10, right: 10, left: 10, bottom: 0 }}
@@ -1140,40 +1166,72 @@ export default function AdminDashboard() {
                       tickFormatter={(val) => (val === 0 ? "₱ 0" : `₱ ${val.toLocaleString()}`)}
                       width={68}
                     />
-                    <Tooltip content={<CustomChartTooltip />} />
-                    <Legend
-                      verticalAlign="bottom"
-                      align="left"
-                      wrapperStyle={{
-                        paddingTop: "8px",
-                        fontSize: "11px",
-                        fontWeight: 600,
-                      }}
-                      iconType="circle"
+                    <ChartTooltip
+                      content={
+                        <ChartTooltipContent
+                          indicator="dot"
+                          labelFormatter={(label) => `${label} 2026`}
+                          formatter={(value, name) => (
+                            <div className="flex items-center justify-between gap-4 w-full">
+                              <div className="flex items-center gap-1.5">
+                                <span
+                                  className="w-2 h-2 rounded-full shrink-0"
+                                  style={{
+                                    backgroundColor:
+                                      name === "collected" || name === "Collected"
+                                        ? "#10b981"
+                                        : name === "outstanding" || name === "Outstanding"
+                                        ? "#f43f5e"
+                                        : "#0284c7",
+                                  }}
+                                />
+                                <span className="text-muted-foreground font-medium text-xs">
+                                  {name === "collected"
+                                    ? "Collected"
+                                    : name === "outstanding"
+                                    ? "Outstanding"
+                                    : name === "billed"
+                                    ? "Invoiced"
+                                    : name}
+                                </span>
+                              </div>
+                              <span className="font-mono font-bold text-foreground">
+                                ₱{Number(value).toLocaleString()}
+                              </span>
+                            </div>
+                          )}
+                          className="bg-white/95 dark:bg-zinc-900/95 backdrop-blur-md border border-slate-200 dark:border-zinc-800 shadow-xl rounded-xl p-3 min-w-44"
+                        />
+                      }
+                    />
+                    <ChartLegend
+                      content={
+                        <ChartLegendContent className="justify-start gap-5 pt-2 text-[11px] font-semibold text-slate-700 dark:text-zinc-300" />
+                      }
                     />
                     <Bar
                       dataKey="collected"
                       name="Collected"
-                      fill="#10b981"
+                      fill="var(--color-collected)"
                       radius={[3, 3, 0, 0]}
                     />
                     <Bar
                       dataKey="outstanding"
                       name="Outstanding"
-                      fill="#f43f5e"
+                      fill="var(--color-outstanding)"
                       radius={[3, 3, 0, 0]}
                     />
                     <Line
                       type="monotone"
                       dataKey="billed"
                       name="Invoiced (Total Amount)"
-                      stroke="#0284c7"
+                      stroke="var(--color-billed)"
                       strokeWidth={2.5}
-                      dot={{ r: 3, fill: "#0284c7" }}
+                      dot={{ r: 3, fill: "var(--color-billed)" }}
                       activeDot={{ r: 5 }}
                     />
                   </ComposedChart>
-                </ResponsiveContainer>
+                </ChartContainer>
               </div>
 
               {/* 4 Stacked Right KPI Badges (Decreased width to expand graph) */}
