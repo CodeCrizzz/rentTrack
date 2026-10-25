@@ -1,5 +1,8 @@
 "use client";
+
 import { useEffect, useState, useMemo } from "react";
+import { useRouter } from "next/navigation";
+import Image from "next/image";
 import api from "@/lib/api";
 import {
   Search,
@@ -13,27 +16,33 @@ import {
   X,
   CheckCircle,
   BedDouble,
-  Layers,
-  ArrowUpRight,
   Check,
   AlertTriangle,
   RefreshCw,
-  Sparkles,
   Phone,
   Calendar,
-  DollarSign,
-  ShieldAlert,
   DoorOpen,
-  Home,
+  Wifi,
+  Wind,
+  Monitor,
+  Box,
+  MoreHorizontal,
+  ChevronRight,
+  FileText,
+  User,
+  RotateCcw,
+  Sparkles,
 } from "lucide-react";
-import CustomSelect from "@/components/CustomSelect";
-import { motion, AnimatePresence, type Variants } from "framer-motion";
+import CustomSelect from "@/components/dropdown-select";
+import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
+import { formatPhoneNumber } from "@/lib/phone-utils";
 
 interface Tenant {
   id: number;
   name: string;
   phone: string;
+  email?: string;
   date_moved_in: string;
   bed_space: string | null;
   balance: number;
@@ -55,11 +64,6 @@ interface Room {
   occupants: Tenant[];
 }
 
-const cardVariants: Variants = {
-  hidden: { opacity: 0, y: 10 },
-  show: { opacity: 1, y: 0, transition: { duration: 0.3 } },
-};
-
 const AMENITY_PRESETS = [
   "Air Conditioning",
   "Free High-Speed Wi-Fi",
@@ -73,24 +77,26 @@ const AMENITY_PRESETS = [
 ];
 
 export default function AdminRooms() {
+  const router = useRouter();
   const [rooms, setRooms] = useState<Room[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Modals
+  // Selected Room for the Right-Side Drawer
+  const [selectedRoom, setSelectedRoom] = useState<Room | null>(null);
+
+  // Modals & Popups
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingRoom, setEditingRoom] = useState<Room | null>(null);
-  const [viewingRoom, setViewingRoom] = useState<Room | null>(null);
+  const [activeMenuRoomId, setActiveMenuRoomId] = useState<number | null>(null);
   const [isDeleting, setIsDeleting] = useState<number | null>(null);
 
   // Filters
   const [searchQuery, setSearchQuery] = useState("");
-  const [statusFilter, setStatusFilter] = useState<
-    "All Units" | "Vacant" | "Available Beds" | "Fully Occupied" | "Maintenance"
-  >("All Units");
-  const [floorFilter, setFloorFilter] = useState("All Floors");
-  const [typeFilter, setTypeFilter] = useState("All Types");
-  const [rentalTypeFilter, setRentalTypeFilter] = useState("All Rental Types");
+  const [statusFilter, setStatusFilter] = useState("All Statuses");
+  const [selectedFloorTab, setSelectedFloorTab] = useState("All Floors");
+  const [typeFilter, setTypeFilter] = useState("All Room Types");
+  const [rentalTypeFilter, setRentalTypeFilter] = useState("All Rental Models");
   const [error, setError] = useState("");
 
   const [formData, setFormData] = useState({
@@ -110,7 +116,15 @@ export default function AdminRooms() {
     setError("");
     try {
       const { data } = await api.get("/admin/rooms");
-      setRooms(data || []);
+      const roomList: Room[] = data || [];
+      setRooms(roomList);
+      if (roomList.length > 0) {
+        setSelectedRoom((prev) => {
+          if (!prev) return roomList[0];
+          const matched = roomList.find((r) => r.id === prev.id);
+          return matched || roomList[0];
+        });
+      }
     } catch (err: any) {
       console.error("Failed to fetch rooms:", err);
       setError("Failed to load rooms.");
@@ -127,13 +141,19 @@ export default function AdminRooms() {
   const handleOpenModal = (room?: Room) => {
     if (room) {
       setEditingRoom(room);
+      // Extract numeric floor only (e.g. "Floor 2" -> "2", "2nd floor" -> "2")
+      const floorDigits = room.floor
+        ? room.floor.replace(/\D/g, "")
+        : room.room_number
+          ? room.room_number.replace(/\D/g, "").charAt(0)
+          : "1";
       setFormData({
         room_number: room.room_number,
         type: room.type || "Single",
         rental_type: room.rental_type || "Whole Room",
         capacity: room.capacity || 1,
         price: room.price || "",
-        floor: room.floor || "",
+        floor: floorDigits || "1",
         description: room.description || "",
         amenities: room.amenities || "",
         status: room.status || "Available",
@@ -146,7 +166,7 @@ export default function AdminRooms() {
         rental_type: "Whole Room",
         capacity: 1,
         price: "",
-        floor: "",
+        floor: "1",
         description: "",
         amenities: "",
         status: "Available",
@@ -177,11 +197,18 @@ export default function AdminRooms() {
     setIsSubmitting(true);
     setError("");
     try {
+      // Standardize floor format to "Floor X"
+      const floorDigits = formData.floor.toString().replace(/\D/g, "") || "1";
+      const payload = {
+        ...formData,
+        floor: `Floor ${floorDigits}`,
+      };
+
       if (editingRoom) {
-        await api.put(`/admin/rooms/${editingRoom.id}`, formData);
+        await api.put(`/admin/rooms/${editingRoom.id}`, payload);
         toast.success(`Room ${formData.room_number} updated successfully`);
       } else {
-        await api.post("/admin/rooms", formData);
+        await api.post("/admin/rooms", payload);
         toast.success(`Room ${formData.room_number} created successfully`);
       }
       setIsModalOpen(false);
@@ -234,140 +261,180 @@ export default function AdminRooms() {
           : `Room ${room.room_number} set to Maintenance`,
       );
       fetchRooms(true);
-      if (viewingRoom && viewingRoom.id === room.id) {
-        setViewingRoom({ ...viewingRoom, status: nextStatus });
+      if (selectedRoom && selectedRoom.id === room.id) {
+        setSelectedRoom({ ...selectedRoom, status: nextStatus });
       }
     } catch (err: any) {
       toast.error("Failed to update room status");
     }
   };
 
-  // Derived Executive Metrics
+  // Helper to categorize room status
+  type RoomCategory =
+    | "Full"
+    | "OccupiedWithBeds"
+    | "Vacant"
+    | "Maintenance";
+
+  const getRoomCategory = (room: Room): RoomCategory => {
+    if (room.status === "Maintenance") return "Maintenance";
+    const occupants =
+      Number(room.current_occupants) || (room.occupants?.length || 0);
+    const capacity = Number(room.capacity) > 0 ? Number(room.capacity) : 1;
+    if (occupants === 0) return "Vacant";
+    if (occupants >= capacity) return "Full";
+    return "OccupiedWithBeds";
+  };
+
+  const getAvailableBeds = (room: Room): number => {
+    const occupants =
+      Number(room.current_occupants) || (room.occupants?.length || 0);
+    const capacity = Number(room.capacity) > 0 ? Number(room.capacity) : 1;
+    return Math.max(0, capacity - occupants);
+  };
+
+  const getRoomStatusLabel = (room: Room, compact = false): string => {
+    const cat = getRoomCategory(room);
+    if (cat === "Maintenance") return "Maintenance";
+    if (cat === "Vacant") return "Vacant";
+    if (cat === "Full") return "Full";
+    const avail = getAvailableBeds(room);
+    if (compact) {
+      return `Occupied (${avail} ${avail === 1 ? "bed" : "beds"} avail)`;
+    }
+    return `Occupied with ${avail} ${avail === 1 ? "available bed" : "available beds"}`;
+  };
+
+  // KPI Metrics (Calculated dynamically)
   const metrics = useMemo(() => {
     const total = rooms.length;
-    const totalBeds = rooms.reduce((acc, r) => acc + (r.capacity || 0), 0);
-    const totalOccupants = rooms.reduce(
-      (acc, r) => acc + (r.current_occupants || 0),
-      0,
-    );
-    const occupiedRooms = rooms.filter(
-      (r) => r.current_occupants > 0 && r.status !== "Maintenance",
-    ).length;
-    const fullyOccupiedRooms = rooms.filter(
-      (r) =>
-        r.current_occupants >= r.capacity &&
-        r.capacity > 0 &&
-        r.status !== "Maintenance",
-    ).length;
-    const partiallyOccupiedRooms = rooms.filter(
-      (r) =>
-        r.current_occupants > 0 &&
-        r.current_occupants < r.capacity &&
-        r.status !== "Maintenance",
-    ).length;
-    const vacantRooms = rooms.filter(
-      (r) =>
-        r.current_occupants === 0 &&
-        r.status !== "Maintenance" &&
-        r.status !== "Unavailable",
-    ).length;
-    const availableBeds = rooms.reduce((acc, r) => {
-      if (r.status === "Maintenance" || r.status === "Unavailable") return acc;
-      return acc + Math.max(0, (r.capacity || 0) - (r.current_occupants || 0));
-    }, 0);
-    const maintenanceRooms = rooms.filter(
-      (r) => r.status === "Maintenance",
-    ).length;
-    const occupancyRate =
-      totalBeds > 0 ? Math.round((totalOccupants / totalBeds) * 100) : 0;
+    let full = 0;
+    let occupiedWithBeds = 0;
+    let vacant = 0;
+    let maintenance = 0;
 
-    // Total Potential Revenue vs Realized Monthly Revenue
-    const totalPotentialRent = rooms.reduce((acc, r) => {
-      const price = Number(r.price) || 0;
-      if (r.rental_type === "Per Bed / Bedspace") {
-        return acc + price * (r.capacity || 1);
-      }
-      return acc + price;
-    }, 0);
+    rooms.forEach((r) => {
+      const cat = getRoomCategory(r);
+      if (cat === "Full") full++;
+      else if (cat === "OccupiedWithBeds") occupiedWithBeds++;
+      else if (cat === "Vacant") vacant++;
+      else if (cat === "Maintenance") maintenance++;
+    });
 
-    const currentActiveRent = rooms.reduce((acc, r) => {
-      const price = Number(r.price) || 0;
-      if (r.rental_type === "Per Bed / Bedspace") {
-        return acc + price * (r.current_occupants || 0);
-      }
-      return acc + (r.current_occupants > 0 ? price : 0);
-    }, 0);
+    const fullPct = total > 0 ? Math.round((full / total) * 100) : 0;
+    const occupiedWithBedsPct =
+      total > 0 ? Math.round((occupiedWithBeds / total) * 100) : 0;
+    const vacantPct = total > 0 ? Math.round((vacant / total) * 100) : 0;
+    const maintenancePct =
+      total > 0 ? Math.round((maintenance / total) * 100) : 0;
 
     return {
       total,
-      totalBeds,
-      totalOccupants,
-      occupiedRooms,
-      fullyOccupiedRooms,
-      partiallyOccupiedRooms,
-      vacantRooms,
-      availableBeds,
-      maintenanceRooms,
-      occupancyRate,
-      totalPotentialRent,
-      currentActiveRent,
+      full,
+      occupiedWithBeds,
+      vacant,
+      maintenance,
+      fullPct,
+      occupiedWithBedsPct,
+      vacantPct,
+      maintenancePct,
     };
   }, [rooms]);
 
-  // Unique filter options
+  const normalizeFloorName = (
+    floorStr?: string | null,
+    roomNumber?: string,
+  ): string => {
+    if (floorStr) {
+      const clean = floorStr.toLowerCase().trim();
+      const match = clean.match(/\d+/);
+      if (match) return `Floor ${match[0]}`;
+      if (clean.includes("first")) return "Floor 1";
+      if (clean.includes("second")) return "Floor 2";
+      if (clean.includes("third")) return "Floor 3";
+      if (clean.includes("fourth")) return "Floor 4";
+      if (clean.includes("fifth")) return "Floor 5";
+      if (clean.includes("sixth")) return "Floor 6";
+      if (clean.includes("seventh")) return "Floor 7";
+    }
+    if (roomNumber && roomNumber.length >= 3 && !isNaN(Number(roomNumber[0]))) {
+      return `Floor ${roomNumber[0]}`;
+    }
+    return "Floor 1";
+  };
+
+  // Unique floors and types
   const uniqueFloors = useMemo(() => {
-    const floors = Array.from(
-      new Set(rooms.map((r) => r.floor).filter((f): f is string => Boolean(f))),
-    );
-    return floors.sort();
+    const set = new Set<string>();
+    rooms.forEach((r) => {
+      set.add(normalizeFloorName(r.floor, r.room_number));
+    });
+    return Array.from(set).sort((a, b) => {
+      const numA = parseInt(a.replace(/\D/g, "")) || 0;
+      const numB = parseInt(b.replace(/\D/g, "")) || 0;
+      return numA - numB;
+    });
   }, [rooms]);
 
   const uniqueTypes = useMemo(() => {
-    const types = Array.from(
-      new Set(rooms.map((r) => r.type).filter((t): t is string => Boolean(t))),
-    );
-    return types.sort();
+    const set = new Set<string>();
+    rooms.forEach((r) => {
+      if (r.type) set.add(r.type);
+    });
+    return Array.from(set).sort();
   }, [rooms]);
 
-  // Filter Logic
+  // Filtered rooms
   const filteredRooms = useMemo(() => {
     return rooms.filter((r) => {
       const q = searchQuery.toLowerCase().trim();
+      const effectiveFloor = normalizeFloorName(r.floor, r.room_number);
+      const floorStr = effectiveFloor.toLowerCase();
+      const tenantMatch = r.occupants?.some((t) =>
+        t.name.toLowerCase().includes(q),
+      );
+
       const matchesSearch =
         !q ||
         r.room_number.toLowerCase().includes(q) ||
         `room ${r.room_number}`.toLowerCase().includes(q) ||
-        (r.floor ? r.floor.toLowerCase().includes(q) : false);
+        floorStr.includes(q) ||
+        r.type.toLowerCase().includes(q) ||
+        tenantMatch;
 
+      // Status Filter
+      const cat = getRoomCategory(r);
       let matchesStatus = true;
-      if (statusFilter === "Vacant") {
-        matchesStatus =
-          r.current_occupants === 0 &&
-          r.status !== "Maintenance" &&
-          r.status !== "Unavailable";
-      } else if (statusFilter === "Available Beds") {
-        matchesStatus =
-          r.current_occupants > 0 &&
-          r.current_occupants < r.capacity &&
-          r.status !== "Maintenance";
-      } else if (statusFilter === "Fully Occupied") {
-        matchesStatus =
-          r.current_occupants >= r.capacity && r.status !== "Maintenance";
-      } else if (statusFilter === "Maintenance") {
-        matchesStatus = r.status === "Maintenance";
-      }
+      if (statusFilter === "Full") matchesStatus = cat === "Full";
+      else if (
+        statusFilter === "Occupied (With Available Beds)" ||
+        statusFilter === "Occupied w/ Beds" ||
+        statusFilter === "Partially Occupied"
+      )
+        matchesStatus = cat === "OccupiedWithBeds";
+      else if (statusFilter === "Occupied")
+        matchesStatus = cat === "Full" || cat === "OccupiedWithBeds";
+      else if (statusFilter === "Vacant") matchesStatus = cat === "Vacant";
+      else if (statusFilter === "Maintenance")
+        matchesStatus = cat === "Maintenance";
 
-      const matchesFloor =
-        floorFilter === "All Floors" || r.floor === floorFilter;
-      const matchesType = typeFilter === "All Types" || r.type === typeFilter;
+      // Floor Tab Filter
+      const matchesFloorTab =
+        selectedFloorTab === "All Floors" || effectiveFloor === selectedFloorTab;
+
+      // Type Filter
+      const matchesType =
+        typeFilter === "All Room Types" || r.type === typeFilter;
+
+      // Rental Model Filter
       const matchesRentalType =
-        rentalTypeFilter === "All Rental Types" ||
+        rentalTypeFilter === "All Rental Models" ||
         r.rental_type === rentalTypeFilter;
 
       return (
         matchesSearch &&
         matchesStatus &&
-        matchesFloor &&
+        matchesFloorTab &&
         matchesType &&
         matchesRentalType
       );
@@ -376,556 +443,764 @@ export default function AdminRooms() {
     rooms,
     searchQuery,
     statusFilter,
-    floorFilter,
+    selectedFloorTab,
     typeFilter,
     rentalTypeFilter,
   ]);
 
-  const getStatusPill = (room: Room) => {
-    if (room.status === "Maintenance") {
-      return (
-        <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-rose-600 dark:text-rose-400/80">
-          <Wrench className="w-3.5 h-3.5" /> Maintenance
-        </span>
-      );
-    }
-    if (room.current_occupants === 0) {
-      return (
-        <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-blue-600 dark:text-blue-400/80">
-          <DoorOpen className="w-3.5 h-3.5" /> Vacant Unit
-        </span>
-      );
-    }
-    if (room.current_occupants < room.capacity) {
-      return (
-        <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-amber-600 dark:text-amber-400/80">
-          <BedDouble className="w-3.5 h-3.5" /> Beds Available (
-          {room.capacity - room.current_occupants})
-        </span>
-      );
-    }
-    return (
-      <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-emerald-600 dark:text-emerald-400/80">
-        <Check className="w-3.5 h-3.5" /> Fully Occupied
-      </span>
-    );
-  };
-
-  if (isLoading) {
-    return (
-      <div className="w-full h-[calc(100vh-6.2rem)] md:h-[calc(100vh-7.2rem)] lg:h-[calc(100dvh-7.2rem)] flex flex-col font-sans text-slate-900 dark:text-zinc-100 overflow-hidden space-y-2.5 sm:space-y-3 animate-pulse">
-        {/* Header & Executive Controls */}
-        <div className="shrink-0 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
-          <div className="flex items-center gap-3">
-            <div className="h-7 w-52 bg-slate-200 dark:bg-zinc-800 rounded-lg"></div>
-            <div className="h-5 w-20 bg-slate-200 dark:bg-zinc-800 rounded-md"></div>
-          </div>
-
-          <div className="flex flex-wrap items-center gap-2">
-            <div className="h-8.5 w-28 bg-slate-200 dark:bg-zinc-800 rounded-lg"></div>
-          </div>
-        </div>
-
-        {/* Executive Metric Ribbon (4 Tiles) */}
-        <div className="shrink-0 grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-3">
-          {[...Array(4)].map((_, i) => (
-            <div
-              key={i}
-              className="bg-card border border-slate-200 dark:border-zinc-800 rounded-xl p-2.5 sm:p-3 shadow-xs flex items-center justify-between"
-            >
-              <div className="space-y-1.5 flex-1">
-                <div className="h-3 w-24 bg-slate-200 dark:bg-zinc-800 rounded"></div>
-                <div className="h-8 w-28 bg-slate-200 dark:bg-zinc-800 rounded-md"></div>
-                <div className="h-3 w-20 bg-slate-200 dark:bg-zinc-800 rounded"></div>
-              </div>
-              <div className="w-11 h-11 rounded-xl bg-slate-100 dark:bg-zinc-800 shrink-0"></div>
-            </div>
-          ))}
-        </div>
-
-        {/* Category Filtering Strip Skeleton */}
-        <div className="shrink-0 bg-card border border-slate-200 dark:border-zinc-800 rounded-xl p-2 shadow-xs">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <div className="flex flex-wrap items-center gap-2">
-              <div className="h-8.5 w-56 sm:w-64 bg-slate-100 dark:bg-zinc-800 rounded-lg"></div>
-              <div className="h-8.5 w-32 sm:w-36 bg-slate-100 dark:bg-zinc-800 rounded-lg"></div>
-              <div className="h-8.5 w-32 sm:w-36 bg-slate-100 dark:bg-zinc-800 rounded-lg"></div>
-              <div className="h-8.5 w-40 sm:w-44 bg-slate-100 dark:bg-zinc-800 rounded-lg"></div>
-              <div className="h-8.5 w-40 sm:w-44 bg-slate-100 dark:bg-zinc-800 rounded-lg"></div>
-            </div>
-            <div className="h-4 w-24 bg-slate-100 dark:bg-zinc-800 rounded"></div>
-          </div>
-        </div>
-
-        {/* Main Units Ledger */}
-        <div className="flex-1 min-h-0 max-h-[610px] bg-card border border-slate-200 dark:border-zinc-800 rounded-xl overflow-hidden shadow-xs flex flex-col relative">
-          <div className="absolute top-0 right-0 w-6 h-[46px] bg-slate-100 dark:bg-zinc-900 border-b border-slate-200 dark:border-zinc-800 z-30 pointer-events-none rounded-tr-xl" />
-          <div className="overflow-x-auto overflow-y-auto flex-1 custom-scrollbar">
-            <table className="w-full min-w-full text-left text-sm border-collapse">
-              <thead className="sticky top-0 z-20 bg-slate-100 dark:bg-zinc-900 shadow-xs border-b border-slate-200 dark:border-zinc-800">
-                <tr className="h-[46px] bg-slate-100 dark:bg-zinc-900">
-                  <th className="py-2.5 px-4 bg-slate-100 dark:bg-zinc-900 border-b border-slate-200 dark:border-zinc-800">
-                    <div className="h-4 w-24 bg-slate-200 dark:bg-zinc-700 rounded"></div>
-                  </th>
-                  <th className="py-2.5 px-3.5 bg-slate-100 dark:bg-zinc-900 border-b border-slate-200 dark:border-zinc-800">
-                    <div className="h-4 w-20 bg-slate-200 dark:bg-zinc-700 rounded mx-auto"></div>
-                  </th>
-                  <th className="py-2.5 px-3.5 bg-slate-100 dark:bg-zinc-900 border-b border-slate-200 dark:border-zinc-800">
-                    <div className="h-4 w-28 bg-slate-200 dark:bg-zinc-700 rounded mx-auto"></div>
-                  </th>
-                  <th className="py-2.5 px-3.5 bg-slate-100 dark:bg-zinc-900 border-b border-slate-200 dark:border-zinc-800">
-                    <div className="h-4 w-20 bg-slate-200 dark:bg-zinc-700 rounded mx-auto"></div>
-                  </th>
-                  <th className="py-2.5 px-3.5 bg-slate-100 dark:bg-zinc-900 border-b border-slate-200 dark:border-zinc-800">
-                    <div className="h-4 w-24 bg-slate-200 dark:bg-zinc-700 rounded mx-auto"></div>
-                  </th>
-                  <th className="py-2.5 pl-3.5 pr-6 text-right bg-slate-100 dark:bg-zinc-900 border-b border-slate-200 dark:border-zinc-800">
-                    <div className="h-4 w-16 bg-slate-200 dark:bg-zinc-700 rounded ml-auto"></div>
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100 dark:divide-zinc-800/60 font-sans">
-                {[...Array(9)].map((_, i) => (
-                  <tr key={i} className="h-[62px]">
-                    <td className="py-2 px-4">
-                      <div className="h-4 w-28 bg-slate-100 dark:bg-zinc-800/80 rounded"></div>
-                    </td>
-                    <td className="py-2 px-3.5">
-                      <div className="h-5 w-20 bg-slate-100 dark:bg-zinc-800/80 rounded mx-auto"></div>
-                    </td>
-                    <td className="py-2 px-3.5">
-                      <div className="h-4 w-24 bg-slate-100 dark:bg-zinc-800/80 rounded mx-auto"></div>
-                    </td>
-                    <td className="py-2 px-3.5">
-                      <div className="h-4 w-20 bg-slate-100 dark:bg-zinc-800/80 rounded mx-auto"></div>
-                    </td>
-                    <td className="py-2 px-3.5">
-                      <div className="h-5 w-24 bg-slate-100 dark:bg-zinc-800/80 rounded-full mx-auto"></div>
-                    </td>
-                    <td className="py-2 px-4">
-                      <div className="h-8 w-20 bg-slate-100 dark:bg-zinc-800/80 rounded-lg ml-auto"></div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </div>
-    );
-  }
+  // Group filtered rooms by Floor
+  const groupedByFloor = useMemo(() => {
+    const groups: { [key: string]: Room[] } = {};
+    filteredRooms.forEach((r) => {
+      const fl = normalizeFloorName(r.floor, r.room_number);
+      if (!groups[fl]) groups[fl] = [];
+      groups[fl].push(r);
+    });
+    // Sort floor keys numerically
+    return Object.keys(groups)
+      .sort((a, b) => {
+        const numA = parseInt(a.replace(/\D/g, "")) || 0;
+        const numB = parseInt(b.replace(/\D/g, "")) || 0;
+        return numA - numB;
+      })
+      .map((key) => ({
+        floor: key,
+        rooms: groups[key].sort((a, b) =>
+          a.room_number.localeCompare(b.room_number, undefined, { numeric: true }),
+        ),
+      }));
+  }, [filteredRooms]);
 
   return (
-    <div className="w-full h-[calc(100vh-6.2rem)] md:h-[calc(100vh-7.2rem)] lg:h-[calc(100dvh-7.2rem)] flex flex-col font-sans text-slate-900 dark:text-zinc-100 overflow-hidden space-y-2.5 sm:space-y-3">
-      {/* Header & Executive Controls */}
-      <div className="shrink-0 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
-        <div>
-          <div className="flex items-center gap-2">
-            <h1 className="text-2xl sm:text-3xl font-black text-slate-950 dark:text-white tracking-tight">
-              Rooms Management
-            </h1>
+    <div className="w-full h-full flex-1 min-h-0 font-sans text-slate-900 dark:text-zinc-100 flex flex-col overflow-hidden gap-2">
+      {/* 1. TOP HEADER */}
+      <div className="flex items-center justify-between gap-2.5 shrink-0">
+        {/* Left Title */}
+        <div className="flex items-center gap-2.5">
+          <div className="w-9 h-9 rounded-xl bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0 border border-blue-100 dark:border-blue-800/40 shadow-xs">
+            <Building2 className="w-5 h-5 stroke-[2.2]" />
           </div>
-          <p className="text-xs sm:text-sm font-semibold text-slate-700 dark:text-zinc-300 mt-0.5">
-            Manage rooms, bed capacities, amenities, and resident room
-            assignments.
-          </p>
-        </div>
-
-        <div className="flex flex-wrap items-center gap-2">
-          <button
-            onClick={() => handleOpenModal()}
-            className="px-3.5 py-1.5 text-sm font-bold rounded-lg bg-slate-900 hover:bg-slate-800 dark:bg-white dark:hover:bg-zinc-200 text-white dark:text-zinc-900 transition-colors flex items-center gap-1.5 shadow-xs"
-          >
-            <Plus className="w-4 h-4 stroke-[2.5]" />
-            <span>Add Room</span>
-          </button>
+          <div>
+            <h1 className="text-lg sm:text-xl font-black text-slate-950 dark:text-white tracking-tight leading-none">
+              Manage Rooms
+            </h1>
+            <p className="text-[11px] text-slate-500 dark:text-zinc-400 font-medium mt-0.5">
+              View and manage all rooms, bedspaces and their current status.
+            </p>
+          </div>
         </div>
       </div>
 
-      {/* Executive Metric Ribbon (4 Compact KPI Tiles) */}
-      <div className="shrink-0 grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-3">
-        {/* Total Units & Physical Capacity */}
-        <motion.div
-          variants={cardVariants}
-          initial="hidden"
-          animate="show"
-          className="bg-card border border-slate-200 dark:border-zinc-800 rounded-xl p-2.5 sm:p-3 shadow-xs flex items-center justify-between select-none"
-        >
-          <div>
-            <span className="text-xs sm:text-sm font-extrabold uppercase tracking-wider text-slate-700 dark:text-zinc-300">
-              Total Units
-            </span>
-            <div className="text-2xl sm:text-3xl lg:text-4xl font-black font-mono text-slate-950 dark:text-white mt-0.5 flex items-baseline gap-2">
-              {metrics.total}{" "}
-              <span className="text-sm sm:text-base font-sans font-extrabold text-slate-700 dark:text-zinc-300">
-                Rooms
+      {/* 2. TOP KPI CARDS RIBBON (Horizontal 4 Tiles with Compact Height) */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 shrink-0">
+        {/* Card 1: Full */}
+        <div className="bg-white dark:bg-zinc-900 border border-slate-200/90 dark:border-zinc-800 rounded-xl p-2.5 sm:p-3 shadow-2xs flex flex-col justify-between">
+          <div className="flex items-start gap-2.5">
+            <div className="w-8 h-8 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0 border border-emerald-100 dark:border-emerald-900/40">
+              <FileText className="w-4 h-4 stroke-[2.2]" />
+            </div>
+            <div className="min-w-0">
+              <span className="text-[11px] font-bold text-slate-700 dark:text-zinc-300 block leading-tight">
+                Full
+              </span>
+              <div className="text-sm sm:text-base font-black text-slate-900 dark:text-white mt-0.5">
+                {metrics.full} / {metrics.total} units
+              </div>
+              <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 block">
+                {metrics.fullPct}%
               </span>
             </div>
-            <p className="text-xs sm:text-sm font-medium text-slate-700 dark:text-zinc-300 mt-0.5">
-              <span className="font-extrabold text-slate-950 dark:text-white">
-                {metrics.totalBeds}
-              </span>{" "}
-              total bedspaces
-            </p>
           </div>
-          <div className="w-11 h-11 rounded-xl bg-slate-100 dark:bg-zinc-800 text-slate-900 dark:text-white flex items-center justify-center shrink-0 border border-slate-300 dark:border-zinc-700">
-            <Building2 className="w-5 h-5" />
+          <div className="w-full h-1 bg-slate-100 dark:bg-zinc-800 rounded-full mt-2 overflow-hidden">
+            <div
+              className="h-full bg-emerald-500 rounded-full transition-all duration-500"
+              style={{ width: `${metrics.fullPct}%` }}
+            />
           </div>
-        </motion.div>
+        </div>
 
-        {/* Occupancy Density */}
-        <motion.div
-          variants={cardVariants}
-          initial="hidden"
-          animate="show"
-          className="bg-card border border-slate-200 dark:border-zinc-800 rounded-xl p-2.5 sm:p-3 shadow-xs flex items-center justify-between select-none"
-        >
-          <div>
-            <span className="text-xs sm:text-sm font-extrabold uppercase tracking-wider text-slate-700 dark:text-zinc-300">
-              Occupancy Density
-            </span>
-            <div className="text-2xl sm:text-3xl lg:text-4xl font-black font-mono text-slate-950 dark:text-white mt-0.5 flex items-baseline gap-2">
-              {metrics.occupancyRate}%{" "}
-              <span className="text-sm sm:text-base font-sans font-extrabold text-emerald-700 dark:text-emerald-400">
-                Filled
+        {/* Card 2: Occupied w/ Available Beds */}
+        <div className="bg-white dark:bg-zinc-900 border border-slate-200/90 dark:border-zinc-800 rounded-xl p-2.5 sm:p-3 shadow-2xs flex flex-col justify-between">
+          <div className="flex items-start gap-2.5">
+            <div className="w-8 h-8 rounded-lg bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0 border border-amber-100 dark:border-amber-900/40">
+              <BedDouble className="w-4 h-4 stroke-[2.2]" />
+            </div>
+            <div className="min-w-0">
+              <span className="text-[11px] font-bold text-slate-700 dark:text-zinc-300 block leading-tight truncate">
+                Occupied w/ Beds
+              </span>
+              <div className="text-sm sm:text-base font-black text-slate-900 dark:text-white mt-0.5">
+                {metrics.occupiedWithBeds} / {metrics.total} units
+              </div>
+              <span className="text-[10px] font-bold text-amber-600 dark:text-amber-400 block">
+                {metrics.occupiedWithBedsPct}%
               </span>
             </div>
-            <p className="text-xs sm:text-sm font-medium text-slate-700 dark:text-zinc-300 mt-0.5">
-              <span className="font-extrabold text-slate-950 dark:text-white">
-                {metrics.totalOccupants}
-              </span>{" "}
-              of{" "}
-              <span className="font-bold text-slate-900 dark:text-zinc-100">
-                {metrics.totalBeds}
-              </span>{" "}
-              beds occupied
-            </p>
           </div>
-          <div className="w-11 h-11 rounded-xl bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 flex items-center justify-center shrink-0 border border-emerald-300/60 dark:border-emerald-500/30">
-            <Users className="w-5 h-5" />
+          <div className="w-full h-1 bg-slate-100 dark:bg-zinc-800 rounded-full mt-2 overflow-hidden">
+            <div
+              className="h-full bg-amber-500 rounded-full transition-all duration-500"
+              style={{ width: `${metrics.occupiedWithBedsPct}%` }}
+            />
           </div>
-        </motion.div>
+        </div>
 
-        {/* Available to Occupy */}
-        <motion.div
-          variants={cardVariants}
-          initial="hidden"
-          animate="show"
-          className="bg-card border border-slate-200 dark:border-zinc-800 rounded-xl p-2.5 sm:p-3 shadow-xs flex items-center justify-between select-none"
-        >
-          <div>
-            <span className="text-xs sm:text-sm font-extrabold uppercase tracking-wider text-slate-700 dark:text-zinc-300">
-              Available to Occupy
-            </span>
-            <div className="text-2xl sm:text-3xl lg:text-4xl font-black font-mono text-slate-950 dark:text-zinc-100 mt-0.5 flex items-baseline gap-2">
-              {metrics.vacantRooms}{" "}
-              <span className="text-sm sm:text-base font-sans font-extrabold text-blue-700 dark:text-blue-400">
+        {/* Card 3: Vacant */}
+        <div className="bg-white dark:bg-zinc-900 border border-slate-200/90 dark:border-zinc-800 rounded-xl p-2.5 sm:p-3 shadow-2xs flex flex-col justify-between">
+          <div className="flex items-start gap-2.5">
+            <div className="w-8 h-8 rounded-lg bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0 border border-blue-100 dark:border-blue-900/40">
+              <DoorOpen className="w-4 h-4 stroke-[2.2]" />
+            </div>
+            <div className="min-w-0">
+              <span className="text-[11px] font-bold text-slate-700 dark:text-zinc-300 block leading-tight">
                 Vacant
               </span>
-            </div>
-            <p className="text-xs sm:text-sm font-medium text-slate-700 dark:text-zinc-300 mt-0.5">
-              <span className="font-extrabold text-slate-950 dark:text-white">
-                {metrics.availableBeds}
-              </span>{" "}
-              open bed slots out of{" "}
-              <span className="font-bold text-slate-900 dark:text-zinc-100">
-                {metrics.totalBeds}
+              <div className="text-sm sm:text-base font-black text-slate-900 dark:text-white mt-0.5">
+                {metrics.vacant} / {metrics.total} units
+              </div>
+              <span className="text-[10px] font-bold text-blue-600 dark:text-blue-400 block">
+                {metrics.vacantPct}%
               </span>
-            </p>
+            </div>
           </div>
-          <div className="w-11 h-11 rounded-xl bg-blue-50 dark:bg-blue-500/10 text-blue-700 dark:text-blue-400 flex items-center justify-center shrink-0 border border-blue-300/60 dark:border-blue-500/30">
-            <DoorOpen className="w-5 h-5" />
-          </div>
-        </motion.div>
-
-        {/* Maintenance */}
-        <motion.div
-          variants={cardVariants}
-          initial="hidden"
-          animate="show"
-          className="bg-card border border-slate-200 dark:border-zinc-800 rounded-xl p-2.5 sm:p-3 shadow-xs flex items-center justify-between select-none"
-        >
-          <div>
-            <span className="text-xs sm:text-sm font-extrabold uppercase tracking-wider text-slate-700 dark:text-zinc-300">
-              Maintenance
-            </span>
+          <div className="w-full h-1 bg-slate-100 dark:bg-zinc-800 rounded-full mt-2 overflow-hidden">
             <div
-              className={`text-2xl sm:text-3xl lg:text-4xl font-black font-mono mt-0.5 flex items-baseline gap-2 ${metrics.maintenanceRooms > 0 ? "text-rose-700 dark:text-rose-400" : "text-slate-950 dark:text-white"}`}
-            >
-              {metrics.maintenanceRooms}{" "}
-              <span className="text-sm sm:text-base font-sans font-extrabold text-slate-700 dark:text-zinc-300">
-                Rooms
+              className="h-full bg-blue-500 rounded-full transition-all duration-500"
+              style={{ width: `${metrics.vacantPct}%` }}
+            />
+          </div>
+        </div>
+
+        {/* Card 4: Maintenance */}
+        <div className="bg-white dark:bg-zinc-900 border border-slate-200/90 dark:border-zinc-800 rounded-xl p-2.5 sm:p-3 shadow-2xs flex flex-col justify-between">
+          <div className="flex items-start gap-2.5">
+            <div className="w-8 h-8 rounded-lg bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400 flex items-center justify-center shrink-0 border border-rose-100 dark:border-rose-900/40">
+              <Wrench className="w-4 h-4 stroke-[2.2]" />
+            </div>
+            <div className="min-w-0">
+              <span className="text-[11px] font-bold text-slate-700 dark:text-zinc-300 block leading-tight">
+                Maintenance
+              </span>
+              <div className="text-sm sm:text-base font-black text-slate-900 dark:text-white mt-0.5">
+                {metrics.maintenance} / {metrics.total} units
+              </div>
+              <span className="text-[10px] font-bold text-rose-600 dark:text-rose-400 block">
+                {metrics.maintenancePct}%
               </span>
             </div>
-            <p className="text-xs sm:text-sm font-semibold text-slate-700 dark:text-zinc-300 mt-0.5">
-              {metrics.maintenanceRooms > 0
-                ? `${metrics.maintenanceRooms} offline under repair`
-                : "Zero offline units"}
-            </p>
           </div>
-          <div className="w-11 h-11 rounded-xl bg-rose-50 dark:bg-rose-500/10 text-rose-700 dark:text-rose-400 flex items-center justify-center shrink-0 border border-rose-300/60 dark:border-rose-500/30">
-            <Wrench className="w-5 h-5" />
-          </div>
-        </motion.div>
-      </div>
-
-      {/* Filter Bar & Search Controls */}
-      <div className="shrink-0 bg-card border border-slate-200 dark:border-zinc-800 rounded-xl p-2 shadow-xs flex flex-wrap items-center justify-between gap-2">
-        <div className="flex flex-wrap items-center gap-2">
-          {/* Search */}
-          <div className="relative w-56 sm:w-64 shrink-0">
-            <Search className="w-3.5 h-3.5 text-slate-500 dark:text-zinc-400 absolute left-3 top-1/2 -translate-y-1/2" />
-            <input
-              type="text"
-              placeholder="Search room # or floor..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-8 pr-7 py-1.5 text-sm font-semibold rounded-lg border border-slate-300 dark:border-zinc-700 bg-slate-50/70 dark:bg-zinc-900/60 text-slate-950 dark:text-white placeholder:text-slate-500 dark:placeholder:text-zinc-400 outline-none focus:ring-2 focus:ring-slate-400/30 dark:focus:ring-zinc-600/40"
+          <div className="w-full h-1 bg-slate-100 dark:bg-zinc-800 rounded-full mt-2 overflow-hidden">
+            <div
+              className="h-full bg-rose-500 rounded-full transition-all duration-500"
+              style={{ width: `${metrics.maintenancePct}%` }}
             />
-            {searchQuery && (
-              <button
-                type="button"
-                onClick={() => setSearchQuery("")}
-                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-950 dark:hover:text-white cursor-pointer"
+          </div>
+        </div>
+      </div>
+
+      {/* 3. UNIFIED FILTER & ACTION CONTROLS BAR */}
+      <div className="flex flex-wrap items-center gap-2 shrink-0 z-20">
+        {/* 1. Searchbar */}
+        <div className="relative w-44 sm:w-56">
+          <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Search room, tenant, type..."
+            className="w-full pl-8 pr-7 py-1.5 text-xs font-medium rounded-lg border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-slate-900 dark:text-white placeholder:text-slate-400 outline-none focus:ring-1 focus:ring-blue-500"
+          />
+          {searchQuery && (
+            <button
+              type="button"
+              onClick={() => setSearchQuery("")}
+              className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-white cursor-pointer"
+            >
+              <X className="w-3 h-3" />
+            </button>
+          )}
+        </div>
+
+        {/* 2. Floors Dropdown Menu */}
+        <div className="w-32 sm:w-36">
+          <CustomSelect
+            value={selectedFloorTab}
+            onChange={(val) => setSelectedFloorTab(val)}
+            options={["All Floors", ...uniqueFloors]}
+            maxListHeight="175px"
+            className="w-full px-2.5 py-1.5 text-xs font-semibold rounded-lg border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-slate-800 dark:text-zinc-200 outline-none"
+          />
+        </div>
+
+        {/* 3. Room Statuses Dropdown */}
+        <div className="w-36 sm:w-44">
+          <CustomSelect
+            value={statusFilter}
+            onChange={(val) => setStatusFilter(val)}
+            options={[
+              "All Statuses",
+              "Full",
+              "Occupied (With Available Beds)",
+              "Vacant",
+              "Maintenance",
+            ]}
+            className="w-full px-2.5 py-1.5 text-xs font-semibold rounded-lg border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-slate-800 dark:text-zinc-200 outline-none"
+          />
+        </div>
+
+        {/* 4. Room Types Dropdown */}
+        <div className="w-32 sm:w-36">
+          <CustomSelect
+            value={typeFilter}
+            onChange={(val) => setTypeFilter(val)}
+            options={["All Room Types", ...uniqueTypes]}
+            className="w-full px-2.5 py-1.5 text-xs font-semibold rounded-lg border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-slate-800 dark:text-zinc-200 outline-none"
+          />
+        </div>
+
+        {/* 5. Rental Mode Dropdown */}
+        <div className="w-32 sm:w-36">
+          <CustomSelect
+            value={rentalTypeFilter}
+            onChange={(val) => setRentalTypeFilter(val)}
+            options={["All Rental Models", "Whole Room", "Per Bed / Bedspace"]}
+            className="w-full px-2.5 py-1.5 text-xs font-semibold rounded-lg border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-slate-800 dark:text-zinc-200 outline-none"
+          />
+        </div>
+
+        {/* 6. Add Room Button */}
+        <button
+          onClick={() => handleOpenModal()}
+          className="px-3 py-1.5 text-xs font-bold rounded-lg bg-blue-600 hover:bg-blue-700 text-white transition-colors flex items-center gap-1.5 shadow-xs shrink-0 cursor-pointer"
+        >
+          <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
+          <span>Add Room</span>
+        </button>
+      </div>
+
+      {/* 4. MAIN SPLIT VIEW (Floor Room Rows vs. Right Drawer) */}
+      <div className="flex-1 min-h-0 flex flex-col lg:flex-row items-stretch gap-2.5 overflow-hidden">
+        {/* LEFT COLUMN: Floor Rows Container - Only Floor Cards have scrollbar, main display shows 1st, 2nd, 3rd floor */}
+        <div className="flex-1 min-w-0 h-full overflow-y-auto pr-1.5 custom-scrollbar space-y-2">
+          {groupedByFloor.length === 0 ? (
+            <div className="bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-xl p-8 text-center">
+              <DoorOpen className="w-10 h-10 text-slate-300 dark:text-zinc-700 mx-auto mb-2" />
+              <h3 className="text-xs sm:text-sm font-bold text-slate-800 dark:text-zinc-200">
+                No rooms match the selected criteria
+              </h3>
+              <p className="text-[11px] text-slate-500 dark:text-zinc-400 mt-0.5">
+                Try adjusting your search keywords, status filter, or floor tabs.
+              </p>
+            </div>
+          ) : (
+            groupedByFloor.map((group) => (
+              <div
+                key={group.floor}
+                className="bg-white dark:bg-zinc-900 border border-slate-200/90 dark:border-zinc-800 rounded-xl p-2.5 sm:p-3 shadow-2xs space-y-2 shrink-0"
               >
-                <X className="w-3.5 h-3.5" />
-              </button>
-            )}
-          </div>
+                {/* Floor Header */}
+                {(() => {
+                  let floorFull = 0;
+                  let floorWithBeds = 0;
+                  let floorVacant = 0;
+                  let floorMaint = 0;
 
-          {/* Dropdown Filters */}
-          <div className="flex flex-wrap items-center gap-2">
-            {/* Floor Dropdown */}
-            <div className="w-32 sm:w-36 shrink-0">
-              <CustomSelect
-                value={floorFilter}
-                onChange={(val) => setFloorFilter(val)}
-                options={["All Floors", ...uniqueFloors]}
-                className="w-full px-2.5 py-1.5 text-sm font-bold rounded-lg border border-slate-300 dark:border-zinc-700 bg-slate-50/70 dark:bg-zinc-900/60 text-slate-900 dark:text-zinc-100 outline-none focus:ring-2 focus:ring-slate-400/30 dark:focus:ring-zinc-600/40"
-              />
-            </div>
+                  group.rooms.forEach((r) => {
+                    const c = getRoomCategory(r);
+                    if (c === "Full") floorFull++;
+                    else if (c === "OccupiedWithBeds") floorWithBeds++;
+                    else if (c === "Vacant") floorVacant++;
+                    else if (c === "Maintenance") floorMaint++;
+                  });
 
-            {/* Room Type Dropdown */}
-            <div className="w-32 sm:w-36 shrink-0">
-              <CustomSelect
-                value={typeFilter}
-                onChange={(val) => setTypeFilter(val)}
-                options={["All Types", ...uniqueTypes]}
-                className="w-full px-2.5 py-1.5 text-sm font-bold rounded-lg border border-slate-300 dark:border-zinc-700 bg-slate-50/70 dark:bg-zinc-900/60 text-slate-900 dark:text-zinc-100 outline-none focus:ring-2 focus:ring-slate-400/30 dark:focus:ring-zinc-600/40"
-              />
-            </div>
+                  return (
+                    <div className="flex flex-wrap items-center justify-between gap-2 px-0.5">
+                      {/* Left: Floor Title & Room Counter beside it */}
+                      <div className="flex items-center gap-2">
+                        <h2 className="text-xs sm:text-sm font-extrabold text-slate-950 dark:text-white tracking-tight">
+                          {group.floor}
+                        </h2>
+                        <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-50 text-blue-600 dark:bg-blue-950/60 dark:text-blue-400 border border-blue-200/60 shrink-0">
+                          {group.rooms.length} {group.rooms.length === 1 ? "room" : "rooms"}
+                        </span>
+                      </div>
 
-            {/* Rental Mode Dropdown */}
-            <div className="w-40 sm:w-44 shrink-0">
-              <CustomSelect
-                value={rentalTypeFilter}
-                onChange={(val) => setRentalTypeFilter(val)}
-                options={[
-                  "All Rental Types",
-                  "Whole Room",
-                  "Per Bed / Bedspace",
-                ]}
-                className="w-full px-2.5 py-1.5 text-sm font-bold rounded-lg border border-slate-300 dark:border-zinc-700 bg-slate-50/70 dark:bg-zinc-900/60 text-slate-900 dark:text-zinc-100 outline-none focus:ring-2 focus:ring-slate-400/30 dark:focus:ring-zinc-600/40"
-              />
-            </div>
-
-            {/* Unit Status Dropdown */}
-            <div className="w-40 sm:w-44 shrink-0">
-              <CustomSelect
-                value={statusFilter}
-                onChange={(val) => setStatusFilter(val as any)}
-                options={[
-                  "All Units",
-                  "Vacant",
-                  "Available Beds",
-                  "Fully Occupied",
-                  "Maintenance",
-                ]}
-                className="w-full px-2.5 py-1.5 text-sm font-bold rounded-lg border border-slate-300 dark:border-zinc-700 bg-slate-50/70 dark:bg-zinc-900/60 text-slate-900 dark:text-zinc-100 outline-none focus:ring-2 focus:ring-slate-400/30 dark:focus:ring-zinc-600/40"
-              />
-            </div>
-          </div>
-        </div>
-
-        <span className="text-[11px] text-slate-500 dark:text-zinc-400 font-semibold shrink-0 ml-auto sm:ml-0">
-          {filteredRooms.length} of {rooms.length} units listed
-        </span>
-      </div>
-      {/* Main Inventory Data: Table */}
-      <div className="flex-1 min-h-0 max-h-[610px] bg-card border border-slate-200 dark:border-zinc-800 rounded-xl shadow-xs flex flex-col overflow-hidden relative">
-        {/* Top-Right scrollbar header filler to extend label header width and align scrollbar with 1st data row */}
-        <div className="absolute top-0 right-0 w-6 h-[46px] bg-slate-100 dark:bg-zinc-900 border-b border-slate-200 dark:border-zinc-800 z-30 pointer-events-none rounded-tr-xl" />
-
-        <div className="flex-1 min-h-0 overflow-y-auto overflow-x-auto custom-scrollbar">
-          <table className="w-full min-w-full text-left text-sm border-collapse">
-            <thead className="sticky top-0 z-20 bg-slate-100 dark:bg-zinc-900 shadow-xs border-b border-slate-200 dark:border-zinc-800">
-              <tr className="h-[46px] bg-slate-100 dark:bg-zinc-900 text-sm sm:text-base font-black text-slate-900 dark:text-white uppercase tracking-wider">
-                <th className="py-3 px-4 bg-slate-100 dark:bg-zinc-900 border-b border-slate-200 dark:border-zinc-800">
-                  Room & Location
-                </th>
-                <th className="py-3 px-3.5 text-center bg-slate-100 dark:bg-zinc-900 border-b border-slate-200 dark:border-zinc-800">
-                  Type & Rental Mode
-                </th>
-                <th className="py-3 px-3.5 text-center bg-slate-100 dark:bg-zinc-900 border-b border-slate-200 dark:border-zinc-800">
-                  Occupancy Density
-                </th>
-                <th className="py-3 px-3.5 text-center bg-slate-100 dark:bg-zinc-900 border-b border-slate-200 dark:border-zinc-800">
-                  Monthly Rate
-                </th>
-                <th className="py-3 px-3.5 text-center bg-slate-100 dark:bg-zinc-900 border-b border-slate-200 dark:border-zinc-800">
-                  Status
-                </th>
-                <th className="py-3 pl-3.5 pr-6 text-right bg-slate-100 dark:bg-zinc-900 border-b border-slate-200 dark:border-zinc-800">
-                  Actions
-                </th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100 dark:divide-zinc-800/60 font-sans">
-              {filteredRooms.map((room) => {
-                const occupancyPercent =
-                  room.capacity > 0
-                    ? Math.round((room.current_occupants / room.capacity) * 100)
-                    : 0;
-
-                return (
-                  <tr
-                    key={room.id}
-                    className="h-[62px] hover:bg-slate-50/80 dark:hover:bg-zinc-800/40 transition-colors group"
-                  >
-                    {/* Room Number & Floor */}
-                    <td className="py-2 px-4">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-lg bg-slate-100 dark:bg-zinc-800 text-slate-800 dark:text-zinc-200 font-mono font-bold text-base flex items-center justify-center shrink-0 border border-slate-200/80 dark:border-zinc-700">
-                          {room.room_number}
-                        </div>
-                        <div>
-                          <span className="font-extrabold text-base sm:text-[17px] text-slate-950 dark:text-white block leading-tight">
-                            Room {room.room_number}
+                      {/* Right: Room Status Summary for this floor */}
+                      <div className="flex flex-wrap items-center gap-1.5 text-[10px] font-bold">
+                        {floorFull > 0 && (
+                          <span className="px-1.5 py-0.5 rounded-md bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 border border-emerald-200/60 dark:border-emerald-800/60 flex items-center gap-1">
+                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                            Full: {floorFull}
                           </span>
-                          <p className="text-sm font-medium text-slate-700 dark:text-zinc-300 block leading-tight mt-0.5">
-                            {room.floor || "Unassigned Floor"}
-                          </p>
+                        )}
+                        {floorWithBeds > 0 && (
+                          <span className="px-1.5 py-0.5 rounded-md bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400 border border-amber-200/60 dark:border-amber-800/60 flex items-center gap-1">
+                            <span className="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
+                            Occupied w/ Beds: {floorWithBeds}
+                          </span>
+                        )}
+                        {floorVacant > 0 && (
+                          <span className="px-1.5 py-0.5 rounded-md bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 border border-blue-200/60 dark:border-blue-800/60 flex items-center gap-1">
+                            <span className="w-1.5 h-1.5 rounded-full bg-blue-500"></span>
+                            Vacant: {floorVacant}
+                          </span>
+                        )}
+                        {floorMaint > 0 && (
+                          <span className="px-1.5 py-0.5 rounded-md bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400 border border-rose-200/60 dark:border-rose-800/60 flex items-center gap-1">
+                            <span className="w-1.5 h-1.5 rounded-full bg-rose-500"></span>
+                            Maint: {floorMaint}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })()}
+
+                {/* Rooms Row */}
+                <div className="flex items-stretch gap-2.5 overflow-x-auto pb-2 pt-0.5 custom-scrollbar scroll-smooth">
+                  {group.rooms.map((room) => {
+                    const cat = getRoomCategory(room);
+                    const isSelected = selectedRoom?.id === room.id;
+                    const primaryOccupant = room.occupants?.[0];
+                    const extraOccupants =
+                      (room.occupants?.length || 0) - 1;
+                    const availBeds = getAvailableBeds(room);
+
+                    return (
+                      <div
+                        key={room.id}
+                        onClick={() => setSelectedRoom(room)}
+                        className={`w-[calc((100%-2.5rem)/5)] min-w-[170px] lg:min-w-[calc((100%-2.5rem)/5)] lg:max-w-[calc((100%-2.5rem)/5)] shrink-0 bg-white dark:bg-zinc-900 rounded-xl p-2 sm:p-2.5 border cursor-pointer transition-all flex flex-col justify-between relative shadow-2xs hover:shadow-xs group ${
+                          isSelected
+                            ? "border-blue-500 ring-2 ring-blue-500/20 bg-blue-50/10 dark:bg-blue-950/20"
+                            : "border-slate-200/90 dark:border-zinc-800 hover:border-slate-300 dark:hover:border-zinc-700"
+                        }`}
+                      >
+                        {/* Top Line: Room Number & Status Badge */}
+                        <div className="flex items-center justify-between gap-1">
+                          <span className="font-bold text-xs sm:text-sm text-slate-900 dark:text-white">
+                            {room.room_number}
+                          </span>
+
+                          {cat === "Full" && (
+                            <span className="px-1.5 py-0.2 rounded-full text-[9px] font-bold bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400 border border-emerald-200/60 dark:border-emerald-800/60 flex items-center gap-1 shrink-0">
+                              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                              Full
+                            </span>
+                          )}
+                          {cat === "OccupiedWithBeds" && (
+                            <span
+                              className="px-1.5 py-0.2 rounded-full text-[9px] font-bold bg-amber-50 dark:bg-amber-950/50 text-amber-600 dark:text-amber-400 border border-amber-200/60 dark:border-amber-800/60 flex items-center gap-1 shrink-0"
+                              title={`Occupied with ${availBeds} ${availBeds === 1 ? "available bed" : "available beds"}`}
+                            >
+                              <span className="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
+                              Occupied ({availBeds} {availBeds === 1 ? "bed" : "beds"} avail)
+                            </span>
+                          )}
+                          {cat === "Vacant" && (
+                            <span className="px-1.5 py-0.2 rounded-full text-[9px] font-bold bg-blue-50 dark:bg-blue-950/50 text-blue-600 dark:text-blue-400 border border-blue-200/60 dark:border-blue-800/60 flex items-center gap-1 shrink-0">
+                              <span className="w-1.5 h-1.5 rounded-full bg-blue-500"></span>
+                              Vacant
+                            </span>
+                          )}
+                          {cat === "Maintenance" && (
+                            <span className="px-1.5 py-0.2 rounded-full text-[9px] font-bold bg-rose-50 dark:bg-rose-950/50 text-rose-600 dark:text-rose-400 border border-rose-200/60 dark:border-rose-800/60 flex items-center gap-1 shrink-0">
+                              <Wrench className="w-2.5 h-2.5" />
+                              <span className="hidden xl:inline 2xl:hidden">Maint.</span>
+                              <span className="inline xl:hidden 2xl:inline">Maintenance</span>
+                            </span>
+                          )}
+                        </div>
+
+                        {/* Room Subtitle: Type & Tier */}
+                        <p className="text-[10px] text-slate-500 dark:text-zinc-400 font-medium mt-0.5 truncate">
+                          {room.type} •{" "}
+                          {room.rental_type === "Per Bed / Bedspace"
+                            ? "Standard"
+                            : "Deluxe"}
+                        </p>
+
+                        {/* Miniature Bed Icons representing capacity */}
+                        <div className="flex items-center gap-1 my-1">
+                          {[...Array(Math.max(1, room.capacity || 1))].map(
+                            (_, bIdx) => {
+                              const isOccupied =
+                                bIdx < (room.current_occupants || 0);
+                              const isMaint = cat === "Maintenance";
+                              return (
+                                <BedDouble
+                                  key={bIdx}
+                                  className={`w-3 h-3 ${
+                                    isMaint
+                                      ? "text-rose-400 fill-rose-400/20"
+                                      : isOccupied
+                                        ? "text-emerald-500 fill-emerald-500/30"
+                                        : "text-slate-300 dark:text-zinc-700"
+                                  }`}
+                                />
+                              );
+                            },
+                          )}
+                        </div>
+
+                        {/* Resident Name or Empty line */}
+                        <div className="h-4.5 flex items-center">
+                          {primaryOccupant ? (
+                            <div className="flex items-center gap-1 text-[10px] font-semibold text-slate-800 dark:text-zinc-200 truncate w-full">
+                              <User className="w-2.5 h-2.5 text-blue-600 shrink-0" />
+                              <span className="truncate">{primaryOccupant.name}</span>
+                              {extraOccupants > 0 && (
+                                <span className="px-1 py-0.2 rounded text-[8px] font-bold bg-blue-50 dark:bg-blue-900/40 text-blue-600 dark:text-blue-300 border border-blue-200 dark:border-blue-800/50 shrink-0">
+                                  +{extraOccupants}
+                                </span>
+                              )}
+                            </div>
+                          ) : (
+                            <span className="text-[10px] text-slate-400 dark:text-zinc-600 italic">
+                              {cat === "Maintenance"
+                                ? "Under Repair"
+                                : "Available"}
+                            </span>
+                          )}
+                        </div>
+
+                        {/* Monthly Rate */}
+                        <div className="text-[11px] font-bold font-mono text-slate-900 dark:text-white mt-1">
+                          ₱{Number(room.price).toLocaleString()}/mo
+                        </div>
+
+                        {/* Bottom Row: Amenity Icons & Menu */}
+                        <div className="flex items-center justify-between pt-1.5 mt-1 border-t border-slate-100 dark:border-zinc-800/80">
+                          <div className="flex items-center gap-1 text-slate-400 dark:text-zinc-500">
+                            <Wifi className="w-2.5 h-2.5" />
+                            <Wind className="w-2.5 h-2.5" />
+                            <Monitor className="w-2.5 h-2.5" />
+                          </div>
+
+                          <div className="relative">
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setActiveMenuRoomId(
+                                  activeMenuRoomId === room.id ? null : room.id,
+                                );
+                              }}
+                              className="p-0.5 rounded text-slate-400 hover:text-slate-700 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-zinc-800 cursor-pointer"
+                            >
+                              <MoreHorizontal className="w-3 h-3" />
+                            </button>
+
+                            {/* Popup Action Menu */}
+                            {activeMenuRoomId === room.id && (
+                              <div
+                                onClick={(e) => e.stopPropagation()}
+                                className="absolute right-0 bottom-6 w-36 bg-white dark:bg-zinc-900 rounded-xl shadow-lg border border-slate-200 dark:border-zinc-800 py-1 z-30 text-xs"
+                              >
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setActiveMenuRoomId(null);
+                                    handleOpenModal(room);
+                                  }}
+                                  className="w-full px-3 py-1.5 text-left hover:bg-slate-50 dark:hover:bg-zinc-800 flex items-center gap-2 font-medium"
+                                >
+                                  <Edit className="w-3.5 h-3.5 text-blue-500" />
+                                  Edit Room
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setActiveMenuRoomId(null);
+                                    handleToggleMaintenance(room);
+                                  }}
+                                  className="w-full px-3 py-1.5 text-left hover:bg-slate-50 dark:hover:bg-zinc-800 flex items-center gap-2 font-medium"
+                                >
+                                  <Wrench className="w-3.5 h-3.5 text-amber-500" />
+                                  {room.status === "Maintenance"
+                                    ? "Set Available"
+                                    : "Maintenance"}
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setActiveMenuRoomId(null);
+                                    handleDelete(room);
+                                  }}
+                                  disabled={room.current_occupants > 0}
+                                  className="w-full px-3 py-1.5 text-left hover:bg-slate-50 dark:hover:bg-zinc-800 text-rose-600 disabled:opacity-40 flex items-center gap-2 font-medium"
+                                >
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                  Delete
+                                </button>
+                              </div>
+                            )}
+                          </div>
                         </div>
                       </div>
-                    </td>
-
-                    {/* Type & Rental Type */}
-                    <td className="py-2 px-3.5 text-center">
-                      <span className="font-extrabold text-base text-slate-900 dark:text-zinc-100 block leading-tight">
-                        {room.type}
-                      </span>
-                      <p className="text-sm font-medium text-slate-700 dark:text-zinc-300 block leading-tight mt-0.5">
-                        {room.rental_type || "Whole Room"}
-                      </p>
-                    </td>
-
-                    {/* Occupancy Density */}
-                    <td className="py-2 px-3.5 whitespace-nowrap text-center">
-                      <span className="font-bold text-base text-slate-900 dark:text-zinc-100">
-                        {room.current_occupants} / {room.capacity} Beds
-                      </span>
-                    </td>
-
-                    {/* Monthly Rate */}
-                    <td className="py-2 px-3.5 text-center">
-                      <div className="font-mono font-extrabold text-base sm:text-lg text-slate-950 dark:text-white leading-tight">
-                        ₱{Number(room.price).toLocaleString()}
-                      </div>
-                      <span className="text-xs text-slate-500 dark:text-zinc-400 font-medium block leading-tight mt-0.5">
-                        {room.rental_type === "Per Bed / Bedspace"
-                          ? "per bedspace / mo"
-                          : "whole room / mo"}
-                      </span>
-                    </td>
-
-                    {/* Status Badge */}
-                    <td className="py-2 px-3.5 text-center">
-                      <div className="flex justify-center">
-                        {getStatusPill(room)}
-                      </div>
-                    </td>
-
-                    {/* Actions */}
-                    <td className="py-2 px-4 text-right">
-                      <div className="flex items-center justify-end gap-1.5">
-                        {/* Maintenance Toggle */}
-                        <button
-                          onClick={() => handleToggleMaintenance(room)}
-                          className={`p-2 rounded-lg border transition-colors cursor-pointer ${room.status === "Maintenance" ? "bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 border-emerald-200 dark:border-emerald-500/30 hover:bg-emerald-100" : "text-slate-500 hover:text-rose-600 border-transparent hover:border-rose-200 dark:hover:border-rose-900/60"}`}
-                          title={
-                            room.status === "Maintenance"
-                              ? "Mark Available"
-                              : "Set to Maintenance"
-                          }
-                        >
-                          {room.status === "Maintenance" ? (
-                            <CheckCircle className="w-4.5 h-4.5" />
-                          ) : (
-                            <Wrench className="w-4.5 h-4.5" />
-                          )}
-                        </button>
-
-                        {/* View Details */}
-                        <button
-                          onClick={() => setViewingRoom(room)}
-                          className="p-2 text-slate-600 hover:text-slate-950 dark:text-zinc-300 dark:hover:text-white border border-transparent hover:border-slate-200 dark:hover:border-zinc-700 rounded-lg transition-colors cursor-pointer"
-                          title="View Occupant Roster & Specs"
-                        >
-                          <Info className="w-4.5 h-4.5" />
-                        </button>
-
-                        {/* Edit */}
-                        <button
-                          onClick={() => handleOpenModal(room)}
-                          className="p-2 text-slate-600 hover:text-slate-950 dark:text-zinc-300 dark:hover:text-white border border-transparent hover:border-slate-200 dark:hover:border-zinc-700 rounded-lg transition-colors cursor-pointer"
-                          title="Edit Room Configuration"
-                        >
-                          <Edit className="w-4.5 h-4.5" />
-                        </button>
-
-                        {/* Delete */}
-                        <button
-                          onClick={() => handleDelete(room)}
-                          disabled={
-                            isDeleting === room.id || room.current_occupants > 0
-                          }
-                          className="p-2 text-slate-600 hover:text-rose-600 disabled:opacity-30 disabled:hover:text-slate-400 border border-transparent hover:border-rose-200 dark:hover:border-rose-900/60 rounded-lg transition-colors cursor-pointer"
-                          title={
-                            room.current_occupants > 0
-                              ? "Cannot delete occupied room"
-                              : "Delete Room"
-                          }
-                        >
-                          <Trash2 className="w-4.5 h-4.5" />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })}
-
-              {filteredRooms.length === 0 && (
-                <tr>
-                  <td
-                    colSpan={6}
-                    className="py-14 text-center text-slate-500 dark:text-zinc-400"
-                  >
-                    <DoorOpen className="w-10 h-10 text-slate-300 dark:text-zinc-700 mx-auto mb-2" />
-                    <p className="font-bold text-base text-slate-700 dark:text-zinc-300">
-                      No rooms found
-                    </p>
-                    <p className="text-sm text-slate-400 dark:text-zinc-500 mt-1">
-                      Try adjusting your filters or search keywords.
-                    </p>
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
+                    );
+                  })}
+                </div>
+              </div>
+            ))
+          )}
         </div>
+
+        {/* RIGHT COLUMN: DETAILED ROOM DOSSIER (Matches Mockup Right Sidebar) */}
+        {selectedRoom && (
+          <div className="w-full lg:w-[285px] 2xl:w-[325px] shrink-0 h-full overflow-y-auto pr-1 custom-scrollbar">
+            <div className="bg-white dark:bg-zinc-900 border border-slate-200/90 dark:border-zinc-800 rounded-xl p-3.5 sm:p-4 shadow-xs space-y-3">
+              {/* Header: Room Number, Badge & Close */}
+              <div>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <h2 className="text-lg font-black text-slate-900 dark:text-white">
+                      Room {selectedRoom.room_number}
+                    </h2>
+                    {getRoomCategory(selectedRoom) === "Full" && (
+                      <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400 border border-emerald-200/60 dark:border-emerald-800/60">
+                        Full
+                      </span>
+                    )}
+                    {getRoomCategory(selectedRoom) === "OccupiedWithBeds" && (
+                      <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 dark:bg-amber-950/50 text-amber-600 dark:text-amber-400 border border-amber-200/60 dark:border-amber-800/60">
+                        Occupied with {getAvailableBeds(selectedRoom)}{" "}
+                        {getAvailableBeds(selectedRoom) === 1
+                          ? "available bed"
+                          : "available beds"}
+                      </span>
+                    )}
+                    {getRoomCategory(selectedRoom) === "Vacant" && (
+                      <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-50 dark:bg-blue-950/50 text-blue-600 dark:text-blue-400 border border-blue-200/60 dark:border-blue-800/60">
+                        Vacant
+                      </span>
+                    )}
+                    {getRoomCategory(selectedRoom) === "Maintenance" && (
+                      <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-50 dark:bg-rose-950/50 text-rose-600 dark:text-rose-400 border border-rose-200/60 dark:border-rose-800/60">
+                        Maintenance
+                      </span>
+                    )}
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => setSelectedRoom(null)}
+                    className="p-1 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-zinc-800 transition-colors cursor-pointer"
+                    title="Close"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+
+                <p className="text-xs text-slate-500 dark:text-zinc-400 mt-1 font-medium">
+                  {normalizeFloorName(
+                    selectedRoom.floor,
+                    selectedRoom.room_number,
+                  )}{" "}
+                  • {selectedRoom.type} Room • Standard
+                </p>
+              </div>
+
+              {/* Price & Rental Mode Pill */}
+              <div className="flex items-center justify-between pt-1">
+                <div className="flex items-baseline gap-1">
+                  <span className="text-xl font-black font-mono text-slate-950 dark:text-white">
+                    ₱ {Number(selectedRoom.price).toLocaleString()}
+                  </span>
+                  <span className="text-xs text-slate-400 font-medium">
+                    / month
+                  </span>
+                </div>
+                <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-blue-50 dark:bg-blue-950/50 text-blue-600 dark:text-blue-400 border border-blue-200/60 dark:border-blue-900/40">
+                  {selectedRoom.rental_type || "Whole Room"}
+                </span>
+              </div>
+
+              {/* Photo & Amenities Mini Grid */}
+              <div className="grid grid-cols-2 gap-3 pt-1">
+                {/* Visual Thumbnail */}
+                <div className="relative aspect-4/3 rounded-xl overflow-hidden border border-slate-200 dark:border-zinc-800 bg-slate-100 dark:bg-zinc-800">
+                  <img
+                    src="/images/room_sample.jpg"
+                    alt="Room sample"
+                    className="w-full h-full object-cover"
+                    onError={(e) => {
+                      // Fallback gradient if file missing
+                      (e.target as HTMLElement).style.display = "none";
+                    }}
+                  />
+                </div>
+
+                {/* Amenities List */}
+                <div className="space-y-1.5 flex flex-col justify-center">
+                  <span className="text-[11px] font-bold text-slate-900 dark:text-white block mb-1">
+                    Amenities
+                  </span>
+                  <div className="flex items-center gap-1.5 text-xs text-slate-600 dark:text-zinc-300 font-medium">
+                    <Wifi className="w-3.5 h-3.5 text-slate-400" />
+                    <span>Wi-Fi</span>
+                  </div>
+                  <div className="flex items-center gap-1.5 text-xs text-slate-600 dark:text-zinc-300 font-medium">
+                    <Wind className="w-3.5 h-3.5 text-slate-400" />
+                    <span>Aircon</span>
+                  </div>
+                  <div className="flex items-center gap-1.5 text-xs text-slate-600 dark:text-zinc-300 font-medium">
+                    <Monitor className="w-3.5 h-3.5 text-slate-400" />
+                    <span>Study Desk</span>
+                  </div>
+                  <div className="flex items-center gap-1.5 text-xs text-slate-600 dark:text-zinc-300 font-medium">
+                    <Box className="w-3.5 h-3.5 text-slate-400" />
+                    <span>Wardrobe</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Room Information Table */}
+              <div className="space-y-2.5 pt-2 border-t border-slate-100 dark:border-zinc-800/80">
+                <h3 className="text-xs font-bold text-slate-900 dark:text-white">
+                  Room Information
+                </h3>
+                <div className="space-y-1.5 text-xs">
+                  <div className="flex items-center justify-between text-slate-500 dark:text-zinc-400">
+                    <span>Total Capacity</span>
+                    <span className="font-bold text-slate-800 dark:text-zinc-200">
+                      {selectedRoom.capacity}{" "}
+                      {selectedRoom.capacity === 1 ? "bed" : "beds"}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between text-slate-500 dark:text-zinc-400">
+                    <span>Occupied Beds</span>
+                    <span className="font-bold text-slate-800 dark:text-zinc-200">
+                      {selectedRoom.current_occupants}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between text-slate-500 dark:text-zinc-400">
+                    <span>Vacant Beds</span>
+                    <span className="font-bold text-slate-800 dark:text-zinc-200">
+                      {Math.max(
+                        0,
+                        selectedRoom.capacity - selectedRoom.current_occupants,
+                      )}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between text-slate-500 dark:text-zinc-400">
+                    <span>Status</span>
+                    <span
+                      className={`font-bold ${
+                        getRoomCategory(selectedRoom) === "Full"
+                          ? "text-emerald-600 dark:text-emerald-400"
+                          : getRoomCategory(selectedRoom) === "OccupiedWithBeds"
+                            ? "text-amber-600 dark:text-amber-400"
+                            : getRoomCategory(selectedRoom) === "Vacant"
+                              ? "text-blue-600 dark:text-blue-400"
+                              : "text-rose-600 dark:text-rose-400"
+                      }`}
+                    >
+                      {getRoomStatusLabel(selectedRoom)}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between text-slate-500 dark:text-zinc-400">
+                    <span>Last Updated</span>
+                    <span className="font-medium text-slate-700 dark:text-zinc-300">
+                      Oct 24, 2026 • 10:24 AM
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Current Residents Section */}
+              <div className="space-y-2.5 pt-2 border-t border-slate-100 dark:border-zinc-800/80">
+                <h3 className="text-xs font-bold text-slate-900 dark:text-white">
+                  Current Residents
+                </h3>
+
+                {selectedRoom.occupants && selectedRoom.occupants.length > 0 ? (
+                  <div className="space-y-2">
+                    {selectedRoom.occupants.map((resident, idx) => (
+                      <div
+                        key={resident.id}
+                        onClick={() => router.push(`/admin/tenants`)}
+                        className="p-2.5 rounded-xl border border-slate-200/80 dark:border-zinc-800 hover:border-blue-400 bg-slate-50/50 dark:bg-zinc-800/40 flex items-center justify-between gap-2.5 cursor-pointer transition-colors"
+                      >
+                        <div className="flex items-center gap-2.5 min-w-0">
+                          <div className="w-8 h-8 rounded-full bg-slate-200 dark:bg-zinc-700 flex items-center justify-center shrink-0 text-slate-600 dark:text-zinc-300 font-bold text-xs">
+                            <User className="w-4 h-4" />
+                          </div>
+                          <div className="min-w-0">
+                            <div className="flex items-center gap-1.5">
+                              <span className="font-bold text-xs text-slate-900 dark:text-white truncate">
+                                {resident.name}
+                              </span>
+                              {idx === 0 && (
+                                <span className="px-1.5 py-0.2 rounded text-[9px] font-bold bg-blue-100 dark:bg-blue-900/60 text-blue-700 dark:text-blue-300">
+                                  Primary
+                                </span>
+                              )}
+                            </div>
+                            <p className="text-[10px] text-slate-500 dark:text-zinc-400 truncate">
+                              {resident.email ||
+                                `${resident.name.toLowerCase().replace(/\s+/g, ".")}@email.com`}
+                            </p>
+                            <p className="text-[10px] text-slate-400 dark:text-zinc-500 font-mono">
+                              {formatPhoneNumber(resident.phone, "+63 999 123 7654")}
+                            </p>
+                          </div>
+                        </div>
+                        <ChevronRight className="w-4 h-4 text-slate-400 shrink-0" />
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="py-4 px-3 rounded-xl border border-dashed border-slate-200 dark:border-zinc-800 text-center">
+                    <p className="text-xs font-semibold text-slate-600 dark:text-zinc-400">
+                      No residents currently assigned
+                    </p>
+                    <p className="text-[10px] text-slate-400 dark:text-zinc-500 mt-0.5">
+                      Ready for new tenant check-in
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              {/* 3 Bottom Action Buttons */}
+              <div className="space-y-2 pt-2 border-t border-slate-100 dark:border-zinc-800/80">
+                <button
+                  type="button"
+                  onClick={() => handleOpenModal(selectedRoom)}
+                  className="w-full py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-xs transition-colors cursor-pointer"
+                >
+                  <Edit className="w-3.5 h-3.5" />
+                  <span>Edit Room</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => router.push(`/admin/tenants?action=assign&room=${selectedRoom.room_number}`)}
+                  className="w-full py-2.5 rounded-xl border border-blue-200 dark:border-blue-900/60 bg-blue-50/50 dark:bg-blue-950/20 text-blue-600 dark:text-blue-400 hover:bg-blue-100/50 font-bold text-xs flex items-center justify-center gap-2 transition-colors cursor-pointer"
+                >
+                  <FileText className="w-3.5 h-3.5" />
+                  <span>Assign Resident</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => handleToggleMaintenance(selectedRoom)}
+                  className="w-full py-2.5 rounded-xl border border-slate-200 dark:border-zinc-800 text-slate-700 dark:text-zinc-300 hover:bg-slate-50 dark:hover:bg-zinc-800 font-bold text-xs flex items-center justify-center gap-2 transition-colors cursor-pointer"
+                >
+                  <RotateCcw className="w-3.5 h-3.5 text-slate-500" />
+                  <span>
+                    {selectedRoom.status === "Maintenance"
+                      ? "Set Available"
+                      : "Change Status (Maintenance)"}
+                  </span>
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
-      {/* Add / Edit Room */}
+      {/* ADD / EDIT ROOM MODAL */}
       <AnimatePresence>
         {isModalOpen && (
           <div className="fixed inset-0 bg-black/60 backdrop-blur-xs z-50 flex items-center justify-center p-4">
@@ -933,7 +1208,7 @@ export default function AdminRooms() {
               initial={{ scale: 0.96, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.96, opacity: 0 }}
-              className="bg-card rounded-2xl w-full max-w-2xl overflow-hidden shadow-2xl border border-slate-200 dark:border-zinc-800 max-h-[90vh] flex flex-col"
+              className="bg-white dark:bg-zinc-900 rounded-2xl w-full max-w-2xl overflow-hidden shadow-2xl border border-slate-200 dark:border-zinc-800 max-h-[90vh] flex flex-col"
             >
               {/* Modal Header */}
               <div className="px-6 py-5 border-b border-slate-200 dark:border-zinc-800 flex justify-between items-center shrink-0">
@@ -993,18 +1268,32 @@ export default function AdminRooms() {
                     />
                   </div>
                   <div className="space-y-1.5">
-                    <label className="text-xs font-bold text-slate-700 dark:text-zinc-300">
-                      Floor Location
+                    <label className="text-xs font-bold text-slate-700 dark:text-zinc-300 flex items-center justify-between">
+                      <span>
+                        Floor Number <span className="text-rose-500">*</span>
+                      </span>
+                      <span className="text-[10px] text-slate-500 dark:text-zinc-400 font-normal">
+                        Number only (e.g. 1, 2)
+                      </span>
                     </label>
-                    <input
-                      type="text"
-                      value={formData.floor}
-                      onChange={(e) =>
-                        setFormData({ ...formData, floor: e.target.value })
-                      }
-                      className="w-full px-3.5 py-2 text-xs font-medium rounded-lg bg-slate-50/50 dark:bg-zinc-900/50 border border-slate-200 dark:border-zinc-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-slate-400/20 dark:focus:ring-zinc-600/30 outline-none"
-                      placeholder="e.g. 1st Floor, 2nd Floor"
-                    />
+                    <div className="relative">
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-500 dark:text-zinc-400 select-none">
+                        Floor
+                      </span>
+                      <input
+                        required
+                        type="text"
+                        inputMode="numeric"
+                        pattern="[0-9]*"
+                        value={formData.floor}
+                        onChange={(e) => {
+                          const val = e.target.value.replace(/\D/g, "");
+                          setFormData({ ...formData, floor: val });
+                        }}
+                        className="w-full pl-14 pr-3.5 py-2 text-xs font-bold rounded-lg bg-slate-50/50 dark:bg-zinc-900/50 border border-slate-200 dark:border-zinc-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-slate-400/20 dark:focus:ring-zinc-600/30 outline-none"
+                        placeholder="1"
+                      />
+                    </div>
                   </div>
                 </div>
 
@@ -1116,7 +1405,11 @@ export default function AdminRooms() {
                           key={preset}
                           type="button"
                           onClick={() => handleToggleAmenity(preset)}
-                          className={`px-2.5 py-1 text-[11px] rounded-md font-medium border transition-colors ${isSelected ? "bg-slate-900 dark:bg-white border-slate-900 dark:border-white text-white dark:text-zinc-900 font-bold" : "bg-slate-50 dark:bg-zinc-900 border-slate-200 dark:border-zinc-800 text-slate-600 dark:text-zinc-400 hover:bg-slate-100 dark:hover:bg-zinc-800"}`}
+                          className={`px-2.5 py-1 text-[11px] rounded-md font-medium border transition-colors ${
+                            isSelected
+                              ? "bg-blue-600 border-blue-600 text-white font-bold"
+                              : "bg-slate-50 dark:bg-zinc-900 border-slate-200 dark:border-zinc-800 text-slate-600 dark:text-zinc-400 hover:bg-slate-100 dark:hover:bg-zinc-800"
+                          }`}
                         >
                           {isSelected && (
                             <Check className="w-3 h-3 inline mr-1" />
@@ -1161,14 +1454,14 @@ export default function AdminRooms() {
                       setIsModalOpen(false);
                       setError("");
                     }}
-                    className="px-4 py-2 text-xs font-semibold text-slate-600 dark:text-zinc-400 bg-slate-100 dark:bg-zinc-800 hover:bg-slate-200 dark:hover:bg-zinc-700 rounded-lg transition-colors"
+                    className="px-4 py-2 text-xs font-semibold text-slate-600 dark:text-zinc-400 bg-slate-100 dark:bg-zinc-800 hover:bg-slate-200 dark:hover:bg-zinc-700 rounded-lg transition-colors cursor-pointer"
                   >
                     Cancel
                   </button>
                   <button
                     type="submit"
                     disabled={isSubmitting}
-                    className="px-5 py-2 text-xs font-bold bg-slate-900 hover:bg-slate-800 dark:bg-white dark:hover:bg-zinc-200 text-white dark:text-zinc-900 rounded-lg transition-colors flex items-center gap-2 disabled:opacity-70"
+                    className="px-5 py-2 text-xs font-bold bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors flex items-center gap-2 disabled:opacity-70 cursor-pointer"
                   >
                     {isSubmitting ? (
                       <RefreshCw className="w-3.5 h-3.5 animate-spin" />
@@ -1180,223 +1473,6 @@ export default function AdminRooms() {
                   </button>
                 </div>
               </form>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
-
-      {/* Detailed Room & Occupant Dossier */}
-      <AnimatePresence>
-        {viewingRoom && (
-          <div className="fixed inset-0 bg-black/60 backdrop-blur-xs z-50 flex items-center justify-center p-4">
-            <motion.div
-              initial={{ scale: 0.96, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.96, opacity: 0 }}
-              className="bg-card rounded-2xl w-full max-w-2xl overflow-hidden shadow-2xl border border-slate-200 dark:border-zinc-800 flex flex-col max-h-[90vh]"
-            >
-              {/* Header */}
-              <div className="px-6 py-5 border-b border-slate-200 dark:border-zinc-800 flex justify-between items-center shrink-0">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-slate-100 dark:bg-zinc-800 text-slate-700 dark:text-zinc-200 font-mono font-bold text-base flex items-center justify-center border border-slate-200 dark:border-zinc-700">
-                    {viewingRoom.room_number}
-                  </div>
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <h2 className="text-lg font-bold text-slate-900 dark:text-white">
-                        Room {viewingRoom.room_number} Dossier
-                      </h2>
-                      {getStatusPill(viewingRoom)}
-                    </div>
-                    <p className="text-xs text-slate-500 dark:text-zinc-400 mt-0.5">
-                      {viewingRoom.type} •{" "}
-                      {viewingRoom.rental_type || "Whole Room"} •{" "}
-                      {viewingRoom.floor || "No Floor Set"}
-                    </p>
-                  </div>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setViewingRoom(null)}
-                  className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-zinc-800 transition-colors"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              </div>
-
-              {/* Body */}
-              <div className="p-6 overflow-y-auto custom-scrollbar space-y-6">
-                {/* Spec Grid */}
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                  <div className="bg-slate-50/60 dark:bg-zinc-900/40 p-3.5 rounded-xl border border-slate-200/80 dark:border-zinc-800">
-                    <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-500">
-                      Monthly Rent
-                    </p>
-                    <p className="font-mono font-bold text-base text-slate-900 dark:text-zinc-100 mt-1">
-                      ₱{Number(viewingRoom.price).toLocaleString()}
-                    </p>
-                  </div>
-                  <div className="bg-slate-50/60 dark:bg-zinc-900/40 p-3.5 rounded-xl border border-slate-200/80 dark:border-zinc-800">
-                    <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-500">
-                      Density / Beds
-                    </p>
-                    <p className="font-bold text-sm text-slate-900 dark:text-white mt-1">
-                      {viewingRoom.current_occupants} / {viewingRoom.capacity}{" "}
-                      Occupied
-                    </p>
-                  </div>
-                  <div className="bg-slate-50/60 dark:bg-zinc-900/40 p-3.5 rounded-xl border border-slate-200/80 dark:border-zinc-800">
-                    <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-500">
-                      Rental Structure
-                    </p>
-                    <p className="font-semibold text-xs text-slate-800 dark:text-zinc-200 mt-1 truncate">
-                      {viewingRoom.rental_type || "Whole Room"}
-                    </p>
-                  </div>
-                  <div className="bg-slate-50/60 dark:bg-zinc-900/40 p-3.5 rounded-xl border border-slate-200/80 dark:border-zinc-800">
-                    <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-500">
-                      Floor Location
-                    </p>
-                    <p className="font-semibold text-xs text-slate-800 dark:text-zinc-200 mt-1">
-                      {viewingRoom.floor || "Unassigned"}
-                    </p>
-                  </div>
-                </div>
-
-                {/* Amenities Tags */}
-                {viewingRoom.amenities && (
-                  <div>
-                    <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-zinc-400 mb-2">
-                      Amenities & Unit Features
-                    </h3>
-                    <div className="flex flex-wrap gap-1.5">
-                      {viewingRoom.amenities.split(",").map((amenity, idx) => (
-                        <span
-                          key={idx}
-                          className="px-2.5 py-1 bg-slate-100 dark:bg-zinc-800 text-slate-700 dark:text-zinc-300 text-xs font-medium rounded-md border border-slate-200/80 dark:border-zinc-700"
-                        >
-                          {amenity.trim()}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {/* Occupant Roster */}
-                <div>
-                  <div className="flex items-center justify-between mb-3">
-                    <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-zinc-400">
-                      Assigned Residents ({viewingRoom.occupants?.length || 0})
-                    </h3>
-                    <span className="text-[11px] text-slate-400 font-medium">
-                      {viewingRoom.capacity - viewingRoom.current_occupants}{" "}
-                      Open Bedspaces
-                    </span>
-                  </div>
-
-                  {viewingRoom.occupants && viewingRoom.occupants.length > 0 ? (
-                    <div className="space-y-2.5">
-                      {viewingRoom.occupants.map((tenant) => (
-                        <div
-                          key={tenant.id}
-                          className="p-3.5 rounded-xl border border-slate-200/80 dark:border-zinc-800 bg-slate-50/40 dark:bg-zinc-900/30 flex items-center justify-between gap-3"
-                        >
-                          <div className="min-w-0">
-                            <div className="flex items-center gap-2">
-                              <p className="font-bold text-xs text-slate-900 dark:text-white truncate">
-                                {tenant.name}
-                              </p>
-                              {tenant.bed_space && (
-                                <span className="px-1.5 py-0.2 rounded text-[10px] font-medium bg-slate-100 dark:bg-zinc-800 text-slate-700 dark:text-zinc-300 border border-slate-200 dark:border-zinc-700">
-                                  {tenant.bed_space}
-                                </span>
-                              )}
-                            </div>
-                            <div className="flex items-center gap-3 text-[11px] text-slate-500 dark:text-zinc-400 mt-1">
-                              {tenant.phone && (
-                                <span className="flex items-center gap-1">
-                                  <Phone className="w-3 h-3 text-slate-400" />{" "}
-                                  {tenant.phone}
-                                </span>
-                              )}
-                              <span className="flex items-center gap-1">
-                                <Calendar className="w-3 h-3 text-slate-400" />{" "}
-                                Since{" "}
-                                {new Date(
-                                  tenant.date_moved_in,
-                                ).toLocaleDateString()}
-                              </span>
-                            </div>
-                          </div>
-
-                          <div className="text-right shrink-0">
-                            <span className="text-[10px] font-bold uppercase text-slate-400 block">
-                              Balance
-                            </span>
-                            <span
-                              className={`font-mono text-xs ${tenant.balance > 0 ? "text-rose-600 dark:text-rose-400/80 font-bold" : "text-slate-900 dark:text-zinc-100 font-semibold"}`}
-                            >
-                              ₱{Number(tenant.balance || 0).toLocaleString()}
-                            </span>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="p-8 border border-dashed border-slate-200 dark:border-zinc-800 rounded-xl text-center">
-                      <DoorOpen className="w-8 h-8 text-slate-300 dark:text-zinc-700 mx-auto mb-2" />
-                      <p className="text-xs font-bold text-slate-700 dark:text-zinc-300">
-                        Unit Currently Vacant
-                      </p>
-                      <p className="text-[11px] text-slate-400 dark:text-zinc-500 mt-0.5">
-                        No residents assigned to this room.
-                      </p>
-                    </div>
-                  )}
-                </div>
-
-                {/* Description */}
-                {viewingRoom.description && (
-                  <div className="pt-3 border-t border-slate-100 dark:border-zinc-800/80">
-                    <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-500 mb-1">
-                      Internal Notes
-                    </p>
-                    <p className="text-xs text-slate-600 dark:text-zinc-400 leading-relaxed">
-                      {viewingRoom.description}
-                    </p>
-                  </div>
-                )}
-              </div>
-
-              {/* Footer */}
-              <div className="px-6 py-4 border-t border-slate-200 dark:border-zinc-800 flex items-center justify-between shrink-0 bg-slate-50/50 dark:bg-zinc-900/20">
-                <button
-                  onClick={() => handleToggleMaintenance(viewingRoom)}
-                  className={`px-3 py-1.5 text-xs font-bold rounded-lg border transition-colors flex items-center gap-1.5 ${viewingRoom.status === "Maintenance" ? "bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 border-emerald-200 hover:bg-emerald-100" : "bg-rose-50 dark:bg-rose-500/10 text-rose-700 border-rose-200 hover:bg-rose-100"}`}
-                >
-                  <Wrench className="w-3.5 h-3.5" />
-                  <span>
-                    {viewingRoom.status === "Maintenance"
-                      ? "Mark as Available"
-                      : "Set to Maintenance"}
-                  </span>
-                </button>
-
-                <div className="flex gap-2">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const r = viewingRoom;
-                      setViewingRoom(null);
-                      handleOpenModal(r);
-                    }}
-                    className="px-4 py-2 text-xs font-bold rounded-lg bg-slate-900 hover:bg-slate-800 dark:bg-white dark:hover:bg-zinc-200 text-white dark:text-zinc-900 transition-colors flex items-center gap-1.5"
-                  >
-                    <Edit className="w-3.5 h-3.5" />
-                    <span>Edit Room</span>
-                  </button>
-                </div>
-              </div>
             </motion.div>
           </div>
         )}
