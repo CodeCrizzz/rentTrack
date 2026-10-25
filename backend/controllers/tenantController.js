@@ -1,5 +1,7 @@
 const db = require('../config/db');
 const bcrypt = require('bcryptjs');
+const { formatPhoneNumber } = require('../utils/phoneUtils');
+const { generateUniqueInvoiceNumber } = require('../utils/invoiceNumberGenerator');
 
 // Get Tenant Dashboard Data
 const getTenantDashboard = async (req, res) => {
@@ -139,6 +141,8 @@ const getTenantPayments = async (req, res) => {
                     COALESCE(p.reference_number, p.id::text) AS reference_number,
                     p.created_at,
                     b.billing_month,
+                    b.invoice_number,
+                    b.invoice_number AS bill_invoice_number,
                     b.rent_amount,
                     b.water_charges,
                     b.electricity_charges,
@@ -246,9 +250,10 @@ const updateTenantProfile = async (req, res) => {
     const tenantId = req.user.id;
     const { name, email, phone } = req.body;
     try {
+        const formattedPhone = phone ? formatPhoneNumber(phone) : null;
         const result = await db.query(
             "UPDATE users SET name = $1, email = $2, phone = $3 WHERE id = $4 RETURNING id, name, email, phone",
-            [name, email, phone, tenantId]
+            [name, email, formattedPhone, tenantId]
         );
         res.status(200).json({ message: 'Profile updated successfully', user: result.rows[0] });
     } catch (error) {
@@ -291,7 +296,7 @@ const getCurrentBill = async (req, res) => {
         const createdAt = user?.created_at || null;
 
         const result = await db.query(
-            "SELECT id, billing_month, total_amount, amount_paid, balance, rent_amount, water_charges, electricity_charges, other_fees, TO_CHAR(due_date, 'YYYY-MM-DD') AS due_date, status FROM bills WHERE tenant_id = $1 AND status != 'Paid' ORDER BY due_date ASC LIMIT 1",
+            "SELECT id, billing_month, total_amount, amount_paid, balance, rent_amount, water_charges, electricity_charges, other_fees, TO_CHAR(due_date, 'YYYY-MM-DD') AS due_date, status, invoice_number FROM bills WHERE tenant_id = $1 AND status != 'Paid' ORDER BY due_date ASC LIMIT 1",
             [tenantId]
         );
 
@@ -321,18 +326,20 @@ const getCurrentBill = async (req, res) => {
 
                 if (existingCheck.rows.length === 0) {
                     const totalAmount = tenantInfo.rent_amount;
+                    const invoiceNumber = await generateUniqueInvoiceNumber(db);
                     const insertBillQuery = `
-                        INSERT INTO bills (tenant_id, room_id, billing_month, due_date, rent_amount, water_charges, electricity_charges, other_fees, total_amount, balance, status, notes)
-                        VALUES ($1, $2, $3, $4, $5, 0, 0, 0, $6, $7, 'Unpaid', 'Auto-generated bill')
-                        RETURNING id, billing_month, total_amount, amount_paid, balance, rent_amount, water_charges, electricity_charges, other_fees, TO_CHAR(due_date, 'YYYY-MM-DD') AS due_date, status
+                        INSERT INTO bills (tenant_id, room_id, billing_month, due_date, rent_amount, water_charges, electricity_charges, other_fees, total_amount, balance, status, notes, invoice_number)
+                        VALUES ($1, $2, $3, $4, $5, 0, 0, 0, $6, $7, 'Unpaid', 'Auto-generated bill', $8)
+                        RETURNING id, billing_month, total_amount, amount_paid, balance, rent_amount, water_charges, electricity_charges, other_fees, TO_CHAR(due_date, 'YYYY-MM-DD') AS due_date, status, invoice_number
                     `;
                     const newBillRes = await db.query(insertBillQuery, [
                         tenantId, tenantInfo.room_id, billingMonthStr, dueDate,
-                        tenantInfo.rent_amount, totalAmount, totalAmount
+                        tenantInfo.rent_amount, totalAmount, totalAmount, invoiceNumber
                     ]);
                     const newBill = newBillRes.rows[0];
                     return res.status(200).json({
                         id: newBill.id,
+                        invoice_number: newBill.invoice_number,
                         month: newBill.billing_month,
                         totalAmount: parseFloat(newBill.total_amount),
                         amountPaid: parseFloat(newBill.amount_paid),
@@ -376,6 +383,7 @@ const getCurrentBill = async (req, res) => {
         const bill = result.rows[0];
         res.status(200).json({
             id: bill.id,
+            invoice_number: bill.invoice_number,
             month: bill.billing_month,
             totalAmount: parseFloat(bill.total_amount),
             amountPaid: parseFloat(bill.amount_paid),
