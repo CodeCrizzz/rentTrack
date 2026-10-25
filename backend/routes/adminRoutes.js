@@ -3,7 +3,7 @@ const router = express.Router();
 const { protect } = require('../middleware/authMiddleware');
 const { 
     getDashboardStats, getAllTenants, getAllRooms, getAllPayments, 
-    getAllRequests, updateTenant, deleteTenant,
+    getAllRequests, createAdminRequest, updateTenant, deleteTenant,
     getConversations, getMessages, sendMessage, getUnreadCount,
     getPendingTenantsCount,
     createRoom, updateRoom, deleteRoom,
@@ -14,7 +14,8 @@ const {
     getAdminNotifications,
     markAllAdminNotificationsRead,
     markAdminNotificationRead,
-    getReportData
+    getReportData,
+    getActivityLogs
 } = require('../controllers/adminController');
 const { updateRequest, deleteRequest } = require('../controllers/requestController');
 
@@ -44,6 +45,7 @@ router.delete('/rooms/:id', deleteRoom);
 
 router.get('/payments', getAllPayments);
 router.get('/requests', getAllRequests);
+router.post('/requests', createAdminRequest);
 router.put('/requests/:id', updateRequest);
 router.delete('/requests/:id', deleteRequest);
 
@@ -61,5 +63,6 @@ router.post('/announcements', createAnnouncement);
 router.delete('/announcements/:id', deleteAnnouncement);
 
 router.get('/reports', getReportData);
+router.get('/activity-logs', getActivityLogs);
 
 module.exports = router;
