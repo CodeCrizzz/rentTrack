@@ -1,88 +1,141 @@
-"use client";
+"use client"
 
-import * as React from "react";
-import { Building2, Home } from "lucide-react";
-import { NavMain } from "@/components/nav-main";
-import { NavUser } from "@/components/nav-user";
+import * as React from "react"
+import { LogOut as LogOutIcon } from "lucide-react"
+import { useRouter } from "next/navigation"
+
+import { NavMain, type NavMainItem } from "@/components/nav-main"
 import {
   Sidebar,
   SidebarContent,
   SidebarFooter,
-  SidebarHeader,
   SidebarRail,
-} from "@/components/ui/sidebar";
+} from "@/components/ui/sidebar"
+
+export interface AppSidebarProps extends React.ComponentProps<typeof Sidebar> {
+  navLabel?: string
+  navItems?: NavMainItem[]
+  user?: {
+    name: string
+    email: string
+    avatar?: string
+    role?: string
+  }
+  onLogout?: () => void
+  teams?: {
+    name: string
+    logo: React.ReactNode
+    plan: string
+  }[]
+}
 
 export function AppSidebar({
-  navLabel,
+  navLabel = "",
   navItems,
   user,
   onLogout,
   ...props
-}: React.ComponentProps<typeof Sidebar> & {
-  navLabel: string;
-  navItems: any[];
-  user: {
-    name: string;
-    email: string;
-    avatar: string;
-    role: string;
-  };
-  onLogout: () => void;
-}) {
+}: AppSidebarProps) {
+  const router = useRouter()
+  const currentUser = user || {
+    name: "Admin",
+    email: "admin@renttrack.com",
+    avatar: "",
+    role: "Master Admin",
+  }
+
+  const initials = currentUser.name
+    ? currentUser.name
+        .trim()
+        .split(/\s+/)
+        .map((part) => part[0])
+        .join("")
+        .slice(0, 2)
+        .toUpperCase()
+    : "U"
+
+  const handleProfileClick = () => {
+    const basePath = currentUser.role?.toLowerCase().includes("admin")
+      ? "/admin"
+      : "/tenant"
+    router.push(`${basePath}/profile`)
+  }
+
   return (
     <Sidebar
       collapsible="icon"
-      className="border-r border-slate-800/80 bg-[#081226] text-white"
+      className="!bg-[#07152b] !border-r !border-[#0d2242] text-white"
       {...props}
     >
-      {/* Top Header: Logo & Subtitle */}
-      <SidebarHeader className="px-5 pt-5 pb-3 border-b border-white/5 transition-all duration-300">
-        <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-xl bg-[#0284c7] flex items-center justify-center shrink-0 shadow-md text-white">
-            <Home className="w-5 h-5 stroke-[2.5]" />
-          </div>
-          <div className="group-data-[collapsible=icon]:hidden overflow-hidden">
-            <div className="font-black text-white text-base tracking-tight leading-none">
-              RentTrack
-            </div>
-            <div className="text-[10px] text-slate-400 font-medium tracking-normal mt-1 truncate">
-              Boarding House Management System
-            </div>
-          </div>
-        </div>
-      </SidebarHeader>
-
-      {/* Main Navigation */}
-      <SidebarContent className="py-2 px-1 group-data-[collapsible=icon]:px-0 custom-scrollbar">
-        <NavMain label={navLabel} items={navItems} />
+      {/* Navigation List starting at the top */}
+      <SidebarContent className="!bg-[#07152b] text-white pt-4 pb-2 px-1 custom-scrollbar">
+        {navItems && navItems.length > 0 && (
+          <NavMain label={navLabel} items={navItems} />
+        )}
       </SidebarContent>
 
-      {/* Footer: Property Card & App Version */}
-      <SidebarFooter className="p-3 border-t border-white/5 space-y-2.5">
-        <div className="p-3 rounded-xl bg-[#0e1d3e] border border-blue-900/40 group-data-[collapsible=icon]:hidden">
-          <div className="flex items-start gap-2.5">
-            <div className="w-7 h-7 rounded-lg bg-blue-500/20 text-cyan-400 flex items-center justify-center shrink-0 mt-0.5">
-              <Building2 className="w-4 h-4" />
+      {/* Footer: User account & Log out button */}
+      <SidebarFooter className="!bg-[#07152b] !border-t-0 p-3 pt-0 group-data-[collapsible=icon]:p-2 group-data-[collapsible=icon]:pt-0">
+        <div className="border-t border-[#0d2242] pt-3 group-data-[collapsible=icon]:pt-2">
+          {/* User Account: Profile in the left, Name in the right */}
+          <div
+            onClick={handleProfileClick}
+            className="w-full flex items-center gap-3 p-2 rounded-xl hover:bg-white/10 transition-colors text-left group cursor-pointer outline-none select-none group-data-[collapsible=icon]:p-1 group-data-[collapsible=icon]:justify-center"
+            title={`${currentUser.name} (${currentUser.role || "User"}) - View Profile`}
+            role="button"
+            tabIndex={0}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault()
+                handleProfileClick()
+              }
+            }}
+          >
+            {/* User Profile (Avatar) in the left */}
+            <div className="relative shrink-0">
+              {currentUser.avatar ? (
+                <img
+                  src={currentUser.avatar}
+                  alt={currentUser.name}
+                  className="w-10 h-10 rounded-xl object-cover border border-blue-400/30 group-hover:scale-105 transition-transform"
+                />
+              ) : (
+                <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-600 border border-blue-400/30 flex items-center justify-center text-white font-bold text-sm shadow-sm group-hover:scale-105 transition-transform">
+                  {initials}
+                </div>
+              )}
+              <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-emerald-500 border-2 border-[#07152b] rounded-full" />
             </div>
-            <div className="min-w-0">
-              <p className="text-xs font-bold text-white truncate">
-                Riverside Boarding House
-              </p>
-              <p className="text-[10px] text-slate-400 truncate mt-0.5">
-                123 Santos St., San Pedro, Laguna
-              </p>
+
+            {/* Name in the right */}
+            <div className="grid flex-1 text-left min-w-0 group-data-[collapsible=icon]:hidden">
+              <span className="truncate font-bold text-white text-xs sm:text-sm leading-tight group-hover:text-blue-300 transition-colors">
+                {currentUser.name}
+              </span>
+              <span className="truncate text-[11px] text-blue-200/60 font-medium leading-tight mt-0.5">
+                {currentUser.role || currentUser.email || "Account"}
+              </span>
             </div>
           </div>
-        </div>
 
-        <div className="flex items-center justify-between text-[11px] text-slate-400 px-1">
-          <span className="font-mono text-slate-500 group-data-[collapsible=icon]:hidden">
+          {/* Below the user profile is a log out button */}
+          <button
+            type="button"
+            onClick={onLogout}
+            className="w-full mt-2 flex items-center justify-center gap-2 px-3 py-2 rounded-xl text-xs font-semibold text-rose-300 hover:text-white bg-rose-500/10 hover:bg-rose-600/30 border border-rose-500/20 hover:border-rose-500/40 transition-all cursor-pointer group active:scale-[0.98] group-data-[collapsible=icon]:p-2 group-data-[collapsible=icon]:mt-1.5"
+            title="Log out"
+          >
+            <LogOutIcon className="w-4 h-4 shrink-0 transition-transform group-hover:-translate-x-0.5" />
+            <span className="group-data-[collapsible=icon]:hidden">Log out</span>
+          </button>
+
+          {/* Version */}
+          <div className="text-[10px] text-blue-300/30 font-medium text-center mt-2 pb-0.5 group-data-[collapsible=icon]:hidden">
             v1.0.0
-          </span>
-          <NavUser user={user} onLogout={onLogout} />
+          </div>
         </div>
       </SidebarFooter>
       <SidebarRail />
     </Sidebar>
-  );
+  )
 }

@@ -2,7 +2,6 @@
 import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { AnimatePresence } from 'framer-motion';
-import PageTransition from '@/components/PageTransition';
 import api from '@/lib/api';
 import { Moon } from "lucide-react";
 
@@ -13,10 +12,9 @@ import {
 } from "@/components/ui/sidebar";
 import { AppSidebar } from '@/components/app-sidebar';
 import { FullscreenToggle } from '@/components/fullscreen-toggle';
-import TenantSettingsModal from '@/components/tenant-settings-modal';
 import { 
   LayoutDashboard, Building2, CreditCard, Wrench, User, MessageSquare, 
-  Bell, Settings, RefreshCw, AlertTriangle, Clock, CheckCheck, ChevronRight 
+  Bell, RefreshCw, AlertTriangle, Clock, CheckCheck, ChevronRight 
 } from 'lucide-react';
 import {
   DropdownMenu,
@@ -29,6 +27,7 @@ export default function TenantLayout({ children }: { children: React.ReactNode }
     const router = useRouter();
     const [tenantName, setTenantName] = useState('Tenant');
     const [tenantEmail, setTenantEmail] = useState('tenant@renttrack.com');
+    const [tenantAvatar, setTenantAvatar] = useState('');
     const [unreadCount, setUnreadCount] = useState(0);
     const [chatUnread, setChatUnread] = useState(0);
     const [notifications, setNotifications] = useState<any[]>([]);
@@ -36,7 +35,6 @@ export default function TenantLayout({ children }: { children: React.ReactNode }
     const [showAllNotifications, setShowAllNotifications] = useState(false);
     const [isAllRead, setIsAllRead] = useState(true);
     const [refreshKey, setRefreshKey] = useState(0);
-    const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
     const fetchNotificationsAndUnread = async () => {
         try {
@@ -76,6 +74,7 @@ export default function TenantLayout({ children }: { children: React.ReactNode }
             }
             setTenantName(user.name);
             if (user.email) setTenantEmail(user.email);
+            if (user.avatar || user.profile_picture) setTenantAvatar(user.avatar || user.profile_picture);
         } catch (e) {
             router.replace('/login');
             return;
@@ -130,7 +129,6 @@ export default function TenantLayout({ children }: { children: React.ReactNode }
         { name: 'Rooms', path: '/tenant/rooms', icon: Building2 },
         { name: 'My Payments', path: '/tenant/payments', icon: CreditCard },
         { name: 'Chat', path: '/tenant/chat', icon: MessageSquare },
-        { name: 'Announcements', path: '/tenant/announcements', icon: Bell },
     ];
 
     const mappedNavItems = rawNavItems.map(item => {
@@ -148,7 +146,7 @@ export default function TenantLayout({ children }: { children: React.ReactNode }
             badgeCount,
             badgeColor: "rose" as const,
             icon: (
-                <item.icon className={`w-5 h-5 shrink-0 ${isActive ? 'text-zinc-950 dark:text-white' : 'text-slate-400 dark:text-zinc-500'}`} strokeWidth={isActive ? 2.5 : 2} />
+                <item.icon className={`w-5 h-5 shrink-0 transition-colors ${isActive ? '!text-white' : 'text-slate-300'}`} strokeWidth={isActive ? 2.2 : 1.8} />
             )
         }
     });
@@ -163,12 +161,12 @@ export default function TenantLayout({ children }: { children: React.ReactNode }
         <SidebarProvider>
             <div className="flex h-screen w-full bg-background text-foreground overflow-hidden selection:bg-zinc-200 dark:selection:bg-zinc-800 selection:text-zinc-950 dark:selection:text-white">
                 <AppSidebar 
-                    navLabel="Resident Portal"
+                    navLabel=""
                     navItems={mappedNavItems}
                     user={{
                         name: tenantName,
                         email: tenantEmail,
-                        avatar: "",
+                        avatar: tenantAvatar,
                         role: "Resident"
                     }}
                     onLogout={handleLogout}
@@ -202,14 +200,6 @@ export default function TenantLayout({ children }: { children: React.ReactNode }
                                 <RefreshCw className="w-5 h-5 group-hover:rotate-180 group-active:scale-90 transition-all duration-500" strokeWidth={2} />
                             </button>
                             <FullscreenToggle />
-                            <button 
-                                onClick={() => setIsSettingsOpen(true)}
-                                className="group p-2 text-slate-500 hover:text-slate-900 dark:text-zinc-400 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/5 rounded-full transition-colors outline-none cursor-pointer"
-                                title="Resident Settings"
-                                aria-label="Resident Settings"
-                            >
-                                <Settings className="w-5 h-5 group-hover:rotate-45 group-active:scale-90 transition-all duration-300" strokeWidth={2} />
-                            </button>
                             <DropdownMenu>
                                 <DropdownMenuTrigger className="group relative p-2 text-slate-500 hover:text-slate-900 dark:text-zinc-400 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/5 rounded-full transition-colors outline-none">
                                     <Bell className="w-5 h-5 group-hover:rotate-12 group-active:-rotate-12 group-active:scale-90 transition-all duration-200 origin-top" strokeWidth={2} />
@@ -338,19 +328,13 @@ export default function TenantLayout({ children }: { children: React.ReactNode }
                     <div className="flex-1 flex flex-col overflow-y-auto overflow-x-hidden custom-scrollbar bg-background">
                         <div className="px-3 pt-3 pb-2 md:px-4 md:pt-4 md:pb-3 lg:px-5 lg:pt-5 lg:pb-3 relative z-10 flex-1 flex flex-col">
                             <AnimatePresence mode="wait">
-                                <PageTransition key={`${pathname}-${refreshKey}`}>
+                                <div key={`${pathname}-${refreshKey}`} className="w-full flex-1 flex flex-col">
                                     {children}
-                                </PageTransition>
+                                </div>
                             </AnimatePresence>
                         </div>
                     </div>
                 </SidebarInset>
-
-                {/* Pop-up Settings Window for Tenants */}
-                <TenantSettingsModal 
-                    isOpen={isSettingsOpen} 
-                    onClose={() => setIsSettingsOpen(false)} 
-                />
             </div>
         </SidebarProvider>
     );

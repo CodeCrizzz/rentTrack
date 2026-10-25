@@ -4,6 +4,7 @@ import { useEffect, useState, useRef, useMemo } from 'react';
 import api from '@/lib/api';
 import { motion, AnimatePresence, type Variants } from 'framer-motion';
 import { toast } from 'sonner';
+import DropdownSelect from '@/components/dropdown-select';
 
 // --- Interfaces & Helpers ---
 interface Request {
@@ -321,32 +322,34 @@ export default function TenantMaintenance() {
                         <div className="grid grid-cols-2 gap-3">
                             <div>
                                 <label className="block text-sm font-bold text-slate-700 dark:text-zinc-300 mb-1.5">Category</label>
-                                <select 
+                                <DropdownSelect 
                                     value={category} 
-                                    onChange={(e) => setCategory(e.target.value)} 
-                                    className="w-full bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-lg px-3 py-2.5 text-sm outline-none focus:border-zinc-400 dark:focus:border-zinc-600 cursor-pointer text-slate-900 dark:text-white"
-                                >
-                                    <option value="Plumbing">Plumbing</option>
-                                    <option value="Electrical">Electrical</option>
-                                    <option value="HVAC">HVAC / Aircon</option>
-                                    <option value="Furniture">Furniture</option>
-                                    <option value="Internet">Internet</option>
-                                    <option value="Appliance">Appliance</option>
-                                    <option value="Other">Other</option>
-                                </select>
+                                    onChange={(val) => setCategory(val)} 
+                                    options={[
+                                        "Plumbing",
+                                        "Electrical",
+                                        "HVAC",
+                                        "Furniture",
+                                        "Internet",
+                                        "Appliance",
+                                        "Other"
+                                    ]}
+                                    className="w-full bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-lg px-3 py-2.5 text-sm outline-none focus:border-zinc-400 dark:focus:border-zinc-600 text-slate-900 dark:text-white"
+                                />
                             </div>
                             <div>
                                 <label className="block text-sm font-bold text-slate-700 dark:text-zinc-300 mb-1.5">Priority</label>
-                                <select 
+                                <DropdownSelect 
                                     value={priority} 
-                                    onChange={(e) => setPriority(e.target.value)} 
-                                    className="w-full bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-lg px-3 py-2.5 text-sm outline-none focus:border-zinc-400 dark:focus:border-zinc-600 cursor-pointer text-slate-900 dark:text-white"
-                                >
-                                    <option value="Low">Low</option>
-                                    <option value="Medium">Medium</option>
-                                    <option value="High">High</option>
-                                    <option value="Urgent">Urgent</option>
-                                </select>
+                                    onChange={(val) => setPriority(val)} 
+                                    options={[
+                                        { value: "Low", label: "Low", dotColor: "bg-blue-500" },
+                                        { value: "Medium", label: "Medium", dotColor: "bg-emerald-500" },
+                                        { value: "High", label: "High", dotColor: "bg-amber-500" },
+                                        { value: "Urgent", label: "Urgent", dotColor: "bg-rose-500" },
+                                    ]}
+                                    className="w-full bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-lg px-3 py-2.5 text-sm outline-none focus:border-zinc-400 dark:focus:border-zinc-600 text-slate-900 dark:text-white"
+                                />
                             </div>
                         </div>
 
@@ -440,30 +443,51 @@ export default function TenantMaintenance() {
                             />
                         </div>
                         
-                        <select value={filterStatus} onChange={(e) => { setFilterStatus(e.target.value); setCurrentPage(1); }} className="bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-lg px-2.5 py-2 text-xs font-semibold outline-none focus:border-zinc-400 dark:focus:border-zinc-600">
-                            <option value="All">All Status</option>
-                            <option value="Pending">Pending</option>
-                            <option value="In Progress">In Progress</option>
-                            <option value="Resolved">Resolved</option>
-                            <option value="Cancelled">Cancelled</option>
-                        </select>
+                        <div className="w-32 shrink-0">
+                          <DropdownSelect 
+                            value={filterStatus} 
+                            onChange={(val) => { setFilterStatus(val); setCurrentPage(1); }} 
+                            options={[
+                              { value: "All", label: "All Status" },
+                              { value: "Pending", label: "Pending", dotColor: "bg-amber-500" },
+                              { value: "In Progress", label: "In Progress", dotColor: "bg-blue-600" },
+                              { value: "Resolved", label: "Resolved", dotColor: "bg-emerald-500" },
+                              { value: "Cancelled", label: "Cancelled", dotColor: "bg-rose-500" },
+                            ]}
+                            className="w-full bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-lg px-2.5 py-2 text-xs font-semibold outline-none focus:border-zinc-400 dark:focus:border-zinc-600"
+                          />
+                        </div>
                         
-                        <select value={filterCategory} onChange={(e) => { setFilterCategory(e.target.value); setCurrentPage(1); }} className="bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-lg px-2.5 py-2 text-xs font-semibold outline-none focus:border-zinc-400 dark:focus:border-zinc-600">
-                            <option value="All">All Categories</option>
-                            <option value="Plumbing">Plumbing</option>
-                            <option value="Electrical">Electrical</option>
-                            <option value="HVAC">HVAC</option>
-                            <option value="Furniture">Furniture</option>
-                            <option value="Internet">Internet</option>
-                            <option value="Appliance">Appliance</option>
-                            <option value="Other">Other</option>
-                        </select>
+                        <div className="w-36 shrink-0">
+                          <DropdownSelect 
+                            value={filterCategory} 
+                            onChange={(val) => { setFilterCategory(val); setCurrentPage(1); }} 
+                            options={[
+                              { value: "All", label: "All Categories" },
+                              "Plumbing",
+                              "Electrical",
+                              "HVAC",
+                              "Furniture",
+                              "Internet",
+                              "Appliance",
+                              "Other",
+                            ]}
+                            className="w-full bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-lg px-2.5 py-2 text-xs font-semibold outline-none focus:border-zinc-400 dark:focus:border-zinc-600"
+                          />
+                        </div>
 
-                        <select value={sortBy} onChange={(e) => setSortBy(e.target.value)} className="bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-lg px-2.5 py-2 text-xs font-semibold outline-none focus:border-zinc-400 dark:focus:border-zinc-600">
-                            <option value="date_desc">Newest First</option>
-                            <option value="date_asc">Oldest First</option>
-                            <option value="priority_desc">Priority (High-Low)</option>
-                        </select>
+                        <div className="w-40 shrink-0">
+                          <DropdownSelect 
+                            value={sortBy} 
+                            onChange={(val) => setSortBy(val)} 
+                            options={[
+                              { value: "date_desc", label: "Newest First" },
+                              { value: "date_asc", label: "Oldest First" },
+                              { value: "priority_desc", label: "Priority (High-Low)" },
+                            ]}
+                            className="w-full bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-lg px-2.5 py-2 text-xs font-semibold outline-none focus:border-zinc-400 dark:focus:border-zinc-600"
+                          />
+                        </div>
                     </div>
 
                     {/* Table */}

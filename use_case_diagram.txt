@@ -1,0 +1,464 @@
+========================================================================================================================
+                                                    RENTTRACK SYSTEM
+                                          UNIFIED USE CASE SPECIFICATION & DIAGRAM
+                             Actors: Property Administrator (Admin/Owner) & Resident (Tenant)
+========================================================================================================================
+PROJECT NAME      : RentTrack (RentFlow) - Property Management Platform
+SYSTEM TYPE       : Web Platform for Boarding Houses, Dormitories & Multi-Unit Residential Rentals
+VERSION           : 1.1.0 (Combined Unified Edition)
+DATE UPDATED      : October 2026
+FILE FORMAT       : Plain Text (.txt) - Monospace UTF-8 Compatible
+========================================================================================================================
+
+
+------------------------------------------------------------------------------------------------------------------------
+TABLE OF CONTENTS
+------------------------------------------------------------------------------------------------------------------------
+1. SYSTEM ACTORS OVERVIEW
+2. UNIFIED USE CASE DIAGRAM (ALL MODULES COMBINED IN ONE DRAWING)
+3. USE CASE CATALOG & INTERACTION MATRIX
+4. DETAILED USE CASE DESCRIPTIONS
+5. MERMAID UML SOURCE CODE (FOR GRAPHICAL PREVIEWS / EXPORT)
+========================================================================================================================
+
+
+========================================================================================================================
+1. SYSTEM ACTORS OVERVIEW
+========================================================================================================================
+
++----------------------------+-----------------------------------------------------------------------------------------+
+| ACTOR NAME                 | ROLE DESCRIPTION & OPERATIONAL RESPONSIBILITIES                                         |
++----------------------------+-----------------------------------------------------------------------------------------+
+| 1. ADMIN / OWNER           | Primary administrative actor (landlord, property owner, manager).                       |
+|    (Property Administrator)| Has full operational authority over room inventory, bed allocation, tenant approvals,  |
+|                            | monthly billing, receipt verification, maintenance management, CCTV security feeds,     |
+|                            | and business revenue analytics.                                                         |
++----------------------------+-----------------------------------------------------------------------------------------+
+| 2. TENANT / RESIDENT       | Primary client actor (resident boarder or prospective applicant).                       |
+|    (Boarder / Renter)      | Uses the self-service portal to browse/apply for rooms, review tenancy details, view    |
+|                            | itemized monthly invoices, submit payments with receipt uploads, submit repair tickets, |
+|                            | chat with the landlord, and read property notices.                                      |
++----------------------------+-----------------------------------------------------------------------------------------+
+| 3. AUTOMATED CRON ENGINE   | Secondary background system actor (Node-cron automated engine).                         |
+|    (System Scheduler)      | Automatically runs scheduled monthly tasks: generates recurring rent & utility bills,   |
+|                            | calculates overdue accounts, and logs system audit activities without manual trigger.   |
++----------------------------+-----------------------------------------------------------------------------------------+
+
+
+========================================================================================================================
+2. UNIFIED USE CASE DIAGRAM (ALL MODULES COMBINED IN ONE DRAWING)
+========================================================================================================================
+
+      ADMIN / OWNER                                                                                      TENANT / RESIDENT
+         (Actor)                                                                                              (Actor)     
+            o                                                                                                    o        
+           /|\               +-------------------------------------------------------------------+              /|\       
+           / \               |                     RENTTRACK SYSTEM BOUNDARY                     |              / \       
+            |                +-------------------------------------------------------------------+               |        
+            |                                                                                                    |        
+            |===================> ( UC-01: Login & Authenticate to Portal ) <====================================|        
+            |                                                                                                    |        
+            |                                         ( UC-02: Register Account & Apply for Room ) <=============|        
+            |                                                       |                                            |        
+            |                                                       v <<include>>                                |        
+            |                                         ( UC-03: Submit Personal & Emergency Info )                |        
+            |                                                       ^                                            |        
+            |                                                       | <<evaluates>>                              |        
+            |-------------------> ( UC-04: Review & Approve/Reject Tenant Applications )                         |        
+            |                                                                                                    |        
+            |-------------------> ( UC-05: Manage Profile & Emergency Contacts ) <==============================|        
+            |                                                                                                    |        
+            |-------------------> ( UC-06: Manage Rooms, Bed Capacity & Amenities )                             |        
+            |                                                                                                    |        
+            |-------------------> ( UC-07: Set Base Rental Rates & Pricing Rules )                               |        
+            |                                                                                                    |        
+            |-------------------> ( UC-08: Assign / Reassign Tenant to Room & Bed )                              |        
+            |                                                                                                    |        
+            |-------------------> ( UC-09: View Visual Floor & Room Matrix ) <===================================|        
+            |                                                                                                    |        
+            |                                         ( UC-10: Submit Notice to Vacate / Move-Out ) <============|        
+            |                                                       |                                            |        
+            |                                                       v <<processes>>                              |        
+            |-------------------> ( UC-11: Process Tenant Move-Out & Release Bed )                               |        
+            |                                                                                                    |        
+            |-----.                                   ( UC-12: Auto-Generate Recurring Bills )                   |        
+            |     |                                                 ^                                            |        
+            |     |                                                 | <<triggers>>                               |        
+            |     |                         [ AUTOMATED CRON ENGINE (System Actor) ]                             |        
+            |     |                                                 |                                            |        
+            |     |                                                 v <<flags>>                                  |        
+            |     |                                   ( UC-13: Flag Overdue Balances & Penalties )               |        
+            |     |                                                 ^                                            |        
+            |     |                                                 | <<extend>>                                 |        
+            |     +-------------> ( UC-14: Create Manual Bill & Utility Breakdown )                              |        
+            |                                                       |                                            |        
+            |                                                       v <<notifies>>                               |        
+            |                                         ( UC-15: View Invoices & Outstanding Balance ) <===========|        
+            |                                                       |                                            |        
+            |                                                       v <<initiates>>                              |        
+            |                                         ( UC-16: Submit Payment Proof ) <==========================|        
+            |                                                       |                                            |        
+            |                                                       +---<<include>>---> ( GCash / Maya )         |        
+            |                                                       |                                            |        
+            |                                                       +---<<include>>---> ( Bank Transfer / Cash ) |        
+            |                                                       |                                            |        
+            |                                                       v <<include>>                                |        
+            |                                         ( UC-17: Upload Receipt Photo & Ref. No. )                 |        
+            |                                                       ^                                            |        
+            |                                                       | <<validates>>                              |        
+            |-------------------> ( UC-18: Verify Payment Receipt & Settle Balance )                             |        
+            |                                                                                                    |        
+            |                                         ( UC-19: Submit Maintenance / Repair Ticket ) <============|        
+            |                                                       |                                            |        
+            |                                                       +---<<include>>---> ( Select Category )      |        
+            |                                                       |                                            |        
+            |                                                       +---<<include>>---> ( Set Priority Level )   |        
+            |                                                       |                                            |        
+            |                                                       v <<extend>>                                 |        
+            |                                         ( UC-20: Attach Photo of Damage )                          |        
+            |                                                       |                                            |        
+            |                                                       v <<tracks>>                                 |        
+            |-------------------> ( UC-21: View Maintenance Kanban Board & Timeline ) <==========================|        
+            |                                                                                                    |        
+            |-------------------> ( UC-22: Update Repair Status: In Progress / Resolved )                        |        
+            |                                                                                                    |        
+            |                                         ( UC-23: Cancel Pending Maintenance Ticket ) <=============|        
+            |                                                                                                    |        
+            |-------------------> ( UC-24: Create & Broadcast Property Announcements )                           |        
+            |                                                       |                                            |        
+            |                                                       v <<reads>>                                  |        
+            |                                         ( UC-25: Read Property Announcements & Notices ) <=========|        
+            |                                                                                                    |        
+            |===================> ( UC-26: One-to-One Direct Chat & Messaging ) <================================|        
+            |                                                                                                    |        
+            |-------------------> ( UC-27: Monitor Multi-Channel CCTV Video Matrix )                             |        
+            |                                                       |                                            |        
+            |                                                       +---<<extend>>---> ( Fullscreen View )       |        
+            |                                                       |                                            |        
+            |                                                       +---<<extend>>---> ( Switch Grid Layout )    |        
+            |                                                       |                                            |        
+            |                                                       v <<inspects>>                               |        
+            |                                         ( UC-28: Inspect Camera Health & Stream FPS )              |        
+            |                                                                                                    |        
+            |-------------------> ( UC-29: View Cashflow Trends & Revenue Analytics )                           |        
+            |                                                                                                    |        
+            |-------------------> ( UC-30: Monitor Urgent Action Center & Overdue Accounts )                     |        
+            |                                                                                                    |        
+            +-------------------> ( UC-31: View Real-Time Dashboard Activity Feed )                              |        
+                                                                                                                 |        
+                                 +-------------------------------------------------------------------+           |        
+                                 | LEGEND & RELATIONSHIPS:                                           |           |        
+                                 |  ------>  = Admin Association Line                                |           |        
+                                 |  <======  = Tenant Association Line                               |           |        
+                                 |  <<include>> = Mandatory sub-step executed in the base use case   |           |        
+                                 |  <<extend>>  = Optional or conditional behavior extension         |           |        
+                                 +-------------------------------------------------------------------+           |        
+
+
+========================================================================================================================
+3. USE CASE CATALOG & INTERACTION MATRIX
+========================================================================================================================
+
++---------+----------------------------------------------+---------------+---------------+-----------------------------+
+| UC ID   | USE CASE TITLE                               | ADMIN / OWNER | TENANT/BORDER | CRON ENGINE | RELATIONSHIP  |
++---------+----------------------------------------------+---------------+---------------+-------------+---------------+
+| UC-01   | Login & Authenticate to Portal               |  PRIMARY (X)  |  PRIMARY (X)  |      -      | Base Use Case |
+| UC-02   | Register Account & Apply for Room            |       -       |  PRIMARY (X)  |      -      | <<include>> 03|
+| UC-03   | Submit Personal & Emergency Info             |       -       |  PRIMARY (X)  |      -      | Part of UC-02 |
+| UC-04   | Review & Approve/Reject Applications         |  PRIMARY (X)  |       -       |      -      | Evaluates 02  |
+| UC-05   | Manage Profile & Emergency Contacts          |  PRIMARY (X)  |  PRIMARY (X)  |      -      | Base Use Case |
+| UC-06   | Manage Rooms, Bed Capacity & Amenities       |  PRIMARY (X)  |       -       |      -      | CRUD Ops      |
+| UC-07   | Set Base Rental Rates & Pricing Rules        |  PRIMARY (X)  |       -       |      -      | Base Use Case |
+| UC-08   | Assign / Reassign Tenant to Room & Bed       |  PRIMARY (X)  |       -       |      -      | Base Use Case |
+| UC-09   | View Visual Floor & Room Matrix              |  PRIMARY (X)  |  PRIMARY (X)  |      -      | Shared View   |
+| UC-10   | Submit Notice to Vacate / Move-Out           |       -       |  PRIMARY (X)  |      -      | Triggers 11   |
+| UC-11   | Process Tenant Move-Out & Release Bed        |  PRIMARY (X)  |       -       |      -      | Processes 10  |
+| UC-12   | Auto-Generate Recurring Bills                |       -       |       -       | PRIMARY (X) | Scheduled Job |
+| UC-13   | Flag Overdue Balances & Penalties            |  PRIMARY (X)  |       -       | SUPPORT (X) | <<extend>> 14 |
+| UC-14   | Create Manual Bill & Utility Breakdown       |  PRIMARY (X)  |       -       |      -      | Notifies 15   |
+| UC-15   | View Invoices & Outstanding Balance          |       -       |  PRIMARY (X)  |      -      | Initiates 16  |
+| UC-16   | Submit Payment Proof                         |       -       |  PRIMARY (X)  |      -      | <<include>> 17|
+| UC-17   | Upload Receipt Photo & Ref. No.              |       -       |  PRIMARY (X)  |      -      | Validated by 18|
+| UC-18   | Verify Payment Receipt & Settle Balance      |  PRIMARY (X)  |       -       |      -      | Validates 16  |
+| UC-19   | Submit Maintenance / Repair Ticket           |       -       |  PRIMARY (X)  |      -      | <<extend>> 20 |
+| UC-20   | Attach Photo of Damage                       |       -       |  PRIMARY (X)  |      -      | Extends 19    |
+| UC-21   | View Maintenance Kanban Board & Timeline     |  PRIMARY (X)  |  PRIMARY (X)  |      -      | Shared View   |
+| UC-22   | Update Repair Status (In Progress/Resolved)  |  PRIMARY (X)  |       -       |      -      | Updates 21    |
+| UC-23   | Cancel Pending Maintenance Ticket            |       -       |  PRIMARY (X)  |      -      | For Pending   |
+| UC-24   | Create & Broadcast Property Announcements    |  PRIMARY (X)  |       -       |      -      | Feeds into 25 |
+| UC-25   | Read Property Announcements & Notices        |       -       |  PRIMARY (X)  |      -      | Reads from 24 |
+| UC-26   | One-to-One Direct Chat & Messaging           |  PRIMARY (X)  |  PRIMARY (X)  |      -      | Bi-directional|
+| UC-27   | Monitor Multi-Channel CCTV Video Matrix      |  PRIMARY (X)  |       -       |      -      | 12-Cam Grid   |
+| UC-28   | Inspect Camera Health & Stream FPS           |  PRIMARY (X)  |       -       |      -      | Surveillance  |
+| UC-29   | View Cashflow Trends & Revenue Analytics     |  PRIMARY (X)  |       -       |      -      | Recharts KPIs |
+| UC-30   | Monitor Urgent Action Center & Overdue       |  PRIMARY (X)  |       -       |      -      | Priority Desk |
+| UC-31   | View Real-Time Dashboard Activity Feed       |  PRIMARY (X)  |       -       |      -      | Live Audit Log |
++---------+----------------------------------------------+---------------+---------------+-------------+---------------+
+
+
+========================================================================================================================
+4. DETAILED USE CASE DESCRIPTIONS
+========================================================================================================================
+
+------------------------------------------------------------------------------------------------------------------------
+[UC-01] LOGIN & AUTHENTICATE TO PORTAL
+------------------------------------------------------------------------------------------------------------------------
+- Primary Actors  : Admin / Owner, Tenant / Resident
+- Pre-conditions  : User account exists with verified credentials in the database.
+- Trigger         : User visits the web app and enters Email and Password.
+- Main Flow       :
+  1. System verifies email existence and compares hashed password using bcrypt.
+  2. System issues a cryptographically signed JSON Web Token (JWT) with user ID and role.
+  3. Client stores token securely in localStorage / HTTP cookies.
+  4. Role Guard redirects Admin to '/admin/dashboard' or Tenant to '/tenant/dashboard'.
+- Post-conditions : User authenticated with active session and authorized route access.
+
+------------------------------------------------------------------------------------------------------------------------
+[UC-02 & UC-03] REGISTER ACCOUNT & APPLY FOR ROOM
+------------------------------------------------------------------------------------------------------------------------
+- Primary Actor   : Tenant Applicant
+- Pre-conditions  : Prospective tenant does not yet have an active account.
+- Main Flow       :
+  1. Applicant fills out signup form (Full Name, Email, Password, Mobile Number).
+  2. Applicant inputs emergency contact details (Contact Person, Relation, Emergency Phone).
+  3. Applicant browses list of available rooms/beds and selects desired unit (e.g., Room 203).
+  4. System creates new user entry with status 'Pending' and links requested room_id.
+  5. Notification alert sent to Admin's Urgent Action Center.
+
+------------------------------------------------------------------------------------------------------------------------
+[UC-04] REVIEW & APPROVE/REJECT TENANT APPLICATIONS
+------------------------------------------------------------------------------------------------------------------------
+- Primary Actor   : Admin / Owner
+- Pre-conditions  : Pending tenant applications exist in the system.
+- Main Flow       :
+  1. Admin navigates to Tenants -> Approvals tab.
+  2. Admin inspects applicant details, requested room, and contact info.
+  3. Admin clicks 'Approve': System marks user status as 'Active', assigns bed space, updates room occupancy count.
+  4. (Alternative) Admin clicks 'Reject': System updates status to 'Inactive' and frees room slot.
+
+------------------------------------------------------------------------------------------------------------------------
+[UC-06, UC-07 & UC-08] ROOM, BED & PRICING MANAGEMENT
+------------------------------------------------------------------------------------------------------------------------
+- Primary Actor   : Admin / Owner
+- Main Flow       :
+  1. Admin adds or edits room records (Room Number, Floor Level, Max Bed Capacity, Type).
+  2. Admin tags amenities (Air Conditioning, Private Bathroom, High-speed Wi-Fi, Balcony).
+  3. Admin configures base monthly rental rate.
+  4. Admin assigns or reassigns active tenants to specific beds. Room status dynamically transitions:
+     'Available' -> 'Partially Occupied' -> 'Occupied' (Full) -> 'Maintenance'.
+
+------------------------------------------------------------------------------------------------------------------------
+[UC-09] VIEW VISUAL FLOOR & ROOM MATRIX
+------------------------------------------------------------------------------------------------------------------------
+- Primary Actors  : Admin / Owner, Tenant / Resident
+- Description     : Interactive, color-coded floor map showing every room and occupied bed in the building.
+                    Allows clicking into individual units to view current tenants, amenities, and vacancies.
+
+------------------------------------------------------------------------------------------------------------------------
+[UC-10 & UC-11] TENANT MOVE-OUT & LEASE TERMINATION
+------------------------------------------------------------------------------------------------------------------------
+- Primary Actors  : Tenant (initiates UC-10), Admin (processes UC-11)
+- Description     : Under RentTrack's flexible stay model, tenants can file a Notice to Vacate at any time.
+                    Admin processes move-out inspection, verifies that pending bills are settled, marks tenant as
+                    'Moved Out', releases the bed space to 'Available', and logs a move-out activity item.
+
+------------------------------------------------------------------------------------------------------------------------
+[UC-12 & UC-14] MONTHLY BILLING & UTILITY INVOICING
+------------------------------------------------------------------------------------------------------------------------
+- Primary Actors  : Automated Cron Engine (UC-12), Admin / Owner (UC-14)
+- Description     : 
+  * Automated Node-cron runs on the 1st of each month to auto-generate itemized monthly invoices for all active boarders.
+  * Admin can also manually generate custom bills or adjust itemized costs: Base Rent, Water Bill, Electricity Bill,
+    and Ancillary/Wi-Fi charges.
+  * System dynamically computes total amount due and sets status to 'Unpaid'.
+
+------------------------------------------------------------------------------------------------------------------------
+[UC-15, UC-16 & UC-17] VIEW BILLS & SUBMIT PAYMENT PROOF
+------------------------------------------------------------------------------------------------------------------------
+- Primary Actor   : Tenant / Resident
+- Description     :
+  1. Tenant views outstanding balance on dashboard and reviews itemized charges.
+  2. Tenant clicks 'Pay Now' and selects payment channel: GCash, Maya, Bank Transfer, or Cash.
+  3. Tenant uploads photo/screenshot of transaction receipt and enters reference number (e.g., #TX-20261013-0033).
+  4. System uploads receipt file via Multer, updates bill status to 'Pending Verification', and alerts Admin.
+
+------------------------------------------------------------------------------------------------------------------------
+[UC-18] VERIFY PAYMENT RECEIPT & SETTLE BALANCE
+------------------------------------------------------------------------------------------------------------------------
+- Primary Actor   : Admin / Owner
+- Description     :
+  1. Admin opens Pending Verification queue or Payment Inspector modal.
+  2. Admin reviews uploaded receipt image, verified payment amount, and bank reference number.
+  3. If valid: Admin clicks 'Approve' -> System records payment transaction, deducts bill balance, marks bill as 'Paid'
+     (or 'Partial'), updates collection analytics, and logs a verified payment activity.
+  4. If invalid: Admin clicks 'Reject' with feedback notes -> Bill reverts to 'Unpaid' and tenant is notified.
+
+------------------------------------------------------------------------------------------------------------------------
+[UC-19, UC-20 & UC-21] MAINTENANCE TICKETING & KANBAN
+------------------------------------------------------------------------------------------------------------------------
+- Primary Actors  : Tenant (UC-19, UC-20), Admin (UC-21, UC-22)
+- Description     :
+  1. Tenant logs issue with Category (Plumbing, Electrical, Carpentry, Appliance, Internet, General) and Priority.
+  2. Tenant optionally attaches a clear photo of the damage/leak.
+  3. Ticket appears on Admin's live Kanban board across columns: [Pending] -> [In Progress] -> [Resolved].
+  4. Admin assigns technician and updates status. Changes reflect live on Tenant dashboard.
+  5. Tenant can cancel ticket while in 'Pending' status.
+
+------------------------------------------------------------------------------------------------------------------------
+[UC-24 & UC-25] BROADCAST ANNOUNCEMENTS
+------------------------------------------------------------------------------------------------------------------------
+- Primary Actors  : Admin (creator), Tenant (reader)
+- Description     : Admin posts property-wide announcements (e.g., scheduled maintenance, holiday curfew, water outage).
+                    Includes priority tags (Standard, Important, Urgent). Displays on tenant dashboard banner.
+
+------------------------------------------------------------------------------------------------------------------------
+[UC-26] ONE-TO-ONE DIRECT CHAT & MESSAGING
+------------------------------------------------------------------------------------------------------------------------
+- Primary Actors  : Admin / Owner, Tenant / Resident
+- Description     : Integrated real-time messaging channel allowing tenants to communicate directly with the landlord
+                    for inquiries, payment clarifications, and urgent requests. Includes unread badges.
+
+------------------------------------------------------------------------------------------------------------------------
+[UC-27 & UC-28] MULTI-CHANNEL CCTV VIDEO SURVEILLANCE
+------------------------------------------------------------------------------------------------------------------------
+- Primary Actor   : Admin / Owner
+- Description     : Live virtual security matrix streaming 12 property surveillance feeds (Main Gate, Lobby, Parking,
+                    Hallways, Rooftop, Elevator, Emergency Exits). Supports 2x2, 3x3, and 4x4 matrix grid switcher,
+                    live timecode overlay, camera FPS diagnostics, and single-click fullscreen camera inspection.
+
+------------------------------------------------------------------------------------------------------------------------
+[UC-29, UC-30 & UC-31] BUSINESS INTELLIGENCE & AUDIT
+------------------------------------------------------------------------------------------------------------------------
+- Primary Actor   : Admin / Owner
+- Description     : Real-time analytical KPIs showing Total Invoiced vs. Collected Revenue vs. Outstanding Balances
+                    (Recharts ComposedChart), collection rates, occupancy rates, Urgent Action Center (4 priority items),
+                    and Recent Activity feed (6 items visible, 2-line concise layout with 27-char wrap limit).
+
+
+========================================================================================================================
+5. MERMAID UML SOURCE CODE (FOR GRAPHICAL PREVIEWS / EXPORT)
+========================================================================================================================
+
+To view this diagram graphically, copy the block below into https://mermaid.live or a Markdown previewer:
+
+```mermaid
+flowchart LR
+    %% Actors Definition
+    subgraph ACTORS ["System Actors"]
+        Admin["👤 Admin / Owner<br/>(Property Administrator)"]
+        Tenant["👥 Tenant / Resident<br/>(Boarder / Renter)"]
+        Cron["⏱️ Automated Cron Service<br/>(System Scheduler)"]
+    end
+
+    %% System Boundary
+    subgraph RENTTRACK ["RentTrack System Boundary"]
+        %% Group 1: Auth & User Lifecycle
+        subgraph G1 ["1. Authentication & Tenant Onboarding"]
+            UC01["(UC-01: Login & Authenticate)"]
+            UC02["(UC-02: Register & Select Room)"]
+            UC03["(UC-03: Submit Personal & Emergency Info)"]
+            UC04["(UC-04: Review Tenant Applications)"]
+            UC05["(UC-05: Manage Profile & Contacts)"]
+        end
+
+        %% Group 2: Room & Inventory
+        subgraph G2 ["2. Room & Occupancy Management"]
+            UC06["(UC-06: Manage Rooms, Beds & Amenities)"]
+            UC07["(UC-07: Set Base Rental Rates)"]
+            UC08["(UC-08: Assign Tenant to Bed / Room)"]
+            UC09["(UC-09: View Visual Room Matrix)"]
+            UC10["(UC-10: Submit Notice to Vacate)"]
+            UC11["(UC-11: Process Tenant Move-Out)"]
+        end
+
+        %% Group 3: Billing & Payments
+        subgraph G3 ["3. Billing, Invoicing & Payments"]
+            UC12["(UC-12: Auto-Generate Recurring Bills)"]
+            UC13["(UC-13: Flag Overdue Balances & Penalties)"]
+            UC14["(UC-14: Create Manual Bill & Utilities)"]
+            UC15["(UC-15: View Invoices & Balance)"]
+            UC16["(UC-16: Submit Payment Proof)"]
+            UC17["(UC-17: Upload Receipt & Ref No)"]
+            UC18["(UC-18: Verify Receipt & Settle Balance)"]
+        end
+
+        %% Group 4: Maintenance
+        subgraph G4 ["4. Maintenance & Repair Ticketing"]
+            UC19["(UC-19: Submit Repair Ticket)"]
+            UC20["(UC-20: Attach Damage Photo)"]
+            UC21["(UC-21: View Maintenance Kanban)"]
+            UC22["(UC-22: Update Repair Status)"]
+            UC23["(UC-23: Cancel Pending Ticket)"]
+        end
+
+        %% Group 5: Communication & Security
+        subgraph G5 ["5. Communication, Notices & CCTV"]
+            UC24["(UC-24: Broadcast Announcements)"]
+            UC25["(UC-25: Read Property Notices)"]
+            UC26["(UC-26: Direct Chat & Messaging)"]
+            UC27["(UC-27: Monitor CCTV Video Grid)"]
+            UC28["(UC-28: Inspect Camera Health & FPS)"]
+        end
+
+        %% Group 6: Analytics & KPIs
+        subgraph G6 ["6. Analytics & Live Audit"]
+            UC29["(UC-29: View Cashflow & Revenue KPI)"]
+            UC30["(UC-30: Monitor Urgent Action Center)"]
+            UC31["(UC-31: View Real-Time Activity Feed)"]
+        end
+    end
+
+    %% Admin Linkages
+    Admin --> UC01
+    Admin --> UC04
+    Admin --> UC05
+    Admin --> UC06
+    Admin --> UC07
+    Admin --> UC08
+    Admin --> UC09
+    Admin --> UC11
+    Admin --> UC14
+    Admin --> UC18
+    Admin --> UC21
+    Admin --> UC22
+    Admin --> UC24
+    Admin --> UC26
+    Admin --> UC27
+    Admin --> UC28
+    Admin --> UC29
+    Admin --> UC30
+    Admin --> UC31
+
+    %% Tenant Linkages
+    Tenant --> UC01
+    Tenant --> UC02
+    Tenant --> UC05
+    Tenant --> UC09
+    Tenant --> UC10
+    Tenant --> UC15
+    Tenant --> UC16
+    Tenant --> UC19
+    Tenant --> UC21
+    Tenant --> UC23
+    Tenant --> UC25
+    Tenant --> UC26
+
+    %% Cron Service Linkages
+    Cron --> UC12
+    Cron --> UC13
+
+    %% Inter-Use-Case Relationships
+    UC02 -.->|<<include>>| UC03
+    UC04 -.->|<<evaluates>>| UC02
+    UC11 -.->|<<processes>>| UC10
+    UC14 -.->|<<extend>>| UC13
+    UC16 -.->|<<include>>| UC17
+    UC18 -.->|<<validates>>| UC16
+    UC19 -.->|<<extend>>| UC20
+    UC24 -.->|<<feeds>>| UC25
+    UC27 -.->|<<includes>>| UC28
+```
+
+========================================================================================================================
+                                                    END OF DOCUMENT
+========================================================================================================================

@@ -1,4 +1,5 @@
 const db = require('../config/db');
+const { generateUniqueInvoiceNumber } = require('../utils/invoiceNumberGenerator');
 
 // @desc    Get all bills
 // @route   GET /api/admin/bills
@@ -40,13 +41,14 @@ const getAllBills = async (req, res) => {
 
                 if (existingBills.length === 0) {
                     const totalAmount = tenant.rent_amount;
+                    const invoiceNumber = await generateUniqueInvoiceNumber(db);
                     const insertBillQuery = `
-                        INSERT INTO bills (tenant_id, room_id, billing_month, due_date, rent_amount, water_charges, electricity_charges, other_fees, total_amount, balance, status, notes)
-                        VALUES ($1, $2, $3, $4, $5, 0, 0, 0, $6, $7, 'Unpaid', 'Auto-generated bill')
+                        INSERT INTO bills (tenant_id, room_id, billing_month, due_date, rent_amount, water_charges, electricity_charges, other_fees, total_amount, balance, status, notes, invoice_number)
+                        VALUES ($1, $2, $3, $4, $5, 0, 0, 0, $6, $7, 'Unpaid', 'Auto-generated bill', $8)
                     `;
                     await db.query(insertBillQuery, [
                         tenant.tenant_id, tenant.room_id, billingMonthStr, dueDate,
-                        tenant.rent_amount, totalAmount, totalAmount
+                        tenant.rent_amount, totalAmount, totalAmount, invoiceNumber
                     ]);
                 }
             }
@@ -140,12 +142,14 @@ const createBill = async (req, res) => {
         const balance = total_amount; // newly created bill has no payments yet
         const status = 'Unpaid';
 
+        const invoiceNumber = await generateUniqueInvoiceNumber(db);
+
         const query = `
-            INSERT INTO bills (tenant_id, room_id, billing_month, due_date, rent_amount, water_charges, electricity_charges, other_fees, total_amount, balance, status, notes)
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+            INSERT INTO bills (tenant_id, room_id, billing_month, due_date, rent_amount, water_charges, electricity_charges, other_fees, total_amount, balance, status, notes, invoice_number)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
             RETURNING *
         `;
-        const values = [tenant_id, room_id, billing_month, due_date, rent, water, electricity, other, total_amount, balance, status, notes];
+        const values = [tenant_id, room_id, billing_month, due_date, rent, water, electricity, other, total_amount, balance, status, notes, invoiceNumber];
 
         const { rows } = await db.query(query, values);
         res.status(201).json(rows[0]);
@@ -351,14 +355,15 @@ const generateMonthlyBills = async (req, res) => {
                 const status = 'Unpaid';
                 const notes = 'Auto-generated bill';
 
+                const invoiceNumber = await generateUniqueInvoiceNumber(db);
                 const insertBillQuery = `
-                    INSERT INTO bills (tenant_id, room_id, billing_month, due_date, rent_amount, water_charges, electricity_charges, other_fees, total_amount, balance, status, notes)
-                    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+                    INSERT INTO bills (tenant_id, room_id, billing_month, due_date, rent_amount, water_charges, electricity_charges, other_fees, total_amount, balance, status, notes, invoice_number)
+                    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
                 `;
                 const values = [
                     tenant.tenant_id, tenant.room_id, billingMonthStr, dueDate,
                     tenant.rent_amount, waterCharges, electricityCharges, otherFees,
-                    totalAmount, balance, status, notes
+                    totalAmount, balance, status, notes, invoiceNumber
                 ];
 
                 await db.query(insertBillQuery, values);
@@ -379,7 +384,7 @@ const generateMonthlyBills = async (req, res) => {
 const getPendingPayments = async (req, res) => {
     try {
         const query = `
-            SELECT p.*, b.billing_month, b.total_amount as bill_total, b.balance as bill_balance, u.name as tenant_name, r.room_number 
+            SELECT p.*, b.billing_month, b.invoice_number, b.total_amount as bill_total, b.balance as bill_balance, u.name as tenant_name, r.room_number 
             FROM payments p
             JOIN bills b ON p.bill_id = b.id
             JOIN users u ON b.tenant_id = u.id

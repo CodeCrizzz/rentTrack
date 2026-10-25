@@ -1,6 +1,7 @@
 "use client";
 import { useState, useEffect } from 'react';
 import { User, Mail, Phone, MapPin, Edit3, Save, Camera } from 'lucide-react';
+import { formatPhoneNumber, formatPhoneInput } from '@/lib/phone-utils';
 
 export default function AdminProfilePage() {
     const [isLoading, setIsLoading] = useState(true);
@@ -8,7 +9,7 @@ export default function AdminProfilePage() {
     const [profile, setProfile] = useState({
         name: 'Admin',
         email: 'admin@renttrack.com',
-        phone: '+63 912 345 6789',
+        phone: '+63 999 123 7654',
         address: '123 RentTrack HQ, Manila, Philippines',
         avatar: ''
     });
@@ -22,7 +23,7 @@ export default function AdminProfilePage() {
                 ...prev,
                 name: user.name || prev.name,
                 email: user.email || prev.email,
-                phone: user.phone || prev.phone,
+                phone: formatPhoneNumber(user.phone, prev.phone),
                 address: user.address || prev.address
             }));
         }
@@ -167,9 +168,9 @@ export default function AdminProfilePage() {
                                 <Phone className="w-4 h-4" /> Contact Number
                             </label>
                             {isEditing ? (
-                                <input type="text" value={editForm.phone} onChange={(e) => setEditForm({...editForm, phone: e.target.value})} className="w-full h-11 px-4 bg-background border border-slate-200 dark:border-zinc-800 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none transition-all dark:text-white" />
+                                <input type="text" value={editForm.phone} onChange={(e) => setEditForm({...editForm, phone: formatPhoneInput(e.target.value)})} placeholder="+63 999 123 7654" className="w-full h-11 px-4 bg-background border border-slate-200 dark:border-zinc-800 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none transition-all dark:text-white font-mono" />
                             ) : (
-                                <p className="text-sm font-bold text-slate-800 dark:text-white px-1">{profile.phone}</p>
+                                <p className="text-sm font-bold text-slate-800 dark:text-white px-1 font-mono">{formatPhoneNumber(profile.phone)}</p>
                             )}
                         </div>
                         <div>

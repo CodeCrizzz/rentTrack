@@ -1,4 +1,5 @@
 const db = require("../config/db");
+const { generateUniqueInvoiceNumber } = require("../utils/invoiceNumberGenerator");
 
 // @desc    Run automatic billing cron job
 // @route   POST /api/cron/billing
@@ -72,10 +73,11 @@ const runBillingCron = async (req, res) => {
         const balance = totalAmount;
         const status = "Unpaid";
         const notes = "Auto-generated bill";
+        const invoiceNumber = await generateUniqueInvoiceNumber(db);
 
         const insertBillQuery = `
-                    INSERT INTO bills (tenant_id, room_id, billing_month, due_date, rent_amount, water_charges, electricity_charges, other_fees, total_amount, balance, status, notes)
-                    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+                    INSERT INTO bills (tenant_id, room_id, billing_month, due_date, rent_amount, water_charges, electricity_charges, other_fees, total_amount, balance, status, notes, invoice_number)
+                    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
                 `;
         const values = [
           tenant.tenant_id,
@@ -90,6 +92,7 @@ const runBillingCron = async (req, res) => {
           balance,
           status,
           notes,
+          invoiceNumber,
         ];
 
         await db.query(insertBillQuery, values);

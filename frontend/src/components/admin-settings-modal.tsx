@@ -12,8 +12,9 @@ import {
     Check, Sparkles
 } from 'lucide-react';
 import { useTheme } from 'next-themes';
-import CustomSelect from '@/components/CustomSelect';
+import CustomSelect from '@/components/dropdown-select';
 import { toast } from 'sonner';
+import { formatPhoneInput, formatPhoneNumber } from '@/lib/phone-utils';
 
 interface AdminSettingsModalProps {
     isOpen: boolean;
@@ -489,7 +490,8 @@ export default function AdminSettingsModal({ isOpen, onClose }: AdminSettingsMod
                                             <input
                                                 type="text"
                                                 value={contactPhone}
-                                                onChange={(e) => setContactPhone(e.target.value)}
+                                                onChange={(e) => setContactPhone(formatPhoneInput(e.target.value))}
+                                                placeholder="+63 999 123 7654"
                                                 className="w-full py-2 px-3 text-xs rounded-lg bg-slate-50 dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 text-slate-900 dark:text-white font-semibold focus:ring-1 focus:ring-slate-400 outline-none"
                                             />
                                         </div>

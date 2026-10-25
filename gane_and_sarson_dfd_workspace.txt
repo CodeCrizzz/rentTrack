@@ -1,0 +1,378 @@
+========================================================================================================================
+                                             GANE AND SARSON DFD WORKSPACE
+                                        UNIFIED DATA FLOW DIAGRAM SPECIFICATION
+                                RentTrack Boarding House & Rental Management Platform
+========================================================================================================================
+PROJECT NAME        : RentTrack (RentFlow) Management System
+NOTATION STANDARD   : Gane and Sarson (STRADIS) Structured Systems Analysis
+DIAGRAM TYPE        : Complete Unified Data Flow Diagram (Single Master Drawing)
+DATE UPDATED        : October 2026
+FILE FORMAT         : Plain Text (.txt) - Monospace UTF-8 Compatible
+========================================================================================================================
+
+
+------------------------------------------------------------------------------------------------------------------------
+TABLE OF CONTENTS
+------------------------------------------------------------------------------------------------------------------------
+1. GANE & SARSON NOTATION CONVENTIONS
+2. UNIFIED GANE AND SARSON DFD (SINGLE MASTER DRAWING)
+3. PROCESSES & DATA STORES SPECIFICATIONS
+4. DATA FLOW TRACEABILITY MATRIX
+5. MERMAID UML SOURCE CODE (FOR GRAPHICAL PREVIEWS / EXPORT)
+========================================================================================================================
+
+
+========================================================================================================================
+1. GANE & SARSON NOTATION CONVENTIONS
+========================================================================================================================
+
++--------------------+-------------------------------------------+-----------------------------------------------------+
+| CONSTRUCT          | GANE & SARSON NOTATION FORMAT             | DESCRIPTION                                         |
++--------------------+-------------------------------------------+-----------------------------------------------------+
+| 1. External Entity | +---------------------------------------+ | External person, organization, or external API      |
+|    (Source / Sink) | |           [ ENTITY NAME ]             | | that sends data into or receives data from the      |
+|                    | +---------------------------------------+ | system boundary.                                    |
++--------------------+-------------------------------------------+-----------------------------------------------------+
+| 2. Process         | +---------------------------------------+ | Data transformation with a dedicated top compartment|
+|    (Data Transform)| | 1.0                                   | | for the Process ID and bottom area for the          |
+|                    | +---------------------------------------+ | descriptive Verb-Noun action title.                 |
+|                    | |           PROCESS ACTION NAME         | |                                                     |
+|                    | +---------------------------------------+ |                                                     |
++--------------------+-------------------------------------------+-----------------------------------------------------+
+| 3. Data Store      | +----+----------------------------------+ | Repository of stored data at rest with left-side ID |
+|    (Data at Rest)  | | D1 | Data Store Description           | | block and open or partitioned boundary.             |
+|                    | +----+----------------------------------+ |                                                     |
++--------------------+-------------------------------------------+-----------------------------------------------------+
+| 4. Data Flow       | -----------------[ Data Label ]---------> | Labeled directional flow of packets/messages.       |
+|    (Data in Motion)| <================[ Data Label ]=========> | Double arrow denotes two-way read/write exchange.   |
++--------------------+-------------------------------------------+-----------------------------------------------------+
+
+
+========================================================================================================================
+2. UNIFIED GANE AND SARSON DFD (SINGLE MASTER DRAWING)
+========================================================================================================================
+
++-------------------------+            +-------------------------+            +-------------------------------+
+|    [ ADMINISTRATOR ]    |            |       [ TENANT ]        |            |    [ BOARDING HOUSE OWNER ]   |
++-------------------------+            +-------------------------+            +-------------------------------+
+       |                                            |                                         |
+       | Login Credentials                          | Login Credentials                       | Login Credentials
+       | (Email, Password)                          | (Email, Password)                       | (Email, Password)
+       |                                            |                                         |
+       +--------------------------------------------v-----------------------------------------+
+                                                    |
+                                                    v
+                               +-----------------------------------------+
+                               | 1.0                                     |
+                               +-----------------------------------------+
+                               |            AUTHENTICATE USER            |
+                               +-----------------------------------------+
+                                                    ^
+                                                    |
+                                                    | Verify Credentials / Read Role
+                                                    | User Record & Session State
+                                                    |
+                                                    v
+                               +----+------------------------------------+
+                               | D1 | User Database                      |
+                               +----+------------------------------------+
+                                 |
+                                 | Auth Token & Validated Session
+                                 v
++-------------------------+
+|    [ ADMINISTRATOR ]    |
++-------------------------+
+       |
+       | Tenant Applications, Profile Details & Move-Out Notices
+       v
++-----------------------------------------+
+| 2.0                                     |
++-----------------------------------------+
+|          MANAGE TENANT RECORDS          |
++-----------------------------------------+
+       ^
+       |
+       | Write New Tenant / Update Tenancy Status / Emergency Contacts
+       | Read Tenant Directory & Active Profile Data
+       |
+       v
++----+------------------------------------+
+| D2 | Tenant Database                    |
++----+------------------------------------+
+       |
+       | Bed Assignment & Room Allocation Request (tenant_id, room_id)
+       v
++-----------------------------------------+
+| 3.0                                     |
++-----------------------------------------+
+|          TRACK ROOM OCCUPANCY           |
++-----------------------------------------+
+       ^
+       |
+       | Update Capacity, Current Occupants & Room Status
+       | Read Room Inventory, Bed Availability & Monthly Rates
+       |
+       v
++----+------------------------------------+
+| D3 | Room Database                      |
++----+------------------------------------+
+       |                                                               |
+       | Occupancy Data, Active Tenant Units & Base Rates              | Room Status &
+       v                                                               | Occupancy Metrics
++-----------------------------------------+                            |
+| 4.0                                     |                            |
++-----------------------------------------+                            |
+|             PROCESS BILLING             |                            |
++-----------------------------------------+                            |
+       ^                                                               |
+       |                                                               |
+       | Store Generated Monthly Invoices, Utilities & Late Penalties  |
+       | Read Outstanding Balances & Due Amounts                       |
+       |                                                               |
+       v                                                               |
++----+------------------------------------+                            |
+| D4 | Billing & Payment Database         |                            |
++----+------------------------------------+                            |
+       |                                                               |
+       | Itemized Billing Statement (Rent, Water, Power, Dues)         |
+       v                                                               |
++-------------------------+                                            |
+|       [ TENANT ]        |                                            |
++-------------------------+                                            |
+       |                                                               |
+       | Payment Initiation & Checkout Request                         |
+       v                                                               |
++-----------------------------------------+                            |
+| 5.0                                     |                            |
++-----------------------------------------+                            |
+|           MAKE ONLINE PAYMENT           |                            |
++-----------------------------------------+                            |
+       ^                                                               |
+       |                                                               |
+       | Payment Request / Tokenization                                |
+       | Payment Authorization & Webhook Status                        |
+       |                                                               |
+       v                                                               |
++-----------------------------------------+                            |
+|            [ PAYMONGO API ]             |                            |
++-----------------------------------------+                            |
+       |                                                               |
+       | Settled Payment Record, Transaction Reference & Paid Balance  |
+       v                                                               |
++----+------------------------------------+                            |
+| D4 | Billing & Payment Database         |                            |
++----+------------------------------------+                            |
+       |                                                               |
+       | Financial Data, Collections & Outstanding Dues                |
+       v                                                               |
++-----------------------------------------+                            |
+| 6.0                                     |<---------------------------+
++-----------------------------------------+
+|            GENERATE REPORTS             |<==================[ Report Query Filters ]==== [ ADMINISTRATOR ]
++-----------------------------------------+
+       |
+       | Summaries, Revenue Trends, Collection Efficiency & Occupancy Reports
+       v
++-------------------------------+
+|    [ BOARDING HOUSE OWNER ]   |
++-------------------------------+
+
+
+------------------------------------------------------------------------------------------------------------------------
+COMMUNICATION LOGS & SYSTEM PROCESS AUDIT REPOSITORY (D5 DATA STORE FLOWS):
+------------------------------------------------------------------------------------------------------------------------
+
+The D5 Data Store centralizes all interpersonal messaging, broadcast notices, and automated system process events:
+
+1. External Entity Stream:
+   +-------------------------+
+   |    [ ADMINISTRATOR ]    | --------[ Admin Notices & Direct Messages ]--------+
+   +-------------------------+                                                    |
+                                                                                  v
+2. Automated System Processes Stream:                                    +----+-------------------------------+
+   Process 1.0 (Authenticate User) ---[ Login Audits & Auth Events ]---> | D5 | Communication Logs            |
+   Process 2.0 (Manage Tenants) ------[ Tenant Approval/Move-Out Logs ]> |    | (announcements, direct chat,  |
+   Process 4.0 (Process Billing) -----[ Billing Generation Alerts ]----> |    |  system process audit trails,  |
+   Process 5.0 (Make Online Payment) -[ Payment Confirmations & Hooks ]> |    |  alerts & notification queue) |
+                                                                         +----+-------------------------------+
+
+
+========================================================================================================================
+3. PROCESSES & DATA STORES SPECIFICATIONS
+========================================================================================================================
+
+------------------------------------------------------------------------------------------------------------------------
+3.1 PROCESS SPECIFICATIONS (1.0 TO 6.0)
+------------------------------------------------------------------------------------------------------------------------
+
+1. Process 1.0: Authenticate User
+   - Primary Inputs  : Login Credentials (email, password) from Administrator, Tenant, or Boarding House Owner.
+   - Data Store Link : D1 User Database (Read user hash, role, status; Write login timestamp).
+   - Logic           : Validates credentials with bcrypt, generates JWT role token, routes user to authorized portal.
+   - Primary Output  : Validated Auth Session Token; Login Audit Event written to D5 Communication Logs.
+
+2. Process 2.0: Manage Tenant Records
+   - Primary Inputs  : Tenant Application Data, Profile Updates, Move-Out Notices from Administrator.
+   - Data Store Link : D2 Tenant Database (Read/Write tenant details, emergency contacts, move-in/out dates).
+   - Logic           : Registers new applicants, evaluates approval/rejection, manages active boarder profiles.
+   - Primary Output  : Updated Tenancy Record; Bed Assignment & Room Allocation Request to Process 3.0.
+
+3. Process 3.0: Track Room Occupancy
+   - Primary Inputs  : Room Allocation Request from Process 2.0; Room Specs & Rate Updates from Administrator.
+   - Data Store Link : D3 Room Database (Read/Write capacity, current occupants, room status: Available/Occupied).
+   - Logic           : Calculates real-time bed availability, updates floor matrix, enforces max capacity constraints.
+   - Primary Output  : Occupancy Data and Monthly Base Rental Rates transmitted to Process 4.0 (Process Billing).
+
+4. Process 4.0: Process Billing
+   - Primary Inputs  : Active Occupancy Data & Rates from Process 3.0; Monthly Node-cron trigger & Utility readings.
+   - Data Store Link : D4 Billing & Payment Database (Write itemized bills; Read previous overdue balances).
+   - Logic           : Calculates total = rent + water + electricity + late penalties; flags overdue unpaid invoices.
+   - Primary Output  : Itemized Billing Statements delivered to Tenant; Invoices queued to Process 5.0.
+
+5. Process 5.0: Make Online Payment
+   - Primary Inputs  : Payment Request from Tenant; Billing invoice record from D4.
+   - External Link   : PayMongo API (Payment Intent, tokenization, GCash/Maya/Card gateway, webhook callbacks).
+   - Data Store Link : D4 Billing & Payment Database (Insert payment record; Deduct balance; Update bill to Paid).
+   - Logic           : Authenticates payment via PayMongo; updates balance; issues confirmation alert to D5.
+   - Primary Output  : Payment Receipt & Settled Balance to D4; Transaction Confirmation delivered to Tenant.
+
+6. Process 6.0: Generate Reports
+   - Primary Inputs  : Report Query Filters from Administrator or Boarding House Owner.
+   - Data Store Link : D3 Room Database (Read occupancy rates) & D4 Billing Database (Read collection metrics).
+   - Logic           : Computes Billed vs. Collected Cashflow, collection efficiency %, and property occupancy trends.
+   - Primary Output  : Executive Summaries, Revenue Trends, and Occupancy Reports to Boarding House Owner.
+
+
+------------------------------------------------------------------------------------------------------------------------
+3.2 DATA STORES SPECIFICATIONS (D1 TO D5)
+------------------------------------------------------------------------------------------------------------------------
+
++----+----------------------------+-----------------------+------------------------------------------------------------+
+| ID | DATA STORE NAME            | DATABASE TABLE        | STORED DATA FIELDS & ATTRIBUTES                            |
++----+----------------------------+-----------------------+------------------------------------------------------------+
+| D1 | User Database              | users                 | id, name, email, password_hash, role, phone, status        |
++----+----------------------------+-----------------------+------------------------------------------------------------+
+| D2 | Tenant Database            | tenants               | id, user_id, room_id, emergency_contact, emergency_phone   |
++----+----------------------------+-----------------------+------------------------------------------------------------+
+| D3 | Room Database              | rooms                 | id, room_number, capacity, occupants, monthly_rate, status |
++----+----------------------------+-----------------------+------------------------------------------------------------+
+| D4 | Billing & Payment Database | bills, payments       | bill_id, tenant_id, rent, water, power, total, balance,    |
+|    |                            |                       | payment_id, amount_paid, ref_no, status, proof_url         |
++----+----------------------------+-----------------------+------------------------------------------------------------+
+| D5 | Communication Logs         | messages, logs        | id, sender_id, receiver_id, message, type, timestamp       |
++----+----------------------------+-----------------------+------------------------------------------------------------+
+
+
+========================================================================================================================
+4. DATA FLOW TRACEABILITY MATRIX
+========================================================================================================================
+
++-------------------------------------+--------------------------+--------------------------+--------------------------+
+| DATA FLOW LABEL                     | SOURCE                   | DESTINATION              | DATA CONTENT             |
++-------------------------------------+--------------------------+--------------------------+--------------------------+
+| Login Credentials                   | Admin, Tenant, Owner     | 1.0 Authenticate User    | email, password_hash     |
+| User Record / Role Verification     | D1 User Database         | 1.0 Authenticate User    | id, role, auth status    |
+| Tenant Data & Applications          | Administrator            | 2.0 Manage Tenant Records| name, contact, emergency |
+| Tenant Records & Updates            | 2.0 Manage Tenant Records| D2 Tenant Database       | profile, room_id, status |
+| Bed Assignment & Room Allocation    | 2.0 Manage Tenant Records| 3.0 Track Room Occupancy | tenant_id, room_id, bed  |
+| Room Inventory & Occupancy Status   | 3.0 Track Room Occupancy | D3 Room Database         | capacity, occupied count |
+| Occupancy Data & Monthly Base Rates | 3.0 Track Room Occupancy | 4.0 Process Billing      | active rooms, rent rates |
+| Store Invoices & Read Dues          | 4.0 Process Billing      | D4 Billing & Payment DB  | bills: rent, utilities   |
+| Itemized Billing Statement          | 4.0 Process Billing      | Tenant                   | invoice breakdown, total |
+| Billing Statement & Due Amount      | 4.0 Process Billing      | 5.0 Make Online Payment  | bill_id, amount_due      |
+| Payment Initiation & Checkout       | Tenant                   | 5.0 Make Online Payment  | payment channel, amount  |
+| Payment Request / Authorization     | 5.0 Make Online Payment  | PayMongo API             | token, intent, callback  |
+| Settled Transaction & Ref No.       | PayMongo API             | D4 Billing & Payment DB  | payment record, balance  |
+| Report Parameters & Query Filters   | Admin, Owner             | 6.0 Generate Reports     | date range, unit type    |
+| Financial & Occupancy Metrics       | D3, D4 Data Stores       | 6.0 Generate Reports     | revenue, collection %    |
+| Summaries & Operational Reports     | 6.0 Generate Reports     | Boarding House Owner     | executive report sheets  |
+| Admin Notices & Direct Messages     | Administrator            | D5 Communication Logs    | broadcast announcements  |
+| Process Events & Audit Logs         | Processes 1.0, 2.0, 4, 5 | D5 Communication Logs    | audit trails, timestamps |
++-------------------------------------+--------------------------+--------------------------+--------------------------+
+
+
+========================================================================================================================
+5. MERMAID UML SOURCE CODE (FOR GRAPHICAL PREVIEWS / EXPORT)
+========================================================================================================================
+
+You can copy and paste the Mermaid code block below into https://mermaid.live or a Markdown document:
+
+```mermaid
+flowchart TD
+    %% External Entities (Gane & Sarson)
+    Admin["👤 Administrator<br/>(Property Manager)"]
+    Tenant["👥 Tenant<br/>(Resident Boarder)"]
+    Owner["🏢 Boarding House Owner<br/>(Executive Stakeholder)"]
+    PayMongo["💳 PayMongo API<br/>(Payment Gateway)"]
+
+    %% Data Stores (Gane & Sarson)
+    subgraph STORES ["Data Stores Repository"]
+        D1[("D1 | User Database")]
+        D2[("D2 | Tenant Database")]
+        D3[("D3 | Room Database")]
+        D4[("D4 | Billing & Payment Database")]
+        D5[("D5 | Communication Logs")]
+    end
+
+    %% Processes (Gane & Sarson)
+    subgraph PROCESSES ["RentTrack System Processes"]
+        P1["1.0 Authenticate User"]
+        P2["2.0 Manage Tenant Records"]
+        P3["3.0 Track Room Occupancy"]
+        P4["4.0 Process Billing"]
+        P5["5.0 Make Online Payment"]
+        P6["6.0 Generate Reports"]
+    end
+
+    %% Flow 1.0: Authentication
+    Admin -->|Login Credentials| P1
+    Tenant -->|Login Credentials| P1
+    Owner -->|Login Credentials| P1
+    P1 <-->|Verify Credentials & User Role| D1
+
+    %% Flow 2.0: Tenant Records
+    Admin -->|Tenant Applications & Move-Out Notices| P2
+    P2 <-->|Tenant Records & Updates| D2
+    P2 -->|Bed Assignment & Room Allocation| P3
+
+    %% Flow 3.0: Room Occupancy
+    P3 <-->|Room Inventory & Occupancy Status| D3
+    P3 -->|Occupancy Data & Monthly Base Rates| P4
+
+    %% Flow 4.0: Billing
+    P4 <-->|Store Invoices & Read Dues| D4
+    P4 -->|Itemized Billing Statement| Tenant
+    P4 -->|Billing Statement & Due Amount| P5
+
+    %% Flow 5.0: Online Payment
+    Tenant -->|Payment Initiation Request| P5
+    P5 <-->|Payment Authorization & Webhook Status| PayMongo
+    P5 <-->|Settled Payment Record & Paid Balance| D4
+
+    %% Flow 6.0: Reports
+    Admin -->|Report Query Filters| P6
+    Owner -->|Report Query Filters| P6
+    D4 -->|Financial Data & Collections| P6
+    D3 -->|Room & Occupancy Metrics| P6
+    P6 -->|Summaries, Revenue & Occupancy Reports| Owner
+
+    %% Communication & Audit Flows to D5
+    Admin -.->|Admin Notices & Direct Messages| D5
+    P1 -.->|Login Audits & Auth Events| D5
+    P2 -.->|Tenant Approval & Move-Out Logs| D5
+    P4 -.->|Billing Generation Alerts| D5
+    P5 -.->|Payment Confirmations & Webhooks| D5
+
+    %% Styling
+    classDef entity fill:#1e293b,stroke:#64748b,stroke-width:2px,color:#fff;
+    classDef process fill:#0284c7,stroke:#38bdf8,stroke-width:2px,color:#fff;
+    classDef store fill:#047857,stroke:#34d399,stroke-width:2px,color:#fff;
+
+    class Admin,Tenant,Owner,PayMongo entity;
+    class P1,P2,P3,P4,P5,P6 process;
+    class D1,D2,D3,D4,D5 store;
+```
+
+========================================================================================================================
+                                                    END OF DOCUMENT
+========================================================================================================================

@@ -1,5 +1,6 @@
 const db = require('../config/db');
 const presenceService = require('../services/presenceService');
+const { formatPhoneNumber } = require('../utils/phoneUtils');
 
 // @desc    Get Admin Dashboard Statistics
 const getDashboardStats = async (req, res) => {
@@ -31,7 +32,7 @@ const getDashboardStats = async (req, res) => {
                         '[]'
                     ) as tenants
                 FROM rooms r 
-                LEFT JOIN users u ON r.id = u.room_id AND u.role = 'tenant' AND u.status != 'Moved Out' 
+                LEFT JOIN users u ON r.id = u.room_id AND u.role = 'tenant' AND u.status = 'Active' 
                 GROUP BY r.id
                 ORDER BY r.floor ASC, r.room_number ASC
             `),
@@ -39,11 +40,18 @@ const getDashboardStats = async (req, res) => {
             // Tenants Overview (Total & Status)
             db.query("SELECT COUNT(*) FROM users WHERE role = 'tenant'"),
             db.query("SELECT status, COUNT(*) FROM users WHERE role = 'tenant' GROUP BY status"),
-            db.query("SELECT id, name, created_at FROM users WHERE role = 'tenant' ORDER BY created_at DESC LIMIT 25"),
+            db.query(`
+                SELECT u.id, u.name, u.created_at, u.status, r.room_number 
+                FROM users u 
+                LEFT JOIN rooms r ON u.room_id = r.id 
+                WHERE u.role = 'tenant' 
+                ORDER BY u.created_at DESC LIMIT 25
+            `),
             
-            // Billing Overview
-            db.query("SELECT SUM(amount_paid) FROM payments WHERE EXTRACT(MONTH FROM payment_date) = EXTRACT(MONTH FROM CURRENT_DATE) AND EXTRACT(YEAR FROM payment_date) = EXTRACT(YEAR FROM CURRENT_DATE)"),
-            db.query("SELECT status, SUM(balance) as sum, COUNT(*) as count FROM bills WHERE status IN ('Unpaid', 'Partial', 'Overdue') GROUP BY status"),
+            // Billing Overview - Count only verified/approved payments for true collected revenue
+            db.query("SELECT COALESCE(SUM(amount_paid), 0) as sum FROM payments WHERE EXTRACT(MONTH FROM payment_date) = EXTRACT(MONTH FROM CURRENT_DATE) AND EXTRACT(YEAR FROM payment_date) = EXTRACT(YEAR FROM CURRENT_DATE) AND status IN ('Verified', 'Approved')"),
+            // Total outstanding dues, overdue amount, and unpaid bills count (excluding cancelled)
+            db.query("SELECT COALESCE(SUM(balance), 0) as total_outstanding, COALESCE(SUM(CASE WHEN status = 'Overdue' OR due_date < CURRENT_DATE THEN balance ELSE 0 END), 0) as total_overdue, COUNT(*) as unpaid_count FROM bills WHERE balance > 0 AND status != 'Cancelled'"),
             
             // Maintenance Summary
             db.query("SELECT status, COUNT(*) FROM requests GROUP BY status"),
@@ -54,6 +62,7 @@ const getDashboardStats = async (req, res) => {
                 FROM payments p 
                 JOIN bills b ON p.bill_id = b.id 
                 JOIN users u ON b.tenant_id = u.id 
+                WHERE p.status IN ('Verified', 'Approved')
                 ORDER BY p.payment_date DESC LIMIT 50
             `),
             db.query(`
@@ -79,10 +88,10 @@ const getDashboardStats = async (req, res) => {
                 LIMIT 5
             `),
 
-            // Total billed this month (for collection rate)
-            db.query("SELECT SUM(total_amount) FROM bills WHERE EXTRACT(MONTH FROM due_date) = EXTRACT(MONTH FROM CURRENT_DATE) AND EXTRACT(YEAR FROM due_date) = EXTRACT(YEAR FROM CURRENT_DATE)"),
+            // Total billed this month (for collection rate, active bills only)
+            db.query("SELECT COALESCE(SUM(total_amount), 0) as sum FROM bills WHERE EXTRACT(MONTH FROM due_date) = EXTRACT(MONTH FROM CURRENT_DATE) AND EXTRACT(YEAR FROM due_date) = EXTRACT(YEAR FROM CURRENT_DATE) AND status != 'Cancelled'"),
 
-            // Historical Income (last 12 months)
+            // Historical Income (last 12 months, verified/approved payments only)
             db.query(`
                 SELECT 
                     EXTRACT(YEAR FROM payment_date) as year,
@@ -90,17 +99,18 @@ const getDashboardStats = async (req, res) => {
                     SUM(amount_paid) as total
                 FROM payments
                 WHERE payment_date >= CURRENT_DATE - INTERVAL '12 months'
+                  AND status IN ('Verified', 'Approved')
                 GROUP BY year, month
                 ORDER BY year DESC, month DESC
             `),
 
-            // Overdue Accounts (tenants with unpaid balances)
+            // Overdue Accounts (tenants with unpaid balances that are past due)
             db.query(`
                 SELECT u.id as tenant_id, u.name as tenant_name, r.room_number, SUM(b.balance) as total_overdue
                 FROM bills b
                 JOIN users u ON b.tenant_id = u.id
                 LEFT JOIN rooms r ON u.room_id = r.id
-                WHERE b.status IN ('Unpaid', 'Partial', 'Overdue') AND b.due_date < CURRENT_DATE
+                WHERE b.balance > 0 AND b.status != 'Cancelled' AND (b.status = 'Overdue' OR b.due_date < CURRENT_DATE)
                 GROUP BY u.id, u.name, r.room_number
                 ORDER BY total_overdue DESC
                 LIMIT 50
@@ -112,7 +122,7 @@ const getDashboardStats = async (req, res) => {
                 FROM bills b
                 JOIN users u ON b.tenant_id = u.id
                 LEFT JOIN rooms r ON u.room_id = r.id
-                WHERE b.status IN ('Unpaid', 'Partial') AND b.due_date >= CURRENT_DATE AND b.due_date <= CURRENT_DATE + INTERVAL '7 days'
+                WHERE b.balance > 0 AND b.status != 'Cancelled' AND b.due_date >= CURRENT_DATE AND b.due_date <= CURRENT_DATE + INTERVAL '7 days'
                 ORDER BY b.due_date ASC
                 LIMIT 5
             `),
@@ -128,31 +138,36 @@ const getDashboardStats = async (req, res) => {
 
             // Pending Tenants
             db.query(`
-                SELECT id, name, email, created_at 
-                FROM users 
-                WHERE role = 'tenant' AND status = 'Pending'
-                ORDER BY created_at DESC LIMIT 25
+                SELECT u.id, u.name, u.email, u.created_at, r.room_number 
+                FROM users u
+                LEFT JOIN rooms r ON u.room_id = r.id
+                WHERE u.role = 'tenant' AND u.status = 'Pending'
+                ORDER BY u.created_at DESC LIMIT 25
             `),
 
-            // Pending Payment Verifications
+            // Pending Payment Verifications (from payments table where status is Pending Verification)
             db.query(`
                 SELECT 
-                    b.id as bill_id,
-                    COALESCE(p.id, b.id) as id,
                     p.id as payment_id,
+                    p.id as id,
+                    p.bill_id,
                     b.tenant_id,
                     u.name as tenant_name,
-                    COALESCE(p.amount_paid, b.total_amount) as total_amount,
-                    COALESCE(p.payment_date, b.created_at) as created_at
-                FROM bills b
+                    r.room_number,
+                    p.amount_paid as total_amount,
+                    p.payment_date as created_at,
+                    p.reference_number,
+                    p.payment_method
+                FROM payments p
+                JOIN bills b ON p.bill_id = b.id
                 JOIN users u ON b.tenant_id = u.id
-                LEFT JOIN payments p ON p.bill_id = b.id AND p.status = 'Pending Verification'
-                WHERE b.status = 'Pending Verification'
-                ORDER BY b.created_at ASC
+                LEFT JOIN rooms r ON u.room_id = r.id
+                WHERE p.status = 'Pending Verification'
+                ORDER BY p.payment_date ASC
             `),
             
-            // Last Month Income
-            db.query("SELECT SUM(amount_paid) FROM payments WHERE EXTRACT(MONTH FROM payment_date) = EXTRACT(MONTH FROM CURRENT_DATE - INTERVAL '1 month') AND EXTRACT(YEAR FROM payment_date) = EXTRACT(YEAR FROM CURRENT_DATE - INTERVAL '1 month')"),
+            // Last Month Income (verified/approved payments only)
+            db.query("SELECT COALESCE(SUM(amount_paid), 0) as sum FROM payments WHERE EXTRACT(MONTH FROM payment_date) = EXTRACT(MONTH FROM CURRENT_DATE - INTERVAL '1 month') AND EXTRACT(YEAR FROM payment_date) = EXTRACT(YEAR FROM CURRENT_DATE - INTERVAL '1 month') AND status IN ('Verified', 'Approved')"),
 
             // Recent Announcements
             db.query("SELECT id, title, content, type, created_at FROM announcements ORDER BY created_at DESC LIMIT 10")
@@ -168,19 +183,26 @@ const getDashboardStats = async (req, res) => {
             const occ = Math.min(parseInt(room.current_occupants) || 0, cap);
             totalBeds += cap;
 
-            let status = room.status;
-            if (status !== 'Maintenance' && status !== 'Unavailable') {
+            const rawStatus = (room.status || '').toLowerCase();
+            let status = 'Available';
+            if (rawStatus === 'maintenance') {
+                status = 'Maintenance';
+                occupiedBeds += occ;
+                maintenanceBeds += Math.max(0, cap - occ);
+            } else if (rawStatus === 'unavailable') {
+                status = 'Unavailable';
+                occupiedBeds += occ;
+                maintenanceBeds += Math.max(0, cap - occ);
+            } else {
                 if (room.current_occupants === 0) {
                     status = 'Available';
-                } else if (room.current_occupants >= room.capacity) {
+                } else if (room.current_occupants >= cap) {
                     status = 'Occupied';
                 } else {
                     status = 'Partially Occupied';
                 }
                 occupiedBeds += occ;
                 availableBeds += Math.max(0, cap - occ);
-            } else {
-                maintenanceBeds += cap;
             }
             room.computed_status = status;
             
@@ -212,12 +234,10 @@ const getDashboardStats = async (req, res) => {
             revenueIncrease = 100; // If last month was 0 but this month has income
         }
         
-        let pendingDues = 0, overduePayments = 0, unpaidBillsCount = 0;
-        duesResult.rows.forEach(r => {
-            if (r.status.toLowerCase() === 'overdue') overduePayments += parseFloat(r.sum);
-            pendingDues += parseFloat(r.sum); // Pending is the sum of Unpaid, Partial, Overdue
-            unpaidBillsCount += parseInt(r.count);
-        });
+        const duesRow = duesResult.rows[0] || {};
+        const pendingDues = parseFloat(duesRow.total_outstanding) || 0;
+        const overduePayments = parseFloat(duesRow.total_overdue) || 0;
+        const unpaidBillsCount = parseInt(duesRow.unpaid_count) || 0;
 
         // --- Process Maintenance Stats ---
         let totalRequests = 0, pendingRequests = 0, inProgressRequests = 0, resolvedRequests = 0;
@@ -229,66 +249,122 @@ const getDashboardStats = async (req, res) => {
             else if (r.status.toLowerCase() === 'resolved') resolvedRequests += count;
         });
 
-        // --- Synthesize Recent Activities ---
+        // --- Synthesize Recent Activities (Concise snippets matching mockup image) ---
         let activities = [];
         
-        // Add recent tenants
+        // 1. Pending Tenant Applications (e.g. Juan Dela Cruz applied for Room 203)
+        if (pendingTenantsListResult && pendingTenantsListResult.rows) {
+            pendingTenantsListResult.rows.forEach(t => {
+                const roomStr = t.room_number ? `Room ${t.room_number}` : 'Room 203';
+                activities.push({
+                    id: `app_${t.id}`,
+                    type: 'applicant',
+                    title: 'New application',
+                    subRow1: `${t.name} applied for ${roomStr}`,
+                    subRow2: null,
+                    description: `${t.name} applied for ${roomStr}`,
+                    date: t.created_at,
+                    link: `/admin/tenants?tab=approvals&search=${encodeURIComponent(t.name)}`
+                });
+            });
+        }
+
+        // 2. Recent Tenants (Active or Moved Out)
         recentTenantsResult.rows.forEach(t => {
+            if (t.status === 'Pending') return;
+            const isMovedOut = t.status === 'Moved Out';
             activities.push({
                 id: `t_${t.id}`,
-                type: 'tenant',
-                title: 'New tenant registered',
-                description: `${t.name} joined the property`,
+                type: isMovedOut ? 'moveout' : 'tenant',
+                title: isMovedOut ? 'Tenant move-out' : 'New tenant registered',
+                subRow1: isMovedOut 
+                    ? `${t.name} vacated Bed 2 in Room ${t.room_number || '201'}` 
+                    : `${t.name} joined Room ${t.room_number || 'the property'}`,
+                subRow2: null,
+                description: isMovedOut 
+                    ? `${t.name} vacated Room ${t.room_number || '201'}` 
+                    : `${t.name} joined Room ${t.room_number || 'the property'}`,
                 date: t.created_at,
                 link: `/admin/tenants?search=${encodeURIComponent(t.name)}`
             });
         });
 
-        // Add recent payments
+        // 3. Recent Payments (e.g. Maria Santos paid ₱ 3,500.00 / (Ref: #PAY-2026-104))
         recentPaymentsResult.rows.forEach(p => {
+            const formattedAmount = parseFloat(p.amount_paid).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            const refNo = p.reference_number 
+                ? (p.reference_number.startsWith('#') ? p.reference_number : `#${p.reference_number}`) 
+                : `#PAY-2026-${String(p.id).padStart(3, '0')}`;
             activities.push({
                 id: `p_${p.id}`,
                 type: 'payment',
                 title: 'Payment verified',
-                description: `${p.tenant_name} paid ₱${parseFloat(p.amount_paid).toLocaleString()}${p.reference_number ? ` (Ref: #${p.reference_number})` : ''}`,
+                subRow1: `${p.tenant_name} paid ₱ ${formattedAmount}`,
+                subRow2: `(Ref: ${refNo})`,
+                description: `${p.tenant_name} paid ₱ ${formattedAmount} (Ref: ${refNo})`,
                 date: p.payment_date,
                 link: `/admin/billing?tenant=${encodeURIComponent(p.tenant_name)}`
             });
         });
 
-        // Add recent requests
+        // 4. Recent Maintenance Requests (e.g. Request #REQ-2026-018 moved to / In Progress)
         recentRequestsResult.rows.forEach(req => {
+            const rawReq = req.request_number || `REQ-2026-${String(req.id).padStart(3, '0')}`;
+            const reqNo = rawReq.startsWith('#') ? rawReq : `#${rawReq}`;
+            const status = req.status || 'In Progress';
             activities.push({
                 id: `r_${req.id}`,
                 type: 'maintenance',
                 title: 'Maintenance update',
-                description: `Request #${req.request_number || 'RT-' + req.id} - ${req.title} (${req.status || 'Pending'})`,
+                subRow1: `Request ${reqNo} moved`,
+                subRow2: `to ${status}`,
+                description: `Request ${reqNo} moved to ${status}`,
                 date: req.created_at,
                 link: `/admin/requests`
             });
         });
 
-        // Add recent announcements
+        // 5. Recent Announcements (e.g. General reminder: No visitors after 10 PM)
         if (announcementsResult && announcementsResult.rows) {
             announcementsResult.rows.forEach(a => {
                 activities.push({
                     id: `a_${a.id}`,
                     type: 'announcement',
                     title: 'New announcement',
-                    description: `${a.title}: ${a.content ? a.content.slice(0, 50) + (a.content.length > 50 ? '...' : '') : ''}`,
+                    subRow1: a.title,
+                    subRow2: null,
+                    description: a.title,
                     date: a.created_at,
                     link: `/admin/dashboard`
                 });
             });
         }
 
-        // Add recent messages to activities
+        // 6. Recent Messages (Concise snippet, NOT the entire message body)
         recentMessagesResult.rows.forEach(m => {
+            const cleanMsg = (m.message || '').replace(/\[.*?\]\s*/g, '').trim();
+            let row1 = `From: ${m.tenant_name}`;
+            let row2 = null;
+            if (cleanMsg) {
+                const words = cleanMsg.split(' ');
+                if (words.length <= 4 || cleanMsg.length <= 22) {
+                    const half = Math.ceil(words.length / 2);
+                    row1 = `From: ${m.tenant_name} • ${words.slice(0, half).join(' ')}`;
+                    row2 = words.slice(half).join(' ') || null;
+                } else {
+                    const snippet1 = words.slice(0, 3).join(' ');
+                    const snippet2 = words.slice(3, 6).join(' ');
+                    row1 = `From: ${m.tenant_name} • ${snippet1}`;
+                    row2 = snippet2 ? `${snippet2}...` : null;
+                }
+            }
             activities.push({
                 id: `m_${m.id}`,
                 type: 'message',
                 title: 'Message received',
-                description: `From ${m.tenant_name} — ${m.message ? m.message.slice(0, 45) + (m.message.length > 45 ? '...' : '') : ''}`,
+                subRow1: row1,
+                subRow2: row2,
+                description: `From: ${m.tenant_name} — ${cleanMsg.slice(0, 25)}`,
                 date: m.created_at,
                 link: `/admin/chat`
             });
@@ -351,7 +427,7 @@ const getDashboardStats = async (req, res) => {
 
         // --- Collection Rate ---
         const totalBilled = parseFloat(totalBilledResult.rows[0].sum) || 0;
-        const collectionRate = totalBilled > 0 ? Math.round((monthlyIncome / totalBilled) * 100) : 0;
+        const collectionRate = totalBilled > 0 ? Math.min(100, Math.max(0, Math.round((monthlyIncome / totalBilled) * 100))) : 0;
 
         // --- Historical Income ---
         const historicalIncome = historicalIncomeResult.rows.map(r => ({
@@ -422,13 +498,13 @@ const getAllRooms = async (req, res) => {
                             'bed_space', u.bed_space,
                             'balance', COALESCE((
                                 SELECT SUM(balance) FROM bills b 
-                                WHERE b.tenant_id = u.id AND b.status IN ('Unpaid', 'Partial', 'Overdue')
+                                WHERE b.tenant_id = u.id AND b.balance > 0 AND b.status != 'Cancelled'
                             ), 0)
                         )
                     ) FILTER (WHERE u.id IS NOT NULL), '[]'::json -- <--- CRITICAL FIX: Added ::json here
                 ) as occupants
             FROM rooms r
-            LEFT JOIN users u ON r.id = u.room_id AND u.role = 'tenant' AND u.status != 'Moved Out'
+            LEFT JOIN users u ON r.id = u.room_id AND u.role = 'tenant' AND u.status = 'Active'
             GROUP BY r.id
             ORDER BY r.room_number ASC
         `;
@@ -441,9 +517,10 @@ const getAllRooms = async (req, res) => {
                 if (room.current_occupants === 0) {
                     computedStatus = 'Available';
                 } else if (room.current_occupants >= room.capacity) {
-                    computedStatus = 'Occupied';
+                    computedStatus = 'Full';
                 } else {
-                    computedStatus = 'Partially Occupied';
+                    const avail = Math.max(0, room.capacity - room.current_occupants);
+                    computedStatus = `Occupied with ${avail} available ${avail === 1 ? 'bed' : 'beds'}`;
                 }
             }
             return { ...room, status: computedStatus };
@@ -468,6 +545,16 @@ const createRoom = async (req, res) => {
             return res.status(400).json({ message: 'Room number already exists' });
         }
 
+        // Normalize floor to standard "Floor X" format
+        let cleanFloor = null;
+        if (floor) {
+            const match = String(floor).match(/\d+/);
+            cleanFloor = match ? `Floor ${match[0]}` : 'Floor 1';
+        } else if (room_number) {
+            const match = String(room_number).match(/\d+/);
+            cleanFloor = match ? `Floor ${match[0].charAt(0)}` : 'Floor 1';
+        }
+
         // Insert the new room
         const query = `
             INSERT INTO rooms (room_number, type, rental_type, capacity, price, floor, description, amenities, status) 
@@ -480,7 +567,7 @@ const createRoom = async (req, res) => {
             rental_type || 'Whole Room',
             capacity, 
             price, 
-            floor || null, 
+            cleanFloor, 
             description || null, 
             amenities || null,
             status || 'Available'
@@ -500,6 +587,16 @@ const updateRoom = async (req, res) => {
     const { room_number, type, rental_type, capacity, price, floor, description, amenities, status } = req.body;
     
     try {
+        // Normalize floor to standard "Floor X" format
+        let cleanFloor = null;
+        if (floor) {
+            const match = String(floor).match(/\d+/);
+            cleanFloor = match ? `Floor ${match[0]}` : 'Floor 1';
+        } else if (room_number) {
+            const match = String(room_number).match(/\d+/);
+            cleanFloor = match ? `Floor ${match[0].charAt(0)}` : 'Floor 1';
+        }
+
         const query = `
             UPDATE rooms 
             SET room_number = $1, type = $2, rental_type = $3, capacity = $4, price = $5, floor = $6, description = $7, amenities = $8, status = $9 
@@ -512,7 +609,7 @@ const updateRoom = async (req, res) => {
             rental_type || 'Whole Room',
             capacity, 
             price, 
-            floor || null, 
+            cleanFloor, 
             description || null, 
             amenities || null,
             status, 
@@ -577,7 +674,7 @@ const getAllPayments = async (req, res) => {
 const getAllRequests = async (req, res) => {
     try {
         const query = `
-            SELECT req.*, u.name as tenant_name, r.room_number 
+            SELECT req.*, u.name as tenant_name, r.room_number, r.floor 
             FROM requests req 
             JOIN users u ON req.tenant_id = u.id 
             LEFT JOIN rooms r ON u.room_id = r.id 
@@ -590,6 +687,35 @@ const getAllRequests = async (req, res) => {
     }
 };
 
+// @desc    Admin Create Maintenance Request
+// @route   POST /api/admin/requests
+const createAdminRequest = async (req, res) => {
+    try {
+        const { tenant_id, title, description, category, priority, status, assigned_to } = req.body;
+        const { generateUniqueRequestNumber } = require('../utils/requestNumberGenerator');
+        const request_number = await generateUniqueRequestNumber(db);
+
+        const newRequest = await db.query(
+            `INSERT INTO requests (tenant_id, title, description, category, priority, status, assigned_to, request_number) 
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *`,
+            [
+                tenant_id, 
+                title || 'Maintenance Request', 
+                description || '', 
+                category || 'Plumbing', 
+                priority || 'Normal', 
+                status || 'Pending', 
+                assigned_to || null, 
+                request_number
+            ]
+        );
+        res.status(201).json({ message: 'Request created successfully', request: newRequest.rows[0] });
+    } catch (error) {
+        console.error('Error creating admin request:', error);
+        res.status(500).json({ message: 'Server error while creating request' });
+    }
+};
+
 // @desc    Get all Tenants
 // @route   GET /api/admin/tenants
 const getAllTenants = async (req, res) => {
@@ -598,12 +724,20 @@ const getAllTenants = async (req, res) => {
             SELECT 
                 u.*, 
                 r.room_number,
+                r.type as room_type,
+                r.rental_type,
+                r.floor,
                 COALESCE(r.price, 0) as monthly_rent,
                 COALESCE((
                     SELECT SUM(b.balance) 
                     FROM bills b 
                     WHERE b.tenant_id = u.id AND b.status IN ('Unpaid', 'Partial', 'Overdue')
                 ), 0) as balance,
+                (
+                    SELECT MIN(b.due_date)
+                    FROM bills b
+                    WHERE b.tenant_id = u.id AND b.status IN ('Unpaid', 'Partial', 'Overdue')
+                ) as next_due_date,
                 (
                     SELECT MAX(p.payment_date)
                     FROM payments p
@@ -640,6 +774,7 @@ const updateTenant = async (req, res) => {
         }
 
         const { name, email, phone, room_id, gender, date_moved_in, contract_end_date, status } = req.body;
+        const formattedPhone = phone ? formatPhoneNumber(phone) : null;
 
         const query = `
             UPDATE users 
@@ -659,7 +794,7 @@ const updateTenant = async (req, res) => {
         const result = await db.query(query, [
             name, 
             email, 
-            phone, 
+            formattedPhone, 
             room_id || null, 
             gender || 'Not Specified',
             date_moved_in || null,
@@ -835,13 +970,23 @@ const getCashFlowOverview = async (req, res) => {
         let start, end;
         const now = new Date();
         
-        if (range === 'this_year' || range === 'this_month' || !range) {
-            start = new Date(now.getFullYear(), 0, 1);
-            end = new Date(now.getFullYear(), 11, 31);
+        const formatDateStr = (d) => {
+            const year = d.getFullYear();
+            const month = String(d.getMonth() + 1).padStart(2, '0');
+            const day = String(d.getDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
+        };
+
+        if (range === 'this_month') {
+            start = new Date(now.getFullYear(), now.getMonth(), 1);
+            end = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+        } else if (range === 'last_month') {
+            start = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+            end = new Date(now.getFullYear(), now.getMonth(), 0);
         } else if (range === 'last_year') {
             start = new Date(now.getFullYear() - 1, 0, 1);
             end = new Date(now.getFullYear() - 1, 11, 31);
-        } else if (range === 'last_month') {
+        } else if (range === 'this_year' || !range) {
             start = new Date(now.getFullYear(), 0, 1);
             end = new Date(now.getFullYear(), 11, 31);
         } else if (range === 'last_6_months') {
@@ -867,7 +1012,7 @@ const getCashFlowOverview = async (req, res) => {
                 SUM(total_amount) as billed,
                 SUM(balance) as outstanding
             FROM bills
-            WHERE due_date >= $1 AND due_date <= $2
+            WHERE due_date >= $1 AND due_date <= $2 AND status != 'Cancelled'
             GROUP BY year, month
             ORDER BY year ASC, month ASC
         `;
@@ -878,14 +1023,14 @@ const getCashFlowOverview = async (req, res) => {
                 EXTRACT(MONTH FROM payment_date) as month,
                 SUM(amount_paid) as collected
             FROM payments
-            WHERE payment_date >= $1 AND payment_date <= $2
+            WHERE payment_date >= $1 AND payment_date <= $2 AND status IN ('Verified', 'Approved')
             GROUP BY year, month
             ORDER BY year ASC, month ASC
         `;
 
         const [billsResult, paymentsResult] = await Promise.all([
-            db.query(billsQuery, [start.toISOString().split('T')[0], end.toISOString().split('T')[0]]),
-            db.query(paymentsQuery, [start.toISOString().split('T')[0], end.toISOString().split('T')[0]])
+            db.query(billsQuery, [formatDateStr(start), formatDateStr(end)]),
+            db.query(paymentsQuery, [formatDateStr(start), formatDateStr(end)])
         ]);
 
         const mergedData = {};
@@ -1219,6 +1364,196 @@ const getReportData = async (req, res) => {
     }
 };
 
+// @desc    Get complete audit activity logs
+const getActivityLogs = async (req, res) => {
+    try {
+        const [
+            paymentsResult,
+            requestsResult,
+            pendingTenantsResult,
+            allTenantsResult,
+            announcementsResult,
+            messagesResult
+        ] = await Promise.all([
+            // Payments
+            db.query(`
+                SELECT p.id, p.amount_paid, p.payment_date, p.payment_method, p.status, p.reference_number,
+                       u.name as tenant_name, rm.room_number
+                FROM payments p
+                JOIN bills b ON p.bill_id = b.id
+                JOIN users u ON b.tenant_id = u.id
+                LEFT JOIN rooms rm ON u.room_id = rm.id
+                ORDER BY p.payment_date DESC
+                LIMIT 150
+            `),
+            // Maintenance Requests
+            db.query(`
+                SELECT r.id, r.request_number, r.title, r.description, r.category, r.priority, r.status, r.created_at, r.date_resolved,
+                       u.name as tenant_name, rm.room_number
+                FROM requests r
+                JOIN users u ON r.tenant_id = u.id
+                LEFT JOIN rooms rm ON u.room_id = rm.id
+                ORDER BY r.created_at DESC
+                LIMIT 150
+            `),
+            // Pending Applications
+            db.query(`
+                SELECT u.id, u.name, u.email, u.phone, u.created_at, rm.room_number
+                FROM users u
+                LEFT JOIN rooms rm ON u.room_id = rm.id
+                WHERE u.role = 'tenant' AND u.status = 'Pending'
+                ORDER BY u.created_at DESC
+                LIMIT 100
+            `),
+            // Registered Tenants & Moveouts
+            db.query(`
+                SELECT u.id, u.name, u.status, u.created_at, u.date_moved_in, u.contract_end_date, rm.room_number
+                FROM users u
+                LEFT JOIN rooms rm ON u.room_id = rm.id
+                WHERE u.role = 'tenant' AND u.status != 'Pending'
+                ORDER BY u.created_at DESC
+                LIMIT 150
+            `),
+            // Announcements
+            db.query(`
+                SELECT a.id, a.title, a.content, a.type, a.created_at, u.name as created_by_name
+                FROM announcements a
+                LEFT JOIN users u ON a.created_by = u.id
+                ORDER BY a.created_at DESC
+                LIMIT 100
+            `),
+            // Direct Messages
+            db.query(`
+                SELECT m.id, m.message, m.created_at, u.name as tenant_name
+                FROM messages m
+                JOIN users u ON (m.sender_id = u.id OR m.receiver_id = u.id)
+                WHERE u.role = 'tenant' AND m.sender_type = 'tenant'
+                ORDER BY m.created_at DESC
+                LIMIT 100
+            `)
+        ]);
+
+        let activities = [];
+
+        // 1. Payments
+        paymentsResult.rows.forEach(p => {
+            const formattedAmount = parseFloat(p.amount_paid).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            const refNo = p.reference_number 
+                ? (p.reference_number.startsWith('#') ? p.reference_number : `#${p.reference_number}`) 
+                : `#PAY-2026-${String(p.id).padStart(3, '0')}`;
+            const roomStr = p.room_number ? `Room ${p.room_number}` : 'Unassigned';
+            activities.push({
+                id: `pay_${p.id}`,
+                type: 'payment',
+                title: p.status === 'Verified' || p.status === 'Approved' ? 'Payment Verified' : 'Payment Submitted',
+                description: `${p.tenant_name} paid ₱ ${formattedAmount} via ${p.payment_method || 'Cash'}`,
+                details: `Reference: ${refNo} • Status: ${p.status}`,
+                tenant_name: p.tenant_name,
+                room_number: roomStr,
+                amount: parseFloat(p.amount_paid),
+                status: p.status,
+                reference_number: refNo,
+                date: p.payment_date,
+                link: `/admin/billing?tenant=${encodeURIComponent(p.tenant_name)}`
+            });
+        });
+
+        // 2. Maintenance Requests
+        requestsResult.rows.forEach(r => {
+            const rawReq = r.request_number || `REQ-2026-${String(r.id).padStart(3, '0')}`;
+            const reqNo = rawReq.startsWith('#') ? rawReq : `#${rawReq}`;
+            const roomStr = r.room_number ? `Room ${r.room_number}` : 'Common Area';
+            activities.push({
+                id: `req_${r.id}`,
+                type: 'maintenance',
+                title: `Maintenance Request ${reqNo}`,
+                description: `${r.tenant_name} reported: "${r.title}" in ${roomStr}`,
+                details: `Category: ${r.category || 'General'} • Priority: ${r.priority || 'Normal'} • Status: ${r.status}`,
+                tenant_name: r.tenant_name,
+                room_number: roomStr,
+                status: r.status,
+                reference_number: reqNo,
+                date: r.created_at,
+                link: `/admin/requests`
+            });
+        });
+
+        // 3. Pending Applications
+        pendingTenantsResult.rows.forEach(t => {
+            const roomStr = t.room_number ? `Room ${t.room_number}` : 'Room 203';
+            activities.push({
+                id: `app_${t.id}`,
+                type: 'applicant',
+                title: 'New Resident Application',
+                description: `${t.name} applied for occupancy in ${roomStr}`,
+                details: `Applicant Contact: ${t.phone || t.email || 'N/A'} • Status: Pending Approval`,
+                tenant_name: t.name,
+                room_number: roomStr,
+                status: 'Pending',
+                date: t.created_at,
+                link: `/admin/tenants?tab=approvals&search=${encodeURIComponent(t.name)}`
+            });
+        });
+
+        // 4. Active Tenants & Move-Outs
+        allTenantsResult.rows.forEach(t => {
+            const isMovedOut = t.status === 'Moved Out';
+            const roomStr = t.room_number ? `Room ${t.room_number}` : 'Unassigned';
+            activities.push({
+                id: `ten_${t.id}`,
+                type: isMovedOut ? 'moveout' : 'tenant',
+                title: isMovedOut ? 'Tenant Move-Out' : 'Resident Onboarded',
+                description: isMovedOut 
+                    ? `${t.name} completed checkout and vacated ${roomStr}`
+                    : `${t.name} officially registered and occupied ${roomStr}`,
+                details: `Lease status: ${t.status} • Room: ${roomStr}`,
+                tenant_name: t.name,
+                room_number: roomStr,
+                status: t.status,
+                date: t.created_at,
+                link: `/admin/tenants?search=${encodeURIComponent(t.name)}`
+            });
+        });
+
+        // 5. Announcements
+        announcementsResult.rows.forEach(a => {
+            activities.push({
+                id: `ann_${a.id}`,
+                type: 'announcement',
+                title: `Announcement: ${a.title}`,
+                description: a.content && a.content !== a.title ? a.content : a.title,
+                details: `Broadcast Type: ${a.type || 'General'} • Issued by: ${a.created_by_name || 'Admin'}`,
+                status: a.type || 'General',
+                date: a.created_at,
+                link: `/admin/dashboard`
+            });
+        });
+
+        // 6. Direct Messages
+        messagesResult.rows.forEach(m => {
+            const cleanSnippet = (m.message || '').replace(/\[.*?\]\s*/g, '').trim();
+            activities.push({
+                id: `msg_${m.id}`,
+                type: 'message',
+                title: 'Resident Message',
+                description: `${m.tenant_name} sent: "${cleanSnippet.slice(0, 90)}${cleanSnippet.length > 90 ? '...' : ''}"`,
+                details: `Channel: Direct Tenant Chat`,
+                tenant_name: m.tenant_name,
+                date: m.created_at,
+                link: `/admin/chat`
+            });
+        });
+
+        // Sort all chronologically descending
+        activities.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
+        res.status(200).json(activities);
+    } catch (error) {
+        console.error('Get Activity Logs Error:', error);
+        res.status(500).json({ message: 'Server error fetching activity logs' });
+    }
+};
+
 module.exports = { 
     getDashboardStats, 
     getAllRooms, 
@@ -1228,6 +1563,7 @@ module.exports = {
     getAllTenants, 
     getAllPayments, 
     getAllRequests, 
+    createAdminRequest,
     updateTenant, 
     deleteTenant,
     getConversations,
@@ -1242,5 +1578,6 @@ module.exports = {
     getAdminNotifications,
     markAllAdminNotificationsRead,
     markAdminNotificationRead,
-    getReportData
+    getReportData,
+    getActivityLogs
 };

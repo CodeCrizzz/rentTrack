@@ -28,6 +28,7 @@ import {
 } from "lucide-react";
 import api from "@/lib/api";
 import { toast } from "sonner";
+import DropdownSelect from "@/components/dropdown-select";
 
 export interface MaintenanceTicket {
   id: number;
@@ -45,15 +46,15 @@ export interface MaintenanceTicket {
   created_at: string;
 }
 
-interface MaintenanceKanbanProps {
+interface MaintenanceRequestBoardProps {
   initialTickets: MaintenanceTicket[];
   onTicketsUpdated?: (tickets: MaintenanceTicket[]) => void;
 }
 
-export default function MaintenanceKanban({
+export default function MaintenanceRequestBoard({
   initialTickets,
   onTicketsUpdated
-}: MaintenanceKanbanProps) {
+}: MaintenanceRequestBoardProps) {
   const [tickets, setTickets] = useState<MaintenanceTicket[]>(initialTickets || []);
   const [searchQuery, setSearchQuery] = useState("");
   const [priorityFilter, setPriorityFilter] = useState("all");
@@ -226,16 +227,19 @@ export default function MaintenanceKanban({
           </div>
 
           {/* Priority Filter */}
-          <select
-            value={priorityFilter}
-            onChange={e => setPriorityFilter(e.target.value)}
-            className="bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 text-xs font-semibold text-slate-700 dark:text-zinc-200 rounded-lg px-2.5 py-1.5 focus:outline-none cursor-pointer"
-          >
-            <option value="all">All Priorities</option>
-            <option value="urgent">Urgent</option>
-            <option value="high">High</option>
-            <option value="normal">Normal</option>
-          </select>
+          <div className="w-36 shrink-0">
+            <DropdownSelect
+              value={priorityFilter}
+              onChange={val => setPriorityFilter(val)}
+              options={[
+                { value: "all", label: "All Priorities" },
+                { value: "urgent", label: "Urgent", dotColor: "bg-rose-500" },
+                { value: "high", label: "High", dotColor: "bg-amber-500" },
+                { value: "normal", label: "Normal", dotColor: "bg-blue-500" },
+              ]}
+              className="w-full bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 text-xs font-semibold text-slate-700 dark:text-zinc-200 rounded-lg px-2.5 py-1.5 focus:outline-none"
+            />
+          </div>
 
           {/* Full Manager Link */}
           <Link

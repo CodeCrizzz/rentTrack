@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useMemo, useRef } from "react";
+import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   X,
@@ -31,6 +32,8 @@ import {
 } from "lucide-react";
 import api from "@/lib/api";
 import { toast } from "sonner";
+import { formatPhoneNumber } from "@/lib/phone-utils";
+import DropdownSelect from "@/components/dropdown-select";
 
 interface AdminReportModalProps {
   isOpen: boolean;
@@ -143,6 +146,7 @@ interface ReportData {
 }
 
 export default function AdminReportModal({ isOpen, onClose }: AdminReportModalProps) {
+  const [mounted, setMounted] = useState(false);
   const [activeTab, setActiveTab] = useState<ReportTab>("overview");
   const [dateRange, setDateRange] = useState("this_month");
   const [isLoading, setIsLoading] = useState(false);
@@ -194,6 +198,10 @@ export default function AdminReportModal({ isOpen, onClose }: AdminReportModalPr
       fetchReport(dateRange);
     }
   }, [isOpen, dateRange]);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   // Escape key handler
   useEffect(() => {
@@ -316,7 +324,7 @@ export default function AdminReportModal({ isOpen, onClose }: AdminReportModalPr
         rows.push([
           a.tenant_name,
           a.room_number || "-",
-          a.phone || "-",
+          formatPhoneNumber(a.phone, "-"),
           a.billing_month,
           a.due_date ? new Date(a.due_date).toLocaleDateString() : "-",
           String(a.days_overdue),
@@ -429,9 +437,9 @@ export default function AdminReportModal({ isOpen, onClose }: AdminReportModalPr
     );
   }, [reportData, searchFilter]);
 
-  if (!isOpen) return null;
+  if (!isOpen || !mounted) return null;
 
-  return (
+  return createPortal(
     <>
       {/* Global CSS for Print View */}
       <style jsx global>{`
@@ -461,7 +469,7 @@ export default function AdminReportModal({ isOpen, onClose }: AdminReportModalPr
         }
       `}</style>
 
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-black/75 backdrop-blur-xs font-sans text-slate-900 dark:text-zinc-100">
+      <div className="fixed inset-0 z-[100] flex items-center justify-center p-2 sm:p-4 bg-black/60 backdrop-blur-md font-sans text-slate-900 dark:text-zinc-100">
         {/* Backdrop click */}
         <motion.div
           initial={{ opacity: 0 }}
@@ -494,7 +502,7 @@ export default function AdminReportModal({ isOpen, onClose }: AdminReportModalPr
                     Official Hub
                   </span>
                 </div>
-                <p className="text-xs text-slate-500 dark:text-zinc-400 mt-0.5">
+                <p className="text-xs text-slate-600 dark:text-zinc-300 mt-0.5 font-medium">
                   Export verified cash flow, rent roll, delinquency audits, and work orders
                 </p>
               </div>
@@ -534,7 +542,7 @@ export default function AdminReportModal({ isOpen, onClose }: AdminReportModalPr
               <button
                 type="button"
                 onClick={onClose}
-                className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-zinc-200 hover:bg-slate-100 dark:hover:bg-zinc-800 transition-colors ml-1 cursor-pointer"
+                className="p-1.5 rounded-lg text-slate-500 hover:text-slate-800 dark:text-zinc-400 dark:hover:text-zinc-100 hover:bg-slate-100 dark:hover:bg-zinc-800 transition-colors ml-1 cursor-pointer"
                 title="Close"
               >
                 <X className="w-5 h-5" />
@@ -563,7 +571,7 @@ export default function AdminReportModal({ isOpen, onClose }: AdminReportModalPr
                     className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-2 whitespace-nowrap cursor-pointer ${
                       isActive
                         ? "bg-teal-50 dark:bg-teal-950/60 text-teal-700 dark:text-teal-300 border border-teal-200 dark:border-teal-800"
-                        : "text-slate-600 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-zinc-200 hover:bg-slate-50 dark:hover:bg-zinc-900"
+                        : "text-slate-600 dark:text-zinc-300 hover:text-slate-900 dark:hover:text-white hover:bg-slate-50 dark:hover:bg-zinc-900"
                     }`}
                   >
                     <Icon className={`w-3.5 h-3.5 ${isActive ? "text-teal-600 dark:text-teal-400" : ""}`} />
@@ -575,30 +583,30 @@ export default function AdminReportModal({ isOpen, onClose }: AdminReportModalPr
 
             {/* Right side: Range Selector & Refresh */}
             <div className="flex items-center gap-2 shrink-0">
-              <div className="flex items-center gap-1.5 bg-slate-50 dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-lg px-2.5 py-1">
-                <Calendar className="w-3.5 h-3.5 text-slate-400" />
-                <select
+              <div className="w-40 sm:w-44 shrink-0">
+                <DropdownSelect
                   value={dateRange}
-                  onChange={e => setDateRange(e.target.value)}
-                  className="bg-transparent text-xs font-semibold text-slate-800 dark:text-zinc-200 focus:outline-none cursor-pointer"
-                >
-                  <option value="this_month">Current Month</option>
-                  <option value="last_month">Previous Month</option>
-                  <option value="this_year">Year-to-Date</option>
-                  <option value="all_time">All-Time History</option>
-                </select>
+                  onChange={val => setDateRange(val)}
+                  options={[
+                    { value: "this_month", label: "Current Month" },
+                    { value: "last_month", label: "Previous Month" },
+                    { value: "this_year", label: "Year-to-Date" },
+                    { value: "all_time", label: "All-Time History" },
+                  ]}
+                  className="w-full bg-slate-50 dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-lg px-2.5 py-1.5 text-xs font-semibold text-slate-800 dark:text-zinc-200 focus:outline-none"
+                />
               </div>
 
               {/* Quick Search */}
               {activeTab !== "overview" && (
                 <div className="relative w-40 sm:w-48">
-                  <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
+                  <Search className="w-3.5 h-3.5 text-slate-500 dark:text-zinc-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
                   <input
                     type="text"
                     value={searchFilter}
                     onChange={e => setSearchFilter(e.target.value)}
                     placeholder="Search records..."
-                    className="w-full bg-slate-50 dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-lg pl-8 pr-2.5 py-1 text-xs text-slate-900 dark:text-zinc-100 placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-teal-500"
+                    className="w-full bg-slate-50 dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-lg pl-8 pr-2.5 py-1 text-xs text-slate-900 dark:text-zinc-100 placeholder:text-slate-500 dark:placeholder:text-zinc-400 focus:outline-none focus:ring-1 focus:ring-teal-500"
                   />
                   {searchFilter && (
                     <button
@@ -639,10 +647,10 @@ export default function AdminReportModal({ isOpen, onClose }: AdminReportModalPr
                   <h1 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white mt-0.5">
                     {propertyProfile.propertyName}
                   </h1>
-                  <p className="text-xs text-slate-500 dark:text-zinc-400 mt-1">
+                  <p className="text-xs text-slate-600 dark:text-zinc-300 mt-1 font-medium">
                     {propertyProfile.propertyAddress} • {propertyProfile.contactPhone}
                   </p>
-                  <p className="text-[11px] font-mono text-slate-400 dark:text-zinc-500">
+                  <p className="text-[11px] font-mono text-slate-500 dark:text-zinc-400 font-medium">
                     {propertyProfile.taxId}
                   </p>
                 </div>
@@ -651,11 +659,11 @@ export default function AdminReportModal({ isOpen, onClose }: AdminReportModalPr
                   <div className="inline-block px-2.5 py-1 rounded bg-slate-100 dark:bg-zinc-800 text-slate-700 dark:text-zinc-300 text-xs font-semibold">
                     Scope: {reportData?.meta?.dateRange || "Current Month"}
                   </div>
-                  <p className="text-[11px] text-slate-500 dark:text-zinc-400">
+                  <p className="text-[11px] text-slate-600 dark:text-zinc-300 font-medium">
                     Generated: {reportData?.meta?.generatedAt ? new Date(reportData.meta.generatedAt).toLocaleString() : new Date().toLocaleString()}
                   </p>
-                  <p className="text-[11px] text-slate-500 dark:text-zinc-400">
-                    Prepared by: <span className="font-semibold text-slate-700 dark:text-zinc-300">{reportData?.meta?.generatedBy || "Administrator"}</span>
+                  <p className="text-[11px] text-slate-600 dark:text-zinc-300 font-medium">
+                    Prepared by: <span className="font-semibold text-slate-800 dark:text-zinc-200">{reportData?.meta?.generatedBy || "Administrator"}</span>
                   </p>
                 </div>
               </div>
@@ -752,7 +760,7 @@ export default function AdminReportModal({ isOpen, onClose }: AdminReportModalPr
                         return (
                           <div key={idx} className="space-y-1">
                             <div className="flex justify-between text-xs">
-                              <span className="font-medium text-slate-600 dark:text-zinc-400">{item.label}</span>
+                              <span className="font-semibold text-slate-700 dark:text-zinc-200">{item.label}</span>
                               <span className="font-mono font-bold text-slate-900 dark:text-white">
                                 ₱{item.amount.toLocaleString()} ({pct}%)
                               </span>
@@ -765,7 +773,7 @@ export default function AdminReportModal({ isOpen, onClose }: AdminReportModalPr
                       })}
                     </div>
 
-                    <div className="mt-5 pt-3 border-t border-slate-100 dark:border-zinc-800 flex items-center justify-between text-xs text-slate-500 dark:text-zinc-400">
+                    <div className="mt-5 pt-3 border-t border-slate-100 dark:border-zinc-800 flex items-center justify-between text-xs text-slate-600 dark:text-zinc-300 font-medium">
                       <span>Total Collections Completed:</span>
                       <span className="font-mono font-bold text-emerald-600 dark:text-emerald-400">
                         ₱{reportData.financials.totalCollected.toLocaleString()}
@@ -787,32 +795,32 @@ export default function AdminReportModal({ isOpen, onClose }: AdminReportModalPr
 
                     <div className="grid grid-cols-2 gap-3 mt-4">
                       <div className="p-3 rounded-lg border border-slate-100 dark:border-zinc-800 bg-slate-50/50 dark:bg-zinc-900/50">
-                        <span className="text-xs text-slate-500 dark:text-zinc-400">Total Capacity</span>
+                        <span className="text-xs text-slate-600 dark:text-zinc-300 font-semibold">Total Capacity</span>
                         <div className="text-lg font-bold font-mono text-slate-900 dark:text-white mt-1">
                           {reportData.occupancy.totalCapacity} Beds
                         </div>
                       </div>
                       <div className="p-3 rounded-lg border border-slate-100 dark:border-zinc-800 bg-slate-50/50 dark:bg-zinc-900/50">
-                        <span className="text-xs text-slate-500 dark:text-zinc-400">Current Occupants</span>
+                        <span className="text-xs text-slate-600 dark:text-zinc-300 font-semibold">Current Occupants</span>
                         <div className="text-lg font-bold font-mono text-slate-900 dark:text-white mt-1">
                           {reportData.occupancy.totalOccupants} Tenants
                         </div>
                       </div>
                       <div className="p-3 rounded-lg border border-slate-100 dark:border-zinc-800 bg-slate-50/50 dark:bg-zinc-900/50">
-                        <span className="text-xs text-slate-500 dark:text-zinc-400">Fully Occupied Rooms</span>
+                        <span className="text-xs text-slate-600 dark:text-zinc-300 font-semibold">Fully Occupied Rooms</span>
                         <div className="text-lg font-bold font-mono text-emerald-600 dark:text-emerald-400 mt-1">
                           {reportData.occupancy.occupiedRooms} Rooms
                         </div>
                       </div>
                       <div className="p-3 rounded-lg border border-slate-100 dark:border-zinc-800 bg-slate-50/50 dark:bg-zinc-900/50">
-                        <span className="text-xs text-slate-500 dark:text-zinc-400">Vacant / Available</span>
+                        <span className="text-xs text-slate-600 dark:text-zinc-300 font-semibold">Vacant / Available</span>
                         <div className="text-lg font-bold font-mono text-blue-600 dark:text-blue-400 mt-1">
                           {reportData.occupancy.availableRooms} Rooms
                         </div>
                       </div>
                     </div>
 
-                    <div className="mt-4 pt-3 border-t border-slate-100 dark:border-zinc-800 flex items-center justify-between text-xs text-slate-500 dark:text-zinc-400">
+                    <div className="mt-4 pt-3 border-t border-slate-100 dark:border-zinc-800 flex items-center justify-between text-xs text-slate-600 dark:text-zinc-300 font-medium">
                       <span>Rooms in Maintenance:</span>
                       <span className="font-mono font-bold text-amber-600">
                         {reportData.occupancy.maintenanceRooms} Units
@@ -839,14 +847,14 @@ export default function AdminReportModal({ isOpen, onClose }: AdminReportModalPr
                   </div>
 
                   {reportData.overdue.accounts.length === 0 ? (
-                    <div className="py-6 text-center text-xs text-slate-500">
+                    <div className="py-6 text-center text-xs text-slate-600 dark:text-zinc-300 font-medium">
                       No overdue accounts found in this period. Perfect standing!
                     </div>
                   ) : (
                     <div className="overflow-x-auto mt-3">
                       <table className="w-full text-left text-xs border-collapse">
                         <thead>
-                          <tr className="border-b border-slate-200 dark:border-zinc-800 text-slate-500 dark:text-zinc-400">
+                          <tr className="border-b border-slate-200 dark:border-zinc-800 text-slate-600 dark:text-zinc-300 font-semibold">
                             <th className="py-2 px-3 font-semibold">Tenant Name</th>
                             <th className="py-2 px-3 font-semibold">Room</th>
                             <th className="py-2 px-3 font-semibold">Month</th>
@@ -861,9 +869,9 @@ export default function AdminReportModal({ isOpen, onClose }: AdminReportModalPr
                               <td className="py-2.5 px-3 font-semibold text-slate-900 dark:text-white">
                                 {acc.tenant_name}
                               </td>
-                              <td className="py-2.5 px-3 font-mono">{acc.room_number || "-"}</td>
-                              <td className="py-2.5 px-3 text-slate-500">{acc.billing_month}</td>
-                              <td className="py-2.5 px-3 text-slate-500">
+                              <td className="py-2.5 px-3 font-mono text-slate-800 dark:text-zinc-200 font-medium">{acc.room_number || "-"}</td>
+                              <td className="py-2.5 px-3 text-slate-600 dark:text-zinc-300 font-medium">{acc.billing_month}</td>
+                              <td className="py-2.5 px-3 text-slate-600 dark:text-zinc-300 font-medium">
                                 {acc.due_date ? new Date(acc.due_date).toLocaleDateString() : "-"}
                               </td>
                               <td className="py-2.5 px-3">
@@ -894,13 +902,13 @@ export default function AdminReportModal({ isOpen, onClose }: AdminReportModalPr
                       key={idx}
                       className="p-3.5 rounded-xl bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 shadow-xs"
                     >
-                      <span className="text-[10px] uppercase font-bold tracking-wider text-slate-500 dark:text-zinc-400">
+                      <span className="text-[10px] uppercase font-bold tracking-wider text-slate-600 dark:text-zinc-300">
                         {m.method}
                       </span>
                       <div className="text-lg font-bold font-mono text-slate-900 dark:text-white mt-1">
                         ₱{Number(m.total).toLocaleString()}
                       </div>
-                      <span className="text-[11px] text-slate-500 dark:text-zinc-400">
+                      <span className="text-[11px] text-slate-600 dark:text-zinc-300 font-medium">
                         {m.count} transactions
                       </span>
                     </div>
@@ -912,7 +920,7 @@ export default function AdminReportModal({ isOpen, onClose }: AdminReportModalPr
                   <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-zinc-800">
                     <div>
                       <h3 className="text-sm font-bold text-slate-900 dark:text-white">Transaction Payment Ledger</h3>
-                      <p className="text-xs text-slate-500 dark:text-zinc-400">
+                      <p className="text-xs text-slate-600 dark:text-zinc-300 font-medium">
                         Showing {filteredLedger.length} verified payment entries
                       </p>
                     </div>
@@ -921,7 +929,7 @@ export default function AdminReportModal({ isOpen, onClose }: AdminReportModalPr
                   <div className="overflow-x-auto mt-3">
                     <table className="w-full text-left text-xs border-collapse">
                       <thead>
-                        <tr className="border-b border-slate-200 dark:border-zinc-800 text-slate-500 dark:text-zinc-400">
+                        <tr className="border-b border-slate-200 dark:border-zinc-800 text-slate-600 dark:text-zinc-300 font-semibold">
                           <th className="py-2.5 px-3 font-semibold">Ref Number</th>
                           <th className="py-2.5 px-3 font-semibold">Date</th>
                           <th className="py-2.5 px-3 font-semibold">Tenant</th>
@@ -938,14 +946,14 @@ export default function AdminReportModal({ isOpen, onClose }: AdminReportModalPr
                             <td className="py-2.5 px-3 font-mono font-medium text-slate-700 dark:text-zinc-300">
                               {p.reference_number || `TXN-${p.id}`}
                             </td>
-                            <td className="py-2.5 px-3 text-slate-500">
+                            <td className="py-2.5 px-3 text-slate-600 dark:text-zinc-300 font-medium">
                               {p.payment_date ? new Date(p.payment_date).toLocaleDateString() : "-"}
                             </td>
                             <td className="py-2.5 px-3 font-semibold text-slate-900 dark:text-white">
                               {p.tenant_name}
                             </td>
-                            <td className="py-2.5 px-3 font-mono">{p.room_number || "-"}</td>
-                            <td className="py-2.5 px-3 text-slate-500">{p.billing_month || "-"}</td>
+                            <td className="py-2.5 px-3 font-mono text-slate-800 dark:text-zinc-200 font-medium">{p.room_number || "-"}</td>
+                            <td className="py-2.5 px-3 text-slate-600 dark:text-zinc-300 font-medium">{p.billing_month || "-"}</td>
                             <td className="py-2.5 px-3">
                               <span className="inline-block px-2 py-0.5 rounded text-[10px] font-semibold bg-slate-100 dark:bg-zinc-800 text-slate-700 dark:text-zinc-300">
                                 {p.payment_method || "Cash"}
@@ -975,7 +983,7 @@ export default function AdminReportModal({ isOpen, onClose }: AdminReportModalPr
                 <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-zinc-800">
                   <div>
                     <h3 className="text-sm font-bold text-slate-900 dark:text-white">Rent Roll & Room Directory</h3>
-                    <p className="text-xs text-slate-500 dark:text-zinc-400">
+                    <p className="text-xs text-slate-600 dark:text-zinc-300 font-medium">
                       {filteredRooms.length} rooms listed with active occupants and tariffs
                     </p>
                   </div>
@@ -984,7 +992,7 @@ export default function AdminReportModal({ isOpen, onClose }: AdminReportModalPr
                 <div className="overflow-x-auto mt-3">
                   <table className="w-full text-left text-xs border-collapse">
                     <thead>
-                      <tr className="border-b border-slate-200 dark:border-zinc-800 text-slate-500 dark:text-zinc-400">
+                      <tr className="border-b border-slate-200 dark:border-zinc-800 text-slate-600 dark:text-zinc-300 font-semibold">
                         <th className="py-2.5 px-3 font-semibold">Room #</th>
                         <th className="py-2.5 px-3 font-semibold">Type</th>
                         <th className="py-2.5 px-3 font-semibold">Floor</th>
@@ -1003,9 +1011,9 @@ export default function AdminReportModal({ isOpen, onClose }: AdminReportModalPr
                             <td className="py-2.5 px-3 font-mono font-bold text-slate-900 dark:text-white">
                               {r.room_number}
                             </td>
-                            <td className="py-2.5 px-3 text-slate-600 dark:text-zinc-300">{r.type}</td>
-                            <td className="py-2.5 px-3 font-mono text-slate-500">Floor {r.floor}</td>
-                            <td className="py-2.5 px-3 font-mono">
+                            <td className="py-2.5 px-3 text-slate-700 dark:text-zinc-200 font-medium">{r.type}</td>
+                            <td className="py-2.5 px-3 font-mono text-slate-600 dark:text-zinc-300 font-medium">Floor {r.floor}</td>
+                            <td className="py-2.5 px-3 font-mono text-slate-700 dark:text-zinc-200 font-medium">
                               {r.current_occupants} / {r.capacity} beds
                             </td>
                             <td className="py-2.5 px-3">
@@ -1016,7 +1024,7 @@ export default function AdminReportModal({ isOpen, onClose }: AdminReportModalPr
                                     : isFull
                                     ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-400"
                                     : isVacant
-                                    ? "bg-slate-100 text-slate-600 dark:bg-zinc-800 dark:text-zinc-400"
+                                    ? "bg-slate-100 text-slate-600 dark:bg-zinc-800 dark:text-zinc-300"
                                     : "bg-blue-100 text-blue-700 dark:bg-blue-950/60 dark:text-blue-400"
                                 }`}
                               >
@@ -1046,7 +1054,7 @@ export default function AdminReportModal({ isOpen, onClose }: AdminReportModalPr
                     <h3 className="text-sm font-bold text-slate-900 dark:text-white">
                       Delinquent / Overdue Accounts Schedule
                     </h3>
-                    <p className="text-xs text-slate-500 dark:text-zinc-400">
+                    <p className="text-xs text-slate-600 dark:text-zinc-300 font-medium">
                       {filteredOverdue.length} delinquent accounts with unpaid balances
                     </p>
                   </div>
@@ -1061,7 +1069,7 @@ export default function AdminReportModal({ isOpen, onClose }: AdminReportModalPr
                 <div className="overflow-x-auto mt-3">
                   <table className="w-full text-left text-xs border-collapse">
                     <thead>
-                      <tr className="border-b border-slate-200 dark:border-zinc-800 text-slate-500 dark:text-zinc-400">
+                      <tr className="border-b border-slate-200 dark:border-zinc-800 text-slate-600 dark:text-zinc-300 font-semibold">
                         <th className="py-2.5 px-3 font-semibold">Tenant Name</th>
                         <th className="py-2.5 px-3 font-semibold">Room</th>
                         <th className="py-2.5 px-3 font-semibold">Contact #</th>
@@ -1079,10 +1087,10 @@ export default function AdminReportModal({ isOpen, onClose }: AdminReportModalPr
                           <td className="py-2.5 px-3 font-semibold text-slate-900 dark:text-white">
                             {acc.tenant_name}
                           </td>
-                          <td className="py-2.5 px-3 font-mono">{acc.room_number || "-"}</td>
-                          <td className="py-2.5 px-3 text-slate-500">{acc.phone || "-"}</td>
-                          <td className="py-2.5 px-3 text-slate-600 dark:text-zinc-400">{acc.billing_month}</td>
-                          <td className="py-2.5 px-3 text-slate-500">
+                          <td className="py-2.5 px-3 font-mono text-slate-800 dark:text-zinc-200 font-medium">{acc.room_number || "-"}</td>
+                          <td className="py-2.5 px-3 font-mono text-slate-600 dark:text-zinc-300 font-medium">{formatPhoneNumber(acc.phone, "-")}</td>
+                          <td className="py-2.5 px-3 text-slate-700 dark:text-zinc-300 font-medium">{acc.billing_month}</td>
+                          <td className="py-2.5 px-3 text-slate-600 dark:text-zinc-300 font-medium">
                             {acc.due_date ? new Date(acc.due_date).toLocaleDateString() : "-"}
                           </td>
                           <td className="py-2.5 px-3">
@@ -1090,7 +1098,7 @@ export default function AdminReportModal({ isOpen, onClose }: AdminReportModalPr
                               {acc.days_overdue} days
                             </span>
                           </td>
-                          <td className="py-2.5 px-3 text-right font-mono text-slate-600 dark:text-zinc-400">
+                          <td className="py-2.5 px-3 text-right font-mono text-slate-700 dark:text-zinc-300 font-medium">
                             ₱{Number(acc.total_amount).toLocaleString()}
                           </td>
                           <td className="py-2.5 px-3 text-right font-mono text-emerald-600 dark:text-emerald-400">
@@ -1113,7 +1121,7 @@ export default function AdminReportModal({ isOpen, onClose }: AdminReportModalPr
                 {/* Stats row */}
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                   <div className="p-3.5 rounded-xl bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 shadow-xs">
-                    <span className="text-[10px] uppercase font-bold tracking-wider text-slate-500 dark:text-zinc-400">
+                    <span className="text-[10px] uppercase font-bold tracking-wider text-slate-600 dark:text-zinc-300">
                       Total Requests
                     </span>
                     <div className="text-xl font-bold font-mono text-slate-900 dark:text-white mt-1">
@@ -1151,7 +1159,7 @@ export default function AdminReportModal({ isOpen, onClose }: AdminReportModalPr
                   <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-zinc-800">
                     <div>
                       <h3 className="text-sm font-bold text-slate-900 dark:text-white">Maintenance Work Order Ledger</h3>
-                      <p className="text-xs text-slate-500 dark:text-zinc-400">
+                      <p className="text-xs text-slate-600 dark:text-zinc-300 font-medium">
                         {filteredTickets.length} tickets recorded
                       </p>
                     </div>
@@ -1160,7 +1168,7 @@ export default function AdminReportModal({ isOpen, onClose }: AdminReportModalPr
                   <div className="overflow-x-auto mt-3">
                     <table className="w-full text-left text-xs border-collapse">
                       <thead>
-                        <tr className="border-b border-slate-200 dark:border-zinc-800 text-slate-500 dark:text-zinc-400">
+                        <tr className="border-b border-slate-200 dark:border-zinc-800 text-slate-600 dark:text-zinc-300 font-semibold">
                           <th className="py-2.5 px-3 font-semibold">Ticket #</th>
                           <th className="py-2.5 px-3 font-semibold">Date Filed</th>
                           <th className="py-2.5 px-3 font-semibold">Tenant</th>
@@ -1178,14 +1186,14 @@ export default function AdminReportModal({ isOpen, onClose }: AdminReportModalPr
                             <td className="py-2.5 px-3 font-mono font-medium text-slate-700 dark:text-zinc-300">
                               {t.request_number || `REQ-${t.id}`}
                             </td>
-                            <td className="py-2.5 px-3 text-slate-500">
+                            <td className="py-2.5 px-3 text-slate-600 dark:text-zinc-300 font-medium">
                               {t.created_at ? new Date(t.created_at).toLocaleDateString() : "-"}
                             </td>
                             <td className="py-2.5 px-3 font-semibold text-slate-900 dark:text-white">
                               {t.tenant_name || "-"}
                             </td>
-                            <td className="py-2.5 px-3 font-mono">{t.room_number || "-"}</td>
-                            <td className="py-2.5 px-3">{t.category}</td>
+                            <td className="py-2.5 px-3 font-mono text-slate-800 dark:text-zinc-200 font-medium">{t.room_number || "-"}</td>
+                            <td className="py-2.5 px-3 text-slate-700 dark:text-zinc-200 font-medium">{t.category}</td>
                             <td className="py-2.5 px-3">
                               <span
                                 className={`inline-block px-2 py-0.5 rounded text-[10px] font-bold ${
@@ -1193,7 +1201,7 @@ export default function AdminReportModal({ isOpen, onClose }: AdminReportModalPr
                                     ? "bg-rose-100 text-rose-700 dark:bg-rose-950/60 dark:text-rose-400"
                                     : t.priority === "High"
                                     ? "bg-amber-100 text-amber-700 dark:bg-amber-950/60 dark:text-amber-400"
-                                    : "bg-slate-100 text-slate-600 dark:bg-zinc-800 dark:text-zinc-400"
+                                    : "bg-slate-100 text-slate-700 dark:bg-zinc-800 dark:text-zinc-300"
                                 }`}
                               >
                                 {t.priority}
@@ -1202,7 +1210,7 @@ export default function AdminReportModal({ isOpen, onClose }: AdminReportModalPr
                             <td className="py-2.5 px-3 font-medium text-slate-800 dark:text-zinc-200">
                               {t.title}
                             </td>
-                            <td className="py-2.5 px-3 text-slate-500">{t.assigned_to || "Unassigned"}</td>
+                            <td className="py-2.5 px-3 text-slate-600 dark:text-zinc-300 font-medium">{t.assigned_to || "Unassigned"}</td>
                             <td className="py-2.5 px-3">
                               <span
                                 className={`inline-block px-2 py-0.5 rounded text-[10px] font-bold ${
@@ -1226,12 +1234,12 @@ export default function AdminReportModal({ isOpen, onClose }: AdminReportModalPr
             )}
 
             {/* Formal Report Sign-Off Footer */}
-            <div className="pt-6 border-t border-slate-200 dark:border-zinc-800 text-xs text-slate-500 dark:text-zinc-400 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <div className="pt-6 border-t border-slate-200 dark:border-zinc-800 text-xs text-slate-600 dark:text-zinc-300 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 font-medium">
               <div>
-                <p className="font-semibold text-slate-700 dark:text-zinc-300">
+                <p className="font-semibold text-slate-800 dark:text-zinc-100">
                   {propertyProfile.propertyName} Management Information System
                 </p>
-                <p className="text-[11px] text-slate-400">
+                <p className="text-[11px] text-slate-500 dark:text-zinc-400">
                   This report is computer-generated and certified for official accounting and auditing records.
                 </p>
               </div>
@@ -1241,19 +1249,20 @@ export default function AdminReportModal({ isOpen, onClose }: AdminReportModalPr
                   <div className="w-32 border-b border-slate-300 dark:border-zinc-700 pb-1 mb-1 font-mono text-[11px] text-slate-800 dark:text-zinc-200">
                     {reportData?.meta?.generatedBy || "Administrator"}
                   </div>
-                  <span className="text-[10px] text-slate-400 uppercase tracking-wider">Prepared By</span>
+                  <span className="text-[10px] text-slate-500 dark:text-zinc-400 uppercase tracking-wider font-semibold">Prepared By</span>
                 </div>
                 <div className="text-center">
                   <div className="w-32 border-b border-slate-300 dark:border-zinc-700 pb-1 mb-1 font-mono text-[11px] text-slate-800 dark:text-zinc-200">
                     {propertyProfile.landlordName}
                   </div>
-                  <span className="text-[10px] text-slate-400 uppercase tracking-wider">Authorized Officer</span>
+                  <span className="text-[10px] text-slate-500 dark:text-zinc-400 uppercase tracking-wider font-semibold">Authorized Officer</span>
                 </div>
               </div>
             </div>
           </div>
         </motion.div>
       </div>
-    </>
+    </>,
+    document.body
   );
 }
