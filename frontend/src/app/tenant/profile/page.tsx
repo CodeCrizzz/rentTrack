@@ -2,6 +2,8 @@
 import { useEffect, useState } from 'react';
 import api from '@/lib/api';
 import { motion, AnimatePresence, type Variants } from 'framer-motion';
+import { formatPhoneNumber, formatPhoneInput } from '@/lib/phone-utils';
+import DropdownSelect from '@/components/dropdown-select';
 
 interface ProfileData {
     name: string;
@@ -81,13 +83,13 @@ export default function TenantProfile() {
                 setProfile(enrichedData);
                 setEditForm({ 
                     name: data.name || '', 
-                    phone: data.phone || '', 
+                    phone: formatPhoneNumber(data.phone, ''), 
                     email: data.email || '',
                     address: data.address || '',
                     gender: data.gender || 'Male',
                     occupation: data.occupation || '',
                     emergency_contact_name: data.emergency_contact_name || '',
-                    emergency_contact_phone: data.emergency_contact_phone || '',
+                    emergency_contact_phone: formatPhoneNumber(data.emergency_contact_phone, ''),
                     password_confirm: ''
                 });
             } catch (error) {
@@ -197,7 +199,7 @@ export default function TenantProfile() {
                                 </div>
                                 
                                 <div className="grid grid-cols-2 md:grid-cols-3 gap-4 pt-2">
-                                    <div className="flex flex-col"><span className="text-xs font-black uppercase tracking-widest text-neutral-400 mb-0.5">Contact</span><span className="text-sm font-bold">{profile.phone || 'N/A'}</span></div>
+                                    <div className="flex flex-col"><span className="text-xs font-black uppercase tracking-widest text-neutral-400 mb-0.5">Contact</span><span className="text-sm font-bold">{formatPhoneNumber(profile.phone, 'N/A')}</span></div>
                                     <div className="flex flex-col"><span className="text-xs font-black uppercase tracking-widest text-neutral-400 mb-0.5">Gender</span><span className="text-sm font-bold">{profile.gender || 'Not Set'}</span></div>
                                     <div className="flex flex-col col-span-2 md:col-span-1"><span className="text-xs font-black uppercase tracking-widest text-neutral-400 mb-0.5">Address</span><span className="text-sm font-bold truncate" title={profile.address}>{profile.address || 'Not Provided'}</span></div>
                                 </div>
@@ -314,8 +316,8 @@ export default function TenantProfile() {
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                         <div className="space-y-1"><label className="text-xs font-bold text-neutral-500 uppercase tracking-widest ml-1">Full Name</label><input type="text" value={editForm.name} onChange={(e) => setEditForm({...editForm, name: e.target.value})} className="w-full bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/5 px-4 py-3 rounded-xl font-bold text-sm outline-none focus:ring-2 focus:ring-blue-500 backdrop-blur-sm" /></div>
                                         <div className="space-y-1"><label className="text-xs font-bold text-neutral-500 uppercase tracking-widest ml-1">Email Address</label><input type="email" value={editForm.email} onChange={(e) => setEditForm({...editForm, email: e.target.value})} className="w-full bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/5 px-4 py-3 rounded-xl font-bold text-sm outline-none focus:ring-2 focus:ring-blue-500 backdrop-blur-sm" /></div>
-                                        <div className="space-y-1"><label className="text-xs font-bold text-neutral-500 uppercase tracking-widest ml-1">Contact Number</label><input type="text" value={editForm.phone} onChange={(e) => setEditForm({...editForm, phone: e.target.value})} className="w-full bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/5 px-4 py-3 rounded-xl font-bold text-sm outline-none focus:ring-2 focus:ring-blue-500 backdrop-blur-sm" /></div>
-                                        <div className="space-y-1"><label className="text-xs font-bold text-neutral-500 uppercase tracking-widest ml-1">Gender</label><select value={editForm.gender} onChange={(e) => setEditForm({...editForm, gender: e.target.value})} className="w-full bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/5 px-4 py-3 rounded-xl font-bold text-sm outline-none focus:ring-2 focus:ring-blue-500 backdrop-blur-sm appearance-none"><option value="Male">Male</option><option value="Female">Female</option><option value="Other">Other</option></select></div>
+                                        <div className="space-y-1"><label className="text-xs font-bold text-neutral-500 uppercase tracking-widest ml-1">Contact Number</label><input type="text" value={editForm.phone} onChange={(e) => setEditForm({...editForm, phone: formatPhoneInput(e.target.value)})} placeholder="+63 999 123 7654" className="w-full bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/5 px-4 py-3 rounded-xl font-bold text-sm outline-none focus:ring-2 focus:ring-blue-500 backdrop-blur-sm" /></div>
+                                        <div className="space-y-1"><label className="text-xs font-bold text-neutral-500 uppercase tracking-widest ml-1">Gender</label><DropdownSelect value={editForm.gender} onChange={(val) => setEditForm({...editForm, gender: val})} options={["Male", "Female", "Other"]} className="w-full bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/5 px-4 py-3 rounded-xl font-bold text-sm outline-none focus:ring-2 focus:ring-blue-500 backdrop-blur-sm" /></div>
                                     </div>
                                     <div className="space-y-1"><label className="text-xs font-bold text-neutral-500 uppercase tracking-widest ml-1">Home Address</label><textarea value={editForm.address} onChange={(e) => setEditForm({...editForm, address: e.target.value})} className="w-full bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/5 px-4 py-3 rounded-xl font-bold text-sm outline-none focus:ring-2 focus:ring-blue-500 resize-none backdrop-blur-sm" rows={2} /></div>
                                     
