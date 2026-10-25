@@ -1,0 +1,157 @@
+================================================================================
+                    RENTTRACK - ACTIVITY LOGS SYSTEM WORKFLOW
+================================================================================
+
+1. EXECUTIVE OVERVIEW & OBJECTIVE
+--------------------------------------------------------------------------------
+The Activity Logs feature serves as an immutable, real-time audit trail and 
+centralized operational ledger for the boarding house management system.
+It aggregates, normalizes, and presents cross-domain system events across:
+  - Financial transactions (Payments, bill verifications)
+  - Resident lifecycle (Applications, approvals, move-ins, move-outs)
+  - Facility operations (Maintenance repair tickets, status resolutions)
+  - Communications (Direct tenant inquiries, emergency broadcasts)
+
+NOTE: This feature is exclusively accessible to authorized Administrators.
+
+
+2. SYSTEM ARCHITECTURE & DATA FLOW
+--------------------------------------------------------------------------------
+
+   +-------------------------------------------------------------------------+
+   |                       TRIGGERING DOMAIN ACTIONS                         |
+   |                                                                         |
+   | [Tenant / Admin Actions]                                                |
+   |  - Tenant submits payment proof        -> writes to "payments" / "bills"|
+   |  - Tenant files maintenance ticket     -> writes to "requests"          |
+   |  - Prospective tenant registers        -> writes to "users" (Pending)   |
+   |  - Tenant moves in / vacates room      -> writes to "users" / "rooms"   |
+   |  - Admin broadcasts notice             -> writes to "announcements"     |
+   |  - Tenant sends direct message         -> writes to "messages"          |
+   +-------------------------------------------------------------------------+
+                                      |
+                                      v
+   +-------------------------------------------------------------------------+
+   |                    DATABASE LAYER (PostgreSQL)                          |
+   |  Tables: payments, bills, requests, users, rooms, announcements,        |
+   |          messages                                                       |
+   +-------------------------------------------------------------------------+
+                                      |
+                                      v
+   +-------------------------------------------------------------------------+
+   |                      BACKEND CONTROLLER & API                           |
+   |  Endpoint: GET /api/admin/activity-logs                                 |
+   |  Controller: getActivityLogs in adminController.js                      |
+   |                                                                         |
+   |  [Security Enforcement]:                                                |
+   |    - protect middleware   (JWT authentication)                          |
+   |    - adminOnly middleware (role === 'admin' check; returns 403 otherwise)|
+   |                                                                         |
+   |  [Parallel Query Aggregation via Promise.all]:                          |
+   |    1. Payments (JOIN bills, users, rooms)                               |
+   |    2. Maintenance Requests (JOIN users, rooms)                          |
+   |    3. Pending Applications (FROM users WHERE status = 'Pending')        |
+   |    4. Active / Moved Out Tenants (FROM users WHERE status != 'Pending') |
+   |    5. Broadcast Announcements (JOIN users)                              |
+   |    6. Direct Messages (FROM messages WHERE sender_type = 'tenant')      |
+   |                                                                         |
+   |  [Normalization & Enrichment]:                                          |
+   |    - Standardizes records into unified schema:                          |
+   |      { id, type, title, description, details, tenant_name,              |
+   |        room_number, amount, status, reference_number, date, link }      |
+   |    - Sorts all aggregated events chronologically (newest first)         |
+   +-------------------------------------------------------------------------+
+                                      |
+                                      v
+   +-------------------------------------------------------------------------+
+   |                        FRONTEND PRESENTATION                            |
+   |  Route: /admin/activity-logs                                            |
+   |  Component: AdminActivityLogsPage (frontend/src/app/admin/activity-logs)|
+   |                                                                         |
+   |  [Client Guard]:                                                        |
+   |    - AdminLayout redirects non-admins to /tenant/dashboard              |
+   |                                                                         |
+   |  [UI Modules]:                                                          |
+   |    - KPI Ribbon: Total Events, Verified Volume (₱), Tickets, Residents   |
+   |    - Searchbar: Instant client-side search across all fields            |
+   |    - Category Filter Tabs: All, Payments, Tenants, Repairs, Notices     |
+   |    - Timeframe Selector: All Time, Today, 7 Days, This Month            |
+   |    - Interactive Table: Badge indicators, timestamps, direct links      |
+   |    - CSV Export: 1-click tabular export of filtered logs                |
+   |    - Live Synchronization: Manual trigger to re-fetch database logs     |
+   +-------------------------------------------------------------------------+
+
+
+3. DETAILED EVENT CLASSIFICATION & SOURCES
+--------------------------------------------------------------------------------
+
++--------------+------------------+-----------------------+--------------------+
+| Event Type   | Source Tables    | Trigger Action        | Generated Details  |
++--------------+------------------+-----------------------+--------------------+
+| payment      | payments, bills, | Tenant uploads GCash/ | Ref Number, Amount |
+|              | users, rooms     | Cash payment receipt  | Tenant, Room, Date |
++--------------+------------------+-----------------------+--------------------+
+| maintenance  | requests, users, | Tenant submits repair | Request ID, Issue, |
+|              | rooms            | ticket (e.g. plumbing)| Priority, Room     |
++--------------+------------------+-----------------------+--------------------+
+| applicant    | users, rooms     | Prospective resident  | Name, Contact,     |
+|              |                  | registers account     | Assigned Room      |
++--------------+------------------+-----------------------+--------------------+
+| tenant       | users, rooms     | Admin approves or     | Lease Status,      |
+|              |                  | activates tenant      | Move-in Date       |
++--------------+------------------+-----------------------+--------------------+
+| moveout      | users, rooms     | Tenant check-out &    | Move-out Date,     |
+|              |                  | room vacation         | Vacated Room       |
++--------------+------------------+-----------------------+--------------------+
+| announcement | announcements,   | Admin publishes       | Broadcast Title,   |
+|              | users            | building notice       | Issuer, Category   |
++--------------+------------------+-----------------------+--------------------+
+| message      | messages, users  | Tenant sends support  | Message Snippet,   |
+|              |                  | or inquiry message    | Tenant, Timestamp  |
++--------------+------------------+-----------------------+--------------------+
+
+
+4. STEP-BY-STEP OPERATIONAL WORKFLOW
+--------------------------------------------------------------------------------
+
+STEP 1: EVENT GENERATION (Background/User Action)
+  - Whenever an action occurs in the portal (e.g., tenant pays rent, submits a
+    plumbing ticket, or checks out), the backend persists the transaction into
+    its native database table.
+
+STEP 2: AGGREGATION & NORMALIZATION (Backend on Request)
+  - When the Admin accesses /admin/activity-logs, the client sends:
+      GET /api/admin/activity-logs (Bearer Token Authorization)
+  - The server verifies that req.user.role === 'admin'.
+  - The controller runs 6 parallel queries against the PostgreSQL database.
+  - Raw table rows are transformed into a normalized activity object structure
+    with uniform timestamps, action links, and human-readable descriptions.
+  - The composite array is sorted descending by date and sent as JSON.
+
+STEP 3: RENDERING & INTERACTION (Admin Interface)
+  - The admin page displays 4 summary KPI tiles at the top.
+  - The admin can filter by category (e.g., view only Payments).
+  - The admin can filter by timeframe (e.g., view only Today's activity).
+  - The admin can type keywords into the search box to find specific tenant
+    names, reference numbers, or room numbers.
+  - Each log row contains a direct link:
+      * Clicking a payment log navigates to /admin/billing for that tenant.
+      * Clicking a maintenance log navigates to /admin/requests.
+      * Clicking an applicant log navigates to /admin/tenants approvals.
+      * Clicking a message log navigates to /admin/chat.
+
+STEP 4: AUDIT EXPORT
+  - The admin clicks "Export CSV" to instantly generate and download a standard
+    CSV spreadsheet containing all currently filtered records for external
+    record-keeping or compliance.
+
+
+5. STRICT ACCESS CONTROL & BOUNDARIES
+--------------------------------------------------------------------------------
+- Admin Portal: Accessible via Sidebar ("Activity Logs") and route /admin/activity-logs.
+- Tenant Portal: Strictly omitted. No navigation items, links, or components exist.
+- Network Security: API endpoint /api/admin/activity-logs is guarded by both
+  token verification (protect) and role verification (adminOnly).
+- Client Security: AdminLayout redirects unauthorized tenant sessions to
+  /tenant/dashboard automatically.
+================================================================================
