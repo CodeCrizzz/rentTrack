@@ -1,0 +1,284 @@
+-- ==============================================================================
+-- RentTrack Database Schema Initialization Script
+-- Database Management System: PostgreSQL
+-- Database Name: rentTrack_db
+-- Target Schema: rentTrack_schema
+-- Description: Complete SQL script containing all queries to create the schema,
+--              extensions, tables, relationships, constraints, indexes, 
+--              triggers, and default seed data.
+-- ==============================================================================
+
+-- ==============================================================================
+-- 1. ROOMS TABLE
+-- Stores details of dormitory / boarding house rooms, capacities, and rates
+-- ==============================================================================
+CREATE TABLE IF NOT EXISTS "rentTrack_schema".rooms (
+    id SERIAL PRIMARY KEY,
+    room_number VARCHAR(50) UNIQUE NOT NULL,
+    type VARCHAR(50) DEFAULT 'Single',                 -- e.g., 'Single', 'Double', 'Quad', 'Suite'
+    rental_type VARCHAR(50) DEFAULT 'Whole Room',       -- e.g., 'Whole Room', 'Bed Space'
+    capacity INTEGER NOT NULL DEFAULT 1,
+    price DECIMAL(10, 2) NOT NULL,
+    floor VARCHAR(50),                                  -- e.g., '1st Floor', '2nd Floor'
+    description TEXT,
+    amenities TEXT,                                     -- e.g., 'Air Conditioning, WiFi, Private Bath'
+    status VARCHAR(50) DEFAULT 'Available',             -- e.g., 'Available', 'Occupied', 'Partially Occupied', 'Maintenance', 'Unavailable'
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- ==============================================================================
+-- 2. USERS TABLE
+-- Stores credentials and profiles for both Admins and Tenants (Residents)
+-- ==============================================================================
+CREATE TABLE IF NOT EXISTS "rentTrack_schema".users (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    email VARCHAR(255) UNIQUE NOT NULL,
+    password VARCHAR(255) NOT NULL,                     -- Bcrypt hashed password
+    role VARCHAR(50) NOT NULL DEFAULT 'tenant',         -- 'admin' or 'tenant'
+    phone VARCHAR(50),
+    gender VARCHAR(50) DEFAULT 'Not Specified',         -- 'Male', 'Female', 'Not Specified'
+    address TEXT,
+    status VARCHAR(50) DEFAULT 'Pending',               -- 'Active', 'Pending', 'Declined', 'Inactive', 'Moved Out'
+    room_id INTEGER REFERENCES "rentTrack_schema".rooms(id) ON DELETE SET NULL,
+    bed_space VARCHAR(50),                              -- Optional bed assignment e.g., 'Bed A', 'Bed B'
+    id_document VARCHAR(255),                           -- ID verification document status or upload path
+    date_moved_in DATE,
+    contract_end_date DATE,
+    profile_picture VARCHAR(255),
+    last_active_at TIMESTAMP WITH TIME ZONE,            -- Online presence and activity tracker
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- ==============================================================================
+-- 3. BILLS TABLE
+-- Stores monthly rent and utility invoices generated for tenants
+-- ==============================================================================
+CREATE TABLE IF NOT EXISTS "rentTrack_schema".bills (
+    id SERIAL PRIMARY KEY,
+    tenant_id INTEGER NOT NULL REFERENCES "rentTrack_schema".users(id) ON DELETE CASCADE,
+    room_id INTEGER REFERENCES "rentTrack_schema".rooms(id) ON DELETE SET NULL,
+    billing_month VARCHAR(50) NOT NULL,                 -- e.g., 'October 2026'
+    due_date DATE NOT NULL,
+    rent_amount DECIMAL(10, 2) NOT NULL DEFAULT 0.00,
+    water_charges DECIMAL(10, 2) DEFAULT 0.00,
+    electricity_charges DECIMAL(10, 2) DEFAULT 0.00,
+    other_fees DECIMAL(10, 2) DEFAULT 0.00,
+    total_amount DECIMAL(10, 2) NOT NULL DEFAULT 0.00,
+    amount_paid DECIMAL(10, 2) DEFAULT 0.00,
+    balance DECIMAL(10, 2) NOT NULL DEFAULT 0.00,
+    status VARCHAR(50) DEFAULT 'Unpaid',                -- 'Paid', 'Partial', 'Unpaid', 'Overdue'
+    notes TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- ==============================================================================
+-- 4. PAYMENTS TABLE
+-- Stores payment transactions, cash remittances, and digital proof uploads
+-- ==============================================================================
+CREATE TABLE IF NOT EXISTS "rentTrack_schema".payments (
+    id SERIAL PRIMARY KEY,
+    bill_id INTEGER NOT NULL REFERENCES "rentTrack_schema".bills(id) ON DELETE CASCADE,
+    tenant_id INTEGER REFERENCES "rentTrack_schema".users(id) ON DELETE CASCADE,
+    amount_paid DECIMAL(10, 2) NOT NULL,
+    payment_date TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    payment_method VARCHAR(50) DEFAULT 'Cash',          -- e.g., 'Cash', 'GCash', 'Bank Transfer', 'Maya'
+    notes TEXT,
+    receipt_url VARCHAR(255),                           -- Proof of payment image URL / path
+    proof_url VARCHAR(255),                             -- Legacy alias for proof of payment
+    status VARCHAR(50) DEFAULT 'Pending Verification',  -- 'Pending Verification', 'Approved', 'Rejected', 'Paid'
+    reference_number VARCHAR(100),                      -- Unique reference e.g., 'CSH-20261023-0001', 'GCASH-...'
+    verified_at TIMESTAMP WITH TIME ZONE,
+    verified_by INTEGER REFERENCES "rentTrack_schema".users(id) ON DELETE SET NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- ==============================================================================
+-- 5. MAINTENANCE REQUESTS TABLE
+-- Stores resident work orders, facility issues, and repair statuses
+-- ==============================================================================
+CREATE TABLE IF NOT EXISTS "rentTrack_schema".requests (
+    id SERIAL PRIMARY KEY,
+    tenant_id INTEGER NOT NULL REFERENCES "rentTrack_schema".users(id) ON DELETE CASCADE,
+    room_id INTEGER REFERENCES "rentTrack_schema".rooms(id) ON DELETE SET NULL,
+    request_number VARCHAR(50) UNIQUE,                  -- e.g., 'RT-294012'
+    title VARCHAR(255) NOT NULL,
+    description TEXT NOT NULL,
+    category VARCHAR(50) DEFAULT 'Other',               -- 'Plumbing', 'Electrical', 'Carpentry', 'Appliance', 'Other'
+    priority VARCHAR(50) DEFAULT 'Normal',              -- 'Low', 'Normal', 'High', 'Urgent'
+    status VARCHAR(50) DEFAULT 'Pending',               -- 'Pending', 'In Progress', 'Resolved', 'Cancelled'
+    attachment_url VARCHAR(255),                        -- Photo/evidence upload path
+    assigned_to VARCHAR(255),                           -- Assigned technician or handyman
+    admin_notes TEXT,
+    scheduled_date TIMESTAMP WITH TIME ZONE,
+    date_resolved TIMESTAMP WITH TIME ZONE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- ==============================================================================
+-- 6. MESSAGES TABLE
+-- Stores direct chat communication between Admin and Tenants
+-- ==============================================================================
+CREATE TABLE IF NOT EXISTS "rentTrack_schema".messages (
+    id SERIAL PRIMARY KEY,
+    sender_id INTEGER NOT NULL REFERENCES "rentTrack_schema".users(id) ON DELETE CASCADE,
+    receiver_id INTEGER NOT NULL REFERENCES "rentTrack_schema".users(id) ON DELETE CASCADE,
+    message TEXT NOT NULL,
+    sender_type VARCHAR(50) NOT NULL,                   -- 'admin' or 'tenant'
+    status VARCHAR(50) DEFAULT 'sent',                  -- 'sent', 'delivered', 'read'
+    attachment_url VARCHAR(255),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- ==============================================================================
+-- 7. ANNOUNCEMENTS TABLE
+-- Stores boarding house public broadcast announcements and notices
+-- ==============================================================================
+CREATE TABLE IF NOT EXISTS "rentTrack_schema".announcements (
+    id SERIAL PRIMARY KEY,
+    title VARCHAR(255) NOT NULL,
+    content TEXT NOT NULL,
+    type VARCHAR(50) DEFAULT 'General',                 -- 'General', 'Urgent', 'Maintenance', 'Billing', 'Event'
+    created_by INTEGER REFERENCES "rentTrack_schema".users(id) ON DELETE SET NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- ==============================================================================
+-- 8. NOTIFICATIONS TABLE
+-- Stores activity logs and system notifications for admins and residents
+-- ==============================================================================
+CREATE TABLE IF NOT EXISTS "rentTrack_schema".notifications (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER NOT NULL REFERENCES "rentTrack_schema".users(id) ON DELETE CASCADE,
+    title VARCHAR(255) NOT NULL,
+    message TEXT NOT NULL,
+    type VARCHAR(50) DEFAULT 'general',                 -- 'billing', 'maintenance_request', 'account_approval', 'chat_message', 'general'
+    bill_id INTEGER REFERENCES "rentTrack_schema".bills(id) ON DELETE CASCADE,
+    link VARCHAR(255),                                  -- Navigation route link for UI action redirection
+    is_read BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- ==============================================================================
+-- PERFORMANCE INDEXES
+-- Optimized for search, joins, foreign key lookups, and cron jobs
+-- ==============================================================================
+
+-- Users Indexes
+CREATE INDEX IF NOT EXISTS idx_users_email ON "rentTrack_schema".users(email);
+CREATE INDEX IF NOT EXISTS idx_users_role_status ON "rentTrack_schema".users(role, status);
+CREATE INDEX IF NOT EXISTS idx_users_room_id ON "rentTrack_schema".users(room_id);
+
+-- Rooms Indexes
+CREATE INDEX IF NOT EXISTS idx_rooms_room_number ON "rentTrack_schema".rooms(room_number);
+CREATE INDEX IF NOT EXISTS idx_rooms_status ON "rentTrack_schema".rooms(status);
+
+-- Bills Indexes
+CREATE INDEX IF NOT EXISTS idx_bills_tenant_id ON "rentTrack_schema".bills(tenant_id);
+CREATE INDEX IF NOT EXISTS idx_bills_room_id ON "rentTrack_schema".bills(room_id);
+CREATE INDEX IF NOT EXISTS idx_bills_billing_month ON "rentTrack_schema".bills(billing_month);
+CREATE INDEX IF NOT EXISTS idx_bills_due_date ON "rentTrack_schema".bills(due_date);
+CREATE INDEX IF NOT EXISTS idx_bills_status ON "rentTrack_schema".bills(status);
+
+-- Payments Indexes
+CREATE INDEX IF NOT EXISTS idx_payments_bill_id ON "rentTrack_schema".payments(bill_id);
+CREATE INDEX IF NOT EXISTS idx_payments_tenant_id ON "rentTrack_schema".payments(tenant_id);
+CREATE INDEX IF NOT EXISTS idx_payments_reference_number ON "rentTrack_schema".payments(reference_number);
+CREATE INDEX IF NOT EXISTS idx_payments_status ON "rentTrack_schema".payments(status);
+
+-- Maintenance Requests Indexes
+CREATE INDEX IF NOT EXISTS idx_requests_tenant_id ON "rentTrack_schema".requests(tenant_id);
+CREATE INDEX IF NOT EXISTS idx_requests_request_number ON "rentTrack_schema".requests(request_number);
+CREATE INDEX IF NOT EXISTS idx_requests_status ON "rentTrack_schema".requests(status);
+CREATE INDEX IF NOT EXISTS idx_requests_created_at ON "rentTrack_schema".requests(created_at);
+
+-- Messages Indexes
+CREATE INDEX IF NOT EXISTS idx_messages_sender_receiver ON "rentTrack_schema".messages(sender_id, receiver_id);
+CREATE INDEX IF NOT EXISTS idx_messages_created_at ON "rentTrack_schema".messages(created_at);
+
+-- Announcements Indexes
+CREATE INDEX IF NOT EXISTS idx_announcements_created_at ON "rentTrack_schema".announcements(created_at);
+
+-- Notifications Indexes
+CREATE INDEX IF NOT EXISTS idx_notifications_user_id ON "rentTrack_schema".notifications(user_id);
+CREATE INDEX IF NOT EXISTS idx_notifications_bill_id ON "rentTrack_schema".notifications(bill_id);
+CREATE INDEX IF NOT EXISTS idx_notifications_created_at ON "rentTrack_schema".notifications(created_at);
+
+-- ==============================================================================
+-- AUTOMATIC TIMESTAMP TRIGGER (updated_at)
+-- Automatically refreshes the updated_at column when a record is updated
+-- ==============================================================================
+CREATE OR REPLACE FUNCTION "rentTrack_schema".update_timestamp()
+RETURNS TRIGGER AS $$
+BEGIN
+    NEW.updated_at = CURRENT_TIMESTAMP;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Apply triggers to relevant tables
+DROP TRIGGER IF EXISTS set_timestamp_rooms ON "rentTrack_schema".rooms;
+CREATE TRIGGER set_timestamp_rooms
+BEFORE UPDATE ON "rentTrack_schema".rooms
+FOR EACH ROW EXECUTE FUNCTION "rentTrack_schema".update_timestamp();
+
+DROP TRIGGER IF EXISTS set_timestamp_users ON "rentTrack_schema".users;
+CREATE TRIGGER set_timestamp_users
+BEFORE UPDATE ON "rentTrack_schema".users
+FOR EACH ROW EXECUTE FUNCTION "rentTrack_schema".update_timestamp();
+
+DROP TRIGGER IF EXISTS set_timestamp_bills ON "rentTrack_schema".bills;
+CREATE TRIGGER set_timestamp_bills
+BEFORE UPDATE ON "rentTrack_schema".bills
+FOR EACH ROW EXECUTE FUNCTION "rentTrack_schema".update_timestamp();
+
+DROP TRIGGER IF EXISTS set_timestamp_payments ON "rentTrack_schema".payments;
+CREATE TRIGGER set_timestamp_payments
+BEFORE UPDATE ON "rentTrack_schema".payments
+FOR EACH ROW EXECUTE FUNCTION "rentTrack_schema".update_timestamp();
+
+DROP TRIGGER IF EXISTS set_timestamp_requests ON "rentTrack_schema".requests;
+CREATE TRIGGER set_timestamp_requests
+BEFORE UPDATE ON "rentTrack_schema".requests
+FOR EACH ROW EXECUTE FUNCTION "rentTrack_schema".update_timestamp();
+
+DROP TRIGGER IF EXISTS set_timestamp_announcements ON "rentTrack_schema".announcements;
+CREATE TRIGGER set_timestamp_announcements
+BEFORE UPDATE ON "rentTrack_schema".announcements
+FOR EACH ROW EXECUTE FUNCTION "rentTrack_schema".update_timestamp();
+
+-- ==============================================================================
+-- INITIAL SEED DATA
+-- Default system administrator account and sample starter rooms
+-- ==============================================================================
+
+-- Default Administrator Account
+-- Email: admin@renttrack.com
+-- Default Password: admin@123
+INSERT INTO "rentTrack_schema".users (name, email, password, role, status, phone, gender, address)
+VALUES (
+    'System Admin',
+    'admin@renttrack.com',
+    '$2b$10$uY342Jn3h8O6T.ZEL84DwOeA0B8ano3.4FzSfDoD6ccJePJBqCJF.',
+    'admin',
+    'Active',
+    '09157453066',
+    'Male',
+    'Property Admin Office'
+)
+ON CONFLICT (email) DO NOTHING;
+
+-- Sample Starter Rooms
+INSERT INTO "rentTrack_schema".rooms (room_number, type, rental_type, capacity, price, floor, description, amenities, status)
+VALUES
+    ('101', 'Single', 'Whole Room', 1, 3500.00, '1st Floor', 'Ground floor single room near entrance', 'WiFi, Private Bath, Desk', 'Available'),
+    ('102', 'Double', 'Bed Space', 2, 2200.00, '1st Floor', 'Shared double bedspace with window view', 'WiFi, Shared Bath, Air Conditioning', 'Available'),
+    ('201', 'Single', 'Whole Room', 1, 3800.00, '2nd Floor', 'Quiet upper floor room with balcony', 'WiFi, Balcony, Private Bath', 'Available'),
+    ('202', 'Quad', 'Bed Space', 4, 1800.00, '2nd Floor', 'Spacious 4-bed shared space for students', 'WiFi, Study Area, Lockers', 'Available')
+ON CONFLICT (room_number) DO NOTHING;
