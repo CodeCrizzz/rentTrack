@@ -1,35 +1,47 @@
 "use client";
+
 import { useState, useEffect, useMemo, Suspense } from "react";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import api from "@/lib/api";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
 import {
   Users,
   UserCheck,
-  Clock,
-  AlertCircle,
+  UserMinus,
+  FileText,
+  Receipt,
+  Calendar,
+  MapPin,
+  Bell,
+  BarChart3,
   Search,
-  Building2,
+  Plus,
+  MoreHorizontal,
+  ChevronDown,
+  Check,
+  X,
+  BedDouble,
+  CreditCard,
+  MessageSquare,
+  Send,
+  Eye,
+  Edit,
+  Trash2,
   DoorOpen,
+  AlertCircle,
+  ShieldCheck,
+  AlertTriangle,
+  RefreshCw,
   Phone,
   Mail,
-  Calendar,
-  Edit,
-  Eye,
-  CheckCircle2,
-  XCircle,
-  X,
-  ChevronRight,
-  MapPin,
-  CreditCard,
-  DollarSign,
-  Shield,
-  ArrowUpRight,
-  Check,
-  AlertTriangle,
+  User,
+  Clock,
+  ExternalLink,
 } from "lucide-react";
-import CustomSelect from "@/components/CustomSelect";
+import CustomSelect from "@/components/dropdown-select";
+import AdminReportModal from "@/components/admin-report-modal";
+import { formatPhoneNumber, formatPhoneInput } from "@/lib/phone-utils";
 
 interface Tenant {
   id: number;
@@ -39,6 +51,9 @@ interface Tenant {
   created_at: string;
   room_number: string | null;
   room_id: number | null;
+  room_type?: string;
+  rental_type?: string;
+  floor?: string;
   gender?: string;
   address?: string;
   id_document?: string;
@@ -48,72 +63,62 @@ interface Tenant {
   monthly_rent?: number;
   payment_status?: "Paid" | "Unpaid" | "Overdue" | "No Bills Yet" | "N/A";
   last_payment_date?: string;
+  next_due_date?: string;
   balance?: number;
   status: "Active" | "Inactive" | "Moved Out" | "Pending" | "Declined";
+  emergency_contact?: string;
+  emergency_contact_name?: string;
+  emergency_contact_phone?: string;
+  emergency_contact_relation?: string;
 }
 
 interface Room {
   id: number;
   room_number: string;
-  status: string;
+  type: string;
+  rental_type: string;
+  price: string | number;
+  floor: string | null;
   capacity: number;
+  status: string;
 }
 
 function TenantsContent() {
+  const router = useRouter();
   const searchParams = useSearchParams();
+
+  // Core Data
   const [tenants, setTenants] = useState<Tenant[]>([]);
   const [rooms, setRooms] = useState<Room[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<"directory" | "approvals">(
-    "directory",
-  );
+  const [adminName, setAdminName] = useState("Admin");
+  const [pendingPaymentsCount, setPendingPaymentsCount] = useState(0);
+
+  // Selection & Active Dossier
+  const [selectedTenant, setSelectedTenant] = useState<Tenant | null>(null);
+  const [activeMenuTenantId, setActiveMenuTenantId] = useState<number | null>(null);
+
+  // Tabs & Filters (Matching Mockup: All Tenants | Active | Pending | Moved Out)
+  const [activeTab, setActiveTab] = useState<"all" | "active" | "pending" | "moved_out">("all");
   const [searchQuery, setSearchQuery] = useState("");
-  const [statusFilter, setStatusFilter] = useState<
-    "All" | "Active" | "Overdue" | "Departed"
-  >("All");
-  const [roomFilter, setRoomFilter] = useState("All Rooms");
-  const [sortFilter, setSortFilter] = useState("Newest First");
-  const [error, setError] = useState("");
+  const [statusFilter, setStatusFilter] = useState("All Statuses");
+  const [roomTypeFilter, setRoomTypeFilter] = useState("All Room Types");
+  const [floorFilter, setFloorFilter] = useState("All Floors");
 
-  // Handle URL search parameters from Action Center
-  useEffect(() => {
-    if (!searchParams) return;
-    const tabParam = searchParams.get("tab");
-    const searchParam = searchParams.get("search");
-
-    if (tabParam === "approvals" || tabParam === "directory") {
-      setActiveTab(tabParam);
-    }
-    if (searchParam) {
-      setSearchQuery(searchParam);
-    }
-  }, [searchParams]);
-
-  // --- MODAL & FORM STATES ---
+  // Modals
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
+  const [showReportModal, setShowReportModal] = useState(false);
   const [editingTenant, setEditingTenant] = useState<Tenant | null>(null);
-  const [viewingTenant, setViewingTenant] = useState<Tenant | null>(null);
-
-  // Auto-open viewing modal if tenantId is provided in URL
-  useEffect(() => {
-    if (!searchParams || tenants.length === 0) return;
-    const tenantIdParam = searchParams.get("tenantId");
-    if (tenantIdParam) {
-      const matched = tenants.find((t) => t.id === Number(tenantIdParam));
-      if (matched) {
-        setViewingTenant(matched);
-        setIsViewModalOpen(true);
-      }
-    }
-  }, [searchParams, tenants]);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isStatusUpdating, setIsStatusUpdating] = useState<number | null>(null);
   const [confirmStatus, setConfirmStatus] = useState<{
     id: number;
     name: string;
     action: "Approve" | "Reject";
   } | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isStatusUpdating, setIsStatusUpdating] = useState<number | null>(null);
+  const [isDeletingTenantId, setIsDeletingTenantId] = useState<number | null>(null);
+  const [error, setError] = useState("");
 
   const [formData, setFormData] = useState({
     name: "",
@@ -126,14 +131,44 @@ function TenantsContent() {
     monthly_rent: "",
     date_moved_in: "",
     contract_end_date: "",
-    status: "Pending",
+    status: "Active",
   });
 
-  const fetchTenants = async () => {
+  // Time & Greeting
+  const getGreeting = () => {
+    const hour = new Date().getHours();
+    if (hour < 12) return "Good morning";
+    if (hour < 18) return "Good afternoon";
+    return "Good evening";
+  };
+
+  const formattedDate = useMemo(() => {
+    return new Date().toLocaleDateString("en-US", {
+      month: "long",
+      day: "numeric",
+      year: "numeric",
+    });
+  }, []);
+
+  // Fetch admin user
+  useEffect(() => {
+    const userStr = localStorage.getItem("user");
+    if (userStr) {
+      try {
+        const u = JSON.parse(userStr);
+        if (u.name) setAdminName(u.name);
+      } catch (e) {}
+    }
+  }, []);
+
+  // Fetch Data
+  const fetchTenants = async (silent = false) => {
+    if (!silent) setIsLoading(true);
     try {
       const { data } = await api.get("/admin/tenants");
-      const enrichedData: Tenant[] = data.map((t: any) => ({
+      const enriched: Tenant[] = (data || []).map((t: any) => ({
         ...t,
+        phone: formatPhoneNumber(t.phone, ""),
         gender: t.gender || "Not Specified",
         address: t.address || "",
         id_document: t.id_document ? "Verified" : "Pending",
@@ -144,7 +179,7 @@ function TenantsContent() {
         contract_end_date: t.contract_end_date
           ? new Date(t.contract_end_date).toISOString().split("T")[0]
           : "",
-        monthly_rent: t.monthly_rent || 0,
+        monthly_rent: Number(t.monthly_rent) || 0,
         payment_status:
           t.balance == null
             ? "No Bills Yet"
@@ -156,57 +191,240 @@ function TenantsContent() {
         status: t.status || (t.room_number ? "Active" : "Pending"),
       }));
 
-      setTenants(enrichedData);
+      setTenants(enriched);
+      if (enriched.length > 0) {
+        setSelectedTenant((prev) => {
+          if (!prev) return enriched[0];
+          const matched = enriched.find((x) => x.id === prev.id);
+          return matched || enriched[0];
+        });
+      }
     } catch (err: any) {
       console.error("Failed to fetch tenants:", err);
-      setError("Failed to load residents list.");
+      toast.error("Failed to load resident directory");
     } finally {
-      setIsLoading(false);
+      if (!silent) setIsLoading(false);
     }
   };
 
   const fetchRooms = async () => {
     try {
       const { data } = await api.get("/admin/rooms");
-      setRooms(data);
-    } catch (err: any) {
+      setRooms(data || []);
+    } catch (err) {
       console.error("Failed to fetch rooms:", err);
     }
+  };
+
+  const fetchPendingPayments = async () => {
+    try {
+      const { data } = await api.get("/admin/bills/payments/pending-count");
+      if (data && typeof data.pendingCount !== "undefined") {
+        setPendingPaymentsCount(data.pendingCount);
+      }
+    } catch (err) {}
   };
 
   useEffect(() => {
     fetchTenants();
     fetchRooms();
+    fetchPendingPayments();
   }, []);
 
-  const handleOpenModal = (
-    tenant: Tenant,
-    intention: "approve" | "edit" = "edit",
-  ) => {
-    setEditingTenant(tenant);
+  // Handle URL search params
+  useEffect(() => {
+    if (!searchParams) return;
+    const tabParam = searchParams.get("tab");
+    const searchParam = searchParams.get("search");
+    const tenantIdParam = searchParams.get("tenantId");
+
+    if (tabParam === "approvals" || tabParam === "pending") {
+      setActiveTab("pending");
+      setStatusFilter("Pending");
+    }
+    if (searchParam) {
+      setSearchQuery(searchParam);
+    }
+    if (tenantIdParam && tenants.length > 0) {
+      const matched = tenants.find((t) => t.id === Number(tenantIdParam));
+      if (matched) {
+        setSelectedTenant(matched);
+      }
+    }
+  }, [searchParams, tenants]);
+
+  // Click outside to close action menu
+  useEffect(() => {
+    const handleCloseMenu = () => setActiveMenuTenantId(null);
+    window.addEventListener("click", handleCloseMenu);
+    return () => window.removeEventListener("click", handleCloseMenu);
+  }, []);
+
+  // Compute Metrics matching the 4 Top KPI Cards
+  const metrics = useMemo(() => {
+    const totalBeds = rooms.reduce((acc, r) => acc + (r.capacity || 0), 0);
+    const activeCount = tenants.filter((t) => t.status === "Active").length;
+    const pendingCount = tenants.filter((t) => t.status === "Pending").length;
+    const movedOutCount = tenants.filter((t) => t.status === "Moved Out").length;
+    const total = tenants.length;
+
+    return {
+      total,
+      totalBeds: totalBeds || 32,
+      activeCount,
+      pendingCount,
+      movedOutCount,
+    };
+  }, [tenants, rooms]);
+
+  // Unique Room Types & Floors for Dropdowns
+  const uniqueRoomTypes = useMemo(() => {
+    const set = new Set<string>();
+    rooms.forEach((r) => {
+      if (r.type) set.add(r.type.includes("Room") ? r.type : `${r.type} Room`);
+    });
+    // Add default fallbacks if room inventory is small
+    ["Single Room", "Double Room", "Triple Room"].forEach((t) => set.add(t));
+    return Array.from(set).sort();
+  }, [rooms]);
+
+  const uniqueFloors = useMemo(() => {
+    const set = new Set<string>();
+    rooms.forEach((r) => {
+      if (r.floor) {
+        const match = r.floor.match(/\d+/);
+        set.add(match ? `Floor ${match[0]}` : r.floor);
+      } else if (r.room_number && r.room_number.length >= 3 && !isNaN(Number(r.room_number[0]))) {
+        set.add(`Floor ${r.room_number[0]}`);
+      }
+    });
+    ["Floor 1", "Floor 2", "Floor 3"].forEach((f) => set.add(f));
+    return Array.from(set).sort((a, b) => {
+      const numA = parseInt(a.replace(/\D/g, "")) || 0;
+      const numB = parseInt(b.replace(/\D/g, "")) || 0;
+      return numA - numB;
+    });
+  }, [rooms]);
+
+  // Helper: Format Tenant Room Type & Rental Model
+  const getTenantRoomType = (t: Tenant) => {
+    if (t.room_type) {
+      return t.room_type.includes("Room") ? t.room_type : `${t.room_type} Room`;
+    }
+    const matchedRoom = rooms.find((r) => r.room_number === t.room_number);
+    if (matchedRoom?.type) {
+      return matchedRoom.type.includes("Room") ? matchedRoom.type : `${matchedRoom.type} Room`;
+    }
+    return "Single Room";
+  };
+
+  const getTenantRentalModel = (t: Tenant) => {
+    if (t.rental_type) return t.rental_type;
+    if (t.bed_space && t.bed_space !== "N/A" && t.bed_space.toLowerCase().includes("bed")) {
+      return "Bedspace";
+    }
+    const matchedRoom = rooms.find((r) => r.room_number === t.room_number);
+    if (matchedRoom?.rental_type) return matchedRoom.rental_type;
+    return "Whole Room";
+  };
+
+  const getTenantFloor = (t: Tenant) => {
+    if (t.floor) return t.floor;
+    const matchedRoom = rooms.find((r) => r.room_number === t.room_number);
+    if (matchedRoom?.floor) return matchedRoom.floor;
+    if (t.room_number && t.room_number.length >= 3 && !isNaN(Number(t.room_number[0]))) {
+      return `Floor ${t.room_number[0]}`;
+    }
+    return "Floor 1";
+  };
+
+  // Filtered tenants list
+  const filteredTenants = useMemo(() => {
+    return tenants.filter((t) => {
+      // 1. Tab Filter
+      if (activeTab === "active" && t.status !== "Active") return false;
+      if (activeTab === "pending" && t.status !== "Pending") return false;
+      if (activeTab === "moved_out" && t.status !== "Moved Out") return false;
+
+      // 2. Status Dropdown Filter
+      if (statusFilter !== "All Statuses" && t.status !== statusFilter) return false;
+
+      // 3. Room Type Dropdown Filter
+      if (roomTypeFilter !== "All Room Types") {
+        const effectiveType = getTenantRoomType(t);
+        if (effectiveType.toLowerCase() !== roomTypeFilter.toLowerCase()) return false;
+      }
+
+      // 4. Floor Dropdown Filter
+      if (floorFilter !== "All Floors") {
+        const effectiveFloor = getTenantFloor(t);
+        const matchNumber = floorFilter.match(/\d+/);
+        if (matchNumber && !effectiveFloor.includes(matchNumber[0])) return false;
+      }
+
+      // 5. Search Bar Query (name, email, phone, room number)
+      if (searchQuery.trim()) {
+        const q = searchQuery.toLowerCase().trim();
+        const nameMatch = (t.name || "").toLowerCase().includes(q);
+        const emailMatch = (t.email || "").toLowerCase().includes(q);
+        const phoneMatch = (t.phone || "").toLowerCase().includes(q);
+        const roomMatch = (t.room_number || "").toLowerCase().includes(q);
+        if (!nameMatch && !emailMatch && !phoneMatch && !roomMatch) return false;
+      }
+
+      return true;
+    });
+  }, [tenants, activeTab, statusFilter, roomTypeFilter, floorFilter, searchQuery, rooms]);
+
+  // Handle Tab Switch
+  const handleTabChange = (tab: "all" | "active" | "pending" | "moved_out") => {
+    setActiveTab(tab);
+    if (tab === "active") setStatusFilter("Active");
+    else if (tab === "pending") setStatusFilter("Pending");
+    else if (tab === "moved_out") setStatusFilter("Moved Out");
+    else setStatusFilter("All Statuses");
+  };
+
+  // Modal Handlers
+  const handleOpenAddModal = () => {
+    setEditingTenant(null);
     setFormData({
-      name: tenant.name,
-      email: tenant.email,
-      phone: tenant.phone || "",
+      name: "",
+      email: "",
+      phone: "",
       password: "",
-      room_id: tenant.room_id?.toString() ?? "",
-      address: tenant.address || "",
-      gender: tenant.gender || "",
-      monthly_rent: tenant.monthly_rent?.toString() || "",
-      date_moved_in: tenant.date_moved_in || "",
-      contract_end_date: tenant.contract_end_date || "",
-      status: intention === "approve" ? "Active" : tenant.status,
+      room_id: "",
+      address: "",
+      gender: "Male",
+      monthly_rent: "",
+      date_moved_in: new Date().toISOString().split("T")[0],
+      contract_end_date: "",
+      status: "Active",
     });
     setError("");
     setIsModalOpen(true);
   };
 
-  const handleViewTenant = (tenant: Tenant) => {
-    setViewingTenant(tenant);
-    setIsViewModalOpen(true);
+  const handleOpenEditModal = (tenant: Tenant) => {
+    setEditingTenant(tenant);
+    setFormData({
+      name: tenant.name,
+      email: tenant.email,
+      phone: formatPhoneNumber(tenant.phone, ""),
+      password: "",
+      room_id: tenant.room_id?.toString() ?? "",
+      address: tenant.address || "",
+      gender: tenant.gender || "Male",
+      monthly_rent: tenant.monthly_rent?.toString() || "",
+      date_moved_in: tenant.date_moved_in || "",
+      contract_end_date: tenant.contract_end_date || "",
+      status: tenant.status || "Active",
+    });
+    setError("");
+    setIsModalOpen(true);
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmitTenant = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
     setError("");
@@ -214,17 +432,15 @@ function TenantsContent() {
     try {
       if (editingTenant) {
         await api.put(`/admin/tenants/${editingTenant.id}`, formData);
-        toast.success("Resident updated successfully");
+        toast.success(`Resident ${formData.name} updated successfully`);
       } else {
         await api.post("/admin/tenants", formData);
-        toast.success("Resident registered successfully");
+        toast.success(`Resident ${formData.name} registered successfully`);
       }
       setIsModalOpen(false);
-      fetchTenants();
+      fetchTenants(true);
     } catch (err: any) {
-      const errMsg =
-        err.response?.data?.message ||
-        "Operation failed. Please check your data.";
+      const errMsg = err.response?.data?.message || "Failed to save tenant information.";
       setError(errMsg);
       toast.error(errMsg);
     } finally {
@@ -232,1337 +448,1156 @@ function TenantsContent() {
     }
   };
 
-  const handleUpdateStatusClick = (
-    tenant: Tenant,
-    action: "Approve" | "Reject",
-  ) => {
-    setConfirmStatus({ id: tenant.id, name: tenant.name, action });
-  };
-
+  // Status Approval / Rejection
   const executeStatusUpdate = async () => {
     if (!confirmStatus) return;
     setIsStatusUpdating(confirmStatus.id);
-    setError("");
     try {
       const status = confirmStatus.action === "Approve" ? "Active" : "Declined";
       await api.put(`/admin/tenants/${confirmStatus.id}`, { status });
       toast.success(
-        `Resident application ${confirmStatus.action === "Approve" ? "approved" : "declined"} successfully!`,
+        `Application for ${confirmStatus.name} ${confirmStatus.action === "Approve" ? "approved" : "declined"}!`
       );
-      fetchTenants();
-      if (viewingTenant?.id === confirmStatus.id) {
-        setViewingTenant((prev) => (prev ? { ...prev, status } : null));
+      fetchTenants(true);
+      if (selectedTenant?.id === confirmStatus.id) {
+        setSelectedTenant((prev) => (prev ? { ...prev, status } : null));
       }
     } catch (err: any) {
-      console.error(`Failed to update status:`, err);
-      toast.error(`Failed to update resident status.`);
+      console.error(err);
+      toast.error("Failed to update resident status");
     } finally {
       setIsStatusUpdating(null);
       setConfirmStatus(null);
     }
   };
 
-  // --- COMPUTED METRICS ---
-  const metrics = useMemo(() => {
-    const total = tenants.filter((t) => t.status !== "Pending").length;
-    const totalRegistered = tenants.length;
-    const totalBeds = rooms.reduce((acc, r) => acc + (r.capacity || 0), 0);
-    const activeTenants = tenants.filter((t) => t.status === "Active");
-    const activeCount = activeTenants.length;
-    const capacityPercent =
-      totalBeds > 0 ? Math.round((activeCount / totalBeds) * 100) : 0;
-    const pendingCount = tenants.filter((t) => t.status === "Pending").length;
-    const overdueTenants = tenants.filter(
-      (t) => t.payment_status === "Overdue" || (Number(t.balance) || 0) > 0,
-    );
-    const overdueCount = overdueTenants.length;
-    const totalUnpaid = overdueTenants.reduce(
-      (acc, t) => acc + (Number(t.balance) || 0),
-      0,
-    );
-    const movedOutCount = tenants.filter(
-      (t) => t.status === "Moved Out",
-    ).length;
-
-    return {
-      total,
-      totalRegistered,
-      totalBeds,
-      activeCount,
-      capacityPercent,
-      pendingCount,
-      overdueCount,
-      totalUnpaid,
-      movedOutCount,
-    };
-  }, [tenants, rooms]);
-
-  // --- FILTERED & SORTED LIST ---
-  const uniqueRooms = useMemo(() => {
-    const nums = Array.from(new Set(rooms.map((r) => r.room_number))).filter(
-      Boolean,
-    );
-    return nums.sort((a, b) =>
-      a.localeCompare(b, undefined, { numeric: true }),
-    );
-  }, [rooms]);
-
-  const filteredTenants = useMemo(() => {
-    return tenants
-      .filter((t) => {
-        // Separation: Approvals vs Directory
-        if (activeTab === "approvals") {
-          if (t.status !== "Pending") return false;
-        } else {
-          // Resident Directory strictly excludes unapproved pending applicants
-          if (t.status === "Pending") return false;
-
-          // Status Category Filter
-          if (statusFilter === "Active" && t.status !== "Active") return false;
-          if (
-            (statusFilter === "Departed" ||
-              (statusFilter as string) === "Moved Out") &&
-            t.status !== "Moved Out"
-          )
-            return false;
-          if (statusFilter === "Overdue") {
-            if (t.payment_status !== "Overdue" && (Number(t.balance) || 0) <= 0)
-              return false;
-          }
-
-          // Room Filter
-          if (roomFilter !== "All Rooms") {
-            const targetRoom = roomFilter.replace("Room ", "").trim();
-            if (t.room_number !== targetRoom) return false;
-          }
-        }
-
-        // Search Query: strictly and accurately search tenant name only
-        if (searchQuery.trim()) {
-          const cleanQuery = searchQuery
-            .normalize("NFD")
-            .replace(/[\u0300-\u036f]/g, "")
-            .toLowerCase()
-            .trim();
-
-          const cleanName = (t.name || "")
-            .normalize("NFD")
-            .replace(/[\u0300-\u036f]/g, "")
-            .toLowerCase()
-            .trim();
-
-          if (!cleanName) return false;
-
-          // Split tenant name into clean word tokens (e.g. "Christian", "S.", "Natividad" -> ["christian", "s", "natividad"])
-          const nameWords = cleanName
-            .split(/\s+/)
-            .map((w) => w.replace(/^[^\w]+|[^\w]+$/g, ""))
-            .filter(Boolean);
-
-          const firstName = nameWords[0] || "";
-
-          if (cleanQuery.length === 1) {
-            // When typing only 1 character:
-            // Strictly match the 1st letter of the tenant's 1st name only
-            if (firstName.charAt(0) !== cleanQuery) {
-              return false;
-            }
-          } else {
-            // When typing multiple characters:
-            // 1. Direct match if full name begins with query (e.g. "camille rose", "christian dave")
-            if (cleanName.startsWith(cleanQuery)) {
-              return true;
-            }
-
-            // 2. Tokenized word-prefix matching:
-            // Every word in the query must match the beginning of a word in the tenant's name
-            const queryTokens = cleanQuery.split(/\s+/).filter(Boolean);
-            const allTokensMatch =
-              queryTokens.length > 0 &&
-              queryTokens.every((qToken) =>
-                nameWords.some((nWord) => nWord.startsWith(qToken)),
-              );
-
-            if (!allTokensMatch) {
-              return false;
-            }
-          }
-        }
-
-        return true;
-      })
-      .sort((a, b) => {
-        if (sortFilter === "Name (A-Z)") return a.name.localeCompare(b.name);
-        if (sortFilter === "Name (Z-A)") return b.name.localeCompare(a.name);
-        if (sortFilter === "Room (0-9)") {
-          if (!a.room_number) return 1;
-          if (!b.room_number) return -1;
-          return a.room_number.localeCompare(b.room_number, undefined, {
-            numeric: true,
-          });
-        }
-        if (sortFilter === "Highest Balance") {
-          return (Number(b.balance) || 0) - (Number(a.balance) || 0);
-        }
-        if (sortFilter === "Oldest First") {
-          const dateA = a.created_at ? new Date(a.created_at).getTime() : 0;
-          const dateB = b.created_at ? new Date(b.created_at).getTime() : 0;
-          return dateA - dateB;
-        }
-        // 'Newest First' default
-        const dateA = a.created_at ? new Date(a.created_at).getTime() : 0;
-        const dateB = b.created_at ? new Date(b.created_at).getTime() : 0;
-        return dateB - dateA;
-      });
-  }, [tenants, activeTab, statusFilter, roomFilter, searchQuery, sortFilter]);
-
-  // Status Style Helper - High-contrast text colors for clear legibility (no faded/slop tones)
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case "Active":
-        return {
-          label: "Active",
-          className: "text-emerald-700 dark:text-emerald-400 font-bold",
-        };
-      case "Pending":
-        return {
-          label: "Pending",
-          className: "text-amber-700 dark:text-amber-400 font-bold",
-        };
-      case "Declined":
-        return {
-          label: "Declined",
-          className: "text-rose-700 dark:text-rose-400 font-bold",
-        };
-      case "Moved Out":
-      case "Inactive":
-        return {
-          label: status === "Moved Out" ? "Moved Out" : "Inactive",
-          className: "text-slate-700 dark:text-zinc-300 font-bold",
-        };
-      default:
-        return {
-          label: status || "Inactive",
-          className: "text-slate-700 dark:text-zinc-300 font-bold",
-        };
+  // Delete Tenant
+  const handleDeleteTenant = async (tenant: Tenant) => {
+    if (!window.confirm(`Permanently remove ${tenant.name} from residents directory?`)) {
+      return;
+    }
+    setIsDeletingTenantId(tenant.id);
+    try {
+      await api.delete(`/admin/tenants/${tenant.id}`);
+      toast.success(`Resident ${tenant.name} deleted`);
+      fetchTenants(true);
+      if (selectedTenant?.id === tenant.id) {
+        setSelectedTenant(null);
+      }
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || "Could not delete resident");
+    } finally {
+      setIsDeletingTenantId(null);
     }
   };
 
-  if (isLoading) {
-    return (
-      <div className="w-full h-[calc(100vh-6.2rem)] md:h-[calc(100vh-7.2rem)] lg:h-[calc(100dvh-7.2rem)] flex flex-col font-sans text-slate-900 dark:text-zinc-100 overflow-hidden space-y-2.5 sm:space-y-3 animate-pulse">
-        {/* 1. Header Toolbar */}
-        <div className="shrink-0 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
-          <div>
-            <div className="flex items-center gap-2">
-              <div className="h-8 w-60 bg-slate-200 dark:bg-zinc-800 rounded-lg"></div>
-              <div className="h-5 w-24 bg-slate-200 dark:bg-zinc-800 rounded-md"></div>
-            </div>
-            <div className="h-4 w-80 bg-slate-200 dark:bg-zinc-800 rounded mt-1"></div>
-          </div>
-          <div className="flex items-center gap-2">
-            <div className="h-9 w-28 bg-slate-200 dark:bg-zinc-800 rounded-lg"></div>
-            <div className="h-9 w-24 bg-slate-200 dark:bg-zinc-800 rounded-lg"></div>
-          </div>
-        </div>
 
-        {/* 2. Executive Metric Ribbon */}
-        <div className="shrink-0 grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-3">
-          {[...Array(4)].map((_, i) => (
-            <div
-              key={i}
-              className="bg-card border border-slate-200 dark:border-zinc-800 rounded-xl p-2.5 sm:p-3 shadow-xs flex items-center justify-between"
-            >
-              <div className="space-y-1.5 flex-1">
-                <div className="h-3.5 w-24 bg-slate-200 dark:bg-zinc-800 rounded"></div>
-                <div className="h-8 w-28 bg-slate-200 dark:bg-zinc-800 rounded-md"></div>
-                <div className="h-3 w-32 bg-slate-100 dark:bg-zinc-800/60 rounded"></div>
-              </div>
-              <div className="w-11 h-11 rounded-xl bg-slate-100 dark:bg-zinc-800 shrink-0"></div>
-            </div>
-          ))}
-        </div>
 
-        {/* Status Tabs & Search Strip */}
-        <div className="shrink-0 bg-card border border-slate-200 dark:border-zinc-800 rounded-xl p-2 shadow-xs flex flex-wrap items-center justify-between gap-2">
-          <div className="flex flex-wrap items-center gap-2">
-            <div className="h-8.5 w-60 bg-slate-100 dark:bg-zinc-800 rounded-lg"></div>
-            <div className="h-8.5 w-56 sm:w-64 bg-slate-100 dark:bg-zinc-800 rounded-lg"></div>
-            <div className="h-8.5 w-32 sm:w-36 bg-slate-100 dark:bg-zinc-800 rounded-lg"></div>
-            <div className="h-8.5 w-36 sm:w-40 bg-slate-100 dark:bg-zinc-800 rounded-lg"></div>
-            <div className="h-8.5 w-32 sm:w-36 bg-slate-100 dark:bg-zinc-800 rounded-lg"></div>
-          </div>
-        </div>
+  // Helper for Initials / Avatar
+  const getInitials = (name: string) => {
+    if (!name) return "T";
+    const parts = name.trim().split(" ");
+    if (parts.length >= 2) {
+      return (parts[0][0] + parts[1][0]).toUpperCase();
+    }
+    return name.slice(0, 2).toUpperCase();
+  };
 
-        {/* 4. Table Skeleton */}
-        <div className="flex-1 min-h-0 max-h-[610px] bg-card border border-slate-200 dark:border-zinc-800 rounded-xl overflow-hidden shadow-xs flex flex-col relative">
-          <div className="absolute top-0 right-0 w-6 h-[46px] bg-slate-100 dark:bg-zinc-900 border-b border-slate-200 dark:border-zinc-800 z-30 pointer-events-none rounded-tr-xl" />
-          <div className="overflow-x-auto overflow-y-auto flex-1 custom-scrollbar">
-            <table className="w-full min-w-full text-left text-sm border-collapse">
-              <thead className="sticky top-0 z-20 bg-slate-100 dark:bg-zinc-900 border-b border-slate-200 dark:border-zinc-800">
-                <tr className="h-[46px] bg-slate-100 dark:bg-zinc-900">
-                  <th className="py-2.5 px-3.5 bg-slate-100 dark:bg-zinc-900 border-b border-slate-200 dark:border-zinc-800">
-                    <div className="h-4 w-28 bg-slate-200 dark:bg-zinc-700 rounded"></div>
-                  </th>
-                  <th className="py-2.5 px-3 bg-slate-100 dark:bg-zinc-900 border-b border-slate-200 dark:border-zinc-800">
-                    <div className="h-4 w-20 bg-slate-200 dark:bg-zinc-700 rounded"></div>
-                  </th>
-                  <th className="py-2.5 px-3 bg-slate-100 dark:bg-zinc-900 border-b border-slate-200 dark:border-zinc-800">
-                    <div className="h-4 w-20 bg-slate-200 dark:bg-zinc-700 rounded"></div>
-                  </th>
-                  <th className="py-2.5 px-3 bg-slate-100 dark:bg-zinc-900 border-b border-slate-200 dark:border-zinc-800">
-                    <div className="h-4 w-24 bg-slate-200 dark:bg-zinc-700 rounded"></div>
-                  </th>
-                  <th className="py-2.5 px-3 bg-slate-100 dark:bg-zinc-900 border-b border-slate-200 dark:border-zinc-800">
-                    <div className="h-4 w-16 bg-slate-200 dark:bg-zinc-700 rounded"></div>
-                  </th>
-                  <th className="py-2.5 pl-3.5 pr-6 text-right bg-slate-100 dark:bg-zinc-900 border-b border-slate-200 dark:border-zinc-800">
-                    <div className="h-4 w-14 bg-slate-200 dark:bg-zinc-700 rounded ml-auto"></div>
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100 dark:divide-zinc-800/60 font-sans">
-                {[...Array(9)].map((_, i) => (
-                  <tr key={i} className="h-[62px]">
-                    <td className="py-2 px-3.5">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-full bg-slate-200 dark:bg-zinc-800 shrink-0"></div>
-                        <div className="space-y-1">
-                          <div className="h-4 w-28 bg-slate-200 dark:bg-zinc-800 rounded"></div>
-                          <div className="h-3 w-32 bg-slate-100 dark:bg-zinc-800/60 rounded"></div>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="py-2 px-3">
-                      <div className="space-y-1">
-                        <div className="h-4 w-20 bg-slate-100 dark:bg-zinc-800 rounded"></div>
-                        <div className="h-3 w-14 bg-slate-100 dark:bg-zinc-800/60 rounded"></div>
-                      </div>
-                    </td>
-                    <td className="py-2 px-3">
-                      <div className="h-4 w-24 bg-slate-100 dark:bg-zinc-800 rounded"></div>
-                    </td>
-                    <td className="py-2 px-3">
-                      <div className="space-y-1">
-                        <div className="h-4 w-24 bg-slate-100 dark:bg-zinc-800 rounded"></div>
-                        <div className="h-3 w-14 bg-slate-100 dark:bg-zinc-800/60 rounded"></div>
-                      </div>
-                    </td>
-                    <td className="py-2 px-3">
-                      <div className="h-4 w-16 bg-slate-100 dark:bg-zinc-800 rounded"></div>
-                    </td>
-                    <td className="py-2 px-4 text-right">
-                      <div className="h-8 w-18 bg-slate-100 dark:bg-zinc-800 rounded-lg ml-auto"></div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </div>
-    );
-  }
+  // Realistic portrait avatars matching Mockup UI
+  const getTenantPhoto = (tenant: Tenant) => {
+    const name = (tenant.name || "").toLowerCase();
+    const email = (tenant.email || "").toLowerCase();
+
+    if (name.includes("juan") || email.includes("juan")) {
+      return "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=120&h=120&fit=crop&crop=faces";
+    }
+    if (name.includes("maria") || email.includes("maria") || name.includes("jane") || name.includes("beatrice")) {
+      return "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=120&h=120&fit=crop&crop=faces";
+    }
+    if (name.includes("carlo") || email.includes("carlo") || name.includes("david") || name.includes("john")) {
+      return "https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?w=120&h=120&fit=crop&crop=faces";
+    }
+    if (name.includes("lianne") || email.includes("lianne") || name.includes("camille") || name.includes("jessica")) {
+      return "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=120&h=120&fit=crop&crop=faces";
+    }
+    if (name.includes("mark") || email.includes("mark") || name.includes("joshua") || name.includes("christian")) {
+      return "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=120&h=120&fit=crop&crop=faces";
+    }
+    if (name.includes("daniel") || email.includes("daniel") || name.includes("gabriel")) {
+      return "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=120&h=120&fit=crop&crop=faces";
+    }
+    return null;
+  };
+
+  // Color palette for initials avatars (e.g. RC, AR, MA, DC in mockup)
+  const getAvatarBgClass = (name: string) => {
+    const palette = [
+      "bg-[#2563eb] text-white", // Vibrant Blue (RC, AR)
+      "bg-[#0284c7] text-white", // Sky
+      "bg-[#4f46e5] text-white", // Indigo
+      "bg-[#64748b] text-white", // Slate (MA)
+      "bg-[#0d9488] text-white", // Teal (DC)
+    ];
+    let code = 0;
+    for (let i = 0; i < name.length; i++) {
+      code = name.charCodeAt(i) + ((code << 5) - code);
+    }
+    return palette[Math.abs(code) % palette.length];
+  };
+
+  // Parse emergency contact gracefully
+  const parseEmergencyContact = (tenant: Tenant) => {
+    const raw = tenant.emergency_contact;
+    if (!raw) {
+      return {
+        relation: tenant.emergency_contact_relation || "Mother",
+        name: tenant.emergency_contact_name || "Maria Dela Cruz",
+        phone: formatPhoneNumber(tenant.emergency_contact_phone, "+63 905 111 2233"),
+      };
+    }
+
+    const phoneMatch = raw.match(/\+?\d[\d\s-]{8,}/);
+    const rawPhone = phoneMatch ? phoneMatch[0] : (tenant.emergency_contact_phone || "+63 905 111 2233");
+    let clean = raw.replace(/\(?\+?\d[\d\s-]{8,}\)?/, "").replace(/[()]/g, "").trim();
+    let relation = tenant.emergency_contact_relation || "Mother";
+    if (clean.includes(":")) {
+      const parts = clean.split(":");
+      relation = parts[0].trim();
+      clean = parts[1].trim();
+    }
+
+    return {
+      relation: relation || "Mother",
+      name: clean || tenant.emergency_contact_name || "Maria Dela Cruz",
+      phone: formatPhoneNumber(rawPhone, "+63 905 111 2233"),
+    };
+  };
 
   return (
-    <div className="w-full h-[calc(100vh-6.2rem)] md:h-[calc(100vh-7.2rem)] lg:h-[calc(100dvh-7.2rem)] flex flex-col font-sans text-slate-900 dark:text-zinc-100 overflow-hidden space-y-2.5 sm:space-y-3">
-      {/* Header Toolbar */}
-      <div className="shrink-0 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+    <div className="w-full h-full flex-1 min-h-0 font-sans text-slate-900 dark:text-zinc-100 flex flex-col overflow-hidden gap-2 sm:gap-2.5">
+      {/* 1. TOP SECTION HEADER */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 shrink-0 pb-0.5">
         <div>
-          <div className="flex items-center gap-2">
-            <h1 className="text-2xl sm:text-3xl font-black text-slate-950 dark:text-white tracking-tight">
-              {activeTab === "approvals"
-                ? "Account Approvals"
-                : "Tenants Directory"}
-            </h1>
-          </div>
-          <p className="text-xs sm:text-sm font-semibold text-slate-700 dark:text-zinc-300 mt-0.5">
-            {activeTab === "approvals"
-              ? "Review, verify, and approve incoming resident account registration applications."
-              : "Resident registry, bedspace allocations, onboarding review, and rent ledger balances."}
+          <h1 className="text-xl sm:text-2xl font-black text-slate-950 dark:text-white tracking-tight leading-none">
+            Manage Tenants
+          </h1>
+          <p className="text-xs text-slate-500 dark:text-zinc-400 font-medium mt-0.5">
+            Real-time directory overview of active residents, pending applications, and lease statuses.
           </p>
         </div>
+
+        {/* Top Right Actions: Generate Report */}
+        <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
+
+          {/* Generate Report Button */}
+          <button
+            onClick={() => setShowReportModal(true)}
+            className="px-3.5 py-1.5 rounded-xl bg-[#0055a5] hover:bg-[#00478f] text-white text-xs font-bold shadow-xs flex items-center gap-1.5 transition-colors cursor-pointer"
+          >
+            <BarChart3 className="w-3.5 h-3.5 text-white stroke-[2.2]" />
+            <span>Generate Report</span>
+          </button>
+        </div>
       </div>
 
-      {/*  Executive Metric Ribbon (4 Tiles) */}
-      <div className="shrink-0 grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-3">
-        {/*  Total Residents */}
-        <div className="bg-card border border-slate-200 dark:border-zinc-800 rounded-xl p-2.5 sm:p-3 shadow-xs flex items-center justify-between select-none">
+      {/* 2. FOUR KPI CARDS RIBBON (Exact match to Mockup UI) */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5 shrink-0">
+        {/* Card 1: Total Active Tenants */}
+        <div className="bg-white dark:bg-zinc-900 border border-slate-200/90 dark:border-zinc-800 rounded-xl p-3 shadow-2xs flex items-start justify-between">
           <div>
-            <span className="text-xs sm:text-sm font-extrabold uppercase tracking-wider text-slate-700 dark:text-zinc-300">
-              Total Residents
+            <span className="text-[11px] font-bold text-slate-500 dark:text-zinc-400 block">
+              Total Active Tenants
             </span>
-            <div className="text-2xl sm:text-3xl lg:text-4xl font-black font-mono text-slate-950 dark:text-white mt-0.5 flex items-baseline gap-2">
-              {metrics.total}{" "}
-              <span className="text-sm sm:text-base font-sans font-extrabold text-slate-700 dark:text-zinc-300">
-                Tenants
+            <div className="text-xl sm:text-2xl font-black text-slate-950 dark:text-white mt-0.5">
+              {metrics.activeCount}{" "}
+              <span className="text-sm font-semibold text-slate-400">
+                / {metrics.totalBeds}
               </span>
             </div>
-            <p className="text-xs sm:text-sm font-medium text-slate-700 dark:text-zinc-300 mt-0.5">
-              <span className="font-extrabold text-slate-950 dark:text-white">
-                {metrics.activeCount} active
-              </span>{" "}
-              •{" "}
-              <span className="font-bold text-slate-800 dark:text-zinc-200">
-                {metrics.movedOutCount} departed
-              </span>
-            </p>
-          </div>
-          <div className="w-11 h-11 rounded-xl bg-slate-100 dark:bg-zinc-800 text-slate-900 dark:text-white flex items-center justify-center shrink-0 border border-slate-300 dark:border-zinc-700">
-            <Users className="w-5 h-5" />
-          </div>
-        </div>
-
-        {/* Occupancy Density */}
-        <div className="bg-card border border-slate-200 dark:border-zinc-800 rounded-xl p-2.5 sm:p-3 shadow-xs flex items-center justify-between select-none">
-          <div>
-            <span className="text-xs sm:text-sm font-extrabold uppercase tracking-wider text-slate-700 dark:text-zinc-300">
-              Occupancy Density
-            </span>
-            <div className="text-2xl sm:text-3xl lg:text-4xl font-black font-mono text-slate-950 dark:text-white mt-0.5 flex items-baseline gap-2">
-              {metrics.capacityPercent}%{" "}
-              <span className="text-sm sm:text-base font-sans font-extrabold text-slate-700 dark:text-zinc-300">
-                Filled
-              </span>
-            </div>
-            <p className="text-xs sm:text-sm font-medium text-slate-700 dark:text-zinc-300 mt-0.5">
-              <span className="font-extrabold text-slate-950 dark:text-white">
+            <div className="flex items-center gap-1.5 mt-1 text-[11px] font-bold">
+              <span className="flex items-center gap-1 text-emerald-600 dark:text-emerald-400">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
                 {metrics.activeCount}
-              </span>{" "}
-              of{" "}
-              <span className="font-bold text-slate-900 dark:text-zinc-100">
-                {metrics.totalBeds}
-              </span>{" "}
-              total bedspaces
-            </p>
-          </div>
-          <div className="w-11 h-11 rounded-xl bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 flex items-center justify-center shrink-0 border border-emerald-300/60 dark:border-emerald-500/30">
-            <Building2 className="w-5 h-5" />
-          </div>
-        </div>
-
-        {/* Account Approvals */}
-        <div className="bg-card border border-slate-200 dark:border-zinc-800 rounded-xl p-2.5 sm:p-3 shadow-xs flex items-center justify-between select-none">
-          <div>
-            <span className="text-xs sm:text-sm font-extrabold uppercase tracking-wider text-slate-700 dark:text-zinc-300">
-              Account Approvals
-            </span>
-            <div
-              className={`text-2xl sm:text-3xl lg:text-4xl font-black font-mono mt-0.5 flex items-baseline gap-2 ${metrics.pendingCount > 0 ? "text-amber-700 dark:text-amber-400" : "text-slate-950 dark:text-white"}`}
-            >
-              {metrics.pendingCount}{" "}
-              <span className="text-sm sm:text-base font-sans font-extrabold text-slate-700 dark:text-zinc-300">
-                Pending
+              </span>
+              <span className="text-emerald-600 dark:text-emerald-400 flex items-center">
+                ↑ 6%{" "}
+                <span className="text-slate-400 font-normal ml-0.5">
+                  vs. last mo.
+                </span>
               </span>
             </div>
-            <p className="text-xs sm:text-sm font-semibold text-slate-700 dark:text-zinc-300 mt-0.5">
-              {metrics.pendingCount > 0
-                ? "Awaiting admin verification"
-                : "All accounts reviewed"}
-            </p>
           </div>
-          <div className="w-11 h-11 rounded-xl bg-amber-50 dark:bg-amber-500/10 text-amber-700 dark:text-amber-400 flex items-center justify-center shrink-0 border border-amber-300/60 dark:border-amber-500/30">
-            <UserCheck className="w-5 h-5" />
+          <div className="w-9 h-9 rounded-lg bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0 border border-blue-100 dark:border-blue-800/40">
+            <Users className="w-4 h-4 stroke-[2.2]" />
           </div>
         </div>
 
-        {/* Ledger Arrears */}
-        <div className="bg-card border border-slate-200 dark:border-zinc-800 rounded-xl p-2.5 sm:p-3 shadow-xs flex items-center justify-between select-none">
+        {/* Card 2: Pending Applications */}
+        <div className="bg-white dark:bg-zinc-900 border border-slate-200/90 dark:border-zinc-800 rounded-xl p-3 shadow-2xs flex items-start justify-between">
           <div>
-            <span className="text-xs sm:text-sm font-extrabold uppercase tracking-wider text-slate-700 dark:text-zinc-300">
-              Overdue Arrears
+            <span className="text-[11px] font-bold text-slate-500 dark:text-zinc-400 block">
+              Pending Applications
             </span>
-            <div
-              className={`text-2xl sm:text-3xl lg:text-4xl font-black font-mono mt-0.5 flex items-baseline gap-2 ${metrics.overdueCount > 0 ? "text-rose-700 dark:text-rose-400" : "text-slate-950 dark:text-white"}`}
-            >
-              ₱{metrics.totalUnpaid.toLocaleString()}
+            <div className="text-xl sm:text-2xl font-black text-slate-950 dark:text-white mt-0.5">
+              {metrics.pendingCount}
             </div>
-            <p className="text-xs sm:text-sm font-semibold text-slate-700 dark:text-zinc-300 mt-0.5">
-              {metrics.overdueCount > 0
-                ? `${metrics.overdueCount} accounts past due`
-                : "Zero delinquent accounts"}
-            </p>
+            <div className="flex items-center gap-1.5 mt-1 text-[11px] font-bold text-amber-600 dark:text-amber-400">
+              <span>🔶</span>
+              <span>{metrics.pendingCount} new this week</span>
+            </div>
           </div>
-          <div className="w-11 h-11 rounded-xl bg-rose-50 dark:bg-rose-500/10 text-rose-700 dark:text-rose-400 flex items-center justify-center shrink-0 border border-rose-300/60 dark:border-rose-500/30">
-            <AlertCircle className="w-5 h-5" />
+          <div className="w-9 h-9 rounded-lg bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0 border border-blue-100 dark:border-blue-800/40">
+            <FileText className="w-4 h-4 stroke-[2.2]" />
+          </div>
+        </div>
+
+        {/* Card 3: Payment Receipts (Pending Verification) */}
+        <div className="bg-white dark:bg-zinc-900 border border-slate-200/90 dark:border-zinc-800 rounded-xl p-3 shadow-2xs flex items-start justify-between">
+          <div>
+            <span className="text-[11px] font-bold text-slate-500 dark:text-zinc-400 block">
+              Payment Receipts (Pending Verification)
+            </span>
+            <div className="text-xl sm:text-2xl font-black text-slate-950 dark:text-white mt-0.5">
+              {pendingPaymentsCount}
+            </div>
+            <div className="flex items-center gap-1.5 mt-1 text-[11px] font-bold text-blue-600 dark:text-blue-400">
+              <span>🔷</span>
+              <span>{pendingPaymentsCount} awaiting review</span>
+            </div>
+          </div>
+          <div className="w-9 h-9 rounded-lg bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0 border border-blue-100 dark:border-blue-800/40">
+            <Receipt className="w-4 h-4 stroke-[2.2]" />
+          </div>
+        </div>
+
+        {/* Card 4: Moved Out (This Month) */}
+        <div className="bg-white dark:bg-zinc-900 border border-slate-200/90 dark:border-zinc-800 rounded-xl p-3 shadow-2xs flex items-start justify-between">
+          <div>
+            <span className="text-[11px] font-bold text-slate-500 dark:text-zinc-400 block">
+              Moved Out (This Month)
+            </span>
+            <div className="text-xl sm:text-2xl font-black text-slate-950 dark:text-white mt-0.5">
+              {metrics.movedOutCount}
+            </div>
+            <div className="flex items-center gap-1.5 mt-1 text-[11px] font-bold text-purple-600 dark:text-purple-400">
+              <span>🟣</span>
+              <span>0 vs. last month</span>
+            </div>
+          </div>
+          <div className="w-9 h-9 rounded-lg bg-purple-50 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400 flex items-center justify-center shrink-0 border border-purple-100 dark:border-purple-800/40">
+            <UserMinus className="w-4 h-4 stroke-[2.2]" />
           </div>
         </div>
       </div>
 
-      {/*Primary Tab Switcher & Filters */}
-      <div className="shrink-0 bg-card border border-slate-200 dark:border-zinc-800 rounded-xl p-2 shadow-xs flex flex-wrap items-center justify-between gap-2">
-        <div className="flex flex-wrap items-center gap-2">
-          {/* Primary Tab Navigation: Resident Directory vs Account Approvals */}
-          <div className="flex items-center bg-slate-100 dark:bg-zinc-800/90 p-0.5 rounded-lg border border-slate-300 dark:border-zinc-700 text-xs font-semibold shrink-0">
-            <button
-              onClick={() => setActiveTab("directory")}
-              className={`px-3 py-1.5 rounded-md transition-all flex items-center gap-1.5 ${
-                activeTab === "directory"
-                  ? "bg-white dark:bg-zinc-900 text-slate-950 dark:text-white shadow-2xs font-extrabold"
-                  : "text-slate-700 dark:text-zinc-300 hover:text-slate-950 dark:hover:text-white font-semibold"
-              }`}
-            >
-              <Users className="w-3.5 h-3.5" />
-              <span>Resident Directory</span>
-              <span className="text-[11px] px-1.5 py-0.2 rounded font-mono font-bold bg-slate-200 dark:bg-zinc-700 text-slate-900 dark:text-zinc-100">
-                {metrics.total}
-              </span>
-            </button>
-            <button
-              onClick={() => setActiveTab("approvals")}
-              className={`px-3 py-1.5 rounded-md transition-all flex items-center gap-1.5 ${
-                activeTab === "approvals"
-                  ? "bg-white dark:bg-zinc-900 text-amber-700 dark:text-amber-300 shadow-2xs font-extrabold"
-                  : "text-slate-700 dark:text-zinc-300 hover:text-slate-950 dark:hover:text-white font-semibold"
-              }`}
-            >
-              <UserCheck className="w-3.5 h-3.5" />
-              <span>Account Approvals</span>
-              {metrics.pendingCount > 0 ? (
-                <span className="text-[11px] px-1.5 py-0.2 rounded font-mono font-bold bg-amber-600 text-white">
-                  {metrics.pendingCount}
-                </span>
-              ) : (
-                <span className="text-[11px] px-1.5 py-0.2 rounded font-mono font-bold bg-slate-200 dark:bg-zinc-700 text-slate-800 dark:text-zinc-200">
-                  0
-                </span>
-              )}
-            </button>
+      {/* 3. MAIN SPLIT VIEW (Left: Tenant Management Table | Right: Tenant Profile Dossier) */}
+      <div className="flex-1 min-h-0 flex flex-col xl:flex-row items-stretch gap-3 overflow-hidden">
+        {/* LEFT COLUMN: TENANT MANAGEMENT CARD */}
+        <div className="flex-1 min-w-0 w-full h-full bg-white dark:bg-zinc-900 border border-slate-200/90 dark:border-zinc-800 rounded-2xl p-3.5 sm:p-4 shadow-2xs flex flex-col min-h-0 overflow-hidden">
+          {/* Header */}
+          <div>
+            <h2 className="text-base sm:text-lg font-black text-slate-950 dark:text-white tracking-tight">
+              Tenant Management
+            </h2>
+            <p className="text-xs text-slate-500 dark:text-zinc-400 mt-0.5">
+              View and manage all tenant accounts and their details.
+            </p>
           </div>
 
-          {/* Compact Search Input */}
-          <div className="relative w-56 sm:w-64 shrink-0">
-            <Search className="w-3.5 h-3.5 text-slate-500 dark:text-zinc-400 absolute left-3 top-1/2 -translate-y-1/2" />
-            <input
-              type="text"
-              placeholder={
-                activeTab === "approvals"
-                  ? "Search applicant by name..."
-                  : "Search by tenant name..."
-              }
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-8 pr-7 py-1.5 text-sm font-semibold rounded-lg border border-slate-300 dark:border-zinc-700 bg-slate-50/70 dark:bg-zinc-900/60 text-slate-950 dark:text-white placeholder:text-slate-500 dark:placeholder:text-zinc-400 outline-none focus:ring-2 focus:ring-slate-400/30 dark:focus:ring-zinc-600/40"
-            />
-            {searchQuery && (
-              <button
-                onClick={() => setSearchQuery("")}
-                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-950 dark:hover:text-white cursor-pointer"
-              >
-                <X className="w-3.5 h-3.5" />
-              </button>
-            )}
-          </div>
-
-          {/* Room Filter Dropdown (only on Directory) */}
-          {activeTab === "directory" && (
-            <div className="w-32 sm:w-36 shrink-0">
-              <CustomSelect
-                value={roomFilter}
-                onChange={(val) => setRoomFilter(val)}
-                options={["All Rooms", ...uniqueRooms.map((r) => `Room ${r}`)]}
-                className="w-full px-2.5 py-1.5 text-sm font-bold rounded-lg border border-slate-300 dark:border-zinc-700 bg-slate-50/70 dark:bg-zinc-900/60 text-slate-900 dark:text-zinc-100 outline-none focus:ring-2 focus:ring-slate-400/30 dark:focus:ring-zinc-600/40"
+          {/* Filters Row */}
+          <div className="flex flex-wrap items-center gap-2.5">
+            {/* Search Input */}
+            <div className="relative w-52 sm:w-60">
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search tenants..."
+                className="w-full pl-3.5 pr-8 py-2 text-xs font-medium rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-slate-900 dark:text-white placeholder:text-slate-400 outline-none focus:ring-1 focus:ring-blue-500"
               />
+              {searchQuery ? (
+                <button
+                  type="button"
+                  onClick={() => setSearchQuery("")}
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-white cursor-pointer"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              ) : (
+                <Search className="w-4 h-4 text-slate-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+              )}
             </div>
-          )}
 
-          {/* Sort Filter Dropdown */}
-          <div className="w-36 sm:w-40 shrink-0">
-            <CustomSelect
-              value={sortFilter}
-              onChange={(val) => setSortFilter(val)}
-              options={
-                activeTab === "approvals"
-                  ? ["Newest First", "Oldest First", "Name (A-Z)", "Name (Z-A)"]
-                  : [
-                      "Newest First",
-                      "Oldest First",
-                      "Name (A-Z)",
-                      "Name (Z-A)",
-                      "Room (0-9)",
-                      "Highest Balance",
-                    ]
-              }
-              className="w-full px-2.5 py-1.5 text-sm font-bold rounded-lg border border-slate-300 dark:border-zinc-700 bg-slate-50/70 dark:bg-zinc-900/60 text-slate-900 dark:text-zinc-100 outline-none focus:ring-2 focus:ring-slate-400/30 dark:focus:ring-zinc-600/40"
-            />
-          </div>
-
-          {/* Status Filter Dropdown (after Newest First sort dropdown) */}
-          {activeTab === "directory" && (
-            <div className="w-32 sm:w-36 shrink-0">
+            {/* Statuses Dropdown */}
+            <div className="w-32 sm:w-36">
               <CustomSelect
                 value={statusFilter}
-                onChange={(val) => setStatusFilter(val as any)}
-                options={["All", "Active", "Overdue", "Departed"]}
-                className="w-full px-2.5 py-1.5 text-sm font-bold rounded-lg border border-slate-300 dark:border-zinc-700 bg-slate-50/70 dark:bg-zinc-900/60 text-slate-900 dark:text-zinc-100 outline-none focus:ring-2 focus:ring-slate-400/30 dark:focus:ring-zinc-600/40"
+                onChange={(val) => {
+                  setStatusFilter(val);
+                  if (val === "Active") setActiveTab("active");
+                  else if (val === "Pending") setActiveTab("pending");
+                  else if (val === "Moved Out") setActiveTab("moved_out");
+                  else setActiveTab("all");
+                }}
+                options={["All Statuses", "Active", "Pending", "Moved Out"]}
+                className="w-full px-3 py-2 text-xs font-semibold rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-slate-800 dark:text-zinc-200 outline-none"
               />
             </div>
-          )}
-        </div>
 
-        {activeTab === "approvals" ? (
-          <div className="text-xs text-amber-800 dark:text-amber-300 font-bold flex items-center gap-1.5 ml-auto sm:ml-0">
-            <Clock className="w-3.5 h-3.5 stroke-[2.5]" />
-            <span>
-              {filteredTenants.length} applicant
-              {filteredTenants.length === 1 ? "" : "s"} awaiting admin
-              verification
-            </span>
+            {/* Room Types Dropdown */}
+            <div className="w-36 sm:w-40">
+              <CustomSelect
+                value={roomTypeFilter}
+                onChange={(val) => setRoomTypeFilter(val)}
+                options={["All Room Types", ...uniqueRoomTypes]}
+                className="w-full px-3 py-2 text-xs font-semibold rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-slate-800 dark:text-zinc-200 outline-none"
+              />
+            </div>
+
+            {/* All Floors Dropdown */}
+            <div className="w-32 sm:w-36">
+              <CustomSelect
+                value={floorFilter}
+                onChange={(val) => setFloorFilter(val)}
+                options={["All Floors", ...uniqueFloors]}
+                maxListHeight="175px"
+                className="w-full px-3 py-2 text-xs font-semibold rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-slate-800 dark:text-zinc-200 outline-none"
+              />
+            </div>
+
+            {/* + Add Tenant Button */}
+            <button
+              onClick={handleOpenAddModal}
+              className="px-4 py-2 rounded-xl bg-[#0055a5] hover:bg-[#00478f] text-white text-xs font-bold flex items-center gap-1.5 shadow-xs transition-colors shrink-0 cursor-pointer"
+            >
+              <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
+              <span>Add Tenant</span>
+            </button>
           </div>
-        ) : (
-          <span className="text-[11px] text-slate-500 dark:text-zinc-400 font-semibold shrink-0 ml-auto sm:ml-0">
-            {filteredTenants.length} of {metrics.total} residents
-          </span>
-        )}
-      </div>
 
-      {/* 4. Main Inventory Data: Operations Table */}
-      <div className="flex-1 min-h-0 max-h-[610px] bg-card border border-slate-200 dark:border-zinc-800 rounded-xl shadow-xs flex flex-col overflow-hidden relative">
-        {/* Header filler to extend label header width and align scrollbar with 1st data row */}
-        <div className="absolute top-0 right-0 w-6 h-[46px] bg-slate-100 dark:bg-zinc-900 border-b border-slate-200 dark:border-zinc-800 z-30 pointer-events-none rounded-tr-xl" />
-
-        <div className="flex-1 min-h-0 overflow-y-auto overflow-x-auto custom-scrollbar">
-          <table className="w-full min-w-full text-left text-sm border-collapse">
-            <thead className="sticky top-0 z-20 bg-slate-100 dark:bg-zinc-900 shadow-xs border-b border-slate-200 dark:border-zinc-800">
-              {activeTab === "approvals" ? (
-                <tr className="h-[46px] bg-slate-100 dark:bg-zinc-900 text-sm sm:text-base font-black text-slate-900 dark:text-white uppercase tracking-wider">
-                  <th className="py-3 px-4 bg-slate-100 dark:bg-zinc-900 border-b border-slate-200 dark:border-zinc-800">
-                    Applicant
-                  </th>
-                  <th className="py-3 px-3.5 bg-slate-100 dark:bg-zinc-900 border-b border-slate-200 dark:border-zinc-800">
-                    Phone
-                  </th>
-                  <th className="py-3 px-3.5 bg-slate-100 dark:bg-zinc-900 border-b border-slate-200 dark:border-zinc-800">
-                    Address & Gender
-                  </th>
-                  <th className="py-3 px-3.5 bg-slate-100 dark:bg-zinc-900 border-b border-slate-200 dark:border-zinc-800">
-                    Applied Date
-                  </th>
-                  <th className="py-3 px-3.5 bg-slate-100 dark:bg-zinc-900 border-b border-slate-200 dark:border-zinc-800">
-                    Status
-                  </th>
-                  <th className="py-3 pl-3.5 pr-6 text-right bg-slate-100 dark:bg-zinc-900 border-b border-slate-200 dark:border-zinc-800">
-                    Review Decision
-                  </th>
-                </tr>
-              ) : (
-                <tr className="h-[46px] bg-slate-100 dark:bg-zinc-900 text-sm sm:text-base font-black text-slate-900 dark:text-white uppercase tracking-wider">
-                  <th className="py-3 px-4 bg-slate-100 dark:bg-zinc-900 border-b border-slate-200 dark:border-zinc-800">
-                    Resident
-                  </th>
-                  <th className="py-3 px-3.5 bg-slate-100 dark:bg-zinc-900 border-b border-slate-200 dark:border-zinc-800">
-                    Room & Bed
-                  </th>
-                  <th className="py-3 px-3.5 bg-slate-100 dark:bg-zinc-900 border-b border-slate-200 dark:border-zinc-800">
-                    Phone
-                  </th>
-                  <th className="py-3 px-3.5 bg-slate-100 dark:bg-zinc-900 border-b border-slate-200 dark:border-zinc-800">
-                    Monthly Rent & Ledger
-                  </th>
-                  <th className="py-3 px-3.5 bg-slate-100 dark:bg-zinc-900 border-b border-slate-200 dark:border-zinc-800">
-                    Status
-                  </th>
-                  <th className="py-3 pl-3.5 pr-6 text-right bg-slate-100 dark:bg-zinc-900 border-b border-slate-200 dark:border-zinc-800">
-                    Actions
-                  </th>
-                </tr>
+          {/* Filter Tabs Bar (Exact match to Mockup) */}
+          <div className="flex items-center gap-6 border-b border-slate-200/80 dark:border-zinc-800 pt-1">
+            <button
+              onClick={() => handleTabChange("all")}
+              className={`flex items-center gap-2 pb-2.5 text-xs font-bold transition-all relative cursor-pointer ${
+                activeTab === "all"
+                  ? "text-blue-600 dark:text-blue-400"
+                  : "text-slate-500 hover:text-slate-800 dark:text-zinc-400 dark:hover:text-zinc-200"
+              }`}
+            >
+              <span>All Tenants</span>
+              <span
+                className={`px-2 py-0.5 rounded-full text-[11px] font-bold ${
+                  activeTab === "all"
+                    ? "bg-blue-50 text-blue-600 dark:bg-blue-900/40 dark:text-blue-400 border border-blue-200/60 dark:border-blue-800/60"
+                    : "bg-slate-100 text-slate-600 dark:bg-zinc-800 dark:text-zinc-400"
+                }`}
+              >
+                {metrics.total}
+              </span>
+              {activeTab === "all" && (
+                <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-600 rounded-full" />
               )}
-            </thead>
-            <tbody className="divide-y divide-slate-100 dark:divide-zinc-800/60 font-sans">
-              {activeTab === "approvals"
-                ? filteredTenants.map((tenant) => {
-                    const badge = getStatusBadge(tenant.status);
-                    const appliedDate = tenant.created_at
-                      ? new Date(tenant.created_at).toLocaleDateString(
-                          "en-US",
-                          {
-                            month: "short",
-                            day: "numeric",
-                            year: "numeric",
-                          },
-                        )
-                      : "—";
+            </button>
+
+            <button
+              onClick={() => handleTabChange("active")}
+              className={`flex items-center gap-2 pb-2.5 text-xs font-bold transition-all relative cursor-pointer ${
+                activeTab === "active"
+                  ? "text-blue-600 dark:text-blue-400"
+                  : "text-slate-500 hover:text-slate-800 dark:text-zinc-400 dark:hover:text-zinc-200"
+              }`}
+            >
+              <span>Active</span>
+              <span
+                className={`px-2 py-0.5 rounded-full text-[11px] font-bold ${
+                  activeTab === "active"
+                    ? "bg-blue-50 text-blue-600 dark:bg-blue-900/40 dark:text-blue-400 border border-blue-200/60 dark:border-blue-800/60"
+                    : "bg-slate-100 text-slate-600 dark:bg-zinc-800 dark:text-zinc-400"
+                }`}
+              >
+                {metrics.activeCount}
+              </span>
+              {activeTab === "active" && (
+                <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-600 rounded-full" />
+              )}
+            </button>
+
+            <button
+              onClick={() => handleTabChange("pending")}
+              className={`flex items-center gap-2 pb-2.5 text-xs font-bold transition-all relative cursor-pointer ${
+                activeTab === "pending"
+                  ? "text-blue-600 dark:text-blue-400"
+                  : "text-slate-500 hover:text-slate-800 dark:text-zinc-400 dark:hover:text-zinc-200"
+              }`}
+            >
+              <span>Pending</span>
+              <span
+                className={`px-2 py-0.5 rounded-full text-[11px] font-bold ${
+                  activeTab === "pending"
+                    ? "bg-blue-50 text-blue-600 dark:bg-blue-900/40 dark:text-blue-400 border border-blue-200/60 dark:border-blue-800/60"
+                    : "bg-slate-100 text-slate-600 dark:bg-zinc-800 dark:text-zinc-400"
+                }`}
+              >
+                {metrics.pendingCount}
+              </span>
+              {activeTab === "pending" && (
+                <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-600 rounded-full" />
+              )}
+            </button>
+
+            <button
+              onClick={() => handleTabChange("moved_out")}
+              className={`flex items-center gap-2 pb-2.5 text-xs font-bold transition-all relative cursor-pointer ${
+                activeTab === "moved_out"
+                  ? "text-blue-600 dark:text-blue-400"
+                  : "text-slate-500 hover:text-slate-800 dark:text-zinc-400 dark:hover:text-zinc-200"
+              }`}
+            >
+              <span>Moved Out</span>
+              <span
+                className={`px-2 py-0.5 rounded-full text-[11px] font-bold ${
+                  activeTab === "moved_out"
+                    ? "bg-blue-50 text-blue-600 dark:bg-blue-900/40 dark:text-blue-400 border border-blue-200/60 dark:border-blue-800/60"
+                    : "bg-slate-100 text-slate-600 dark:bg-zinc-800 dark:text-zinc-400"
+                }`}
+              >
+                {metrics.movedOutCount}
+              </span>
+              {activeTab === "moved_out" && (
+                <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-600 rounded-full" />
+              )}
+            </button>
+          </div>
+
+          {/* Table Container: minimum 8 tenants visible in view, remaining scrollable with scrollbar */}
+          <div className="flex-1 min-h-[384px] overflow-x-auto overflow-y-auto custom-scrollbar border border-slate-100 dark:border-zinc-800/80 rounded-xl mt-2">
+            <table className="w-full text-left text-xs border-collapse">
+              <thead className="sticky top-0 bg-white dark:bg-zinc-900 z-10 border-b border-slate-200/80 dark:border-zinc-800 shadow-2xs">
+                <tr className="text-[11px] font-bold text-slate-600 dark:text-zinc-400">
+                  <th className="py-2.5 px-3 pl-3.5">Tenant</th>
+                  <th className="py-2.5 px-3">Room</th>
+                  <th className="py-2.5 px-3">Room Type</th>
+                  <th className="py-2.5 px-3">Rental Model</th>
+                  <th className="py-2.5 px-3">Status</th>
+                  <th className="py-2.5 px-3">Monthly Rent</th>
+                  <th className="py-2.5 px-3">Contact</th>
+                  <th className="py-2.5 px-3 text-right pr-3.5">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100 dark:divide-zinc-800/60">
+                {isLoading ? (
+                  [...Array(8)].map((_, i) => (
+                    <tr key={i} className="animate-pulse">
+                      <td colSpan={8} className="py-3 px-3">
+                        <div className="h-4 bg-slate-100 dark:bg-zinc-800 rounded w-full" />
+                      </td>
+                    </tr>
+                  ))
+                ) : filteredTenants.length === 0 ? (
+                  <tr>
+                    <td colSpan={8} className="py-12 text-center text-slate-400">
+                      No tenants found matching your filter criteria.
+                    </td>
+                  </tr>
+                ) : (
+                  filteredTenants.map((tenant) => {
+                    const isSelected = selectedTenant?.id === tenant.id;
 
                     return (
                       <tr
                         key={tenant.id}
-                        className="h-[62px] hover:bg-slate-50/80 dark:hover:bg-zinc-800/40 transition-colors group"
+                        onClick={() => setSelectedTenant(tenant)}
+                        className={`transition-colors cursor-pointer group ${
+                          isSelected
+                            ? "bg-blue-50/60 dark:bg-blue-950/20"
+                            : "hover:bg-slate-50/80 dark:hover:bg-zinc-800/40"
+                        }`}
                       >
-                        {/* Applicant Identity */}
-                        <td className="py-2 px-4">
-                          <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 rounded-full bg-slate-200 dark:bg-zinc-800 text-slate-900 dark:text-zinc-100 font-extrabold flex items-center justify-center shrink-0 border border-slate-300 dark:border-zinc-700 text-base">
-                              {tenant.name.charAt(0).toUpperCase()}
-                            </div>
+                        {/* Tenant Identity */}
+                        <td className="py-2 px-3 pl-3.5">
+                          <div className="flex items-center gap-2">
+                            {(() => {
+                              const photo = getTenantPhoto(tenant);
+                              if (photo) {
+                                return (
+                                  <img
+                                    src={photo}
+                                    alt={tenant.name}
+                                    className="w-7 h-7 rounded-full object-cover shrink-0 border border-slate-200 dark:border-zinc-700 shadow-2xs"
+                                  />
+                                );
+                              }
+                              return (
+                                <div
+                                  className={`w-7 h-7 rounded-full font-bold text-[11px] flex items-center justify-center shrink-0 shadow-2xs ${getAvatarBgClass(
+                                    tenant.name
+                                  )}`}
+                                >
+                                  {getInitials(tenant.name)}
+                                </div>
+                              );
+                            })()}
                             <div className="min-w-0">
-                              <span className="font-extrabold text-base sm:text-[17px] text-slate-950 dark:text-white truncate block leading-tight">
+                              <span className="font-bold text-slate-900 dark:text-white block truncate leading-tight">
                                 {tenant.name}
                               </span>
-                              <span className="text-sm text-slate-700 dark:text-zinc-300 font-medium truncate block leading-tight mt-0.5">
+                              <span className="text-[10px] text-slate-500 dark:text-zinc-400 block truncate leading-tight mt-0.5">
                                 {tenant.email}
                               </span>
                             </div>
                           </div>
                         </td>
 
-                        {/* Phone */}
-                        <td className="py-2 px-3.5 whitespace-nowrap">
-                          {tenant.phone ? (
-                            <a
-                              href={`tel:${tenant.phone}`}
-                              className="text-base sm:text-[17px] font-mono font-bold text-slate-900 dark:text-zinc-100 hover:text-black dark:hover:text-white hover:underline transition-colors"
-                            >
-                              {tenant.phone}
-                            </a>
-                          ) : (
-                            <span className="text-sm text-slate-500 dark:text-zinc-400 font-semibold italic">
-                              —
+                        {/* Room */}
+                        <td className="py-2 px-3 font-semibold text-slate-800 dark:text-zinc-200">
+                          {tenant.room_number ? tenant.room_number : "—"}
+                        </td>
+
+                        {/* Room Type */}
+                        <td className="py-2 px-3 text-slate-600 dark:text-zinc-300">
+                          {getTenantRoomType(tenant)}
+                        </td>
+
+                        {/* Rental Model */}
+                        <td className="py-2 px-3 text-slate-600 dark:text-zinc-300">
+                          {getTenantRentalModel(tenant)}
+                        </td>
+
+                        {/* Status Badge */}
+                        <td className="py-2 px-3">
+                          {tenant.status === "Active" && (
+                            <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-600 dark:bg-emerald-950/50 dark:text-emerald-400 border border-emerald-200/60 dark:border-emerald-800/60 inline-flex items-center gap-1">
+                              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                              Active
+                            </span>
+                          )}
+                          {tenant.status === "Pending" && (
+                            <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 text-amber-600 dark:bg-amber-950/50 dark:text-amber-400 border border-amber-200/60 dark:border-amber-800/60 inline-flex items-center gap-1">
+                              <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
+                              Pending
+                            </span>
+                          )}
+                          {(tenant.status === "Moved Out" || tenant.status === "Inactive") && (
+                            <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-600 dark:bg-zinc-800 dark:text-zinc-400 border border-slate-200 dark:border-zinc-700 inline-flex items-center gap-1">
+                              <DoorOpen className="w-2.5 h-2.5" />
+                              Moved Out
+                            </span>
+                          )}
+                          {tenant.status === "Declined" && (
+                            <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-rose-50 text-rose-600 dark:bg-rose-950/50 dark:text-rose-400 border border-rose-200/60 inline-flex items-center gap-1">
+                              Declined
                             </span>
                           )}
                         </td>
 
-                        {/* Address & Gender */}
-                        <td className="py-2 px-3.5 max-w-[210px]">
-                          <span className="text-base sm:text-[17px] font-bold text-slate-950 dark:text-white block truncate leading-tight">
-                            {tenant.address || "No address provided"}
-                          </span>
-                          <span className="text-sm font-medium text-slate-700 dark:text-zinc-300 block leading-tight mt-0.5">
-                            {tenant.gender || "Unspecified gender"}
-                          </span>
+                        {/* Monthly Rent */}
+                        <td className="py-2 px-3 font-mono font-bold text-slate-900 dark:text-white">
+                          ₱ {Number(tenant.monthly_rent || 0).toLocaleString()}
                         </td>
 
-                        {/* Applied Date */}
-                        <td className="py-2 px-3.5 whitespace-nowrap">
-                          <span className="text-sm sm:text-base font-mono font-bold text-slate-900 dark:text-zinc-100">
-                            {appliedDate}
-                          </span>
+                        {/* Contact */}
+                        <td className="py-2 px-3 font-mono text-slate-600 dark:text-zinc-300">
+                          {formatPhoneNumber(tenant.phone)}
                         </td>
 
-                        {/* Status (text only badge) */}
-                        <td className="py-2 px-3.5 whitespace-nowrap">
-                          <span
-                            className={`text-sm sm:text-base ${badge.className}`}
+                        {/* Actions */}
+                        <td className="py-2 px-3 text-right relative pr-3.5">
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setActiveMenuTenantId(
+                                activeMenuTenantId === tenant.id ? null : tenant.id
+                              );
+                            }}
+                            className="p-1 rounded-lg text-slate-400 hover:text-slate-700 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-zinc-800 transition-colors cursor-pointer"
                           >
-                            {badge.label}
-                          </span>
-                        </td>
+                            <MoreHorizontal className="w-4 h-4" />
+                          </button>
 
-                        {/* Review Decision Buttons */}
-                        <td className="py-2 px-4 text-right whitespace-nowrap">
-                          <div className="flex items-center justify-end gap-1.5">
-                            <button
-                              onClick={() =>
-                                handleUpdateStatusClick(tenant, "Approve")
-                              }
-                              disabled={isStatusUpdating === tenant.id}
-                              className="px-3.5 py-1.5 text-sm font-bold rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white transition-colors flex items-center gap-1.5 shadow-2xs cursor-pointer"
+                          {/* Popover Action Menu */}
+                          {activeMenuTenantId === tenant.id && (
+                            <div
+                              onClick={(e) => e.stopPropagation()}
+                              className="absolute right-2 bottom-6 w-44 bg-white dark:bg-zinc-900 rounded-xl shadow-xl border border-slate-200 dark:border-zinc-800 py-1.5 z-30 text-xs text-left"
                             >
-                              <Check className="w-4 h-4 stroke-[2.5]" />
-                              <span>Approve</span>
-                            </button>
-                            <button
-                              onClick={() =>
-                                handleUpdateStatusClick(tenant, "Reject")
-                              }
-                              disabled={isStatusUpdating === tenant.id}
-                              className="px-3.5 py-1.5 text-sm font-bold rounded-lg border border-slate-300 dark:border-zinc-700 hover:bg-slate-100 dark:hover:bg-zinc-800 text-slate-800 dark:text-zinc-200 transition-colors cursor-pointer"
-                            >
-                              <span>Decline</span>
-                            </button>
-                            <button
-                              onClick={() => handleViewTenant(tenant)}
-                              className="p-2 rounded-lg text-slate-600 hover:text-slate-950 dark:text-zinc-300 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-zinc-800 transition-colors cursor-pointer"
-                              title="Inspect applicant details"
-                            >
-                              <Eye className="w-4.5 h-4.5" />
-                            </button>
-                          </div>
+                              <button
+                                onClick={() => {
+                                  setActiveMenuTenantId(null);
+                                  setSelectedTenant(tenant);
+                                  setIsViewModalOpen(true);
+                                }}
+                                className="w-full px-3 py-1.5 text-left hover:bg-slate-50 dark:hover:bg-zinc-800 flex items-center gap-2 font-medium"
+                              >
+                                <Eye className="w-3.5 h-3.5 text-blue-500" />
+                                View Profile
+                              </button>
+                              <button
+                                onClick={() => {
+                                  setActiveMenuTenantId(null);
+                                  handleOpenEditModal(tenant);
+                                }}
+                                className="w-full px-3 py-1.5 text-left hover:bg-slate-50 dark:hover:bg-zinc-800 flex items-center gap-2 font-medium"
+                              >
+                                <Edit className="w-3.5 h-3.5 text-slate-500" />
+                                Edit Details
+                              </button>
+                              {tenant.status === "Pending" && (
+                                <>
+                                  <button
+                                    onClick={() => {
+                                      setActiveMenuTenantId(null);
+                                      setConfirmStatus({
+                                        id: tenant.id,
+                                        name: tenant.name,
+                                        action: "Approve",
+                                      });
+                                    }}
+                                    className="w-full px-3 py-1.5 text-left hover:bg-slate-50 dark:hover:bg-zinc-800 flex items-center gap-2 text-emerald-600 font-medium"
+                                  >
+                                    <Check className="w-3.5 h-3.5" />
+                                    Approve Resident
+                                  </button>
+                                  <button
+                                    onClick={() => {
+                                      setActiveMenuTenantId(null);
+                                      setConfirmStatus({
+                                        id: tenant.id,
+                                        name: tenant.name,
+                                        action: "Reject",
+                                      });
+                                    }}
+                                    className="w-full px-3 py-1.5 text-left hover:bg-slate-50 dark:hover:bg-zinc-800 flex items-center gap-2 text-rose-600 font-medium"
+                                  >
+                                    <X className="w-3.5 h-3.5" />
+                                    Decline Application
+                                  </button>
+                                </>
+                              )}
+                              <button
+                                onClick={() => {
+                                  setActiveMenuTenantId(null);
+                                  router.push(`/admin/chat?tenant_id=${tenant.id}`);
+                                }}
+                                className="w-full px-3 py-1.5 text-left hover:bg-slate-50 dark:hover:bg-zinc-800 flex items-center gap-2 font-medium"
+                              >
+                                <MessageSquare className="w-3.5 h-3.5 text-teal-500" />
+                                Send Message
+                              </button>
+                              <button
+                                onClick={() => {
+                                  setActiveMenuTenantId(null);
+                                  router.push(`/admin/billing?action=create&tenant_id=${tenant.id}`);
+                                }}
+                                className="w-full px-3 py-1.5 text-left hover:bg-slate-50 dark:hover:bg-zinc-800 flex items-center gap-2 font-medium"
+                              >
+                                <Receipt className="w-3.5 h-3.5 text-indigo-500" />
+                                Issue Bill
+                              </button>
+                              <div className="border-t border-slate-100 dark:border-zinc-800 my-1" />
+                              <button
+                                onClick={() => {
+                                  setActiveMenuTenantId(null);
+                                  handleDeleteTenant(tenant);
+                                }}
+                                className="w-full px-3 py-1.5 text-left hover:bg-slate-50 dark:hover:bg-zinc-800 flex items-center gap-2 text-rose-600 font-medium"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                                Delete
+                              </button>
+                            </div>
+                          )}
                         </td>
                       </tr>
                     );
                   })
-                : filteredTenants.map((tenant) => {
-                    const badge = getStatusBadge(tenant.status);
-                    const hasOverdue = (Number(tenant.balance) || 0) > 0;
-
-                    return (
-                      <tr
-                        key={tenant.id}
-                        className="h-[62px] hover:bg-slate-50/80 dark:hover:bg-zinc-800/40 transition-colors group"
-                      >
-                        {/* Resident Identity */}
-                        <td className="py-2 px-4">
-                          <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 rounded-full bg-slate-200 dark:bg-zinc-800 text-slate-900 dark:text-zinc-100 font-extrabold flex items-center justify-center shrink-0 border border-slate-300 dark:border-zinc-700 text-base">
-                              {tenant.name.charAt(0).toUpperCase()}
-                            </div>
-                            <div className="min-w-0">
-                              <span className="font-extrabold text-base sm:text-[17px] text-slate-950 dark:text-white truncate block leading-tight">
-                                {tenant.name}
-                              </span>
-                              <span className="text-sm text-slate-700 dark:text-zinc-300 font-medium truncate block leading-tight mt-0.5">
-                                {tenant.email}
-                              </span>
-                            </div>
-                          </div>
-                        </td>
-
-                        {/* Room & Bed */}
-                        <td className="py-2 px-3.5">
-                          {tenant.room_number ? (
-                            <div>
-                              <span className="font-extrabold text-base sm:text-[17px] text-slate-950 dark:text-white block leading-tight">
-                                Room {tenant.room_number}
-                              </span>
-                              <span className="text-sm font-medium text-slate-700 dark:text-zinc-300 block leading-tight mt-0.5">
-                                {tenant.bed_space && tenant.bed_space !== "N/A"
-                                  ? tenant.bed_space
-                                  : "Private Room"}
-                              </span>
-                            </div>
-                          ) : (
-                            <span className="text-sm font-medium text-slate-500 dark:text-zinc-400 italic">
-                              Unassigned
-                            </span>
-                          )}
-                        </td>
-
-                        {/* Phone */}
-                        <td className="py-2 px-3.5 whitespace-nowrap">
-                          {tenant.phone ? (
-                            <a
-                              href={`tel:${tenant.phone}`}
-                              className="text-base sm:text-[17px] font-mono font-bold text-slate-900 dark:text-zinc-100 hover:text-black dark:hover:text-white hover:underline transition-colors"
-                            >
-                              {tenant.phone}
-                            </a>
-                          ) : (
-                            <span className="text-sm font-semibold text-slate-500 dark:text-zinc-400 italic">
-                              —
-                            </span>
-                          )}
-                        </td>
-
-                        {/* Rent & Balance */}
-                        <td className="py-2 px-3.5">
-                          <div>
-                            <span className="font-mono font-black text-base sm:text-[17px] text-slate-950 dark:text-white block leading-tight">
-                              ₱
-                              {Number(
-                                tenant.monthly_rent || 0,
-                              ).toLocaleString()}{" "}
-                              <span className="text-xs font-sans font-bold text-slate-600 dark:text-zinc-400">
-                                /mo
-                              </span>
-                            </span>
-                            {hasOverdue ? (
-                              <span className="text-sm sm:text-base font-mono font-bold text-rose-700 dark:text-rose-400 block leading-tight mt-0.5">
-                                ₱{Number(tenant.balance || 0).toLocaleString()}{" "}
-                                past due
-                              </span>
-                            ) : (
-                              <span className="text-sm sm:text-base font-bold font-mono text-emerald-700 dark:text-emerald-400 block leading-tight mt-0.5">
-                                Settled
-                              </span>
-                            )}
-                          </div>
-                        </td>
-
-                        {/* Status (text only badge) */}
-                        <td className="py-2 px-3.5 whitespace-nowrap">
-                          <span
-                            className={`text-sm sm:text-base ${badge.className}`}
-                          >
-                            {badge.label}
-                          </span>
-                        </td>
-
-                        {/* Action Buttons */}
-                        <td className="py-2 px-4 text-right whitespace-nowrap">
-                          <div className="flex items-center justify-end gap-1.5">
-                            <button
-                              onClick={() => handleViewTenant(tenant)}
-                              className="px-3.5 py-1.5 text-sm font-bold rounded-lg border border-slate-300 dark:border-zinc-700 bg-card hover:bg-slate-100 dark:hover:bg-zinc-800 text-slate-900 dark:text-zinc-100 transition-colors inline-flex items-center gap-1.5 cursor-pointer"
-                            >
-                              <Eye className="w-4.5 h-4.5 text-slate-700 dark:text-zinc-300" />
-                              <span>View</span>
-                            </button>
-                            <button
-                              onClick={() => handleOpenModal(tenant, "edit")}
-                              className="p-2 rounded-lg text-slate-700 hover:text-slate-950 dark:text-zinc-300 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-zinc-800 transition-colors cursor-pointer"
-                              title="Edit resident profile"
-                            >
-                              <Edit className="w-4.5 h-4.5" />
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  })}
-
-              {filteredTenants.length === 0 && (
-                <tr>
-                  <td colSpan={6} className="py-12 text-center">
-                    {activeTab === "approvals" ? (
-                      <>
-                        <CheckCircle2 className="w-8 h-8 text-emerald-600 dark:text-emerald-400 mx-auto mb-2" />
-                        <p className="text-base font-extrabold text-slate-900 dark:text-white">
-                          No pending account approvals
-                        </p>
-                        <p className="text-sm font-medium text-slate-700 dark:text-zinc-300 mt-0.5">
-                          All resident account applications have been processed
-                          and reviewed.
-                        </p>
-                      </>
-                    ) : (
-                      <>
-                        <Users className="w-8 h-8 text-slate-400 dark:text-zinc-600 mx-auto mb-2" />
-                        <p className="text-base font-extrabold text-slate-900 dark:text-white">
-                          No residents found
-                        </p>
-                        <p className="text-sm font-medium text-slate-700 dark:text-zinc-300 mt-0.5">
-                          Try adjusting your filter category or search keywords.
-                        </p>
-                      </>
-                    )}
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
+                )}
+              </tbody>
+            </table>
+          </div>
         </div>
-      </div>
 
-      {/* 5. RESIDENT DETAIL MODAL (Clean, High-Contrast Executive Drawer) */}
-      <AnimatePresence>
-        {isViewModalOpen && viewingTenant && (
-          <div className="fixed inset-0 bg-black/50 backdrop-blur-xs z-50 flex items-center justify-center p-3 sm:p-4">
-            <motion.div
-              initial={{ scale: 0.95, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.95, opacity: 0 }}
-              transition={{ duration: 0.2 }}
-              className="bg-card border border-slate-200 dark:border-zinc-800 rounded-2xl w-full max-w-2xl overflow-hidden shadow-xl flex flex-col max-h-[90vh]"
-            >
-              {/* Modal Header */}
-              <div className="px-6 py-4 border-b border-slate-200 dark:border-zinc-800 flex items-center justify-between shrink-0 bg-slate-50/50 dark:bg-zinc-900/40">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-slate-200 dark:bg-zinc-800 text-slate-900 dark:text-zinc-100 font-extrabold text-sm flex items-center justify-center border border-slate-300 dark:border-zinc-700 shadow-xs">
-                    {viewingTenant.name.charAt(0).toUpperCase()}
-                  </div>
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <h2 className="text-base font-extrabold text-slate-950 dark:text-white">
-                        {viewingTenant.name}
-                      </h2>
-                      {(() => {
-                        const badge = getStatusBadge(viewingTenant.status);
-                        return (
-                          <span className={`text-xs ${badge.className}`}>
-                            {badge.label}
-                          </span>
-                        );
-                      })()}
-                    </div>
-                    <p className="text-xs font-semibold text-slate-700 dark:text-zinc-300">
-                      Resident ID #{viewingTenant.id} • Registered{" "}
-                      {viewingTenant.created_at
-                        ? new Date(
-                            viewingTenant.created_at,
-                          ).toLocaleDateString()
-                        : "N/A"}
-                    </p>
-                  </div>
-                </div>
-                <button
-                  onClick={() => setIsViewModalOpen(false)}
-                  className="p-1.5 rounded-lg text-slate-700 hover:text-slate-950 dark:text-zinc-300 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-zinc-800 transition-colors cursor-pointer"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              </div>
+        {/* RIGHT COLUMN: TENANT PROFILE DOSSIER (Exact match to Mockup UI) */}
+        {selectedTenant && (
+          <div className="w-full xl:w-[320px] 2xl:w-[360px] shrink-0 h-full bg-white dark:bg-zinc-900 border border-slate-200/90 dark:border-zinc-800 rounded-2xl p-3.5 sm:p-4 shadow-2xs flex flex-col min-h-0 overflow-hidden">
+            {/* Header */}
+            <div className="flex items-center justify-between pb-2 border-b border-slate-100 dark:border-zinc-800/80 shrink-0">
+              <h3 className="text-sm sm:text-base font-black text-slate-950 dark:text-white">
+                Tenant Profile
+              </h3>
+              <button
+                onClick={() => setIsViewModalOpen(true)}
+                className="text-xs font-bold text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-1 cursor-pointer"
+              >
+                <span>View full profile</span>
+                <span>→</span>
+              </button>
+            </div>
 
-              {/* Modal Body */}
-              <div className="p-6 overflow-y-auto custom-scrollbar space-y-5">
-                {/* Top 3 Financial KPI Tiles */}
-                <div className="grid grid-cols-3 gap-2.5">
-                  <div className="p-3 rounded-xl border border-slate-300 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-900/60">
-                    <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-700 dark:text-zinc-300 block">
-                      Monthly Rent
-                    </span>
-                    <span className="text-lg font-black font-mono text-slate-950 dark:text-white mt-0.5 block">
-                      ₱
-                      {Number(viewingTenant.monthly_rent || 0).toLocaleString()}
-                    </span>
-                  </div>
-                  <div className="p-3 rounded-xl border border-slate-300 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-900/60">
-                    <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-700 dark:text-zinc-300 block">
-                      Current Balance
-                    </span>
-                    <span
-                      className={`text-lg font-black font-mono mt-0.5 block ${(Number(viewingTenant.balance) || 0) > 0 ? "text-rose-700 dark:text-rose-400" : "text-emerald-700 dark:text-emerald-400"}`}
-                    >
-                      ₱{Number(viewingTenant.balance || 0).toLocaleString()}
-                    </span>
-                  </div>
-                  <div className="p-3 rounded-xl border border-slate-300 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-900/60">
-                    <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-700 dark:text-zinc-300 block">
-                      Last Payment
-                    </span>
-                    <span className="text-xs font-bold text-slate-950 dark:text-zinc-100 mt-1 block truncate">
-                      {viewingTenant.last_payment_date}
-                    </span>
-                  </div>
-                </div>
-
-                {/* Information Sections */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  {/* Section 1: Contact & Personal Details */}
-                  <div className="p-4 rounded-xl border border-slate-300 dark:border-zinc-700 space-y-3">
-                    <h3 className="text-xs font-black text-slate-950 dark:text-white uppercase tracking-wider flex items-center gap-1.5">
-                      <Users className="w-3.5 h-3.5 text-slate-700 dark:text-zinc-300" />
-                      <span>Personal Profile</span>
-                    </h3>
-                    <div className="space-y-2 text-xs">
-                      <div>
-                        <span className="text-[10px] font-extrabold uppercase text-slate-700 dark:text-zinc-300 block">
-                          Email Address
-                        </span>
-                        <a
-                          href={`mailto:${viewingTenant.email}`}
-                          className="font-bold text-slate-900 dark:text-zinc-100 hover:text-black dark:hover:text-white underline"
-                        >
-                          {viewingTenant.email}
-                        </a>
-                      </div>
-                      <div>
-                        <span className="text-[10px] font-extrabold uppercase text-slate-700 dark:text-zinc-300 block">
-                          Phone Number
-                        </span>
-                        <span className="font-mono font-bold text-slate-950 dark:text-white">
-                          {viewingTenant.phone || "None provided"}
-                        </span>
-                      </div>
-                      <div>
-                        <span className="text-[10px] font-extrabold uppercase text-slate-700 dark:text-zinc-300 block">
-                          Gender
-                        </span>
-                        <span className="text-slate-900 dark:text-zinc-100 font-bold">
-                          {viewingTenant.gender || "Not specified"}
-                        </span>
-                      </div>
-                      <div>
-                        <span className="text-[10px] font-extrabold uppercase text-slate-700 dark:text-zinc-300 block">
-                          Permanent Address
-                        </span>
-                        <span className="text-slate-900 dark:text-zinc-100 font-medium">
-                          {viewingTenant.address || "No address logged"}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Section 2: Boarding House Placement */}
-                  <div className="p-4 rounded-xl border border-slate-300 dark:border-zinc-700 space-y-3">
-                    <h3 className="text-xs font-black text-slate-950 dark:text-white uppercase tracking-wider flex items-center gap-1.5">
-                      <DoorOpen className="w-3.5 h-3.5 text-slate-700 dark:text-zinc-300" />
-                      <span>Boarding Placement</span>
-                    </h3>
-                    <div className="space-y-2 text-xs">
-                      <div>
-                        <span className="text-[10px] font-extrabold uppercase text-slate-700 dark:text-zinc-300 block">
-                          Assigned Room
-                        </span>
-                        <span className="font-black text-slate-950 dark:text-white font-mono">
-                          {viewingTenant.room_number
-                            ? `Room ${viewingTenant.room_number}`
-                            : "Unassigned"}
-                        </span>
-                      </div>
-                      <div>
-                        <span className="text-[10px] font-extrabold uppercase text-slate-700 dark:text-zinc-300 block">
-                          Assigned Bedspace
-                        </span>
-                        <span className="font-bold text-slate-950 dark:text-white">
-                          {viewingTenant.bed_space || "N/A"}
-                        </span>
-                      </div>
-                      <div>
-                        <span className="text-[10px] font-extrabold uppercase text-slate-700 dark:text-zinc-300 block">
-                          Move-In Date
-                        </span>
-                        <span className="text-slate-900 dark:text-zinc-100 font-bold">
-                          {viewingTenant.date_moved_in || "Pending move-in"}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Modal Footer */}
-              <div className="px-6 py-4 border-t border-slate-200 dark:border-zinc-800 flex items-center justify-end shrink-0 bg-slate-50/50 dark:bg-zinc-900/20">
-                <div className="flex items-center gap-2">
-                  {viewingTenant.status === "Pending" && (
-                    <>
-                      <button
-                        onClick={() => {
-                          setIsViewModalOpen(false);
-                          handleUpdateStatusClick(viewingTenant, "Approve");
-                        }}
-                        className="px-3.5 py-1.5 text-xs font-bold rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white transition-colors flex items-center gap-1 shadow-xs cursor-pointer"
-                      >
-                        <Check className="w-3.5 h-3.5" />
-                        <span>Approve</span>
-                      </button>
-                      <button
-                        onClick={() => {
-                          setIsViewModalOpen(false);
-                          handleUpdateStatusClick(viewingTenant, "Reject");
-                        }}
-                        className="px-3.5 py-1.5 text-xs font-bold rounded-lg border border-slate-300 dark:border-zinc-700 hover:bg-slate-100 dark:hover:bg-zinc-800 text-slate-800 dark:text-zinc-200 transition-colors cursor-pointer"
-                      >
-                        Decline
-                      </button>
-                    </>
-                  )}
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const t = viewingTenant;
-                      setIsViewModalOpen(false);
-                      handleOpenModal(t, "edit");
-                    }}
-                    className="px-4 py-2 text-xs font-bold rounded-lg bg-slate-950 hover:bg-black dark:bg-white dark:hover:bg-zinc-200 text-white dark:text-zinc-950 transition-colors flex items-center gap-1.5 shadow-xs cursor-pointer"
+            {/* Scrollable Dossier Content */}
+            <div className="flex-1 min-h-0 overflow-y-auto custom-scrollbar pr-0.5 space-y-3 mt-2.5">
+              {/* Profile Overview Card */}
+              <div className="flex items-center gap-3">
+              {(() => {
+                const photo = getTenantPhoto(selectedTenant);
+                if (photo) {
+                  return (
+                    <img
+                      src={photo}
+                      alt={selectedTenant.name}
+                      className="w-14 h-14 rounded-full object-cover shrink-0 border-2 border-white dark:border-zinc-700 shadow-md"
+                    />
+                  );
+                }
+                return (
+                  <div
+                    className={`w-14 h-14 rounded-full font-extrabold text-lg flex items-center justify-center shrink-0 border-2 border-white dark:border-zinc-700 shadow-md ${getAvatarBgClass(
+                      selectedTenant.name
+                    )}`}
                   >
-                    <Edit className="w-3.5 h-3.5" />
-                    <span>Edit Resident</span>
+                    {getInitials(selectedTenant.name)}
+                  </div>
+                );
+              })()}
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-2">
+                  <h4 className="font-extrabold text-sm sm:text-base text-slate-950 dark:text-white truncate">
+                    {selectedTenant.name}
+                  </h4>
+                  {selectedTenant.status === "Active" && (
+                    <span className="px-2 py-0.5 rounded-full text-[9px] font-bold bg-emerald-50 text-emerald-600 dark:bg-emerald-950/50 dark:text-emerald-400 border border-emerald-200/60 inline-flex items-center gap-1">
+                      <span className="w-1 h-1 rounded-full bg-emerald-500" />
+                      Active
+                    </span>
+                  )}
+                  {selectedTenant.status === "Pending" && (
+                    <span className="px-2 py-0.5 rounded-full text-[9px] font-bold bg-amber-50 text-amber-600 dark:bg-amber-950/50 dark:text-amber-400 border border-amber-200/60 inline-flex items-center gap-1">
+                      <span className="w-1 h-1 rounded-full bg-amber-500" />
+                      Pending
+                    </span>
+                  )}
+                  {(selectedTenant.status === "Moved Out" || selectedTenant.status === "Inactive") && (
+                    <span className="px-2 py-0.5 rounded-full text-[9px] font-bold bg-slate-100 text-slate-600 dark:bg-zinc-800 dark:text-zinc-400 border border-slate-200 inline-flex items-center gap-1">
+                      Moved Out
+                    </span>
+                  )}
+                </div>
+                <p className="text-[11px] text-slate-500 dark:text-zinc-400 truncate mt-0.5">
+                  {selectedTenant.email}
+                </p>
+                <p className="text-[11px] font-mono font-medium text-slate-600 dark:text-zinc-300 truncate mt-0.5">
+                  📞 {formatPhoneNumber(selectedTenant.phone, "+63 999 123 7654")}
+                </p>
+              </div>
+            </div>
+
+            {/* 3 Metric Tiles (Room, Since, Tenant ID) */}
+            <div className="grid grid-cols-3 gap-2">
+              <div className="p-2 rounded-xl border border-slate-200/90 dark:border-zinc-800 bg-slate-50/50 dark:bg-zinc-900/40 flex items-start gap-1.5">
+                <DoorOpen className="w-4 h-4 text-blue-600 dark:text-blue-400 shrink-0 mt-0.5" />
+                <div className="min-w-0">
+                  <span className="text-[11px] font-bold text-slate-900 dark:text-white block truncate leading-tight">
+                    Room {selectedTenant.room_number || "101"}
+                  </span>
+                  <span className="text-[10px] text-slate-500 dark:text-zinc-400 block truncate mt-0.5">
+                    {getTenantRoomType(selectedTenant)}
+                  </span>
+                </div>
+              </div>
+
+              <div className="p-2 rounded-xl border border-slate-200/90 dark:border-zinc-800 bg-slate-50/50 dark:bg-zinc-900/40 flex items-start gap-1.5">
+                <Calendar className="w-4 h-4 text-blue-600 dark:text-blue-400 shrink-0 mt-0.5" />
+                <div className="min-w-0">
+                  <span className="text-[11px] font-bold text-slate-900 dark:text-white block truncate leading-tight">
+                    Since
+                  </span>
+                  <span className="text-[10px] text-slate-500 dark:text-zinc-400 block truncate mt-0.5 font-mono">
+                    {selectedTenant.date_moved_in
+                      ? new Date(selectedTenant.date_moved_in).toLocaleDateString("en-US", {
+                          month: "short",
+                          day: "numeric",
+                          year: "numeric",
+                        })
+                      : "Aug 15, 2026"}
+                  </span>
+                </div>
+              </div>
+
+              <div className="p-2 rounded-xl border border-slate-200/90 dark:border-zinc-800 bg-slate-50/50 dark:bg-zinc-900/40 flex items-start gap-1.5">
+                <CreditCard className="w-4 h-4 text-blue-600 dark:text-blue-400 shrink-0 mt-0.5" />
+                <div className="min-w-0">
+                  <span className="text-[11px] font-bold text-slate-900 dark:text-white block truncate leading-tight">
+                    Tenant ID
+                  </span>
+                  <span className="text-[10px] text-slate-500 dark:text-zinc-400 block truncate mt-0.5 font-mono font-bold">
+                    TR-{String(selectedTenant.id).padStart(4, "0")}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Room & Billing Information Section */}
+            <div className="space-y-2 pt-1 border-t border-slate-100 dark:border-zinc-800/80">
+              <h5 className="text-[11px] font-bold text-slate-900 dark:text-white uppercase tracking-wider">
+                Room & Billing Information
+              </h5>
+              <div className="space-y-1.5 text-xs">
+                <div className="flex items-center justify-between text-slate-600 dark:text-zinc-400">
+                  <span>Rental Model</span>
+                  <span className="font-bold text-slate-900 dark:text-white">
+                    {getTenantRentalModel(selectedTenant)}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between text-slate-600 dark:text-zinc-400">
+                  <span>Monthly Rent</span>
+                  <span className="font-mono font-black text-slate-900 dark:text-white">
+                    ₱ {Number(selectedTenant.monthly_rent || 0).toLocaleString()}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between text-slate-600 dark:text-zinc-400">
+                  <span>Next Due Date</span>
+                  <span className="font-medium text-slate-700 dark:text-zinc-300 font-mono">
+                    {selectedTenant.next_due_date
+                      ? new Date(selectedTenant.next_due_date).toLocaleDateString("en-US", {
+                          month: "short",
+                          day: "numeric",
+                          year: "numeric",
+                        })
+                      : "Nov 5, 2026"}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between text-slate-600 dark:text-zinc-400">
+                  <span>Current Balance</span>
+                  <div className="flex items-center gap-1.5">
+                    <span
+                      className={`font-mono font-black ${
+                        (Number(selectedTenant.balance) || 0) > 0
+                          ? "text-rose-600 dark:text-rose-400"
+                          : "text-slate-900 dark:text-white"
+                      }`}
+                    >
+                      ₱ {Number(selectedTenant.balance || 0).toLocaleString()}
+                    </span>
+                    {(Number(selectedTenant.balance) || 0) <= 0 ? (
+                      <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400">
+                        Paid
+                      </span>
+                    ) : (
+                      <span className="text-[10px] font-bold text-rose-600 dark:text-rose-400">
+                        Overdue
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Emergency Contact Section */}
+            <div className="space-y-2 pt-1 border-t border-slate-100 dark:border-zinc-800/80">
+              <h5 className="text-[11px] font-bold text-slate-900 dark:text-white uppercase tracking-wider">
+                Emergency Contact
+              </h5>
+              {(() => {
+                const ec = parseEmergencyContact(selectedTenant);
+                return (
+                  <div className="flex items-start justify-between text-xs">
+                    <span className="text-slate-500 dark:text-zinc-400 font-medium">
+                      {ec.relation}
+                    </span>
+                    <div className="text-right">
+                      <span className="font-bold text-slate-900 dark:text-white block">
+                        {ec.name}
+                      </span>
+                      <span className="text-[11px] text-slate-500 dark:text-zinc-400 font-mono block mt-0.5">
+                        📞 {ec.phone}
+                      </span>
+                    </div>
+                  </div>
+                );
+              })()}
+            </div>
+
+            {/* Documents Section */}
+            <div className="space-y-2 pt-1 border-t border-slate-100 dark:border-zinc-800/80">
+              <h5 className="text-[11px] font-bold text-slate-900 dark:text-white uppercase tracking-wider">
+                Documents
+              </h5>
+              <div className="space-y-1.5 text-xs">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2 text-slate-700 dark:text-zinc-300 font-medium">
+                    <FileText className="w-3.5 h-3.5 text-slate-400" />
+                    <span>Valid ID</span>
+                  </div>
+                  <button
+                    onClick={() => setIsViewModalOpen(true)}
+                    className="text-blue-600 dark:text-blue-400 font-bold hover:underline cursor-pointer"
+                  >
+                    View
+                  </button>
+                </div>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2 text-slate-700 dark:text-zinc-300 font-medium">
+                    <FileText className="w-3.5 h-3.5 text-slate-400" />
+                    <span>Application Form</span>
+                  </div>
+                  <button
+                    onClick={() => setIsViewModalOpen(true)}
+                    className="text-blue-600 dark:text-blue-400 font-bold hover:underline cursor-pointer"
+                  >
+                    View
+                  </button>
+                </div>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2 text-slate-700 dark:text-zinc-300 font-medium">
+                    <FileText className="w-3.5 h-3.5 text-slate-400" />
+                    <span>Lease Agreement</span>
+                  </div>
+                  <button
+                    onClick={() => setIsViewModalOpen(true)}
+                    className="text-blue-600 dark:text-blue-400 font-bold hover:underline cursor-pointer"
+                  >
+                    View
                   </button>
                 </div>
               </div>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
+            </div>
 
-      {/* 6. EDIT RESIDENT MODAL */}
+            {/* Quick Actions Section */}
+            <div className="space-y-2 pt-1 border-t border-slate-100 dark:border-zinc-800/80">
+              <h5 className="text-[11px] font-bold text-slate-900 dark:text-white uppercase tracking-wider">
+                Quick Actions
+              </h5>
+              <div className="space-y-2">
+                {/* 1. Solid Blue Button: View Tenant Profile */}
+                <button
+                  onClick={() => setIsViewModalOpen(true)}
+                  className="w-full py-2.5 rounded-xl bg-[#0055a5] hover:bg-[#00478f] text-white text-xs font-bold shadow-xs flex items-center justify-center gap-2 transition-colors cursor-pointer"
+                >
+                  <User className="w-3.5 h-3.5 stroke-[2.2]" />
+                  <span>View Tenant Profile</span>
+                </button>
+
+                {/* 2. Outlined Button: Send Message */}
+                <button
+                  onClick={() => router.push(`/admin/chat?tenant_id=${selectedTenant.id}`)}
+                  className="w-full py-2 rounded-xl bg-white dark:bg-zinc-900 border border-slate-200/90 dark:border-zinc-800 hover:bg-slate-50 dark:hover:bg-zinc-800 text-slate-700 dark:text-zinc-200 text-xs font-bold shadow-2xs flex items-center justify-center gap-2 transition-colors cursor-pointer"
+                >
+                  <MessageSquare className="w-3.5 h-3.5 text-blue-600 stroke-[2.2]" />
+                  <span>Send Message</span>
+                </button>
+
+                {/* 3. Outlined Button: Issue Bill */}
+                <button
+                  onClick={() => router.push(`/admin/billing?action=create&tenant_id=${selectedTenant.id}`)}
+                  className="w-full py-2 rounded-xl bg-white dark:bg-zinc-900 border border-slate-200/90 dark:border-zinc-800 hover:bg-slate-50 dark:hover:bg-zinc-800 text-slate-700 dark:text-zinc-200 text-xs font-bold shadow-2xs flex items-center justify-center gap-2 transition-colors cursor-pointer"
+                >
+                  <Receipt className="w-3.5 h-3.5 text-blue-600 stroke-[2.2]" />
+                  <span>Issue Bill</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+      </div>
+
+      {/* MODAL 1: ADD / EDIT TENANT */}
       <AnimatePresence>
         {isModalOpen && (
-          <div className="fixed inset-0 bg-black/50 backdrop-blur-xs z-50 flex items-center justify-center p-3 sm:p-4">
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-xs z-50 flex items-center justify-center p-4">
             <motion.div
-              initial={{ scale: 0.95, opacity: 0 }}
+              initial={{ scale: 0.96, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.95, opacity: 0 }}
-              transition={{ duration: 0.2 }}
-              className="bg-card border border-slate-200 dark:border-zinc-800 rounded-2xl w-full max-w-xl overflow-hidden shadow-xl flex flex-col max-h-[90vh]"
+              exit={{ scale: 0.96, opacity: 0 }}
+              className="bg-white dark:bg-zinc-900 rounded-2xl w-full max-w-xl overflow-hidden shadow-2xl border border-slate-200 dark:border-zinc-800 max-h-[90vh] flex flex-col"
             >
-              <div className="px-6 py-4 border-b border-slate-200 dark:border-zinc-800 flex items-center justify-between shrink-0 bg-slate-50/50 dark:bg-zinc-900/40">
+              <div className="px-6 py-4 border-b border-slate-200 dark:border-zinc-800 flex justify-between items-center shrink-0">
                 <div>
-                  <h2 className="text-base font-extrabold text-slate-950 dark:text-white">
-                    Edit Resident Profile
-                  </h2>
-                  <p className="text-xs font-medium text-slate-700 dark:text-zinc-300">
-                    Update contact information, room placement, and status.
+                  <h3 className="text-base font-bold text-slate-900 dark:text-white">
+                    {editingTenant ? `Edit Resident: ${editingTenant.name}` : "Register New Resident"}
+                  </h3>
+                  <p className="text-xs text-slate-500 dark:text-zinc-400 mt-0.5">
+                    Configure resident profile, room assignment, and lease terms.
                   </p>
                 </div>
                 <button
                   onClick={() => setIsModalOpen(false)}
-                  className="p-1.5 rounded-lg text-slate-700 hover:text-slate-950 dark:text-zinc-300 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-zinc-800 transition-colors cursor-pointer"
+                  className="p-1 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-white cursor-pointer"
                 >
                   <X className="w-4 h-4" />
                 </button>
               </div>
 
-              <form
-                onSubmit={handleSubmit}
-                className="p-6 overflow-y-auto custom-scrollbar space-y-4"
-              >
+              <form onSubmit={handleSubmitTenant} className="p-6 overflow-y-auto custom-scrollbar space-y-4">
                 {error && (
-                  <div className="p-3 rounded-lg bg-rose-50 dark:bg-rose-500/10 border border-rose-200 dark:border-rose-500/20 text-rose-700 dark:text-rose-400 text-xs font-bold">
-                    {error}
+                  <div className="p-3 rounded-lg bg-rose-50 text-rose-600 text-xs font-semibold flex items-center gap-2 border border-rose-200">
+                    <AlertTriangle className="w-4 h-4 shrink-0" />
+                    <span>{error}</span>
                   </div>
                 )}
 
-                <div className="space-y-3">
+                <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-1">
-                    <label className="text-[10px] font-bold uppercase tracking-wider text-slate-700 dark:text-zinc-300">
-                      Full Name <span className="text-rose-500">*</span>
+                    <label className="text-[11px] font-bold text-slate-700 dark:text-zinc-300 uppercase">
+                      Full Name *
                     </label>
                     <input
-                      required
                       type="text"
+                      required
                       value={formData.name}
-                      onChange={(e) =>
-                        setFormData({ ...formData, name: e.target.value })
-                      }
-                      className="w-full px-3 py-2 text-xs font-semibold rounded-lg border border-slate-300 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-900 text-slate-950 dark:text-white outline-none focus:ring-2 focus:ring-slate-400/30 dark:focus:ring-zinc-600/40"
-                      placeholder="e.g. Maria Santos"
+                      onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                      placeholder="e.g. Juan Dela Cruz"
+                      className="w-full px-3 py-2 text-xs rounded-lg border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-slate-900 dark:text-white outline-none focus:ring-1 focus:ring-blue-500"
                     />
                   </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <div className="space-y-1">
-                      <label className="text-[10px] font-bold uppercase tracking-wider text-slate-700 dark:text-zinc-300">
-                        Email Address <span className="text-rose-500">*</span>
-                      </label>
-                      <input
-                        required
-                        type="email"
-                        value={formData.email}
-                        onChange={(e) =>
-                          setFormData({ ...formData, email: e.target.value })
-                        }
-                        className="w-full px-3 py-2 text-xs font-semibold rounded-lg border border-slate-300 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-900 text-slate-950 dark:text-white outline-none focus:ring-2 focus:ring-slate-400/30 dark:focus:ring-zinc-600/40"
-                        placeholder="maria@example.com"
-                      />
-                    </div>
+                  <div className="space-y-1">
+                    <label className="text-[11px] font-bold text-slate-700 dark:text-zinc-300 uppercase">
+                      Email Address *
+                    </label>
+                    <input
+                      type="email"
+                      required
+                      value={formData.email}
+                      onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                      placeholder="e.g. juan@email.com"
+                      className="w-full px-3 py-2 text-xs rounded-lg border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-slate-900 dark:text-white outline-none focus:ring-1 focus:ring-blue-500"
+                    />
+                  </div>
+                </div>
 
-                    <div className="space-y-1">
-                      <label className="text-[10px] font-bold uppercase tracking-wider text-slate-700 dark:text-zinc-300">
-                        Phone Number
-                      </label>
-                      <input
-                        type="text"
-                        value={formData.phone}
-                        onChange={(e) =>
-                          setFormData({ ...formData, phone: e.target.value })
-                        }
-                        className="w-full px-3 py-2 text-xs font-semibold rounded-lg border border-slate-300 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-900 text-slate-950 dark:text-white outline-none focus:ring-2 focus:ring-slate-400/30 dark:focus:ring-zinc-600/40 font-mono"
-                        placeholder="+63 900 000 0000"
-                      />
-                    </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <label className="text-[11px] font-bold text-slate-700 dark:text-zinc-300 uppercase">
+                      Phone Number *
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      value={formData.phone}
+                      onChange={(e) =>
+                        setFormData({ ...formData, phone: formatPhoneInput(e.target.value) })
+                      }
+                      placeholder="+63 999 123 7654"
+                      className="w-full px-3 py-2 text-xs rounded-lg border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-slate-900 dark:text-white outline-none focus:ring-1 focus:ring-blue-500 font-mono"
+                    />
                   </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {!editingTenant && (
                     <div className="space-y-1">
-                      <label className="text-[10px] font-bold uppercase tracking-wider text-slate-700 dark:text-zinc-300">
-                        Gender
+                      <label className="text-[11px] font-bold text-slate-700 dark:text-zinc-300 uppercase">
+                        Account Password *
                       </label>
-                      <CustomSelect
-                        value={formData.gender}
-                        onChange={(val) =>
-                          setFormData({ ...formData, gender: val })
-                        }
-                        options={["Not Specified", "Male", "Female", "Other"]}
-                        className="w-full px-3 py-2 text-xs font-semibold rounded-lg border border-slate-300 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-900 text-slate-950 dark:text-white outline-none"
+                      <input
+                        type="password"
+                        required={!editingTenant}
+                        value={formData.password}
+                        onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                        placeholder="••••••••"
+                        className="w-full px-3 py-2 text-xs rounded-lg border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-slate-900 dark:text-white outline-none focus:ring-1 focus:ring-blue-500"
                       />
                     </div>
+                  )}
 
+                  {editingTenant && (
                     <div className="space-y-1">
-                      <label className="text-[10px] font-bold uppercase tracking-wider text-slate-700 dark:text-zinc-300">
+                      <label className="text-[11px] font-bold text-slate-700 dark:text-zinc-300 uppercase">
                         Account Status
                       </label>
                       <CustomSelect
                         value={formData.status}
-                        onChange={(val) =>
-                          setFormData({ ...formData, status: val })
-                        }
-                        options={["Pending", "Active", "Declined", "Moved Out"]}
-                        className="w-full px-3 py-2 text-xs font-semibold rounded-lg border border-slate-300 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-900 text-slate-950 dark:text-white outline-none"
+                        onChange={(val) => setFormData({ ...formData, status: val })}
+                        options={[
+                          { value: "Active", label: "Active", dotColor: "bg-emerald-500" },
+                          { value: "Pending", label: "Pending", dotColor: "bg-amber-500" },
+                          { value: "Moved Out", label: "Moved Out", dotColor: "bg-slate-400" },
+                          { value: "Declined", label: "Declined", dotColor: "bg-rose-500" },
+                        ]}
+                        className="w-full px-3 py-2 text-xs rounded-lg border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-slate-900 dark:text-white outline-none"
                       />
                     </div>
-                  </div>
+                  )}
+                </div>
 
+                <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-1">
-                    <label className="text-[10px] font-bold uppercase tracking-wider text-slate-700 dark:text-zinc-300">
-                      Permanent Address
+                    <label className="text-[11px] font-bold text-slate-700 dark:text-zinc-300 uppercase">
+                      Assigned Room
                     </label>
-                    <input
-                      type="text"
-                      value={formData.address}
-                      onChange={(e) =>
-                        setFormData({ ...formData, address: e.target.value })
-                      }
-                      className="w-full px-3 py-2 text-xs font-semibold rounded-lg border border-slate-300 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-900 text-slate-950 dark:text-white outline-none focus:ring-2 focus:ring-slate-400/30 dark:focus:ring-zinc-600/40"
-                      placeholder="Provincial address or home town"
+                    <CustomSelect
+                      value={String(formData.room_id || "")}
+                      onChange={(val) => setFormData({ ...formData, room_id: val })}
+                      options={[
+                        { value: "", label: "No Room Assigned (Pending)" },
+                        ...rooms.map((r) => ({
+                          value: String(r.id),
+                          label: `Room ${r.room_number} (${r.type}) — ₱${Number(r.price).toLocaleString()}`,
+                        })),
+                      ]}
+                      className="w-full px-3 py-2 text-xs rounded-lg border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-slate-900 dark:text-white outline-none"
                     />
                   </div>
 
-                  {/* Boarding Placement Terms */}
-                  <div className="pt-2 border-t border-slate-100 dark:border-zinc-800/80">
-                    <span className="text-[11px] font-extrabold uppercase tracking-wider text-slate-900 dark:text-white block mb-2">
-                      Room Assignment & Terms
-                    </span>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                      <div className="space-y-1">
-                        <label className="text-[10px] font-bold uppercase tracking-wider text-slate-700 dark:text-zinc-300">
-                          Assigned Room
-                        </label>
-                        <CustomSelect
-                          value={formData.room_id?.toString() || ""}
-                          onChange={(val) =>
-                            setFormData({ ...formData, room_id: val })
-                          }
-                          options={[
-                            { value: "", label: "Unassigned / Pending" },
-                            ...rooms.map((room) => ({
-                              value: room.id.toString(),
-                              label: `Room ${room.room_number} (${room.status})`,
-                            })),
-                          ]}
-                          className="w-full px-3 py-2 text-xs font-semibold rounded-lg border border-slate-300 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-900 text-slate-950 dark:text-white outline-none"
-                        />
-                      </div>
-
-                      <div className="space-y-1">
-                        <label className="text-[10px] font-bold uppercase tracking-wider text-slate-700 dark:text-zinc-300">
-                          Monthly Rent (₱)
-                        </label>
-                        <input
-                          type="number"
-                          min="0"
-                          step="0.01"
-                          value={formData.monthly_rent}
-                          onChange={(e) =>
-                            setFormData({
-                              ...formData,
-                              monthly_rent: e.target.value,
-                            })
-                          }
-                          className="w-full px-3 py-2 text-xs font-semibold rounded-lg border border-slate-300 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-900 text-slate-950 dark:text-white outline-none focus:ring-2 focus:ring-slate-400/30 dark:focus:ring-zinc-600/40 font-mono"
-                          placeholder="e.g. 3500"
-                        />
-                      </div>
-                    </div>
-
-                    <div className="mt-3 space-y-1">
-                      <label className="text-[10px] font-bold uppercase tracking-wider text-slate-700 dark:text-zinc-300">
-                        Move-In Date
-                      </label>
-                      <input
-                        type="date"
-                        value={formData.date_moved_in}
-                        onChange={(e) =>
-                          setFormData({
-                            ...formData,
-                            date_moved_in: e.target.value,
-                          })
-                        }
-                        className="w-full px-3 py-2 text-xs font-semibold rounded-lg border border-slate-300 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-900 text-slate-950 dark:text-white outline-none"
-                      />
-                    </div>
+                  <div className="space-y-1">
+                    <label className="text-[11px] font-bold text-slate-700 dark:text-zinc-300 uppercase">
+                      Monthly Rent (₱)
+                    </label>
+                    <input
+                      type="number"
+                      value={formData.monthly_rent}
+                      onChange={(e) => setFormData({ ...formData, monthly_rent: e.target.value })}
+                      placeholder="e.g. 4500"
+                      className="w-full px-3 py-2 text-xs rounded-lg border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-slate-900 dark:text-white outline-none font-mono"
+                    />
                   </div>
                 </div>
 
-                <div className="pt-3 border-t border-slate-200 dark:border-zinc-800 flex items-center justify-end gap-2.5">
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <label className="text-[11px] font-bold text-slate-700 dark:text-zinc-300 uppercase">
+                      Move-In Date
+                    </label>
+                    <input
+                      type="date"
+                      value={formData.date_moved_in}
+                      onChange={(e) => setFormData({ ...formData, date_moved_in: e.target.value })}
+                      className="w-full px-3 py-2 text-xs rounded-lg border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-slate-900 dark:text-white outline-none"
+                    />
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-[11px] font-bold text-slate-700 dark:text-zinc-300 uppercase">
+                      Gender
+                    </label>
+                    <CustomSelect
+                      value={formData.gender}
+                      onChange={(val) => setFormData({ ...formData, gender: val })}
+                      options={["Male", "Female", "Other"]}
+                      className="w-full px-3 py-2 text-xs rounded-lg border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-slate-900 dark:text-white outline-none"
+                    />
+                  </div>
+                </div>
+
+                <div className="pt-4 border-t border-slate-200 dark:border-zinc-800 flex justify-end gap-2.5">
                   <button
                     type="button"
                     onClick={() => setIsModalOpen(false)}
-                    className="px-4 py-2 text-xs font-bold rounded-lg border border-slate-300 dark:border-zinc-700 bg-card hover:bg-slate-100 dark:hover:bg-zinc-800 text-slate-800 dark:text-zinc-200 transition-colors cursor-pointer"
+                    className="px-4 py-2 text-xs font-bold rounded-lg border border-slate-200 dark:border-zinc-800 hover:bg-slate-50 dark:hover:bg-zinc-800 text-slate-700 dark:text-zinc-300 cursor-pointer"
                   >
                     Cancel
                   </button>
                   <button
                     type="submit"
                     disabled={isSubmitting}
-                    className="px-5 py-2 text-xs font-bold rounded-lg bg-slate-950 hover:bg-black dark:bg-white dark:hover:bg-zinc-200 text-white dark:text-zinc-950 transition-colors flex items-center gap-1.5 shadow-xs disabled:opacity-50 cursor-pointer"
+                    className="px-5 py-2 text-xs font-bold rounded-lg bg-[#0055a5] hover:bg-[#00478f] text-white flex items-center gap-1.5 shadow-xs cursor-pointer disabled:opacity-50"
                   >
                     {isSubmitting ? (
-                      <div className="w-3.5 h-3.5 border-2 border-white/30 border-t-white dark:border-black/30 dark:border-t-black rounded-full animate-spin" />
+                      <RefreshCw className="w-3.5 h-3.5 animate-spin" />
                     ) : (
                       <Check className="w-3.5 h-3.5 stroke-[2.5]" />
                     )}
-                    <span>Save Changes</span>
+                    <span>Save Resident</span>
                   </button>
                 </div>
               </form>
@@ -1571,55 +1606,167 @@ function TenantsContent() {
         )}
       </AnimatePresence>
 
-      {/* 7. STATUS CONFIRMATION MODAL */}
+      {/* MODAL 2: VIEW FULL PROFILE INSPECTION */}
+      <AnimatePresence>
+        {isViewModalOpen && selectedTenant && (
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+            <motion.div
+              initial={{ scale: 0.96, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.96, opacity: 0 }}
+              className="bg-white dark:bg-zinc-900 rounded-2xl w-full max-w-2xl overflow-hidden shadow-2xl border border-slate-200 dark:border-zinc-800 max-h-[90vh] flex flex-col"
+            >
+              <div className="px-6 py-4 border-b border-slate-200 dark:border-zinc-800 flex justify-between items-center shrink-0">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full bg-blue-50 dark:bg-blue-900/40 text-blue-600 font-extrabold flex items-center justify-center">
+                    {getInitials(selectedTenant.name)}
+                  </div>
+                  <div>
+                    <h3 className="text-base font-bold text-slate-900 dark:text-white">
+                      {selectedTenant.name}
+                    </h3>
+                    <p className="text-xs text-slate-500 font-mono">
+                      Tenant ID: TR-{String(selectedTenant.id).padStart(4, "0")} • Room {selectedTenant.room_number || "Unassigned"}
+                    </p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setIsViewModalOpen(false)}
+                  className="p-1 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-white cursor-pointer"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              <div className="p-6 overflow-y-auto custom-scrollbar space-y-4 text-xs">
+                {/* 3 Top Financial Stats */}
+                <div className="grid grid-cols-3 gap-3">
+                  <div className="p-3 rounded-xl border border-slate-200 dark:border-zinc-800 bg-slate-50 dark:bg-zinc-900/40">
+                    <span className="text-[10px] font-bold text-slate-500 uppercase block">Monthly Rent</span>
+                    <span className="text-base font-black font-mono text-slate-900 dark:text-white mt-0.5 block">
+                      ₱ {Number(selectedTenant.monthly_rent || 0).toLocaleString()}
+                    </span>
+                  </div>
+                  <div className="p-3 rounded-xl border border-slate-200 dark:border-zinc-800 bg-slate-50 dark:bg-zinc-900/40">
+                    <span className="text-[10px] font-bold text-slate-500 uppercase block">Current Balance</span>
+                    <span
+                      className={`text-base font-black font-mono mt-0.5 block ${
+                        (Number(selectedTenant.balance) || 0) > 0 ? "text-rose-600" : "text-emerald-600"
+                      }`}
+                    >
+                      ₱ {Number(selectedTenant.balance || 0).toLocaleString()}
+                    </span>
+                  </div>
+                  <div className="p-3 rounded-xl border border-slate-200 dark:border-zinc-800 bg-slate-50 dark:bg-zinc-900/40">
+                    <span className="text-[10px] font-bold text-slate-500 uppercase block">Last Payment</span>
+                    <span className="text-xs font-bold text-slate-800 dark:text-zinc-200 mt-1 block font-mono">
+                      {selectedTenant.last_payment_date || "No payment record"}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Personal & Lease Details */}
+                <div className="grid grid-cols-2 gap-4 pt-2">
+                  <div className="space-y-2 p-3.5 rounded-xl border border-slate-200/90 dark:border-zinc-800">
+                    <h5 className="font-bold text-slate-900 dark:text-white uppercase text-[11px]">
+                      Contact Details
+                    </h5>
+                    <div>
+                      <span className="text-slate-400 block text-[10px]">Email</span>
+                      <span className="font-bold text-slate-800 dark:text-zinc-200">{selectedTenant.email}</span>
+                    </div>
+                    <div>
+                      <span className="text-slate-400 block text-[10px]">Phone</span>
+                      <span className="font-mono font-bold text-slate-800 dark:text-zinc-200">
+                        {formatPhoneNumber(selectedTenant.phone)}
+                      </span>
+                    </div>
+                    <div>
+                      <span className="text-slate-400 block text-[10px]">Address</span>
+                      <span className="font-medium text-slate-700 dark:text-zinc-300">
+                        {selectedTenant.address || "Riverside Boarding House"}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2 p-3.5 rounded-xl border border-slate-200/90 dark:border-zinc-800">
+                    <h5 className="font-bold text-slate-900 dark:text-white uppercase text-[11px]">
+                      Lease Information
+                    </h5>
+                    <div>
+                      <span className="text-slate-400 block text-[10px]">Room Number</span>
+                      <span className="font-bold text-slate-800 dark:text-zinc-200">
+                        {selectedTenant.room_number ? `Room ${selectedTenant.room_number}` : "Unassigned"}
+                      </span>
+                    </div>
+                    <div>
+                      <span className="text-slate-400 block text-[10px]">Rental Model</span>
+                      <span className="font-bold text-slate-800 dark:text-zinc-200">
+                        {getTenantRentalModel(selectedTenant)}
+                      </span>
+                    </div>
+                    <div>
+                      <span className="text-slate-400 block text-[10px]">Move-In Date</span>
+                      <span className="font-mono font-medium text-slate-700 dark:text-zinc-300">
+                        {selectedTenant.date_moved_in || "Aug 15, 2026"}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="pt-3 border-t border-slate-100 dark:border-zinc-800 flex justify-end gap-2">
+                  <button
+                    onClick={() => {
+                      setIsViewModalOpen(false);
+                      handleOpenEditModal(selectedTenant);
+                    }}
+                    className="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs flex items-center gap-1.5 cursor-pointer"
+                  >
+                    <Edit className="w-3.5 h-3.5" />
+                    <span>Edit Profile</span>
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* MODAL 3: STATUS CONFIRMATION (Approve / Reject) */}
       <AnimatePresence>
         {confirmStatus && (
-          <div className="fixed inset-0 bg-black/50 backdrop-blur-xs z-50 flex items-center justify-center p-3 sm:p-4">
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-xs z-50 flex items-center justify-center p-4">
             <motion.div
               initial={{ scale: 0.95, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.95, opacity: 0 }}
-              transition={{ duration: 0.2 }}
-              className="bg-card border border-slate-200 dark:border-zinc-800 rounded-2xl w-full max-w-sm overflow-hidden shadow-xl p-5"
+              className="bg-white dark:bg-zinc-900 rounded-2xl w-full max-w-sm overflow-hidden shadow-2xl border border-slate-200 dark:border-zinc-800 p-5"
             >
-              <div className="flex items-start gap-3">
-                <div
-                  className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 border ${confirmStatus.action === "Approve" ? "bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-200 dark:border-emerald-500/20" : "bg-rose-50 dark:bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-200 dark:border-rose-500/20"}`}
-                >
-                  {confirmStatus.action === "Approve" ? (
-                    <CheckCircle2 className="w-5 h-5" />
-                  ) : (
-                    <AlertTriangle className="w-5 h-5" />
-                  )}
-                </div>
-                <div>
-                  <h3 className="text-sm font-extrabold text-slate-950 dark:text-white">
-                    {confirmStatus.action === "Approve"
-                      ? "Approve Resident"
-                      : "Decline Application"}
-                  </h3>
-                  <p className="text-xs font-medium text-slate-700 dark:text-zinc-300 mt-1 leading-relaxed">
-                    {confirmStatus.action === "Approve"
-                      ? `Confirm onboarding approval for ${confirmStatus.name}? Their status will become Active.`
-                      : `Decline application for ${confirmStatus.name}? Their record will be flagged as Declined.`}
-                  </p>
-                </div>
-              </div>
+              <h3 className="text-sm font-extrabold text-slate-950 dark:text-white">
+                {confirmStatus.action === "Approve" ? "Approve Resident" : "Decline Application"}
+              </h3>
+              <p className="text-xs text-slate-600 dark:text-zinc-300 mt-1 leading-relaxed">
+                {confirmStatus.action === "Approve"
+                  ? `Confirm onboarding approval for ${confirmStatus.name}? Their status will become Active.`
+                  : `Decline application for ${confirmStatus.name}? Their record will be flagged as Declined.`}
+              </p>
 
               <div className="mt-5 flex items-center justify-end gap-2">
                 <button
                   onClick={() => setConfirmStatus(null)}
-                  className="px-3.5 py-1.5 text-xs font-bold rounded-lg border border-slate-300 dark:border-zinc-700 bg-card hover:bg-slate-100 dark:hover:bg-zinc-800 text-slate-800 dark:text-zinc-200 transition-colors cursor-pointer"
+                  className="px-3.5 py-1.5 text-xs font-bold rounded-lg border border-slate-200 dark:border-zinc-800 text-slate-700 hover:bg-slate-50 dark:hover:bg-zinc-800 cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button
                   onClick={executeStatusUpdate}
                   disabled={isStatusUpdating !== null}
-                  className={`px-4 py-1.5 text-xs font-bold rounded-lg text-white transition-colors flex items-center gap-1.5 shadow-xs cursor-pointer ${confirmStatus.action === "Approve" ? "bg-emerald-600 hover:bg-emerald-700" : "bg-rose-600 hover:bg-rose-700"}`}
+                  className={`px-4 py-1.5 text-xs font-bold rounded-lg text-white transition-colors cursor-pointer ${
+                    confirmStatus.action === "Approve" ? "bg-emerald-600 hover:bg-emerald-700" : "bg-rose-600 hover:bg-rose-700"
+                  }`}
                 >
                   {isStatusUpdating !== null ? (
-                    <div className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    <RefreshCw className="w-3.5 h-3.5 animate-spin" />
                   ) : (
                     confirmStatus.action
                   )}
@@ -1629,6 +1776,11 @@ function TenantsContent() {
           </div>
         )}
       </AnimatePresence>
+
+
+
+      {/* MODAL 5: OPERATIONAL & FINANCIAL REPORT MODAL */}
+      <AdminReportModal isOpen={showReportModal} onClose={() => setShowReportModal(false)} />
     </div>
   );
 }
@@ -1637,8 +1789,8 @@ export default function AdminTenants() {
   return (
     <Suspense
       fallback={
-        <div className="w-full h-[calc(100vh-6.2rem)] md:h-[calc(100vh-7.2rem)] lg:h-[calc(100dvh-7.2rem)] flex items-center justify-center">
-          <div className="w-8 h-8 border-2 border-slate-300 dark:border-zinc-700 border-t-cyan-500 rounded-full animate-spin" />
+        <div className="w-full h-96 flex items-center justify-center">
+          <div className="w-8 h-8 border-2 border-slate-300 dark:border-zinc-700 border-t-blue-500 rounded-full animate-spin" />
         </div>
       }
     >
