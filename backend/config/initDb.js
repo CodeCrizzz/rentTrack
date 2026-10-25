@@ -54,7 +54,11 @@ const initDb = async () => {
             WHERE reference_number IS NULL;
         `);
 
-        console.log('Database tables & indexes verified (notifications and payments reference_number ready).');
+        // Ensure bills table has invoice_number column and backfill random invoice numbers
+        const { backfillExistingBills } = require('../utils/invoiceNumberGenerator');
+        await backfillExistingBills();
+
+        console.log('Database tables & indexes verified (notifications, payments, and invoice numbers ready).');
     } catch (error) {
         console.error('Error initializing database tables:', error);
     }
