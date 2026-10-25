@@ -2,7 +2,6 @@
 import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { AnimatePresence } from 'framer-motion';
-import PageTransition from '@/components/PageTransition';
 import api from '@/lib/api';
 import { Moon } from "lucide-react";
 import { toast } from 'sonner';
@@ -14,8 +13,7 @@ import {
 } from "@/components/ui/sidebar";
 import { AppSidebar } from '@/components/app-sidebar';
 import { FullscreenToggle } from '@/components/fullscreen-toggle';
-import AdminSettingsModal from '@/components/admin-settings-modal';
-import { LayoutDashboard, Building2, Users, Receipt, Wrench, MessageSquareMore, Bell, Settings, User, RefreshCw, Calendar, Cctv, UserPlus, CheckCheck, Clock, Bed, Megaphone, BarChart3 } from 'lucide-react';
+import { Home, Building2, Users, Calculator, Wrench, MessageSquareMore, Bell, Settings, User, RefreshCw, Calendar, Cctv, UserPlus, CheckCheck, Clock, Bed, Receipt, Activity } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -37,6 +35,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     const router = useRouter();
     const [adminName, setAdminName] = useState('Admin');
     const [adminEmail, setAdminEmail] = useState('admin@renttrack.com');
+    const [adminAvatar, setAdminAvatar] = useState('');
     const [unreadCount, setUnreadCount] = useState(0);
     const [pendingTenantsCount, setPendingTenantsCount] = useState(0);
     const [pendingPaymentsCount, setPendingPaymentsCount] = useState(0);
@@ -45,7 +44,6 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     const [showAllNotifications, setShowAllNotifications] = useState(false);
     const [refreshKey, setRefreshKey] = useState(0);
     const [currentDate, setCurrentDate] = useState("");
-    const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
     const fetchUnreadCount = async () => {
         try {
@@ -129,6 +127,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             }
             setAdminName(user.name);
             if (user.email) setAdminEmail(user.email);
+            if (user.avatar) setAdminAvatar(user.avatar);
         } catch (e) {
             router.replace('/login');
             return;
@@ -208,20 +207,19 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     };
 
     const rawNavItems = [
-        { name: 'Dashboard', path: '/admin/dashboard', icon: LayoutDashboard },
+        { name: 'Dashboard', path: '/admin/dashboard', icon: Home },
         { name: 'Rooms', path: '/admin/rooms', icon: Bed },
         { name: 'Tenants', path: '/admin/tenants', icon: Users },
-        { name: 'Billing & Collections', path: '/admin/billing', icon: Receipt },
+        { name: 'Bills and Payments', path: '/admin/billing', icon: Calculator },
         { name: 'Maintenance Requests', path: '/admin/requests', icon: Wrench },
         { name: 'Messages', path: '/admin/chat', icon: MessageSquareMore },
-        { name: 'Announcements', path: '/admin/announcements', icon: Megaphone },
         { name: 'CCTV Monitoring', path: '/admin/cctv', icon: Cctv },
-        { name: 'Reports', path: '/admin/reports', icon: BarChart3 },
+        { name: 'Activity Logs', path: '/admin/activity-logs', icon: Activity },
         { name: 'Settings', path: '/admin/settings', icon: Settings },
     ];
 
     const mappedNavItems = rawNavItems.map(item => {
-        const isActive = pathname === item.path;
+        const isActive = pathname === item.path || (item.path !== '/admin/dashboard' && pathname.startsWith(item.path));
         let badgeCount = 0;
 
         if (item.name === 'Tenants' && pendingTenantsCount > 0) {
@@ -230,7 +228,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         if (item.name === 'Messages' && unreadCount > 0) {
             badgeCount = unreadCount;
         }
-        if (item.name === 'Billing & Collections' && pendingPaymentsCount > 0) {
+        if (item.name === 'Bills and Payments' && pendingPaymentsCount > 0) {
             badgeCount = pendingPaymentsCount;
         }
 
@@ -241,7 +239,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             badgeCount,
             badgeColor: "rose" as const,
             icon: (
-                <item.icon className={`w-5 h-5 shrink-0 ${isActive ? 'text-white' : 'text-slate-400 group-hover:text-white'}`} strokeWidth={isActive ? 2.5 : 2} />
+                <item.icon className={`w-5 h-5 shrink-0 transition-colors ${isActive ? '!text-white' : 'text-slate-300'}`} strokeWidth={isActive ? 2.2 : 1.8} />
             )
         }
     });
@@ -249,6 +247,10 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     const getPageTitle = () => {
         const path = pathname.split('/').pop();
         if (!path) return 'Dashboard';
+        if (path === 'billing') return 'Bills and Payments';
+        if (path === 'requests') return 'Maintenance Requests';
+        if (path === 'cctv') return 'CCTV Monitoring';
+        if (path === 'activity-logs') return 'Activity Logs';
         return path.split('-').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
     };
 
@@ -256,20 +258,19 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         <SidebarProvider>
             <div className="flex h-screen w-full bg-background text-foreground overflow-hidden selection:bg-zinc-200 dark:selection:bg-zinc-800 selection:text-zinc-950 dark:selection:text-white">
                 <AppSidebar 
-                    navLabel="Platform Overview"
+                    navLabel=""
                     navItems={mappedNavItems}
                     user={{
                         name: adminName,
                         email: adminEmail,
-                        avatar: "",
+                        avatar: adminAvatar,
                         role: "Master Admin"
                     }}
                     onLogout={handleLogout}
                 />
 
                 <SidebarInset className="flex-1 flex flex-col relative w-full h-[100dvh] overflow-hidden bg-transparent">
-                    {/* Modern Top Header (Hidden on Dashboard to prevent duplicate header) */}
-                    {pathname !== '/admin/dashboard' && (
+                    {/* Modern Top Header */}
                     <header className="flex h-16 shrink-0 items-center justify-between gap-4 border-b border-border bg-background/95 backdrop-blur-2xl px-4 sm:px-6 lg:px-8 sticky top-0 z-20 shadow-none">
                         <div className="flex items-center gap-3 sm:gap-4 flex-1">
                             <SidebarTrigger className="-ml-2 text-slate-500 hover:text-slate-900 dark:text-zinc-400 dark:hover:text-white" />
@@ -304,14 +305,6 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                                 <RefreshCw className="w-5 h-5 group-hover:rotate-180 group-active:scale-90 transition-all duration-500" strokeWidth={2} />
                             </button>
                             <FullscreenToggle />
-                            <button 
-                                onClick={() => setIsSettingsOpen(true)}
-                                className="group p-2 text-slate-500 hover:text-slate-900 dark:text-zinc-400 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/5 rounded-full transition-colors outline-none cursor-pointer"
-                                title="Admin Settings"
-                                aria-label="Admin Settings"
-                            >
-                                <Settings className="w-5 h-5 group-hover:rotate-45 group-active:scale-90 transition-all duration-300" strokeWidth={2} />
-                            </button>
                             <DropdownMenu>
                                 <DropdownMenuTrigger className="group relative p-2 text-slate-500 hover:text-slate-900 dark:text-zinc-400 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/5 rounded-full transition-colors outline-none cursor-pointer">
                                     <Bell className="w-5 h-5 group-hover:rotate-12 group-active:-rotate-12 group-active:scale-90 transition-all duration-200 origin-top" strokeWidth={2} />
@@ -414,25 +407,25 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
                         </div>
                     </header>
-                    )}
 
                     {/* Main Content Area */}
-                    <div className="flex-1 flex flex-col overflow-y-auto overflow-x-hidden custom-scrollbar bg-[#f4f7fb] dark:bg-zinc-950">
-                        <div className="p-4 sm:p-6 lg:p-7 relative z-10">
-                            <AnimatePresence mode="wait">
-                                <PageTransition key={`${pathname}-${refreshKey}`}>
-                                    {children}
-                                </PageTransition>
-                            </AnimatePresence>
-                        </div>
-                    </div>
+                    {(() => {
+                        const isManageRooms = pathname?.startsWith('/admin/rooms');
+                        const isManageTenants = pathname?.startsWith('/admin/tenants');
+                        const isNoPageScroll = isManageRooms || isManageTenants;
+                        return (
+                            <div className={`flex-1 flex flex-col ${isNoPageScroll ? 'overflow-hidden' : 'overflow-y-auto'} overflow-x-hidden ${isNoPageScroll ? '' : 'custom-scrollbar'} bg-[#f4f7fb] dark:bg-zinc-950`}>
+                                <div className={`px-4 pt-3 pb-2 sm:px-5 sm:pt-3.5 sm:pb-2.5 lg:px-6 lg:pt-3.5 lg:pb-2.5 relative ${isNoPageScroll ? 'h-full flex-1 flex flex-col min-h-0 overflow-hidden' : ''}`}>
+                                    <AnimatePresence mode="wait">
+                                        <div key={`${pathname}-${refreshKey}`} className={`w-full flex-1 flex flex-col ${isNoPageScroll ? 'h-full min-h-0 overflow-hidden' : ''}`}>
+                                            {children}
+                                        </div>
+                                    </AnimatePresence>
+                                </div>
+                            </div>
+                        );
+                    })()}
                 </SidebarInset>
-
-                {/* Pop-up Settings Window */}
-                <AdminSettingsModal 
-                    isOpen={isSettingsOpen} 
-                    onClose={() => setIsSettingsOpen(false)} 
-                />
             </div>
         </SidebarProvider>
     );
