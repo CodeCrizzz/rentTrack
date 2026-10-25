@@ -3,6 +3,8 @@ const bcrypt = require('bcryptjs');
 const db = require('../config/db');
 const { JWT_SECRET } = require('../middleware/authMiddleware');
 
+const { formatPhoneNumber } = require('../utils/phoneUtils');
+
 // @desc    Register a new user (Tenant or Admin)
 // @route   POST /api/auth/register
 const registerUser = async (req, res) => {
@@ -22,10 +24,11 @@ const registerUser = async (req, res) => {
         // Insert user into database
         const roleToSet = role || 'tenant';
         const statusToSet = roleToSet === 'tenant' ? 'Pending' : 'Active';
+        const formattedPhone = phone ? formatPhoneNumber(phone) : null;
 
         const newUser = await db.query(
             'INSERT INTO users (name, email, password, role, phone, gender, address, status) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id, name, email, role, status',
-            [name, email, hashedPassword, roleToSet, phone || null, gender || 'Not Specified', address || null, statusToSet]
+            [name, email, hashedPassword, roleToSet, formattedPhone, gender || 'Not Specified', address || null, statusToSet]
         );
 
         const registeredUser = newUser.rows[0];
