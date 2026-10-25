@@ -12,7 +12,7 @@ import {
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useTheme } from 'next-themes';
-import CustomSelect from '@/components/CustomSelect';
+import CustomSelect from '@/components/dropdown-select';
 import { toast } from 'sonner';
 
 const DEFAULT_SETTINGS = {
