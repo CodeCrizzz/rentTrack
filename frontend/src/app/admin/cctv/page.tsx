@@ -216,7 +216,9 @@ export default function CCTVPage() {
 
   const takeSnapshot = (camName: string, e: React.MouseEvent) => {
     e.stopPropagation();
-    toast.success(`Surveillance snapshot captured for ${camName}`);
+    toast.success("Snapshot Captured", {
+      description: `Surveillance snapshot saved for ${camName}.`,
+    });
   };
 
   const filteredCameras = useMemo(() => {
@@ -808,7 +810,11 @@ export default function CCTVPage() {
               <div className="p-3.5 border-t border-zinc-800 bg-zinc-900/60 flex items-center justify-between text-xs">
                 <div className="flex items-center gap-2">
                   <button
-                    onClick={() => toast.success("PTZ Camera Reset to Center")}
+                    onClick={() =>
+                      toast.success("PTZ Centered", {
+                        description: "Camera orientation reset to home position.",
+                      })
+                    }
                     className="px-3 py-1.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-white font-semibold"
                   >
                     PTZ Center
