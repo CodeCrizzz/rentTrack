@@ -66,11 +66,15 @@ export default function AdminActivityLogsPage() {
       const { data } = await api.get("/admin/activity-logs");
       setLogs(Array.isArray(data) ? data : []);
       if (isManualRefresh) {
-        toast.success("Activity logs synchronized");
+        toast.success("Activity Logs Synchronized", {
+          description: "Latest administrative event entries loaded.",
+        });
       }
     } catch (error) {
       console.error("Failed to fetch activity logs:", error);
-      toast.error("Failed to load activity logs");
+      toast.error("Sync Failed", {
+        description: "Failed to load recent activity logs.",
+      });
     } finally {
       setIsLoading(false);
       setIsRefreshing(false);
@@ -222,7 +226,9 @@ export default function AdminActivityLogsPage() {
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-    toast.success("Activity logs CSV exported successfully!");
+    toast.success("Activity Logs Exported", {
+      description: "CSV audit spreadsheet downloaded successfully.",
+    });
   };
 
   const formatRelativeTime = (dateStr: string) => {
