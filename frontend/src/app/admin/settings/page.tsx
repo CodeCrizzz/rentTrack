@@ -190,7 +190,9 @@ export default function AdminSettingsPage() {
 
         setTimeout(() => {
             setIsSaving(false);
-            toast.success("Platform configurations saved successfully!");
+            toast.success("Settings Saved", {
+                description: "Platform configurations and preferences updated successfully.",
+            });
             setCurrentPassword('');
             setNewPassword('');
             setConfirmPassword('');
@@ -199,7 +201,9 @@ export default function AdminSettingsPage() {
 
     const handleReset = () => {
         revertToSavedSettings();
-        toast.info("Unsaved configuration modifications reverted");
+        toast.info("Changes Reverted", {
+            description: "Unsaved configuration modifications have been discarded.",
+        });
     };
 
     const handleExportBackup = () => {
@@ -217,14 +221,18 @@ export default function AdminSettingsPage() {
         a.download = `renttrack-config-backup-${new Date().toISOString().slice(0, 10)}.json`;
         a.click();
         URL.revokeObjectURL(url);
-        toast.success("System configuration snapshot downloaded");
+        toast.success("Backup Downloaded", {
+            description: "System configuration snapshot saved to file.",
+        });
     };
 
     const handlePurgeCache = () => {
         setIsPurging(true);
         setTimeout(() => {
             setIsPurging(false);
-            toast.success("Application memory & Redis cache purged");
+            toast.success("Cache Purged", {
+                description: "Application runtime memory cache cleared successfully.",
+            });
         }, 500);
     };
 
