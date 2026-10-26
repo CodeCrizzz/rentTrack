@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation"
 import { NavMain, type NavMainItem } from "@/components/nav-main"
 import {
   Sidebar,
+  SidebarHeader,
   SidebarContent,
   SidebarFooter,
   SidebarRail,
@@ -47,10 +48,7 @@ export function AppSidebar({
   const initials = currentUser.name
     ? currentUser.name
         .trim()
-        .split(/\s+/)
-        .map((part) => part[0])
-        .join("")
-        .slice(0, 2)
+        .charAt(0)
         .toUpperCase()
     : "U"
 
@@ -64,23 +62,43 @@ export function AppSidebar({
   return (
     <Sidebar
       collapsible="icon"
-      className="!bg-[#07152b] !border-r !border-[#0d2242] text-white"
+      className="!bg-[#07152b] dark:!bg-[#09090b] !border-r !border-[#0d2242] dark:!border-[#27272a] text-white"
       {...props}
     >
-      {/* Navigation List starting at the top */}
-      <SidebarContent className="!bg-[#07152b] text-white pt-4 pb-2 px-1 custom-scrollbar">
+      {/* Brand Logo & Text at the top (non-clickable) */}
+      <SidebarHeader className="!bg-[#07152b] dark:!bg-[#09090b] !border-b !border-[#0d2242] dark:!border-[#27272a] h-20 !flex-row items-center px-4 group-data-[collapsible=icon]:p-2 group-data-[collapsible=icon]:justify-center">
+        <div className="flex items-center gap-2 w-full group-data-[collapsible=icon]:justify-center select-none cursor-default">
+          <img
+            src="/images/logo/rentTrack_icon.png"
+            alt="RentTrack Logo"
+            className="w-12 h-12 shrink-0 object-contain group-data-[collapsible=icon]:w-8 group-data-[collapsible=icon]:h-8 pointer-events-none"
+          />
+          <div className="flex flex-col justify-center group-data-[collapsible=icon]:hidden min-w-0 pointer-events-none">
+            <div className="flex items-center text-xl sm:text-2xl font-black tracking-tight leading-tight">
+              <span className="text-white">Rent</span>
+              <span className="text-teal-400">Track</span>
+            </div>
+            <span className="text-[10.5px] font-medium text-blue-200/75 dark:text-zinc-400 tracking-tight leading-none mt-0.5 whitespace-nowrap">
+              Boarding House Management
+            </span>
+          </div>
+        </div>
+      </SidebarHeader>
+
+      {/* Navigation List */}
+      <SidebarContent className="!bg-[#07152b] dark:!bg-[#09090b] text-white pt-3 pb-2 px-1 custom-scrollbar">
         {navItems && navItems.length > 0 && (
           <NavMain label={navLabel} items={navItems} />
         )}
       </SidebarContent>
 
       {/* Footer: User account & Log out button */}
-      <SidebarFooter className="!bg-[#07152b] !border-t-0 p-3 pt-0 group-data-[collapsible=icon]:p-2 group-data-[collapsible=icon]:pt-0">
-        <div className="border-t border-[#0d2242] pt-3 group-data-[collapsible=icon]:pt-2">
+      <SidebarFooter className="!bg-[#07152b] dark:!bg-[#09090b] !border-t-0 p-3 pt-0 group-data-[collapsible=icon]:p-2 group-data-[collapsible=icon]:pt-0">
+        <div className="border-t border-[#0d2242] dark:border-[#27272a] pt-3 group-data-[collapsible=icon]:pt-2">
           {/* User Account: Profile in the left, Name in the right */}
           <div
             onClick={handleProfileClick}
-            className="w-full flex items-center gap-3 p-2 rounded-xl hover:bg-white/10 transition-colors text-left group cursor-pointer outline-none select-none group-data-[collapsible=icon]:p-1 group-data-[collapsible=icon]:justify-center"
+            className="w-full flex items-center gap-3 p-2.5 rounded-xl bg-[#0b1f3c] hover:bg-[#102a50] dark:bg-zinc-900/80 dark:hover:bg-zinc-800 border border-[#14325c] dark:border-zinc-800/80 shadow-xs transition-all text-left group cursor-pointer outline-none select-none group-data-[collapsible=icon]:p-1.5 group-data-[collapsible=icon]:justify-center"
             title={`${currentUser.name} (${currentUser.role || "User"}) - View Profile`}
             role="button"
             tabIndex={0}
@@ -104,7 +122,7 @@ export function AppSidebar({
                   {initials}
                 </div>
               )}
-              <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-emerald-500 border-2 border-[#07152b] rounded-full" />
+              <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-emerald-500 border-2 border-[#0b1f3c] dark:border-zinc-900 rounded-full" />
             </div>
 
             {/* Name in the right */}
@@ -112,7 +130,7 @@ export function AppSidebar({
               <span className="truncate font-bold text-white text-xs sm:text-sm leading-tight group-hover:text-blue-300 transition-colors">
                 {currentUser.name}
               </span>
-              <span className="truncate text-[11px] text-blue-200/60 font-medium leading-tight mt-0.5">
+              <span className="truncate text-[11px] text-blue-200/70 dark:text-zinc-400 font-medium leading-tight mt-0.5">
                 {currentUser.role || currentUser.email || "Account"}
               </span>
             </div>
@@ -130,7 +148,7 @@ export function AppSidebar({
           </button>
 
           {/* Version */}
-          <div className="text-[10px] text-blue-300/30 font-medium text-center mt-2 pb-0.5 group-data-[collapsible=icon]:hidden">
+          <div className="text-[10px] text-blue-300/30 dark:text-zinc-600 font-medium text-center mt-2 pb-0.5 group-data-[collapsible=icon]:hidden">
             v1.0.0
           </div>
         </div>
