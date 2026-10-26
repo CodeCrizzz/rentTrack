@@ -358,18 +358,19 @@ export default function AdminMaintenanceRequests() {
     }
   };
 
-  const getTenantAvatarUrl = (index: number) => {
-    const avatarList = [
-      "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&q=80&w=120", // Juan Dela Cruz
-      "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&q=80&w=120", // Maria Santos
-      "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&q=80&w=120", // Carlos Lopez
-      "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=120", // Ana Reyes
-      "https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?auto=format&fit=crop&q=80&w=120", // Mark Rivera
-      "https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&q=80&w=120", // Ella Cruz
-      "https://images.unsplash.com/photo-1522075469751-3a6694fb2f61?auto=format&fit=crop&q=80&w=120", // Daniel Santos
-      "https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&q=80&w=120", // Group A
+  const getAvatarBgClass = (name: string) => {
+    const palette = [
+      "bg-[#0062cc] text-white",
+      "bg-[#2563eb] text-white",
+      "bg-[#0284c7] text-white",
+      "bg-[#4f46e5] text-white",
+      "bg-[#0d9488] text-white",
     ];
-    return avatarList[index % avatarList.length];
+    let code = 0;
+    for (let i = 0; i < name.length; i++) {
+      code = name.charCodeAt(i) + ((code << 5) - code);
+    }
+    return palette[Math.abs(code) % palette.length];
   };
 
   // Status & Priority Normalization
@@ -484,11 +485,15 @@ export default function AdminMaintenanceRequests() {
         status: nextStatus,
         date_resolved: nextStatus === "Resolved" ? new Date().toISOString() : null,
       }).catch(() => {});
-      toast.success(`Request marked as ${nextStatus}`);
+      toast.success("Work Order Updated", {
+        description: `Request marked as ${nextStatus}.`,
+      });
       setActiveMenuId(null);
     } catch (err) {
       console.error(err);
-      toast.error("Failed to update status");
+      toast.error("Failed to Update Status", {
+        description: "Could not update request operational status.",
+      });
     }
   };
 
@@ -501,11 +506,15 @@ export default function AdminMaintenanceRequests() {
       if (selectedRequestId === reqId) {
         setSelectedRequestId(null);
       }
-      toast.success("Maintenance request deleted");
+      toast.success("Work Order Deleted", {
+        description: "Maintenance request permanently removed.",
+      });
       setActiveMenuId(null);
     } catch (err) {
       console.error(err);
-      toast.error("Failed to delete request");
+      toast.error("Deletion Failed", {
+        description: "Could not delete maintenance ticket.",
+      });
     }
   };
 
@@ -535,12 +544,16 @@ export default function AdminMaintenanceRequests() {
             : r
         )
       );
-      toast.success("Status updated successfully!");
+      toast.success("Work Order Saved", {
+        description: `Status changed to ${statusForm.status} (Priority: ${statusForm.priority}).`,
+      });
       setIsUpdateStatusModalOpen(false);
       setUpdatingRequest(null);
     } catch (error) {
       console.error("Failed to update status:", error);
-      toast.error("Failed to update status");
+      toast.error("Failed to Update Status", {
+        description: "Could not save work order adjustments.",
+      });
     } finally {
       setIsSubmittingStatus(false);
     }
@@ -900,11 +913,13 @@ export default function AdminMaintenanceRequests() {
                           {/* Tenant */}
                           <td className="py-2.5 px-3 whitespace-nowrap">
                             <div className="flex items-center gap-2.5">
-                              <img
-                                src={getTenantAvatarUrl(idx)}
-                                alt={req.tenant_name}
-                                className="w-7 h-7 rounded-full object-cover shrink-0 border border-slate-200 dark:border-zinc-700"
-                              />
+                              <div
+                                className={`w-7 h-7 rounded-full font-bold text-[11px] flex items-center justify-center shrink-0 shadow-2xs select-none ${getAvatarBgClass(
+                                  req.tenant_name || "Tenant"
+                                )}`}
+                              >
+                                {(req.tenant_name || "T").trim().charAt(0).toUpperCase()}
+                              </div>
                               <div className="min-w-0">
                                 <div className="font-bold text-slate-900 dark:text-white leading-tight truncate">
                                   {req.tenant_name || "Juan Dela Cruz"}
@@ -1132,11 +1147,9 @@ export default function AdminMaintenanceRequests() {
                     Assigned To
                   </div>
                   <div className="flex items-center gap-2.5">
-                    <img
-                      src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=120"
-                      alt="Assigned Technician"
-                      className="w-7 h-7 rounded-full object-cover border border-slate-200 dark:border-zinc-700"
-                    />
+                    <div className="w-7 h-7 rounded-full bg-blue-100 dark:bg-blue-900/60 text-[#0062cc] dark:text-blue-400 font-bold text-xs flex items-center justify-center border border-blue-200 dark:border-blue-800 select-none">
+                      M
+                    </div>
                     <div>
                       <div className="text-xs font-bold text-slate-900 dark:text-white">
                         Maintenance Team
