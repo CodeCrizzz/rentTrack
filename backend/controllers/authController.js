@@ -21,9 +21,9 @@ const registerUser = async (req, res) => {
         const salt = await bcrypt.genSalt(10);
         const hashedPassword = await bcrypt.hash(password, salt); 
 
-        // Insert user into database
-        const roleToSet = role || 'tenant';
-        const statusToSet = roleToSet === 'tenant' ? 'Pending' : 'Active';
+        // Enforce role: public registration is strictly for tenants only
+        const roleToSet = 'tenant';
+        const statusToSet = 'Pending';
         const formattedPhone = phone ? formatPhoneNumber(phone) : null;
 
         const newUser = await db.query(
