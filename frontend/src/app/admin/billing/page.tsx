@@ -1213,13 +1213,17 @@ function BillingContent() {
     try {
       setIsSubmitting(true);
       await api.post("/admin/bills", billForm);
-      toast.success("Billing invoice issued successfully");
+      toast.success("Billing Invoice Issued", {
+        description: "Invoice generated and added to billing ledger.",
+      });
       setIsCreateOpen(false);
       setBillForm(initialBillForm);
       fetchData();
     } catch (error: any) {
       console.error("Create bill error:", error);
-      toast.error(error.response?.data?.message || "Failed to create invoice.");
+      toast.error("Failed to Issue Invoice", {
+        description: error.response?.data?.message || "Could not generate invoice.",
+      });
     } finally {
       setIsSubmitting(false);
     }
@@ -1232,12 +1236,16 @@ function BillingContent() {
     try {
       setIsSubmitting(true);
       await api.put(`/admin/bills/${selectedBill.id}`, billForm);
-      toast.success("Invoice updated successfully");
+      toast.success("Invoice Updated", {
+        description: "Invoice adjustments and charges saved successfully.",
+      });
       setIsEditOpen(false);
       fetchData();
     } catch (error: any) {
       console.error("Edit bill error:", error);
-      toast.error("Failed to update invoice.");
+      toast.error("Failed to Update Invoice", {
+        description: "Could not save invoice adjustments.",
+      });
     } finally {
       setIsSubmitting(false);
     }
@@ -1250,13 +1258,17 @@ function BillingContent() {
     try {
       setIsSubmitting(true);
       await api.post(`/admin/bills/${selectedBill.id}/pay`, paymentForm);
-      toast.success("Payment recorded into ledger");
+      toast.success("Payment Recorded", {
+        description: `Payment of ₱${Number(paymentForm.amount_paid).toLocaleString()} posted to ledger.`,
+      });
       setIsPayOpen(false);
       setPaymentForm(initialPaymentForm);
       fetchData();
     } catch (error: any) {
       console.error("Payment error:", error);
-      toast.error(error.response?.data?.message || "Failed to record payment.");
+      toast.error("Payment Record Failed", {
+        description: error.response?.data?.message || "Could not post payment.",
+      });
     } finally {
       setIsSubmitting(false);
     }
@@ -1266,16 +1278,16 @@ function BillingContent() {
     try {
       setIsSubmitting(true);
       await api.post("/admin/bills/generate");
-      toast.success(
-        "Monthly billing invoices generated for all active residents!",
-      );
+      toast.success("Monthly Invoices Generated", {
+        description: "Billing statements created for all active residents.",
+      });
       setIsGenerateConfirmOpen(false);
       fetchData();
     } catch (error: any) {
       console.error("Auto generate bills error:", error);
-      toast.error(
-        error.response?.data?.message || "Failed to generate monthly bills.",
-      );
+      toast.error("Generation Failed", {
+        description: error.response?.data?.message || "Failed to generate monthly bills.",
+      });
     } finally {
       setIsSubmitting(false);
     }
@@ -1288,7 +1300,13 @@ function BillingContent() {
     try {
       await api.post(`/admin/bills/payments/${paymentId}/verify`, { action });
       toast.success(
-        `Payment verified: ${action === "approve" ? "Approved" : "Rejected"}`,
+        action === "approve" ? "Payment Approved" : "Payment Rejected",
+        {
+          description:
+            action === "approve"
+              ? "Payment proof verified and receipt acknowledged."
+              : "Payment proof marked as rejected.",
+        }
       );
       fetchData();
       if (pendingPayments.length <= 1) {
@@ -1296,7 +1314,9 @@ function BillingContent() {
       }
     } catch (error) {
       console.error("Verification error:", error);
-      toast.error(`Failed to ${action} payment verification.`);
+      toast.error("Verification Failed", {
+        description: `Failed to ${action} payment verification.`,
+      });
     }
   };
 
