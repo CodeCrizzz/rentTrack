@@ -103,7 +103,7 @@ export default function AdminRooms() {
     room_number: "",
     type: "Single",
     rental_type: "Whole Room",
-    capacity: 1,
+    capacity: "1" as string | number,
     price: "",
     floor: "",
     description: "",
@@ -151,7 +151,7 @@ export default function AdminRooms() {
         room_number: room.room_number,
         type: room.type || "Single",
         rental_type: room.rental_type || "Whole Room",
-        capacity: room.capacity || 1,
+        capacity: room.capacity !== undefined && room.capacity !== null ? String(room.capacity) : "1",
         price: room.price || "",
         floor: floorDigits || "1",
         description: room.description || "",
@@ -164,7 +164,7 @@ export default function AdminRooms() {
         room_number: "",
         type: "Single",
         rental_type: "Whole Room",
-        capacity: 1,
+        capacity: "1",
         price: "",
         floor: "1",
         description: "",
@@ -194,6 +194,28 @@ export default function AdminRooms() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!formData.room_number || !formData.price) {
+      toast.warning("Incomplete Room Details", {
+        description: "Please enter a valid room number and monthly tariff.",
+      });
+      return;
+    }
+
+    const parsedCapacity = parseInt(String(formData.capacity), 10);
+    if (!formData.capacity || isNaN(parsedCapacity) || parsedCapacity < 1) {
+      toast.warning("Invalid Capacity", {
+        description: "Please specify a valid capacity of at least 1 bed.",
+      });
+      return;
+    }
+
+    if (editingRoom && parsedCapacity < (editingRoom.current_occupants || 0)) {
+      toast.warning("Capacity Below Occupancy", {
+        description: `This room currently has ${editingRoom.current_occupants} active occupant(s). You cannot set capacity lower than current occupancy.`,
+      });
+      return;
+    }
+
     setIsSubmitting(true);
     setError("");
     try {
@@ -201,22 +223,29 @@ export default function AdminRooms() {
       const floorDigits = formData.floor.toString().replace(/\D/g, "") || "1";
       const payload = {
         ...formData,
+        capacity: parsedCapacity,
         floor: `Floor ${floorDigits}`,
       };
 
       if (editingRoom) {
         await api.put(`/admin/rooms/${editingRoom.id}`, payload);
-        toast.success(`Room ${formData.room_number} updated successfully`);
+        toast.success("Room Updated Successfully", {
+          description: `Room ${formData.room_number} details have been saved.`,
+        });
       } else {
         await api.post("/admin/rooms", payload);
-        toast.success(`Room ${formData.room_number} created successfully`);
+        toast.success("Room Created Successfully", {
+          description: `Room ${formData.room_number} (${formData.type}) added to inventory.`,
+        });
       }
       setIsModalOpen(false);
       fetchRooms(true);
     } catch (err: any) {
       const errMsg = err.response?.data?.message || "Operation failed.";
       setError(errMsg);
-      toast.error(errMsg);
+      toast.error(editingRoom ? "Failed to Update Room" : "Failed to Create Room", {
+        description: errMsg,
+      });
     } finally {
       setIsSubmitting(false);
     }
@@ -224,9 +253,9 @@ export default function AdminRooms() {
 
   const handleDelete = async (room: Room) => {
     if (room.current_occupants > 0) {
-      toast.error(
-        `Cannot delete Room ${room.room_number}: active tenants are currently residing here.`,
-      );
+      toast.warning("Cannot Delete Room", {
+        description: `Room ${room.room_number} currently has ${room.current_occupants} active occupant(s). Reassign them first.`,
+      });
       return;
     }
 
@@ -240,11 +269,15 @@ export default function AdminRooms() {
     setIsDeleting(room.id);
     try {
       await api.delete(`/admin/rooms/${room.id}`);
-      toast.success(`Room ${room.room_number} removed from inventory`);
+      toast.success("Room Deleted Successfully", {
+        description: `Room ${room.room_number} permanently removed from inventory.`,
+      });
       fetchRooms(true);
     } catch (err: any) {
       const errMsg = err.response?.data?.message || "Failed to delete room.";
-      toast.error(errMsg);
+      toast.error("Failed to Delete Room", {
+        description: errMsg,
+      });
     } finally {
       setIsDeleting(null);
     }
@@ -255,17 +288,20 @@ export default function AdminRooms() {
       room.status === "Maintenance" ? "Available" : "Maintenance";
     try {
       await api.put(`/admin/rooms/${room.id}`, { ...room, status: nextStatus });
-      toast.success(
-        nextStatus === "Available"
-          ? `Room ${room.room_number} marked as Available`
-          : `Room ${room.room_number} set to Maintenance`,
-      );
+      toast.success("Room Status Updated", {
+        description:
+          nextStatus === "Available"
+            ? `Room ${room.room_number} is now marked as Available.`
+            : `Room ${room.room_number} has been set to Maintenance.`,
+      });
       fetchRooms(true);
       if (selectedRoom && selectedRoom.id === room.id) {
         setSelectedRoom({ ...selectedRoom, status: nextStatus });
       }
     } catch (err: any) {
-      toast.error("Failed to update room status");
+      toast.error("Status Update Failed", {
+        description: "Could not update room operational status.",
+      });
     }
   };
 
@@ -313,13 +349,39 @@ export default function AdminRooms() {
     let vacant = 0;
     let maintenance = 0;
 
+    let totalBeds = 0;
+    let occupiedBeds = 0;
+    let fullBeds = 0;
+    let availableBedsInOccupied = 0;
+    let vacantBeds = 0;
+    let maintenanceBeds = 0;
+
     rooms.forEach((r) => {
+      const cap = r.capacity || 1;
+      const occ = r.occupants?.length || r.current_occupants || 0;
+      totalBeds += cap;
+      occupiedBeds += occ;
+
       const cat = getRoomCategory(r);
-      if (cat === "Full") full++;
-      else if (cat === "OccupiedWithBeds") occupiedWithBeds++;
-      else if (cat === "Vacant") vacant++;
-      else if (cat === "Maintenance") maintenance++;
+      if (cat === "Full") {
+        full++;
+        fullBeds += cap;
+      } else if (cat === "OccupiedWithBeds") {
+        occupiedWithBeds++;
+        const avail = Math.max(0, cap - occ);
+        availableBedsInOccupied += avail;
+      } else if (cat === "Vacant") {
+        vacant++;
+        vacantBeds += cap;
+      } else if (cat === "Maintenance") {
+        maintenance++;
+        maintenanceBeds += cap;
+      }
     });
+
+    const totalAvailableBeds = Math.max(0, totalBeds - occupiedBeds);
+    const occupancyRate =
+      totalBeds > 0 ? Math.round((occupiedBeds / totalBeds) * 100) : 0;
 
     const fullPct = total > 0 ? Math.round((full / total) * 100) : 0;
     const occupiedWithBedsPct =
@@ -334,6 +396,14 @@ export default function AdminRooms() {
       occupiedWithBeds,
       vacant,
       maintenance,
+      totalBeds,
+      occupiedBeds,
+      totalAvailableBeds,
+      occupancyRate,
+      fullBeds,
+      availableBedsInOccupied,
+      vacantBeds,
+      maintenanceBeds,
       fullPct,
       occupiedWithBedsPct,
       vacantPct,
@@ -491,111 +561,268 @@ export default function AdminRooms() {
         </div>
       </div>
 
-      {/* 2. TOP KPI CARDS RIBBON (Horizontal 4 Tiles with Compact Height) */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 shrink-0">
+      {/* 2. REAL-WORLD SAAS METRIC & FILTER CARDS */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 shrink-0">
         {/* Card 1: Full */}
-        <div className="bg-white dark:bg-zinc-900 border border-slate-200/90 dark:border-zinc-800 rounded-xl p-2.5 sm:p-3 shadow-2xs flex flex-col justify-between">
-          <div className="flex items-start gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0 border border-emerald-100 dark:border-emerald-900/40">
-              <FileText className="w-4 h-4 stroke-[2.2]" />
-            </div>
-            <div className="min-w-0">
-              <span className="text-[11px] font-bold text-slate-700 dark:text-zinc-300 block leading-tight">
+        <button
+          type="button"
+          onClick={() =>
+            setStatusFilter(statusFilter === "Full" ? "All Statuses" : "Full")
+          }
+          className={`group text-left bg-white dark:bg-zinc-900 border rounded-xl p-3.5 transition-all duration-150 cursor-pointer select-none flex flex-col justify-between ${
+            statusFilter === "Full"
+              ? "border-emerald-500/80 bg-emerald-50/25 dark:bg-emerald-950/20 ring-1 ring-emerald-500/25 shadow-2xs"
+              : "border-slate-200/90 dark:border-zinc-800 hover:border-slate-300 dark:hover:border-zinc-700 hover:bg-slate-50/50 dark:hover:bg-zinc-800/40 shadow-2xs"
+          }`}
+        >
+          {/* Top Header: Icon + Title + Percentage Chip */}
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2 min-w-0">
+              <div className="w-7 h-7 rounded-lg bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0 border border-emerald-100 dark:border-emerald-900/40">
+                <CheckCircle className="w-3.5 h-3.5 stroke-[2.2]" />
+              </div>
+              <span className="text-xs font-semibold text-slate-800 dark:text-zinc-200 truncate">
                 Full
               </span>
-              <div className="text-sm sm:text-base font-black text-slate-900 dark:text-white mt-0.5">
-                {metrics.full} / {metrics.total} units
-              </div>
-              <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 block">
+            </div>
+            <div className="flex items-center gap-1.5 shrink-0">
+              {statusFilter === "Full" && (
+                <span className="text-[10px] font-bold text-emerald-700 dark:text-emerald-400 bg-emerald-100/80 dark:bg-emerald-950/80 px-1.5 py-0.5 rounded">
+                  Filtered
+                </span>
+              )}
+              <span className="text-sm sm:text-base font-extrabold font-mono text-slate-800 dark:text-zinc-100 bg-slate-100 dark:bg-zinc-800 px-2 py-0.5 rounded-md shrink-0">
                 {metrics.fullPct}%
               </span>
             </div>
           </div>
-          <div className="w-full h-1 bg-slate-100 dark:bg-zinc-800 rounded-full mt-2 overflow-hidden">
+
+          {/* Metric Value */}
+          <div className="mt-2.5 flex items-baseline gap-1.5">
+            <span className="text-2xl sm:text-[26px] font-bold text-slate-950 dark:text-white tracking-tight tabular-nums">
+              {metrics.full}
+            </span>
+            <span className="text-xs font-medium text-slate-400 dark:text-zinc-500">
+              / {metrics.total} rooms
+            </span>
+          </div>
+
+          {/* Precision Progress Track */}
+          <div className="mt-2.5 w-full h-1.5 bg-slate-100 dark:bg-zinc-800 rounded-full overflow-hidden">
             <div
               className="h-full bg-emerald-500 rounded-full transition-all duration-500"
               style={{ width: `${metrics.fullPct}%` }}
             />
           </div>
-        </div>
 
-        {/* Card 2: Occupied w/ Available Beds */}
-        <div className="bg-white dark:bg-zinc-900 border border-slate-200/90 dark:border-zinc-800 rounded-xl p-2.5 sm:p-3 shadow-2xs flex flex-col justify-between">
-          <div className="flex items-start gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0 border border-amber-100 dark:border-amber-900/40">
-              <BedDouble className="w-4 h-4 stroke-[2.2]" />
-            </div>
-            <div className="min-w-0">
-              <span className="text-[11px] font-bold text-slate-700 dark:text-zinc-300 block leading-tight truncate">
+          {/* Operational Context Subtext */}
+          <div className="mt-2 flex items-center justify-between text-[11px] text-slate-500 dark:text-zinc-400 font-medium">
+            <span>Bed capacity</span>
+            <span className="flex items-center gap-1 font-semibold text-slate-700 dark:text-zinc-300">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />
+              {metrics.fullBeds} beds (100%)
+            </span>
+          </div>
+        </button>
+
+        {/* Card 2: Occupied w/ Beds */}
+        <button
+          type="button"
+          onClick={() =>
+            setStatusFilter(
+              statusFilter === "Occupied (With Available Beds)" ||
+                statusFilter === "Occupied w/ Beds"
+                ? "All Statuses"
+                : "Occupied (With Available Beds)",
+            )
+          }
+          className={`group text-left bg-white dark:bg-zinc-900 border rounded-xl p-3.5 transition-all duration-150 cursor-pointer select-none flex flex-col justify-between ${
+            statusFilter === "Occupied (With Available Beds)" ||
+            statusFilter === "Occupied w/ Beds" ||
+            statusFilter === "Partially Occupied"
+              ? "border-amber-500/80 bg-amber-50/25 dark:bg-amber-950/20 ring-1 ring-amber-500/25 shadow-2xs"
+              : "border-slate-200/90 dark:border-zinc-800 hover:border-slate-300 dark:hover:border-zinc-700 hover:bg-slate-50/50 dark:hover:bg-zinc-800/40 shadow-2xs"
+          }`}
+        >
+          {/* Top Header: Icon + Title + Percentage Chip */}
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2 min-w-0">
+              <div className="w-7 h-7 rounded-lg bg-amber-50 dark:bg-amber-950/50 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0 border border-amber-100 dark:border-amber-900/40">
+                <BedDouble className="w-3.5 h-3.5 stroke-[2.2]" />
+              </div>
+              <span className="text-xs font-semibold text-slate-800 dark:text-zinc-200 truncate">
                 Occupied w/ Beds
               </span>
-              <div className="text-sm sm:text-base font-black text-slate-900 dark:text-white mt-0.5">
-                {metrics.occupiedWithBeds} / {metrics.total} units
-              </div>
-              <span className="text-[10px] font-bold text-amber-600 dark:text-amber-400 block">
+            </div>
+            <div className="flex items-center gap-1.5 shrink-0">
+              {(statusFilter === "Occupied (With Available Beds)" ||
+                statusFilter === "Occupied w/ Beds" ||
+                statusFilter === "Partially Occupied") && (
+                <span className="text-[10px] font-bold text-amber-700 dark:text-amber-400 bg-amber-100/80 dark:bg-amber-950/80 px-1.5 py-0.5 rounded">
+                  Filtered
+                </span>
+              )}
+              <span className="text-sm sm:text-base font-extrabold font-mono text-slate-800 dark:text-zinc-100 bg-slate-100 dark:bg-zinc-800 px-2 py-0.5 rounded-md shrink-0">
                 {metrics.occupiedWithBedsPct}%
               </span>
             </div>
           </div>
-          <div className="w-full h-1 bg-slate-100 dark:bg-zinc-800 rounded-full mt-2 overflow-hidden">
+
+          {/* Metric Value */}
+          <div className="mt-2.5 flex items-baseline gap-1.5">
+            <span className="text-2xl sm:text-[26px] font-bold text-slate-950 dark:text-white tracking-tight tabular-nums">
+              {metrics.occupiedWithBeds}
+            </span>
+            <span className="text-xs font-medium text-slate-400 dark:text-zinc-500">
+              / {metrics.total} rooms
+            </span>
+          </div>
+
+          {/* Precision Progress Track */}
+          <div className="mt-2.5 w-full h-1.5 bg-slate-100 dark:bg-zinc-800 rounded-full overflow-hidden">
             <div
               className="h-full bg-amber-500 rounded-full transition-all duration-500"
               style={{ width: `${metrics.occupiedWithBedsPct}%` }}
             />
           </div>
-        </div>
+
+          {/* Operational Context Subtext */}
+          <div className="mt-2 flex items-center justify-between text-[11px] text-slate-500 dark:text-zinc-400 font-medium">
+            <span>Available beds</span>
+            <span className="flex items-center gap-1 font-semibold text-amber-600 dark:text-amber-400">
+              <span className="w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0" />
+              {metrics.availableBedsInOccupied} open to lease
+            </span>
+          </div>
+        </button>
 
         {/* Card 3: Vacant */}
-        <div className="bg-white dark:bg-zinc-900 border border-slate-200/90 dark:border-zinc-800 rounded-xl p-2.5 sm:p-3 shadow-2xs flex flex-col justify-between">
-          <div className="flex items-start gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0 border border-blue-100 dark:border-blue-900/40">
-              <DoorOpen className="w-4 h-4 stroke-[2.2]" />
-            </div>
-            <div className="min-w-0">
-              <span className="text-[11px] font-bold text-slate-700 dark:text-zinc-300 block leading-tight">
+        <button
+          type="button"
+          onClick={() =>
+            setStatusFilter(
+              statusFilter === "Vacant" ? "All Statuses" : "Vacant",
+            )
+          }
+          className={`group text-left bg-white dark:bg-zinc-900 border rounded-xl p-3.5 transition-all duration-150 cursor-pointer select-none flex flex-col justify-between ${
+            statusFilter === "Vacant"
+              ? "border-blue-500/80 bg-blue-50/25 dark:bg-blue-950/20 ring-1 ring-blue-500/25 shadow-2xs"
+              : "border-slate-200/90 dark:border-zinc-800 hover:border-slate-300 dark:hover:border-zinc-700 hover:bg-slate-50/50 dark:hover:bg-zinc-800/40 shadow-2xs"
+          }`}
+        >
+          {/* Top Header: Icon + Title + Percentage Chip */}
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2 min-w-0">
+              <div className="w-7 h-7 rounded-lg bg-blue-50 dark:bg-blue-950/50 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0 border border-blue-100 dark:border-blue-900/40">
+                <DoorOpen className="w-3.5 h-3.5 stroke-[2.2]" />
+              </div>
+              <span className="text-xs font-semibold text-slate-800 dark:text-zinc-200 truncate">
                 Vacant
               </span>
-              <div className="text-sm sm:text-base font-black text-slate-900 dark:text-white mt-0.5">
-                {metrics.vacant} / {metrics.total} units
-              </div>
-              <span className="text-[10px] font-bold text-blue-600 dark:text-blue-400 block">
+            </div>
+            <div className="flex items-center gap-1.5 shrink-0">
+              {statusFilter === "Vacant" && (
+                <span className="text-[10px] font-bold text-blue-700 dark:text-blue-400 bg-blue-100/80 dark:bg-blue-950/80 px-1.5 py-0.5 rounded">
+                  Filtered
+                </span>
+              )}
+              <span className="text-sm sm:text-base font-extrabold font-mono text-slate-800 dark:text-zinc-100 bg-slate-100 dark:bg-zinc-800 px-2 py-0.5 rounded-md shrink-0">
                 {metrics.vacantPct}%
               </span>
             </div>
           </div>
-          <div className="w-full h-1 bg-slate-100 dark:bg-zinc-800 rounded-full mt-2 overflow-hidden">
+
+          {/* Metric Value */}
+          <div className="mt-2.5 flex items-baseline gap-1.5">
+            <span className="text-2xl sm:text-[26px] font-bold text-slate-950 dark:text-white tracking-tight tabular-nums">
+              {metrics.vacant}
+            </span>
+            <span className="text-xs font-medium text-slate-400 dark:text-zinc-500">
+              / {metrics.total} rooms
+            </span>
+          </div>
+
+          {/* Precision Progress Track */}
+          <div className="mt-2.5 w-full h-1.5 bg-slate-100 dark:bg-zinc-800 rounded-full overflow-hidden">
             <div
               className="h-full bg-blue-500 rounded-full transition-all duration-500"
               style={{ width: `${metrics.vacantPct}%` }}
             />
           </div>
-        </div>
+
+          {/* Operational Context Subtext */}
+          <div className="mt-2 flex items-center justify-between text-[11px] text-slate-500 dark:text-zinc-400 font-medium">
+            <span>Move-in ready</span>
+            <span className="flex items-center gap-1 font-semibold text-blue-600 dark:text-blue-400">
+              <span className="w-1.5 h-1.5 rounded-full bg-blue-500 shrink-0" />
+              {metrics.vacantBeds} {metrics.vacantBeds === 1 ? "bed" : "beds"} ready
+            </span>
+          </div>
+        </button>
 
         {/* Card 4: Maintenance */}
-        <div className="bg-white dark:bg-zinc-900 border border-slate-200/90 dark:border-zinc-800 rounded-xl p-2.5 sm:p-3 shadow-2xs flex flex-col justify-between">
-          <div className="flex items-start gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400 flex items-center justify-center shrink-0 border border-rose-100 dark:border-rose-900/40">
-              <Wrench className="w-4 h-4 stroke-[2.2]" />
-            </div>
-            <div className="min-w-0">
-              <span className="text-[11px] font-bold text-slate-700 dark:text-zinc-300 block leading-tight">
+        <button
+          type="button"
+          onClick={() =>
+            setStatusFilter(
+              statusFilter === "Maintenance" ? "All Statuses" : "Maintenance",
+            )
+          }
+          className={`group text-left bg-white dark:bg-zinc-900 border rounded-xl p-3.5 transition-all duration-150 cursor-pointer select-none flex flex-col justify-between ${
+            statusFilter === "Maintenance"
+              ? "border-rose-500/80 bg-rose-50/25 dark:bg-rose-950/20 ring-1 ring-rose-500/25 shadow-2xs"
+              : "border-slate-200/90 dark:border-zinc-800 hover:border-slate-300 dark:hover:border-zinc-700 hover:bg-slate-50/50 dark:hover:bg-zinc-800/40 shadow-2xs"
+          }`}
+        >
+          {/* Top Header: Icon + Title + Percentage Chip */}
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2 min-w-0">
+              <div className="w-7 h-7 rounded-lg bg-rose-50 dark:bg-rose-950/50 text-rose-600 dark:text-rose-400 flex items-center justify-center shrink-0 border border-rose-100 dark:border-rose-900/40">
+                <Wrench className="w-3.5 h-3.5 stroke-[2.2]" />
+              </div>
+              <span className="text-xs font-semibold text-slate-800 dark:text-zinc-200 truncate">
                 Maintenance
               </span>
-              <div className="text-sm sm:text-base font-black text-slate-900 dark:text-white mt-0.5">
-                {metrics.maintenance} / {metrics.total} units
-              </div>
-              <span className="text-[10px] font-bold text-rose-600 dark:text-rose-400 block">
+            </div>
+            <div className="flex items-center gap-1.5 shrink-0">
+              {statusFilter === "Maintenance" && (
+                <span className="text-[10px] font-bold text-rose-700 dark:text-rose-400 bg-rose-100/80 dark:bg-rose-950/80 px-1.5 py-0.5 rounded">
+                  Filtered
+                </span>
+              )}
+              <span className="text-sm sm:text-base font-extrabold font-mono text-slate-800 dark:text-zinc-100 bg-slate-100 dark:bg-zinc-800 px-2 py-0.5 rounded-md shrink-0">
                 {metrics.maintenancePct}%
               </span>
             </div>
           </div>
-          <div className="w-full h-1 bg-slate-100 dark:bg-zinc-800 rounded-full mt-2 overflow-hidden">
+
+          {/* Metric Value */}
+          <div className="mt-2.5 flex items-baseline gap-1.5">
+            <span className="text-2xl sm:text-[26px] font-bold text-slate-950 dark:text-white tracking-tight tabular-nums">
+              {metrics.maintenance}
+            </span>
+            <span className="text-xs font-medium text-slate-400 dark:text-zinc-500">
+              / {metrics.total} rooms
+            </span>
+          </div>
+
+          {/* Precision Progress Track */}
+          <div className="mt-2.5 w-full h-1.5 bg-slate-100 dark:bg-zinc-800 rounded-full overflow-hidden">
             <div
               className="h-full bg-rose-500 rounded-full transition-all duration-500"
               style={{ width: `${metrics.maintenancePct}%` }}
             />
           </div>
-        </div>
+
+          {/* Operational Context Subtext */}
+          <div className="mt-2 flex items-center justify-between text-[11px] text-slate-500 dark:text-zinc-400 font-medium">
+            <span>Offline beds</span>
+            <span className="flex items-center gap-1 font-semibold text-rose-600 dark:text-rose-400">
+              <span className="w-1.5 h-1.5 rounded-full bg-rose-500 shrink-0" />
+              {metrics.maintenanceBeds} {metrics.maintenanceBeds === 1 ? "bed" : "beds"} offline
+            </span>
+          </div>
+        </button>
       </div>
 
       {/* 3. UNIFIED FILTER & ACTION CONTROLS BAR */}
@@ -680,8 +907,8 @@ export default function AdminRooms() {
 
       {/* 4. MAIN SPLIT VIEW (Floor Room Rows vs. Right Drawer) */}
       <div className="flex-1 min-h-0 flex flex-col lg:flex-row items-stretch gap-2.5 overflow-hidden">
-        {/* LEFT COLUMN: Floor Rows Container - Only Floor Cards have scrollbar, main display shows 1st, 2nd, 3rd floor */}
-        <div className="flex-1 min-w-0 h-full overflow-y-auto pr-1.5 custom-scrollbar space-y-2">
+        {/* LEFT COLUMN: Rooms Grid Container - fits 2 rows in the main display, scroll for the rest so each card is bigger */}
+        <div className="flex-1 min-w-0 h-full overflow-y-auto pr-2 custom-scrollbar space-y-4">
           {groupedByFloor.length === 0 ? (
             <div className="bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-xl p-8 text-center">
               <DoorOpen className="w-10 h-10 text-slate-300 dark:text-zinc-700 mx-auto mb-2" />
@@ -693,256 +920,250 @@ export default function AdminRooms() {
               </p>
             </div>
           ) : (
-            groupedByFloor.map((group) => (
-              <div
-                key={group.floor}
-                className="bg-white dark:bg-zinc-900 border border-slate-200/90 dark:border-zinc-800 rounded-xl p-2.5 sm:p-3 shadow-2xs space-y-2 shrink-0"
-              >
-                {/* Floor Header */}
-                {(() => {
-                  let floorFull = 0;
-                  let floorWithBeds = 0;
-                  let floorVacant = 0;
-                  let floorMaint = 0;
+            groupedByFloor.map((group) => {
+              let floorFull = 0;
+              let floorWithBeds = 0;
+              let floorVacant = 0;
+              let floorMaint = 0;
 
-                  group.rooms.forEach((r) => {
-                    const c = getRoomCategory(r);
-                    if (c === "Full") floorFull++;
-                    else if (c === "OccupiedWithBeds") floorWithBeds++;
-                    else if (c === "Vacant") floorVacant++;
-                    else if (c === "Maintenance") floorMaint++;
-                  });
+              group.rooms.forEach((r) => {
+                const c = getRoomCategory(r);
+                if (c === "Full") floorFull++;
+                else if (c === "OccupiedWithBeds") floorWithBeds++;
+                else if (c === "Vacant") floorVacant++;
+                else if (c === "Maintenance") floorMaint++;
+              });
 
-                  return (
-                    <div className="flex flex-wrap items-center justify-between gap-2 px-0.5">
-                      {/* Left: Floor Title & Room Counter beside it */}
-                      <div className="flex items-center gap-2">
-                        <h2 className="text-xs sm:text-sm font-extrabold text-slate-950 dark:text-white tracking-tight">
-                          {group.floor}
-                        </h2>
-                        <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-50 text-blue-600 dark:bg-blue-950/60 dark:text-blue-400 border border-blue-200/60 shrink-0">
-                          {group.rooms.length} {group.rooms.length === 1 ? "room" : "rooms"}
-                        </span>
-                      </div>
-
-                      {/* Right: Room Status Summary for this floor */}
-                      <div className="flex flex-wrap items-center gap-1.5 text-[10px] font-bold">
-                        {floorFull > 0 && (
-                          <span className="px-1.5 py-0.5 rounded-md bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 border border-emerald-200/60 dark:border-emerald-800/60 flex items-center gap-1">
-                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
-                            Full: {floorFull}
-                          </span>
-                        )}
-                        {floorWithBeds > 0 && (
-                          <span className="px-1.5 py-0.5 rounded-md bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400 border border-amber-200/60 dark:border-amber-800/60 flex items-center gap-1">
-                            <span className="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
-                            Occupied w/ Beds: {floorWithBeds}
-                          </span>
-                        )}
-                        {floorVacant > 0 && (
-                          <span className="px-1.5 py-0.5 rounded-md bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 border border-blue-200/60 dark:border-blue-800/60 flex items-center gap-1">
-                            <span className="w-1.5 h-1.5 rounded-full bg-blue-500"></span>
-                            Vacant: {floorVacant}
-                          </span>
-                        )}
-                        {floorMaint > 0 && (
-                          <span className="px-1.5 py-0.5 rounded-md bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400 border border-rose-200/60 dark:border-rose-800/60 flex items-center gap-1">
-                            <span className="w-1.5 h-1.5 rounded-full bg-rose-500"></span>
-                            Maint: {floorMaint}
-                          </span>
-                        )}
-                      </div>
+              return (
+                <div
+                  key={group.floor}
+                  className="bg-white dark:bg-zinc-900 border border-slate-200/90 dark:border-zinc-800 rounded-2xl p-3.5 sm:p-4 shadow-2xs space-y-2.5 shrink-0"
+                >
+                  {/* Floor Header Bar */}
+                  <div className="flex flex-wrap items-center justify-between gap-2 px-0.5">
+                    {/* Left: Floor Title & Room Counter beside it */}
+                    <div className="flex items-center gap-2">
+                      <h2 className="text-sm sm:text-base font-extrabold text-slate-950 dark:text-white tracking-tight">
+                        {group.floor}
+                      </h2>
+                      <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-blue-50 text-blue-600 dark:bg-blue-950/60 dark:text-blue-400 border border-blue-200/60 shrink-0">
+                        {group.rooms.length} {group.rooms.length === 1 ? "room" : "rooms"}
+                      </span>
                     </div>
-                  );
-                })()}
 
-                {/* Rooms Row */}
-                <div className="flex items-stretch gap-2.5 overflow-x-auto pb-2 pt-0.5 custom-scrollbar scroll-smooth">
-                  {group.rooms.map((room) => {
-                    const cat = getRoomCategory(room);
-                    const isSelected = selectedRoom?.id === room.id;
-                    const primaryOccupant = room.occupants?.[0];
-                    const extraOccupants =
-                      (room.occupants?.length || 0) - 1;
-                    const availBeds = getAvailableBeds(room);
+                    {/* Right: Room Status Summary for this floor */}
+                    <div className="flex flex-wrap items-center gap-2.5 sm:gap-3 text-[10px] sm:text-xs font-bold">
+                      {floorFull > 0 && (
+                        <span className="text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
+                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                          Full: {floorFull}
+                        </span>
+                      )}
+                      {floorWithBeds > 0 && (
+                        <span className="text-amber-600 dark:text-amber-400 flex items-center gap-1">
+                          <span className="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
+                          Occupied w/ Beds: {floorWithBeds}
+                        </span>
+                      )}
+                      {floorVacant > 0 && (
+                        <span className="text-blue-600 dark:text-blue-400 flex items-center gap-1">
+                          <span className="w-1.5 h-1.5 rounded-full bg-blue-500"></span>
+                          Vacant: {floorVacant}
+                        </span>
+                      )}
+                      {floorMaint > 0 && (
+                        <span className="text-rose-600 dark:text-rose-400 flex items-center gap-1">
+                          <span className="w-1.5 h-1.5 rounded-full bg-rose-500"></span>
+                          Maint: {floorMaint}
+                        </span>
+                      )}
+                    </div>
+                  </div>
 
-                    return (
-                      <div
-                        key={room.id}
-                        onClick={() => setSelectedRoom(room)}
-                        className={`w-[calc((100%-2.5rem)/5)] min-w-[170px] lg:min-w-[calc((100%-2.5rem)/5)] lg:max-w-[calc((100%-2.5rem)/5)] shrink-0 bg-white dark:bg-zinc-900 rounded-xl p-2 sm:p-2.5 border cursor-pointer transition-all flex flex-col justify-between relative shadow-2xs hover:shadow-xs group ${
-                          isSelected
-                            ? "border-blue-500 ring-2 ring-blue-500/20 bg-blue-50/10 dark:bg-blue-950/20"
-                            : "border-slate-200/90 dark:border-zinc-800 hover:border-slate-300 dark:hover:border-zinc-700"
-                        }`}
-                      >
-                        {/* Top Line: Room Number & Status Badge */}
-                        <div className="flex items-center justify-between gap-1">
-                          <span className="font-bold text-xs sm:text-sm text-slate-900 dark:text-white">
-                            {room.room_number}
-                          </span>
+                  {/* Rooms Horizontal Row: 1 floor per row with horizontal scrollbar to show other room cards */}
+                  <div className="flex items-stretch gap-3 overflow-x-auto pb-2.5 pt-0.5 custom-scrollbar scroll-smooth">
+                    {group.rooms.map((room) => {
+                      const cat = getRoomCategory(room);
+                      const isSelected = selectedRoom?.id === room.id;
+                      const availBeds = getAvailableBeds(room);
+                      const totalBeds = Math.max(1, room.capacity || 1);
+                      const bedRowsCount = Math.ceil(totalBeds / 5);
+                      const hasBedScroll = bedRowsCount >= 3;
 
-                          {cat === "Full" && (
-                            <span className="px-1.5 py-0.2 rounded-full text-[9px] font-bold bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400 border border-emerald-200/60 dark:border-emerald-800/60 flex items-center gap-1 shrink-0">
-                              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
-                              Full
-                            </span>
-                          )}
-                          {cat === "OccupiedWithBeds" && (
-                            <span
-                              className="px-1.5 py-0.2 rounded-full text-[9px] font-bold bg-amber-50 dark:bg-amber-950/50 text-amber-600 dark:text-amber-400 border border-amber-200/60 dark:border-amber-800/60 flex items-center gap-1 shrink-0"
-                              title={`Occupied with ${availBeds} ${availBeds === 1 ? "available bed" : "available beds"}`}
-                            >
-                              <span className="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
-                              Occupied ({availBeds} {availBeds === 1 ? "bed" : "beds"} avail)
-                            </span>
-                          )}
-                          {cat === "Vacant" && (
-                            <span className="px-1.5 py-0.2 rounded-full text-[9px] font-bold bg-blue-50 dark:bg-blue-950/50 text-blue-600 dark:text-blue-400 border border-blue-200/60 dark:border-blue-800/60 flex items-center gap-1 shrink-0">
-                              <span className="w-1.5 h-1.5 rounded-full bg-blue-500"></span>
-                              Vacant
-                            </span>
-                          )}
-                          {cat === "Maintenance" && (
-                            <span className="px-1.5 py-0.2 rounded-full text-[9px] font-bold bg-rose-50 dark:bg-rose-950/50 text-rose-600 dark:text-rose-400 border border-rose-200/60 dark:border-rose-800/60 flex items-center gap-1 shrink-0">
-                              <Wrench className="w-2.5 h-2.5" />
-                              <span className="hidden xl:inline 2xl:hidden">Maint.</span>
-                              <span className="inline xl:hidden 2xl:inline">Maintenance</span>
-                            </span>
-                          )}
-                        </div>
+                      return (
+                        <div
+                          key={room.id}
+                          onClick={() => setSelectedRoom(room)}
+                          className={`w-[245px] sm:w-[260px] min-w-[245px] sm:min-w-[260px] shrink-0 bg-white dark:bg-zinc-900 rounded-2xl p-3.5 sm:p-4 border cursor-pointer transition-all flex flex-col justify-between relative shadow-2xs hover:shadow-xs group min-h-[215px] sm:min-h-[225px] ${
+                            isSelected
+                              ? "border-blue-600 dark:border-blue-500 ring-2 ring-blue-500/20 bg-blue-50/15 dark:bg-blue-950/25"
+                              : "border-slate-200/90 dark:border-zinc-800 hover:border-slate-300 dark:hover:border-zinc-700"
+                          }`}
+                        >
+                          <div>
+                            {/* Top Line: Room Number */}
+                            <div className="mb-1">
+                              <span className="font-black text-base sm:text-lg font-mono text-slate-900 dark:text-white truncate">
+                                Room {room.room_number}
+                              </span>
+                            </div>
 
-                        {/* Room Subtitle: Type & Tier */}
-                        <p className="text-[10px] text-slate-500 dark:text-zinc-400 font-medium mt-0.5 truncate">
-                          {room.type} •{" "}
-                          {room.rental_type === "Per Bed / Bedspace"
-                            ? "Standard"
-                            : "Deluxe"}
-                        </p>
+                            {/* Room Subtitle: Type & Tier */}
+                            <p className="text-xs text-slate-500 dark:text-zinc-400 font-semibold mt-1 truncate">
+                              {room.type} • {room.rental_type === "Per Bed / Bedspace" ? "Per Bed / Bedspace" : "Whole Room"}
+                            </p>
 
-                        {/* Miniature Bed Icons representing capacity */}
-                        <div className="flex items-center gap-1 my-1">
-                          {[...Array(Math.max(1, room.capacity || 1))].map(
-                            (_, bIdx) => {
-                              const isOccupied =
-                                bIdx < (room.current_occupants || 0);
-                              const isMaint = cat === "Maintenance";
-                              return (
-                                <BedDouble
-                                  key={bIdx}
-                                  className={`w-3 h-3 ${
-                                    isMaint
-                                      ? "text-rose-400 fill-rose-400/20"
-                                      : isOccupied
-                                        ? "text-emerald-500 fill-emerald-500/30"
-                                        : "text-slate-300 dark:text-zinc-700"
-                                  }`}
-                                />
-                              );
-                            },
-                          )}
-                        </div>
+                            {/* Bed Capacity & Occupancy Visualization (5 columns, min 2 rows, scrollable if >= 3 rows) */}
+                            <div className="flex items-center justify-between gap-3 bg-slate-50 dark:bg-zinc-800/60 rounded-xl p-2.5 my-2.5 border border-slate-100 dark:border-zinc-800">
+                              <div
+                                className={`w-fit min-h-[38px] max-h-[38px] ${
+                                  hasBedScroll
+                                    ? "overflow-y-auto pr-1 [scrollbar-width:thin] [&::-webkit-scrollbar]:w-1 [&::-webkit-scrollbar-thumb]:bg-slate-300 dark:[&::-webkit-scrollbar-thumb]:bg-zinc-700 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-track]:bg-transparent"
+                                    : "overflow-hidden"
+                                }`}
+                              >
+                                <div className="grid grid-cols-5 gap-1 w-fit">
+                                  {[...Array(totalBeds)].map((_, bIdx) => {
+                                    const isOccupied = bIdx < (room.current_occupants || 0);
+                                    const isMaint = cat === "Maintenance";
+                                    return (
+                                      <BedDouble
+                                        key={bIdx}
+                                        className={`w-4 h-4 shrink-0 ${
+                                          isMaint
+                                            ? "text-rose-400 fill-rose-400/20"
+                                            : isOccupied
+                                              ? "text-emerald-500 fill-emerald-500/30"
+                                              : "text-slate-300 dark:text-zinc-700"
+                                        }`}
+                                      />
+                                    );
+                                  })}
+                                </div>
+                              </div>
+                              <span className="text-xs font-bold text-slate-700 dark:text-zinc-300 font-mono shrink-0 whitespace-nowrap text-right pl-2">
+                                {room.current_occupants || 0} / {room.capacity || 1} Beds
+                              </span>
+                            </div>
 
-                        {/* Resident Name or Empty line */}
-                        <div className="h-4.5 flex items-center">
-                          {primaryOccupant ? (
-                            <div className="flex items-center gap-1 text-[10px] font-semibold text-slate-800 dark:text-zinc-200 truncate w-full">
-                              <User className="w-2.5 h-2.5 text-blue-600 shrink-0" />
-                              <span className="truncate">{primaryOccupant.name}</span>
-                              {extraOccupants > 0 && (
-                                <span className="px-1 py-0.2 rounded text-[8px] font-bold bg-blue-50 dark:bg-blue-900/40 text-blue-600 dark:text-blue-300 border border-blue-200 dark:border-blue-800/50 shrink-0">
-                                  +{extraOccupants}
-                                </span>
+                            {/* Room Status Line (Replaces tenant name) */}
+                            <div className="min-h-[26px] flex items-center">
+                              {cat === "Maintenance" && (
+                                <div className="text-xs font-semibold text-rose-600 dark:text-rose-400 flex items-center gap-1.5 truncate">
+                                  <Wrench className="w-3.5 h-3.5 text-rose-500 shrink-0" />
+                                  <span className="truncate">Under Maintenance</span>
+                                </div>
+                              )}
+                              {cat === "Full" && (
+                                <div className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 flex items-center gap-1.5 truncate">
+                                  <CheckCircle className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
+                                  <span className="truncate">Full</span>
+                                </div>
+                              )}
+                              {cat === "OccupiedWithBeds" && (
+                                <div
+                                  className="text-xs font-semibold text-amber-600 dark:text-amber-400 flex items-center gap-1.5 truncate"
+                                  title={`Occupied with ${availBeds} ${availBeds === 1 ? "available bed" : "available beds"}`}
+                                >
+                                  <Users className="w-3.5 h-3.5 text-amber-500 shrink-0" />
+                                  <span className="truncate">
+                                    Occupied with {availBeds} {availBeds === 1 ? "available bed" : "available beds"}
+                                  </span>
+                                </div>
+                              )}
+                              {cat === "Vacant" && (
+                                <div className="text-xs font-semibold text-blue-600 dark:text-blue-400 flex items-center gap-1.5 truncate">
+                                  <DoorOpen className="w-3.5 h-3.5 text-blue-500 shrink-0" />
+                                  <span className="truncate">Vacant • Ready for Move-in</span>
+                                </div>
                               )}
                             </div>
-                          ) : (
-                            <span className="text-[10px] text-slate-400 dark:text-zinc-600 italic">
-                              {cat === "Maintenance"
-                                ? "Under Repair"
-                                : "Available"}
-                            </span>
-                          )}
-                        </div>
-
-                        {/* Monthly Rate */}
-                        <div className="text-[11px] font-bold font-mono text-slate-900 dark:text-white mt-1">
-                          ₱{Number(room.price).toLocaleString()}/mo
-                        </div>
-
-                        {/* Bottom Row: Amenity Icons & Menu */}
-                        <div className="flex items-center justify-between pt-1.5 mt-1 border-t border-slate-100 dark:border-zinc-800/80">
-                          <div className="flex items-center gap-1 text-slate-400 dark:text-zinc-500">
-                            <Wifi className="w-2.5 h-2.5" />
-                            <Wind className="w-2.5 h-2.5" />
-                            <Monitor className="w-2.5 h-2.5" />
                           </div>
 
-                          <div className="relative">
-                            <button
-                              type="button"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setActiveMenuRoomId(
-                                  activeMenuRoomId === room.id ? null : room.id,
-                                );
-                              }}
-                              className="p-0.5 rounded text-slate-400 hover:text-slate-700 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-zinc-800 cursor-pointer"
-                            >
-                              <MoreHorizontal className="w-3 h-3" />
-                            </button>
+                          {/* Bottom Row: Monthly Rate, Amenities & Action Menu */}
+                          <div className="pt-2.5 mt-2 border-t border-slate-100 dark:border-zinc-800/80 flex items-center justify-between">
+                            <div>
+                              <span className="text-base sm:text-lg font-black font-mono text-slate-900 dark:text-white">
+                                ₱{Number(room.price).toLocaleString()}
+                              </span>
+                              <span className="text-[11px] text-slate-400 dark:text-zinc-500 font-medium"> / mo</span>
+                            </div>
 
-                            {/* Popup Action Menu */}
-                            {activeMenuRoomId === room.id && (
-                              <div
-                                onClick={(e) => e.stopPropagation()}
-                                className="absolute right-0 bottom-6 w-36 bg-white dark:bg-zinc-900 rounded-xl shadow-lg border border-slate-200 dark:border-zinc-800 py-1 z-30 text-xs"
-                              >
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    setActiveMenuRoomId(null);
-                                    handleOpenModal(room);
-                                  }}
-                                  className="w-full px-3 py-1.5 text-left hover:bg-slate-50 dark:hover:bg-zinc-800 flex items-center gap-2 font-medium"
-                                >
-                                  <Edit className="w-3.5 h-3.5 text-blue-500" />
-                                  Edit Room
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    setActiveMenuRoomId(null);
-                                    handleToggleMaintenance(room);
-                                  }}
-                                  className="w-full px-3 py-1.5 text-left hover:bg-slate-50 dark:hover:bg-zinc-800 flex items-center gap-2 font-medium"
-                                >
-                                  <Wrench className="w-3.5 h-3.5 text-amber-500" />
-                                  {room.status === "Maintenance"
-                                    ? "Set Available"
-                                    : "Maintenance"}
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    setActiveMenuRoomId(null);
-                                    handleDelete(room);
-                                  }}
-                                  disabled={room.current_occupants > 0}
-                                  className="w-full px-3 py-1.5 text-left hover:bg-slate-50 dark:hover:bg-zinc-800 text-rose-600 disabled:opacity-40 flex items-center gap-2 font-medium"
-                                >
-                                  <Trash2 className="w-3.5 h-3.5" />
-                                  Delete
-                                </button>
+                            <div className="flex items-center gap-2">
+                              {/* Amenity Icons */}
+                              <div className="flex items-center gap-1.5 text-slate-400 dark:text-zinc-500">
+                                <span title="Wi-Fi"><Wifi className="w-3.5 h-3.5" /></span>
+                                <span title="Air Conditioning"><Wind className="w-3.5 h-3.5" /></span>
+                                <span title="Desk / Work Area"><Monitor className="w-3.5 h-3.5" /></span>
                               </div>
-                            )}
+
+                              <div className="relative">
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setActiveMenuRoomId(activeMenuRoomId === room.id ? null : room.id);
+                                  }}
+                                  className="p-1 rounded-lg text-slate-400 hover:text-slate-700 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-zinc-800 cursor-pointer transition-colors"
+                                  title="Room actions"
+                                >
+                                  <MoreHorizontal className="w-4 h-4" />
+                                </button>
+
+                                {/* Popup Action Menu */}
+                                {activeMenuRoomId === room.id && (
+                                  <div
+                                    onClick={(e) => e.stopPropagation()}
+                                    className="absolute right-0 bottom-7 w-38 bg-white dark:bg-zinc-900 rounded-xl shadow-lg border border-slate-200 dark:border-zinc-800 py-1 z-30 text-xs"
+                                  >
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        setActiveMenuRoomId(null);
+                                        handleOpenModal(room);
+                                      }}
+                                      className="w-full px-3 py-1.5 text-left hover:bg-slate-50 dark:hover:bg-zinc-800 flex items-center gap-2 font-medium"
+                                    >
+                                      <Edit className="w-3.5 h-3.5 text-blue-500" />
+                                      Edit Room
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        setActiveMenuRoomId(null);
+                                        handleToggleMaintenance(room);
+                                      }}
+                                      className="w-full px-3 py-1.5 text-left hover:bg-slate-50 dark:hover:bg-zinc-800 flex items-center gap-2 font-medium"
+                                    >
+                                      <Wrench className="w-3.5 h-3.5 text-amber-500" />
+                                      {room.status === "Maintenance"
+                                        ? "Set Available"
+                                        : "Maintenance"}
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        setActiveMenuRoomId(null);
+                                        handleDelete(room);
+                                      }}
+                                      disabled={room.current_occupants > 0}
+                                      className="w-full px-3 py-1.5 text-left hover:bg-slate-50 dark:hover:bg-zinc-800 text-rose-600 disabled:opacity-40 flex items-center gap-2 font-medium"
+                                    >
+                                      <Trash2 className="w-3.5 h-3.5" />
+                                      Delete
+                                    </button>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    );
-                  })}
+                      );
+                    })}
+                  </div>
                 </div>
-              </div>
-            ))
+              );
+            })
           )}
         </div>
 
@@ -958,12 +1179,12 @@ export default function AdminRooms() {
                       Room {selectedRoom.room_number}
                     </h2>
                     {getRoomCategory(selectedRoom) === "Full" && (
-                      <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400 border border-emerald-200/60 dark:border-emerald-800/60">
+                      <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400">
                         Full
                       </span>
                     )}
                     {getRoomCategory(selectedRoom) === "OccupiedWithBeds" && (
-                      <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 dark:bg-amber-950/50 text-amber-600 dark:text-amber-400 border border-amber-200/60 dark:border-amber-800/60">
+                      <span className="text-xs font-bold text-amber-600 dark:text-amber-400">
                         Occupied with {getAvailableBeds(selectedRoom)}{" "}
                         {getAvailableBeds(selectedRoom) === 1
                           ? "available bed"
@@ -971,12 +1192,12 @@ export default function AdminRooms() {
                       </span>
                     )}
                     {getRoomCategory(selectedRoom) === "Vacant" && (
-                      <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-50 dark:bg-blue-950/50 text-blue-600 dark:text-blue-400 border border-blue-200/60 dark:border-blue-800/60">
+                      <span className="text-xs font-bold text-blue-600 dark:text-blue-400">
                         Vacant
                       </span>
                     )}
                     {getRoomCategory(selectedRoom) === "Maintenance" && (
-                      <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-50 dark:bg-rose-950/50 text-rose-600 dark:text-rose-400 border border-rose-200/60 dark:border-rose-800/60">
+                      <span className="text-xs font-bold text-rose-600 dark:text-rose-400">
                         Maintenance
                       </span>
                     )}
@@ -1350,7 +1571,7 @@ export default function AdminRooms() {
                       onChange={(e) =>
                         setFormData({
                           ...formData,
-                          capacity: parseInt(e.target.value) || 1,
+                          capacity: e.target.value,
                         })
                       }
                       className="w-full px-3.5 py-2 text-xs font-medium rounded-lg bg-slate-50/50 dark:bg-zinc-900/50 border border-slate-200 dark:border-zinc-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-slate-400/20 dark:focus:ring-zinc-600/30 outline-none"
