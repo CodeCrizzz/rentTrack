@@ -431,7 +431,10 @@ export default function TenantDashboard() {
 
                 {/* Tile 4: Notice Board */}
                 <div 
-                    onClick={() => router.push('/tenant/announcements')}
+                    onClick={() => {
+                        const el = document.getElementById('community-notice-board');
+                        if (el) el.scrollIntoView({ behavior: 'smooth' });
+                    }}
                     className="bg-card border border-slate-200 dark:border-zinc-800 rounded-xl p-3.5 shadow-xs flex items-center justify-between cursor-pointer hover:border-zinc-400 dark:hover:border-zinc-600 transition-all group"
                 >
                     <div>
@@ -452,7 +455,7 @@ export default function TenantDashboard() {
 
             {/* Community Notice Board (Entire Announcement Displayed) */}
             {latestAnnouncement && (
-                <div className="bg-card border border-slate-200 dark:border-zinc-800 rounded-xl p-4 sm:p-5 shadow-xs space-y-3">
+                <div id="community-notice-board" className="bg-card border border-slate-200 dark:border-zinc-800 rounded-xl p-4 sm:p-5 shadow-xs space-y-3">
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-slate-100 dark:border-zinc-800">
                         <div className="flex items-center gap-2.5">
                             <div className="w-9 h-9 rounded-xl bg-slate-100 dark:bg-zinc-800 text-slate-700 dark:text-zinc-200 flex items-center justify-center shrink-0">
@@ -474,13 +477,9 @@ export default function TenantDashboard() {
                             </div>
                         </div>
 
-                        <Link 
-                            href="/tenant/announcements" 
-                            className="text-xs font-bold text-zinc-900 dark:text-white hover:underline flex items-center gap-1 self-start sm:self-center"
-                        >
-                            <span>View All Bulletins ({tenantData.announcements.length})</span>
-                            <ArrowUpRight className="w-3.5 h-3.5" />
-                        </Link>
+                        <span className="text-xs font-semibold text-slate-500 dark:text-zinc-400 self-start sm:self-center">
+                            {tenantData.announcements.length} Active Bulletin{tenantData.announcements.length !== 1 ? 's' : ''}
+                        </span>
                     </div>
 
                     {/* ENTIRE ANNOUNCEMENT TEXT */}
