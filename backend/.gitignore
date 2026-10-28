@@ -1,0 +1,64 @@
+# ==============================================================================
+# RentTrack Backend .gitignore
+# ==============================================================================
+
+# Dependencies
+node_modules/
+
+# Environment Variables & Secrets (CRITICAL)
+.env
+.env.*
+!.env.example
+
+# Cryptographic Keys & Certificates
+*.pem
+*.key
+*.pub
+*.cert
+*.cer
+*.crt
+*.pfx
+*.p12
+
+# Cloud & Service Account JSON credentials
+*service-account*.json
+credentials.json
+client_secret*.json
+
+# User Uploads & Media (PII, Proof of Payment Receipts, Maintenance Photos)
+uploads/
+
+# Database Dumps, Backups & Local Data
+*.sql
+*.dump
+*.pgdump
+*.psql
+*.bak
+*.backup
+*.sqlite
+*.sqlite3
+*.db
+*.rdb
+dump.rdb
+
+# Logs & Audit Traces
+*.log
+logs/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Process IDs
+*.pid
+*.pid.lock
+*.seed
+
+# Testing & Coverage
+coverage/
+.nyc_output/
+
+# OS & Editor Files
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/

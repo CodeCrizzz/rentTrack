@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { protect } = require('../middleware/authMiddleware');
+const { ROLES, requireRole } = require('../middleware/rbacMiddleware');
 const { 
     getTenantDashboard, getTenantProfile, updateTenantProfile, updateTenantPassword,
     getTenantPayments, getCurrentBill, submitTenantPayment,
@@ -12,6 +13,10 @@ const {
 const multer = require('multer');
 const fs = require('fs');
 const path = require('path');
+
+const { paymentLimiter } = require('../middleware/rateLimiter');
+const { sanitizeInput } = require('../middleware/sanitize');
+const { sqlInjectionProtector } = require('../middleware/sqlInjectionProtector');
 
 const storage = multer.diskStorage({
     destination: function (req, file, cb) {
@@ -29,11 +34,13 @@ const storage = multer.diskStorage({
 });
 const upload = multer({ storage: storage });
 
+// All tenant portal endpoints require active authentication and the tenant role
 router.use(protect);
+router.use(requireRole([ROLES.TENANT]));
 
 router.get('/dashboard', getTenantDashboard);
 router.get('/payments', getTenantPayments);
-router.post('/payments', upload.single('proofOfPayment'), submitTenantPayment);
+router.post('/payments', paymentLimiter, upload.single('proofOfPayment'), sanitizeInput, sqlInjectionProtector, submitTenantPayment);
 router.get('/bill/current', getCurrentBill);
 
 router.get('/profile', getTenantProfile);

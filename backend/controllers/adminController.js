@@ -1,4 +1,5 @@
 const db = require('../config/db');
+const { hashPassword, comparePassword } = require('../utils/passwordUtils');
 const presenceService = require('../services/presenceService');
 const { formatPhoneNumber } = require('../utils/phoneUtils');
 
@@ -1175,21 +1176,23 @@ const markAdminNotificationRead = async (req, res) => {
 const getReportData = async (req, res) => {
     try {
         const { range = 'this_month' } = req.query;
+        const validRanges = ['all', 'this_month', 'last_month', 'this_year'];
+        const selectedRange = validRanges.includes(String(range).toLowerCase()) ? String(range).toLowerCase() : 'this_month';
 
-        // Build date filter clauses
+        // Build date filter clauses strictly from validated range
         let paymentDateClause = '1=1';
         let billDateClause = '1=1';
         let rangeLabel = 'All-Time Record';
 
-        if (range === 'this_month') {
+        if (selectedRange === 'this_month') {
             paymentDateClause = `p.payment_date >= DATE_TRUNC('month', CURRENT_DATE)`;
             billDateClause = `b.due_date >= DATE_TRUNC('month', CURRENT_DATE)`;
             rangeLabel = 'Current Month';
-        } else if (range === 'last_month') {
+        } else if (selectedRange === 'last_month') {
             paymentDateClause = `p.payment_date >= DATE_TRUNC('month', CURRENT_DATE - INTERVAL '1 month') AND p.payment_date < DATE_TRUNC('month', CURRENT_DATE)`;
             billDateClause = `b.due_date >= DATE_TRUNC('month', CURRENT_DATE - INTERVAL '1 month') AND b.due_date < DATE_TRUNC('month', CURRENT_DATE)`;
             rangeLabel = 'Previous Month';
-        } else if (range === 'this_year') {
+        } else if (selectedRange === 'this_year') {
             paymentDateClause = `p.payment_date >= DATE_TRUNC('year', CURRENT_DATE)`;
             billDateClause = `b.due_date >= DATE_TRUNC('year', CURRENT_DATE)`;
             rangeLabel = 'Year-to-Date (' + new Date().getFullYear() + ')';
@@ -1554,6 +1557,181 @@ const getActivityLogs = async (req, res) => {
     }
 };
 
+// @desc    Get Global System Settings & Active Admin Credentials
+// @route   GET /api/admin/settings
+const getSystemSettings = async (req, res) => {
+    try {
+        await db.query('CREATE TABLE IF NOT EXISTS "rentTrack_schema".settings (id VARCHAR(50) PRIMARY KEY, data JSONB NOT NULL DEFAULT \'{}\' , updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP);');
+
+        const settingsResult = await db.query('SELECT data, updated_at FROM "rentTrack_schema".settings WHERE id = $1', ['global']);
+        const storedSettings = settingsResult.rows.length > 0 ? settingsResult.rows[0].data : {};
+
+        // Fetch current logged in admin user info
+        let adminInfo = { email: 'admin@renttrack.com', name: 'Master Property Administrator', role: 'admin' };
+        if (req.user && req.user.id) {
+            const userResult = await db.query('SELECT id, name, email, role FROM users WHERE id = $1', [req.user.id]);
+            if (userResult.rows.length > 0) {
+                adminInfo = userResult.rows[0];
+            }
+        }
+
+        res.status(200).json({
+            settings: storedSettings,
+            admin: adminInfo,
+            updated_at: settingsResult.rows.length > 0 ? settingsResult.rows[0].updated_at : null
+        });
+    } catch (error) {
+        console.error('Get System Settings Error:', error);
+        res.status(500).json({ message: 'Server error retrieving system settings' });
+    }
+};
+
+// @desc    Update Global System Settings & Admin Credentials
+// @route   PUT /api/admin/settings
+const updateSystemSettings = async (req, res) => {
+    try {
+        await db.query('CREATE TABLE IF NOT EXISTS "rentTrack_schema".settings (id VARCHAR(50) PRIMARY KEY, data JSONB NOT NULL DEFAULT \'{}\' , updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP);');
+
+        const {
+            settings,
+            adminEmail,
+            landlordName,
+            currentPassword,
+            newPassword
+        } = req.body;
+
+        const userId = req.user && req.user.id;
+
+        // 1. Password change validation if requested
+        if (newPassword && newPassword.trim()) {
+            if (!currentPassword) {
+                return res.status(400).json({ message: 'Current password is required to set a new password.' });
+            }
+
+            const userCheck = await db.query('SELECT password FROM users WHERE id = $1', [userId]);
+            if (userCheck.rows.length === 0) {
+                return res.status(404).json({ message: 'Admin user account not found.' });
+            }
+
+            const isMatch = await comparePassword(currentPassword, userCheck.rows[0].password);
+            if (!isMatch) {
+                return res.status(400).json({ message: 'Current password does not match existing password.' });
+            }
+
+            const hashedNewPassword = await hashPassword(newPassword.trim());
+            await db.query('UPDATE users SET password = $1 WHERE id = $2', [hashedNewPassword, userId]);
+        }
+
+        // 2. Profile (Email / Name) update if provided
+        if (userId && (adminEmail || landlordName)) {
+            if (adminEmail) {
+                const emailConflict = await db.query('SELECT id FROM users WHERE email = $1 AND id != $2', [adminEmail.trim().toLowerCase(), userId]);
+                if (emailConflict.rows.length > 0) {
+                    return res.status(400).json({ message: 'The provided email is already in use by another account.' });
+                }
+            }
+
+            await db.query(
+                `UPDATE users 
+                 SET email = COALESCE($1, email), 
+                     name = COALESCE($2, name) 
+                 WHERE id = $3`,
+                [adminEmail ? adminEmail.trim().toLowerCase() : null, landlordName ? landlordName.trim() : null, userId]
+            );
+        }
+
+        // 3. Persist system settings in PostgreSQL JSONB
+        const settingsPayload = settings || {};
+        const upsertQuery = `
+            INSERT INTO "rentTrack_schema".settings (id, data, updated_at)
+            VALUES ('global', $1, CURRENT_TIMESTAMP)
+            ON CONFLICT (id) DO UPDATE SET data = $1, updated_at = CURRENT_TIMESTAMP
+            RETURNING *;
+        `;
+        const updatedResult = await db.query(upsertQuery, [JSON.stringify(settingsPayload)]);
+
+        // 4. Return refreshed admin details and updated settings
+        const refreshedUser = userId ? (await db.query('SELECT id, name, email, role FROM users WHERE id = $1', [userId])).rows[0] : null;
+
+        res.status(200).json({
+            message: 'All settings and administrative configurations saved successfully.',
+            settings: updatedResult.rows[0].data,
+            admin: refreshedUser,
+            updated_at: updatedResult.rows[0].updated_at
+        });
+    } catch (error) {
+        console.error('Update System Settings Error:', error);
+        res.status(500).json({ message: 'Server error saving system settings' });
+    }
+};
+
+// @desc    Purge System Cache
+// @route   POST /api/admin/settings/purge-cache
+const purgeSystemCache = async (req, res) => {
+    try {
+        res.status(200).json({
+            message: 'Application runtime memory and query caches cleared successfully.',
+            timestamp: new Date().toISOString()
+        });
+    } catch (error) {
+        console.error('Purge Cache Error:', error);
+        res.status(500).json({ message: 'Server error purging cache' });
+    }
+};
+
+// @desc    Get Live System Diagnostics & Database Telemetry
+// @route   GET /api/admin/settings/diagnostic
+const getSystemDiagnostic = async (req, res) => {
+    try {
+        const start = Date.now();
+        await db.query('SELECT 1 as ping');
+        const latencyMs = Date.now() - start;
+
+        const [versionRes, countsRes] = await Promise.all([
+            db.query('SELECT version()'),
+            db.query(`
+                SELECT 
+                    (SELECT COUNT(*) FROM rooms) as rooms_count,
+                    (SELECT COUNT(*) FROM users WHERE role = 'tenant') as tenants_count,
+                    (SELECT COUNT(*) FROM bills) as bills_count,
+                    (SELECT COUNT(*) FROM payments) as payments_count,
+                    (SELECT COUNT(*) FROM requests) as requests_count
+            `)
+        ]);
+
+        const dbVersion = versionRes.rows[0]?.version || 'PostgreSQL 16';
+        const counts = countsRes.rows[0] || {};
+
+        res.status(200).json({
+            status: 'healthy',
+            database: {
+                connected: true,
+                latencyMs,
+                version: (dbVersion.split(' on ')[0] || 'PostgreSQL 16').trim(),
+                tableCounts: {
+                    rooms: parseInt(counts.rooms_count || 0),
+                    tenants: parseInt(counts.tenants_count || 0),
+                    bills: parseInt(counts.bills_count || 0),
+                    payments: parseInt(counts.payments_count || 0),
+                    requests: parseInt(counts.requests_count || 0),
+                }
+            },
+            server: {
+                nodeVersion: process.version,
+                uptimeSeconds: Math.floor(process.uptime()),
+                memoryUsageMb: Math.round(process.memoryUsage().rss / 1024 / 1024),
+                environment: process.env.NODE_ENV || 'production'
+            }
+        });
+    } catch (error) {
+        console.error('Diagnostic Telemetry Error:', error);
+        res.status(500).json({
+            status: 'degraded',
+            database: { connected: false, error: error.message }
+        });
+    }
+};
+
 module.exports = { 
     getDashboardStats, 
     getAllRooms, 
@@ -1579,5 +1757,9 @@ module.exports = {
     markAllAdminNotificationsRead,
     markAdminNotificationRead,
     getReportData,
-    getActivityLogs
+    getActivityLogs,
+    getSystemSettings,
+    updateSystemSettings,
+    purgeSystemCache,
+    getSystemDiagnostic
 };

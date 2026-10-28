@@ -2,6 +2,13 @@ const express = require('express');
 const router = express.Router();
 const { protect } = require('../middleware/authMiddleware');
 const { 
+    ROLES, 
+    PERMISSIONS, 
+    requireRole, 
+    hasPermission 
+} = require('../middleware/rbacMiddleware');
+
+const { 
     getAllBills, 
     getBillById, 
     createBill, 
@@ -16,34 +23,31 @@ const {
     triggerPaymentReminders
 } = require('../controllers/billingController');
 
-const adminOnly = (req, res, next) => {
-    if (req.user && req.user.role === 'admin') {
-        next();
-    } else {
-        res.status(403).json({ message: 'Access denied. Admin only.' });
-    }
-};
-
+// All billing admin routes require authentication and authorized billing roles
 router.use(protect);
-router.use(adminOnly);
+router.use(requireRole([ROLES.ADMIN, ROLES.OWNER]));
 
-router.post('/generate', generateMonthlyBills);
-router.post('/reminders', triggerPaymentReminders);
+// Automated Generation & Batch Reminders
+router.post('/generate', hasPermission(PERMISSIONS.BILLS_GENERATE), generateMonthlyBills);
+router.post('/reminders', hasPermission(PERMISSIONS.BILLS_REMINDERS), triggerPaymentReminders);
 
-router.get('/payments', getAllPayments);
-router.get('/payments/pending', getPendingPayments);
-router.get('/payments/pending-count', getPendingPaymentsCount);
-router.post('/payments/:paymentId/verify', verifyPayment);
+// Payment Review & Verification
+router.get('/payments', hasPermission(PERMISSIONS.BILLS_READ), getAllPayments);
+router.get('/payments/pending', hasPermission(PERMISSIONS.BILLS_READ), getPendingPayments);
+router.get('/payments/pending-count', hasPermission(PERMISSIONS.BILLS_READ), getPendingPaymentsCount);
+router.post('/payments/:paymentId/verify', hasPermission(PERMISSIONS.BILLS_VERIFY_PAYMENT), verifyPayment);
 
+// Bill Invoicing CRUD
 router.route('/')
-    .get(getAllBills)
-    .post(createBill);
+    .get(hasPermission(PERMISSIONS.BILLS_READ), getAllBills)
+    .post(hasPermission(PERMISSIONS.BILLS_CREATE), createBill);
 
 router.route('/:id')
-    .get(getBillById)
-    .put(updateBill)
-    .delete(deleteBill);
+    .get(hasPermission(PERMISSIONS.BILLS_READ), getBillById)
+    .put(hasPermission(PERMISSIONS.BILLS_UPDATE), updateBill)
+    .delete(hasPermission(PERMISSIONS.BILLS_DELETE), deleteBill);
 
-router.post('/:id/pay', payBill);
+// Manual Bill Payment Settlement
+router.post('/:id/pay', hasPermission(PERMISSIONS.BILLS_UPDATE), payBill);
 
 module.exports = router;

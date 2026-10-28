@@ -1,5 +1,5 @@
 const db = require('../config/db');
-const bcrypt = require('bcryptjs');
+const { hashPassword, comparePassword } = require('../utils/passwordUtils');
 const { formatPhoneNumber } = require('../utils/phoneUtils');
 const { generateUniqueInvoiceNumber } = require('../utils/invoiceNumberGenerator');
 
@@ -43,7 +43,7 @@ const getTenantProfile = async (req, res) => {
     const tenantId = req.user.id;
     try {
         const result = await db.query(
-            `SELECT u.name, u.email, u.phone, u.status, u.created_at, u.date_moved_in, u.contract_end_date, r.room_number, r.capacity, r.price, r.type 
+            `SELECT u.name, u.email, u.phone, u.status, u.created_at, u.date_moved_in, u.contract_end_date, u.bed_space, r.room_number, r.capacity, r.price, r.type 
              FROM users u 
              LEFT JOIN rooms r ON u.room_id = r.id 
              WHERE u.id = $1`,
@@ -206,6 +206,7 @@ const sendTenantMessage = async (req, res) => {
             VALUES ($1, $2, $3, 'tenant', 'sent') 
             RETURNING *;
         `;
+        const result = await db.query(query, [tenantId, adminId, message]);
         const sentMsg = result.rows[0];
 
         // Notify admin if offline when tenant sends message
@@ -247,41 +248,86 @@ const getUnreadCount = async (req, res) => {
 
 // Update Tenant Profile
 const updateTenantProfile = async (req, res) => {
-    const tenantId = req.user.id;
+    const tenantId = req.user?.id;
+    if (!tenantId) {
+        return res.status(401).json({ message: 'Authentication required' });
+    }
     const { name, email, phone } = req.body;
     try {
-        const formattedPhone = phone ? formatPhoneNumber(phone) : null;
+        const cleanName = (name && typeof name === 'string' && name.trim()) ? name.trim() : null;
+        const cleanEmail = (email && typeof email === 'string' && email.trim()) ? email.trim().toLowerCase() : null;
+        const formattedPhone = (phone && typeof phone === 'string' && phone.trim()) ? formatPhoneNumber(phone) : null;
+
+        // Check for email conflicts with other users if an email is provided
+        if (cleanEmail) {
+            const conflict = await db.query(
+                'SELECT id FROM users WHERE email = $1 AND id != $2',
+                [cleanEmail, tenantId]
+            );
+            if (conflict.rows.length > 0) {
+                return res.status(400).json({ message: 'The provided email is already in use by another account' });
+            }
+        }
+
         const result = await db.query(
-            "UPDATE users SET name = $1, email = $2, phone = $3 WHERE id = $4 RETURNING id, name, email, phone",
-            [name, email, formattedPhone, tenantId]
+            `UPDATE users 
+             SET name = COALESCE($1, name), 
+                 email = COALESCE($2, email), 
+                 phone = COALESCE($3, phone) 
+             WHERE id = $4 
+             RETURNING id, name, email, phone, role, status`,
+            [cleanName, cleanEmail, formattedPhone, tenantId]
         );
-        res.status(200).json({ message: 'Profile updated successfully', user: result.rows[0] });
+
+        if (result.rows.length === 0) {
+            return res.status(404).json({ message: 'Tenant record not found' });
+        }
+
+        res.status(200).json({ 
+            message: 'Profile updated successfully', 
+            user: result.rows[0] 
+        });
     } catch (error) {
         console.error('Update Profile Error:', error);
-        res.status(500).json({ message: 'Server error updating profile' });
+        res.status(500).json({ message: error.message || 'Server error updating profile' });
     }
 };
 
 // Update Tenant Password
 const updateTenantPassword = async (req, res) => {
-    const tenantId = req.user.id;
+    const tenantId = req.user?.id;
+    if (!tenantId) {
+        return res.status(401).json({ message: 'Authentication required' });
+    }
     const { currentPassword, newPassword } = req.body;
     try {
-        const userResult = await db.query("SELECT password FROM users WHERE id = $1", [tenantId]);
+        if (!currentPassword) {
+            return res.status(400).json({ message: 'Current password is required to authorize this change' });
+        }
+        if (!newPassword || typeof newPassword !== 'string' || newPassword.trim().length < 6) {
+            return res.status(400).json({ message: 'New password must be at least 6 characters long' });
+        }
+
+        const userResult = await db.query("SELECT id, password FROM users WHERE id = $1", [tenantId]);
+        if (userResult.rows.length === 0) {
+            return res.status(404).json({ message: 'Tenant record not found' });
+        }
         const user = userResult.rows[0];
 
-        // Bcrypt compare
-        const isMatch = await bcrypt.compare(currentPassword, user.password);
-        if (!isMatch) return res.status(401).json({ message: 'Incorrect current password' });
+        // Bcrypt / legacy compare
+        const isMatch = await comparePassword(currentPassword, user.password);
+        if (!isMatch) {
+            return res.status(401).json({ message: 'Current password does not match' });
+        }
         
-        // Hash the new password
-        const salt = await bcrypt.genSalt(10);
-        const hashedPassword = await bcrypt.hash(newPassword, salt);
+        // Hash the new password with bcrypt
+        const hashedPassword = await hashPassword(newPassword.trim());
         
         await db.query("UPDATE users SET password = $1 WHERE id = $2", [hashedPassword, tenantId]);
         res.status(200).json({ message: 'Password updated successfully' });
     } catch (error) {
-        res.status(500).json({ message: 'Server error updating password' });
+        console.error('Update Password Error:', error);
+        res.status(500).json({ message: error.message || 'Server error updating password' });
     }
 };
 

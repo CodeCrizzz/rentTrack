@@ -1,27 +1,28 @@
+const crypto = require('crypto');
 const jwt = require('jsonwebtoken');
-const bcrypt = require('bcryptjs');
 const db = require('../config/db');
-const { JWT_SECRET } = require('../middleware/authMiddleware');
-
+const { JWT_SECRET, JWT_ISSUER, JWT_AUDIENCE } = require('../middleware/authMiddleware');
+const { hashPassword, comparePassword } = require('../utils/passwordUtils');
 const { formatPhoneNumber } = require('../utils/phoneUtils');
+const { revokeToken } = require('../utils/tokenBlacklist');
+const { getPermissionsForRole } = require('../middleware/rbacMiddleware');
 
-// @desc    Register a new user (Tenant or Admin)
+// @desc    Register a new user (Tenant only for public signups)
 // @route   POST /api/auth/register
 const registerUser = async (req, res) => {
     const { name, email, password, role, phone, gender, address } = req.body;
 
     try {
-        //Check if user already exists
-        const userExists = await db.query('SELECT * FROM users WHERE email = $1', [email]);
+        // Check if user already exists
+        const userExists = await db.query('SELECT id FROM users WHERE email = $1', [email]);
         if (userExists.rows.length > 0) {
             return res.status(400).json({ message: 'User with this email already exists' });
         }
 
-        // Hash password before storing
-        const salt = await bcrypt.genSalt(10);
-        const hashedPassword = await bcrypt.hash(password, salt); 
+        // Hash password with bcrypt before storing (Principle of Defense in Depth)
+        const hashedPassword = await hashPassword(password); 
 
-        // Enforce role: public registration is strictly for tenants only
+        // Enforce Least Privilege: public registration is strictly for tenants with 'Pending' approval status
         const roleToSet = 'tenant';
         const statusToSet = 'Pending';
         const formattedPhone = phone ? formatPhoneNumber(phone) : null;
@@ -33,7 +34,7 @@ const registerUser = async (req, res) => {
 
         const registeredUser = newUser.rows[0];
 
-        // If a new tenant submitted an account for approval, notify admin only if admin is offline
+        // Notify admin if offline when tenant submits an account for approval
         if (roleToSet === 'tenant' && statusToSet === 'Pending') {
             try {
                 const adminNotificationService = require('../services/adminNotificationService');
@@ -49,7 +50,7 @@ const registerUser = async (req, res) => {
         }
 
         res.status(201).json({
-            message: 'User registered successfully',
+            message: 'User registered successfully. Your account is pending administrator approval.',
             user: registeredUser
         });
     } catch (error) {
@@ -58,7 +59,7 @@ const registerUser = async (req, res) => {
     }
 };
 
-// @desc    Authenticate user & get token
+// @desc    Authenticate user & issue modern RFC 7519 compliant JWT
 // @route   POST /api/auth/login
 const loginUser = async (req, res) => {
     const { email, password, role } = req.body;
@@ -73,32 +74,55 @@ const loginUser = async (req, res) => {
 
         const user = result.rows[0];
 
-        // 2. Bcrypt password compare
-        const isMatch = await bcrypt.compare(password, user.password);
+        // 2. Bcrypt constant-time password comparison
+        const isMatch = await comparePassword(password, user.password);
         if (!isMatch) {
             return res.status(401).json({ message: 'Incorrect password' });
         }
 
-        // 3. Role Validation: If the login request specifies a role (e.g., from Admin Login), verify it
+        // 3. Role Validation: If the login request specifies a role (e.g. from Admin portal), verify it
         if (role && user.role !== role) {
-            return res.status(403).json({ message: 'Invalid account' });
+            return res.status(403).json({ message: 'Invalid credentials for this portal' });
         }
 
-        // 4. Check if tenant is approved and prevent access if not
-        if (user.role === 'tenant') {
-            if (user.status === 'Pending') {
-                return res.status(403).json({ message: 'Your account is pending admin approval' });
-            }
-            if (user.status === 'Declined') {
-                return res.status(403).json({ message: 'Your account application was declined' });
-            }
+        // 4. Lifecycle & Status Validation (Account Access Control)
+        if (user.status === 'Declined') {
+            return res.status(403).json({ 
+                code: 'ACCOUNT_DECLINED',
+                message: 'Your account application was declined. Please contact the administrator.' 
+            });
+        }
+        if (user.status === 'Pending') {
+            return res.status(403).json({ 
+                code: 'ACCOUNT_PENDING',
+                message: 'Your account is pending administrator approval.' 
+            });
+        }
+        if (user.status === 'Suspended' || user.status === 'Inactive') {
+            return res.status(403).json({ 
+                code: 'ACCOUNT_DISABLED',
+                message: 'Your account is currently disabled or inactive. Please contact the administrator.' 
+            });
         }
 
-        // 3. Generate JWT Token
+        // 5. Generate Modern JWT Token with RFC 7519 standard claims
+        const sessionExpiry = process.env.JWT_EXPIRES_IN || (user.role === 'admin' || user.role === 'owner' ? '8h' : '24h');
+        const jwtId = crypto.randomUUID();
+
         const token = jwt.sign(
-            { id: user.id, role: user.role }, 
+            {
+                id: user.id,
+                sub: String(user.id),
+                role: user.role,
+                status: user.status,
+                jti: jwtId
+            }, 
             JWT_SECRET, 
-            { expiresIn: '30d' } 
+            { 
+                expiresIn: sessionExpiry,
+                issuer: JWT_ISSUER,
+                audience: JWT_AUDIENCE
+            } 
         );
 
         // Record active presence
@@ -109,15 +133,20 @@ const loginUser = async (req, res) => {
             // non-blocking
         }
 
-        // 4. Send response back to Next.js
+        const userPermissions = getPermissionsForRole(user.role);
+
+        // 6. Return secure standardized payload
         res.status(200).json({
             message: 'Login successful',
             token,
+            expiresIn: sessionExpiry,
             user: {
                 id: user.id,
                 name: user.name,
                 email: user.email,
-                role: user.role
+                role: user.role,
+                status: user.status,
+                permissions: userPermissions
             }
         });
     } catch (error) {
@@ -126,15 +155,24 @@ const loginUser = async (req, res) => {
     }
 };
 
-// @desc    Logout user & mark offline
+// @desc    Logout user, revoke active session token & mark offline
 // @route   POST /api/auth/logout
 const logoutUser = async (req, res) => {
     try {
+        // Modern Auth Token Revocation: Invalidate current token by JTI
+        if (req.tokenJti) {
+            revokeToken(req.tokenJti, req.tokenExp);
+        }
+
         if (req.user && req.user.id) {
             const presenceService = require('../services/presenceService');
             presenceService.markOffline(req.user.id);
         }
-        res.status(200).json({ message: 'Logged out successfully' });
+
+        res.status(200).json({ 
+            success: true,
+            message: 'Logged out successfully. Session revoked.' 
+        });
     } catch (error) {
         console.error('Logout Error:', error);
         res.status(500).json({ message: 'Server error during logout' });
