@@ -2169,67 +2169,62 @@ function BillingContent() {
       {/* ========================================================= */}
       <div id="bills-table-section" className="bg-white dark:bg-zinc-900 border border-slate-200/90 dark:border-zinc-800 rounded-xl shadow-xs overflow-hidden">
         {/* Header & Controls */}
-        <div className="p-4 border-b border-slate-200/80 dark:border-zinc-800 flex flex-col lg:flex-row lg:items-center justify-between gap-3.5">
-          {/* Left: Title & Filter Tabs */}
-          <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+        <div className="p-4 border-b border-slate-200/80 dark:border-zinc-800 flex flex-col gap-3 relative z-20">
+          {/* Top: Title */}
+          <div>
             <h3 className="text-base font-bold text-slate-900 dark:text-white whitespace-nowrap">
               Bills and Payments
             </h3>
-
-            <div className="flex items-center gap-1 border-b sm:border-b-0 border-slate-200 dark:border-zinc-800 overflow-x-auto pb-1 sm:pb-0">
-              {(
-                [
-                  { key: "all", label: "All Bills" },
-                  { key: "unpaid", label: "Unpaid" },
-                  { key: "overdue", label: "Overdue" },
-                  { key: "pending", label: "Pending Verification" },
-                  { key: "paid", label: "Paid" },
-                ] as const
-              ).map((tab) => (
-                <button
-                  key={tab.key}
-                  onClick={() => {
-                    setActiveTableTab(tab.key);
-                    setCurrentPage(1);
-                  }}
-                  className={`px-3 py-1 text-xs font-semibold rounded-md transition-all whitespace-nowrap cursor-pointer ${
-                    activeTableTab === tab.key
-                      ? "text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/40 border-b-2 border-blue-600 dark:border-blue-400"
-                      : "text-slate-500 dark:text-zinc-400 hover:text-slate-800 dark:hover:text-zinc-200"
-                  }`}
-                >
-                  {tab.label}
-                </button>
-              ))}
-            </div>
           </div>
 
-          {/* Right: Search Input */}
-          <div className="relative min-w-[240px] sm:w-80">
-            <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
-            <input
-              type="text"
-              placeholder="Search by invoice ID or tenant name..."
-              value={tableSearchQuery}
-              onChange={(e) => {
-                setTableSearchQuery(e.target.value);
-                setCurrentPage(1);
-              }}
-              className="w-full pl-8 pr-7 py-1.5 text-xs rounded-lg border border-slate-200 dark:border-zinc-700 bg-slate-50/50 dark:bg-zinc-800/50 text-slate-900 dark:text-zinc-100 placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-blue-500"
-            />
-            {tableSearchQuery && (
-              <button
-                onClick={() => setTableSearchQuery("")}
-                className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 cursor-pointer"
-              >
-                <X className="w-3.5 h-3.5" />
-              </button>
-            )}
+          {/* Bottom: Search Bar & Dropdown Menu beside it */}
+          <div className="flex flex-col sm:flex-row sm:items-center gap-2.5">
+            {/* Search Input */}
+            <div className="relative w-full sm:w-80">
+              <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
+              <input
+                type="text"
+                placeholder="Search by invoice ID or tenant name..."
+                value={tableSearchQuery}
+                onChange={(e) => {
+                  setTableSearchQuery(e.target.value);
+                  setCurrentPage(1);
+                }}
+                className="w-full pl-8 pr-7 py-1.5 text-xs rounded-lg border border-slate-200 dark:border-zinc-700 bg-slate-50/50 dark:bg-zinc-800/50 text-slate-900 dark:text-zinc-100 placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              />
+              {tableSearchQuery && (
+                <button
+                  onClick={() => setTableSearchQuery("")}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 cursor-pointer"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              )}
+            </div>
+
+            {/* Dropdown Menu */}
+            <div className="w-full sm:w-52">
+              <CustomSelect
+                value={activeTableTab}
+                onChange={(val) => {
+                  setActiveTableTab(val as "all" | "unpaid" | "overdue" | "pending" | "paid");
+                  setCurrentPage(1);
+                }}
+                options={[
+                  { value: "all", label: "All Bills", dotColor: "bg-slate-400" },
+                  { value: "unpaid", label: "Unpaid", dotColor: "bg-blue-500" },
+                  { value: "overdue", label: "Overdue", dotColor: "bg-rose-500" },
+                  { value: "pending", label: "Pending Verification", dotColor: "bg-amber-500" },
+                  { value: "paid", label: "Paid", dotColor: "bg-emerald-500" },
+                ]}
+                className="w-full bg-slate-50/50 dark:bg-zinc-800/50 pl-3 pr-7 py-1.5 border border-slate-200 dark:border-zinc-700 rounded-lg text-xs font-semibold text-slate-700 dark:text-zinc-300 shadow-2xs"
+              />
+            </div>
           </div>
         </div>
 
         {/* Table */}
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto min-h-[285px]">
           <table className="w-full text-xs border-collapse">
             <thead>
               <tr className="border-b border-slate-200 dark:border-zinc-800 bg-slate-50/70 dark:bg-zinc-900/80 text-slate-600 dark:text-zinc-400 font-semibold select-none">
@@ -2282,23 +2277,24 @@ function BillingContent() {
                 <tr>
                   <td
                     colSpan={10}
-                    className="h-[210px] text-center align-middle p-0"
+                    className="h-[245px] text-center align-middle p-0"
                   >
-                    <div className="flex items-center justify-center h-[210px] text-slate-300 dark:text-zinc-600 font-light text-xs">
+                    <div className="flex items-center justify-center h-[245px] text-slate-300 dark:text-zinc-600 font-light text-xs">
                       No invoices found matching criteria.
                     </div>
                   </td>
                 </tr>
               ) : (
-                paginatedBills.map((bill) => {
-                  const formattedInv = formatInvoiceNumber(bill);
-                  const roomDisplay = getBillRoomDisplay(bill);
+                <>
+                  {paginatedBills.map((bill) => {
+                    const formattedInv = formatInvoiceNumber(bill);
+                    const roomDisplay = getBillRoomDisplay(bill);
 
-                  return (
-                    <tr
-                      key={bill.id}
-                      className="hover:bg-slate-50/80 dark:hover:bg-zinc-800/40 transition-colors"
-                    >
+                    return (
+                      <tr
+                        key={bill.id}
+                        className="h-[49px] hover:bg-slate-50/80 dark:hover:bg-zinc-800/40 transition-colors"
+                      >
                       {/* Invoice # */}
                       <td className="py-3 pl-4 pr-3 text-left whitespace-nowrap font-mono font-medium text-blue-600 dark:text-blue-400">
                         <button
@@ -2465,9 +2461,27 @@ function BillingContent() {
                       </td>
                     </tr>
                   );
-                })
-              )}
-            </tbody>
+                })}
+                {paginatedBills.length < 5 &&
+                  Array.from({ length: 5 - paginatedBills.length }).map(
+                    (_, idx) => (
+                      <tr
+                        key={`filler-${idx}`}
+                        className="h-[49px] pointer-events-none select-none"
+                        aria-hidden="true"
+                      >
+                        <td
+                          colSpan={10}
+                          className="py-3 px-3 text-transparent text-xs"
+                        >
+                          &nbsp;
+                        </td>
+                      </tr>
+                    ),
+                  )}
+              </>
+            )}
+          </tbody>
           </table>
         </div>
 

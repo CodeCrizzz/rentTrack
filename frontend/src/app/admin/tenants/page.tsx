@@ -1314,50 +1314,6 @@ function TenantsContent() {
               })()}
             </div>
 
-            {/* Documents Section */}
-            <div className="space-y-2 pt-1 border-t border-slate-100 dark:border-zinc-800/80">
-              <h5 className="text-[11px] font-bold text-slate-900 dark:text-white uppercase tracking-wider">
-                Documents
-              </h5>
-              <div className="space-y-1.5 text-xs">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2 text-slate-700 dark:text-zinc-300 font-medium">
-                    <FileText className="w-3.5 h-3.5 text-slate-400" />
-                    <span>Valid ID</span>
-                  </div>
-                  <button
-                    onClick={() => setIsViewModalOpen(true)}
-                    className="text-blue-600 dark:text-blue-400 font-bold hover:underline cursor-pointer"
-                  >
-                    View
-                  </button>
-                </div>
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2 text-slate-700 dark:text-zinc-300 font-medium">
-                    <FileText className="w-3.5 h-3.5 text-slate-400" />
-                    <span>Application Form</span>
-                  </div>
-                  <button
-                    onClick={() => setIsViewModalOpen(true)}
-                    className="text-blue-600 dark:text-blue-400 font-bold hover:underline cursor-pointer"
-                  >
-                    View
-                  </button>
-                </div>
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2 text-slate-700 dark:text-zinc-300 font-medium">
-                    <FileText className="w-3.5 h-3.5 text-slate-400" />
-                    <span>Lease Agreement</span>
-                  </div>
-                  <button
-                    onClick={() => setIsViewModalOpen(true)}
-                    className="text-blue-600 dark:text-blue-400 font-bold hover:underline cursor-pointer"
-                  >
-                    View
-                  </button>
-                </div>
-              </div>
-            </div>
 
             {/* Quick Actions Section */}
             <div className="space-y-2 pt-1 border-t border-slate-100 dark:border-zinc-800/80">

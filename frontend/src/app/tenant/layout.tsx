@@ -12,9 +12,10 @@ import {
 } from "@/components/ui/sidebar";
 import { AppSidebar } from '@/components/app-sidebar';
 import { FullscreenToggle } from '@/components/fullscreen-toggle';
+import TenantSettingsModal from '@/components/tenant-settings-modal';
 import { 
   LayoutDashboard, Building2, CreditCard, Wrench, User, MessageSquare, 
-  Bell, RefreshCw, AlertTriangle, Clock, CheckCheck, ChevronRight 
+  Bell, Settings, RefreshCw, AlertTriangle, Clock, CheckCheck, ChevronRight 
 } from 'lucide-react';
 import {
   DropdownMenu,
@@ -35,6 +36,7 @@ export default function TenantLayout({ children }: { children: React.ReactNode }
     const [showAllNotifications, setShowAllNotifications] = useState(false);
     const [isAllRead, setIsAllRead] = useState(true);
     const [refreshKey, setRefreshKey] = useState(0);
+    const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
     const fetchNotificationsAndUnread = async () => {
         try {
@@ -129,6 +131,7 @@ export default function TenantLayout({ children }: { children: React.ReactNode }
         { name: 'Rooms', path: '/tenant/rooms', icon: Building2 },
         { name: 'My Payments', path: '/tenant/payments', icon: CreditCard },
         { name: 'Chat', path: '/tenant/chat', icon: MessageSquare },
+        { name: 'Settings', path: '/tenant/settings', icon: Settings },
     ];
 
     const mappedNavItems = rawNavItems.map(item => {
@@ -200,6 +203,14 @@ export default function TenantLayout({ children }: { children: React.ReactNode }
                                 <RefreshCw className="w-5 h-5 group-hover:rotate-180 group-active:scale-90 transition-all duration-500" strokeWidth={2} />
                             </button>
                             <FullscreenToggle />
+                            <button 
+                                onClick={() => setIsSettingsOpen(true)}
+                                className="group p-2 text-slate-500 hover:text-slate-900 dark:text-zinc-400 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/5 rounded-full transition-colors outline-none cursor-pointer"
+                                title="Resident Settings"
+                                aria-label="Resident Settings"
+                            >
+                                <Settings className="w-5 h-5 group-hover:rotate-45 group-active:scale-90 transition-all duration-300" strokeWidth={2} />
+                            </button>
                             <DropdownMenu>
                                 <DropdownMenuTrigger className="group relative p-2 text-slate-500 hover:text-slate-900 dark:text-zinc-400 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/5 rounded-full transition-colors outline-none">
                                     <Bell className="w-5 h-5 group-hover:rotate-12 group-active:-rotate-12 group-active:scale-90 transition-all duration-200 origin-top" strokeWidth={2} />
@@ -335,6 +346,12 @@ export default function TenantLayout({ children }: { children: React.ReactNode }
                         </div>
                     </div>
                 </SidebarInset>
+
+                {/* Resident Settings Modal */}
+                <TenantSettingsModal 
+                    isOpen={isSettingsOpen} 
+                    onClose={() => setIsSettingsOpen(false)} 
+                />
             </div>
         </SidebarProvider>
     );

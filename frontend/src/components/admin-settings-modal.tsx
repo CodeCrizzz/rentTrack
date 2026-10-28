@@ -12,6 +12,7 @@ import {
     Check, Sparkles
 } from 'lucide-react';
 import { useTheme } from 'next-themes';
+import api from '@/lib/api';
 import CustomSelect from '@/components/dropdown-select';
 import { toast } from 'sonner';
 import { formatPhoneInput, formatPhoneNumber } from '@/lib/phone-utils';
@@ -181,7 +182,7 @@ export default function AdminSettingsModal({ isOpen, onClose }: AdminSettingsMod
         return () => window.removeEventListener('keydown', handleKeyDown);
     }, [isOpen]);
 
-    const handleSaveChanges = () => {
+    const handleSaveChanges = async () => {
         if (newPassword) {
             if (newPassword !== confirmPassword) {
                 toast.error("New passwords do not match!");
@@ -189,6 +190,10 @@ export default function AdminSettingsModal({ isOpen, onClose }: AdminSettingsMod
             }
             if (!currentPassword) {
                 toast.error("Please provide your current password to set a new password.");
+                return;
+            }
+            if (newPassword.length < 6) {
+                toast.error("New password must be at least 6 characters long.");
                 return;
             }
         }
@@ -215,6 +220,33 @@ export default function AdminSettingsModal({ isOpen, onClose }: AdminSettingsMod
         setTheme(localTheme);
 
         try {
+            // Persist to backend if online
+            const { data } = await api.put('/admin/settings', {
+                settings: newSettings,
+                adminEmail,
+                landlordName,
+                currentPassword: currentPassword || undefined,
+                newPassword: newPassword || undefined
+            });
+
+            if (data?.admin) {
+                try {
+                    const currentUserStr = localStorage.getItem('user');
+                    if (currentUserStr) {
+                        const currentUser = JSON.parse(currentUserStr);
+                        localStorage.setItem('user', JSON.stringify({
+                            ...currentUser,
+                            email: data.admin.email || adminEmail,
+                            name: data.admin.name || landlordName
+                        }));
+                    }
+                } catch (e) {}
+            }
+        } catch (err: any) {
+            console.warn("Backend settings persistence note:", err?.response?.data?.message || err.message);
+        }
+
+        try {
             localStorage.setItem('renttrack_admin_settings', JSON.stringify(newSettings));
             savedSettingsRef.current = newSettings;
             window.dispatchEvent(new CustomEvent('renttrack-settings-saved', { detail: newSettings }));
@@ -222,15 +254,13 @@ export default function AdminSettingsModal({ isOpen, onClose }: AdminSettingsMod
             console.error("Failed to save settings to localStorage:", err);
         }
 
-        setTimeout(() => {
-            setIsSaving(false);
-            toast.success("Settings Saved", {
-                description: "Platform configurations and preferences updated successfully.",
-            });
-            setCurrentPassword('');
-            setNewPassword('');
-            setConfirmPassword('');
-        }, 350);
+        setIsSaving(false);
+        toast.success("Settings Saved", {
+            description: "Platform configurations and preferences updated successfully.",
+        });
+        setCurrentPassword('');
+        setNewPassword('');
+        setConfirmPassword('');
     };
 
     const handleReset = () => {
@@ -260,14 +290,15 @@ export default function AdminSettingsModal({ isOpen, onClose }: AdminSettingsMod
         });
     };
 
-    const handlePurgeCache = () => {
+    const handlePurgeCache = async () => {
         setIsPurging(true);
-        setTimeout(() => {
-            setIsPurging(false);
-            toast.success("Cache Purged", {
-                description: "Application runtime memory cache cleared successfully.",
-            });
-        }, 500);
+        try {
+            await api.post('/admin/settings/purge-cache');
+        } catch (err) {}
+        setIsPurging(false);
+        toast.success("Cache Purged", {
+            description: "Application runtime memory cache cleared successfully.",
+        });
     };
 
     const handlePasswordStrength = (pass: string) => {
@@ -280,19 +311,30 @@ export default function AdminSettingsModal({ isOpen, onClose }: AdminSettingsMod
     const strength = handlePasswordStrength(newPassword);
 
     const categories = useMemo(() => [
-        { id: 'property' as SettingsCategory, label: 'Property Profile', icon: Building2, badge: 'Official' },
-        { id: 'billing' as SettingsCategory, label: 'Billing & Tariffs', icon: CreditCard, badge: 'Tariffs' },
-        { id: 'notifications' as SettingsCategory, label: 'Notification Rules', icon: Bell, badge: '6 Rules' },
-        { id: 'appearance' as SettingsCategory, label: 'Appearance', icon: Moon, badge: 'Theme' },
-        { id: 'security' as SettingsCategory, label: 'Security & Sessions', icon: ShieldCheck, badge: 'Protected' },
+        { id: 'property' as SettingsCategory, label: 'Property Profile', icon: Building2, badge: 'Official', keywords: ['name', 'address', 'phone', 'contact', 'tax', 'tin', 'landlord'] },
+        { id: 'billing' as SettingsCategory, label: 'Billing & Tariffs', icon: CreditCard, badge: 'Tariffs', keywords: ['water', 'electricity', 'rent', 'grace', 'penalty', 'fee', 'receipt'] },
+        { id: 'notifications' as SettingsCategory, label: 'Notification Rules', icon: Bell, badge: '6 Rules', keywords: ['alerts', 'email', 'tenant', 'payment', 'maintenance', 'chat'] },
+        { id: 'appearance' as SettingsCategory, label: 'Appearance', icon: Moon, badge: 'Theme', keywords: ['theme', 'dark', 'light', 'contrast', 'system', 'mode'] },
+        { id: 'security' as SettingsCategory, label: 'Security & Sessions', icon: ShieldCheck, badge: 'Protected', keywords: ['password', 'email', '2fa', 'session', 'timeout', 'logout'] },
     ], []);
 
     // Filter categories if searching
     const filteredCategories = useMemo(() => {
         if (!searchQuery.trim()) return categories;
-        const q = searchQuery.toLowerCase();
-        return categories.filter(c => c.label.toLowerCase().includes(q));
+        const q = searchQuery.toLowerCase().trim();
+        return categories.filter(c => 
+            c.label.toLowerCase().includes(q) ||
+            c.badge.toLowerCase().includes(q) ||
+            c.id.toLowerCase().includes(q) ||
+            c.keywords.some(k => k.includes(q))
+        );
     }, [categories, searchQuery]);
+
+    useEffect(() => {
+        if (filteredCategories.length > 0 && !filteredCategories.some(c => c.id === activeTab)) {
+            setActiveTab(filteredCategories[0].id);
+        }
+    }, [filteredCategories, activeTab]);
 
     // Polished Toggle Switch
     const ToggleSwitch = ({ 

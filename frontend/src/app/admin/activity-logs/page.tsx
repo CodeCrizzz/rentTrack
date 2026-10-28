@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useMemo } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import api from "@/lib/api";
@@ -47,6 +48,12 @@ interface ActivityLog {
 }
 
 export default function AdminActivityLogsPage() {
+  const router = useRouter();
+
+  useEffect(() => {
+    router.replace("/admin/settings#activity-logs");
+  }, [router]);
+
   const [logs, setLogs] = useState<ActivityLog[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);

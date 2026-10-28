@@ -2006,7 +2006,7 @@ export default function AdminDashboard() {
               Recent Activity
             </h2>
             <Link
-              href="/admin/activity-logs"
+              href="/admin/settings#activity-logs"
               className="text-xs font-semibold text-blue-600 dark:text-blue-400 hover:underline"
             >
               View All →
@@ -2411,7 +2411,11 @@ export default function AdminDashboard() {
 
                 <div className="p-4 border-t border-slate-200 dark:border-zinc-800 bg-slate-50/50 dark:bg-zinc-900/40 flex items-center justify-between">
                   <Link
-                    href="/admin/rooms"
+                    href={
+                      activeRoomModal?.room_number
+                        ? `/admin/rooms?room=${encodeURIComponent(activeRoomModal.room_number)}`
+                        : "/admin/rooms"
+                    }
                     className="text-xs text-blue-600 dark:text-blue-400 font-semibold hover:underline flex items-center gap-1"
                   >
                     <span>View Room Details</span>

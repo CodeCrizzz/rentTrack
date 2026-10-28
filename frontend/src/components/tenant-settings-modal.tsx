@@ -82,8 +82,8 @@ export default function TenantSettingsModal({ isOpen, onClose }: TenantSettingsM
     // Form states - Appearance (Candidate theme before saving)
     const [localTheme, setLocalTheme] = useState(savedSettingsRef.current.theme || theme || 'system');
 
-    // Load active resident profile info from localStorage or API
-    const loadResidentProfile = () => {
+    // Load active resident profile info from localStorage and backend
+    const loadResidentProfile = async () => {
         if (typeof window !== 'undefined') {
             const userStr = localStorage.getItem('user');
             if (userStr) {
@@ -93,6 +93,16 @@ export default function TenantSettingsModal({ isOpen, onClose }: TenantSettingsM
                     if (u.email) setEmail(u.email);
                 } catch (e) {}
             }
+        }
+
+        try {
+            const { data } = await api.get('/tenant/profile');
+            if (data) {
+                if (data.name) setTenantName(data.name);
+                if (data.email) setEmail(data.email);
+            }
+        } catch (err) {
+            // gracefully fallback to local cache
         }
     };
 
@@ -146,12 +156,28 @@ export default function TenantSettingsModal({ isOpen, onClose }: TenantSettingsM
                 toast.error("Please provide your current password to authorize this update.");
                 return;
             }
+            if (newPassword.length < 6) {
+                toast.error("Password Too Short", {
+                    description: "New password must be at least 6 characters long."
+                });
+                return;
+            }
         }
 
         setIsSaving(true);
 
         try {
-            // Update password via backend API if entered
+            // 1. Update basic profile info on backend
+            try {
+                await api.put('/tenant/profile', {
+                    name: tenantName,
+                    email
+                });
+            } catch (err: any) {
+                console.warn('Profile update note:', err?.response?.data?.message || err.message);
+            }
+
+            // 2. Update password via backend API if entered
             if (newPassword) {
                 await api.put('/tenant/profile/password', { currentPassword, newPassword });
                 toast.success("Security password updated successfully!");
@@ -167,12 +193,24 @@ export default function TenantSettingsModal({ isOpen, onClose }: TenantSettingsM
                 theme: localTheme
             };
 
-            // Theme change ONLY applies when user clicks Save Changes
+            // 3. Theme change ONLY applies when user clicks Save Changes
             setTheme(localTheme);
 
-            // Persist settings to localStorage
+            // 4. Persist settings to localStorage
             localStorage.setItem('renttrack_tenant_settings', JSON.stringify(updatedSettings));
             savedSettingsRef.current = updatedSettings;
+
+            // 5. Update user in localStorage
+            if (typeof window !== 'undefined') {
+                const userStr = localStorage.getItem('user');
+                if (userStr) {
+                    try {
+                        const u = JSON.parse(userStr);
+                        localStorage.setItem('user', JSON.stringify({ ...u, email }));
+                    } catch (e) {}
+                }
+            }
+
             window.dispatchEvent(new CustomEvent('renttrack-tenant-settings-saved', { detail: updatedSettings }));
 
             toast.success("Resident preferences saved successfully!");
@@ -191,8 +229,8 @@ export default function TenantSettingsModal({ isOpen, onClose }: TenantSettingsM
 
     const handlePasswordStrength = (pass: string) => {
         if (!pass) return 0;
-        if (pass.length > 8 && /[A-Z]/.test(pass) && /[0-9]/.test(pass)) return 3;
-        if (pass.length > 6) return 2;
+        if (pass.length >= 8 && /[A-Z]/.test(pass) && /[0-9]/.test(pass)) return 3;
+        if (pass.length >= 6) return 2;
         return 1;
     };
     
@@ -202,22 +240,35 @@ export default function TenantSettingsModal({ isOpen, onClose }: TenantSettingsM
         api.post('/auth/logout').catch(() => {});
         localStorage.removeItem('token');
         localStorage.removeItem('user');
+        onClose();
         router.push('/');
     };
 
     const categories = useMemo(() => [
-        { id: 'security' as TenantSettingsCategory, label: 'Security & Access', icon: Shield, badge: 'Credentials' },
-        { id: 'notifications' as TenantSettingsCategory, label: 'Notification Rules', icon: Bell, badge: '7 Triggers' },
-        { id: 'appearance' as TenantSettingsCategory, label: 'Appearance & Theme', icon: Moon, badge: 'Display' },
-        { id: 'sessions' as TenantSettingsCategory, label: 'Session & Device', icon: Monitor, badge: 'Active' },
+        { id: 'security' as TenantSettingsCategory, label: 'Security & Access', icon: Shield, badge: 'Credentials', keywords: ['password', 'credentials', 'email', '2fa', 'two-factor', 'login'] },
+        { id: 'notifications' as TenantSettingsCategory, label: 'Notification Rules', icon: Bell, badge: '7 Triggers', keywords: ['alerts', 'billing', 'maintenance', 'messages', 'sound', 'reminders'] },
+        { id: 'appearance' as TenantSettingsCategory, label: 'Appearance & Theme', icon: Moon, badge: 'Display', keywords: ['theme', 'dark', 'light', 'obsidian', 'system', 'mode'] },
+        { id: 'sessions' as TenantSettingsCategory, label: 'Session & Device', icon: Monitor, badge: 'Active', keywords: ['device', 'browser', 'logout', 'signout', 'session'] },
     ], []);
 
     // Filter categories if searching
     const filteredCategories = useMemo(() => {
         if (!searchQuery.trim()) return categories;
-        const q = searchQuery.toLowerCase();
-        return categories.filter(c => c.label.toLowerCase().includes(q));
+        const q = searchQuery.toLowerCase().trim();
+        return categories.filter(c => 
+            c.label.toLowerCase().includes(q) ||
+            c.badge.toLowerCase().includes(q) ||
+            c.id.toLowerCase().includes(q) ||
+            c.keywords.some(k => k.includes(q))
+        );
     }, [categories, searchQuery]);
+
+    // Auto-select first matching category if current is filtered out
+    useEffect(() => {
+        if (filteredCategories.length > 0 && !filteredCategories.some(c => c.id === activeTab)) {
+            setActiveTab(filteredCategories[0].id);
+        }
+    }, [filteredCategories, activeTab]);
 
     // Polished Toggle Switch
     const ToggleSwitch = ({ 
@@ -242,7 +293,7 @@ export default function TenantSettingsModal({ isOpen, onClose }: TenantSettingsM
                 aria-checked={checked}
                 onClick={() => onChange(!checked)}
                 className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
-                    checked ? 'bg-slate-900 dark:bg-white' : 'bg-slate-300 dark:bg-zinc-700'
+                    checked ? 'bg-teal-600 dark:bg-teal-500' : 'bg-slate-300 dark:bg-zinc-700'
                 }`}
             >
                 <span
@@ -303,11 +354,20 @@ export default function TenantSettingsModal({ isOpen, onClose }: TenantSettingsM
                                 <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
                                 <input
                                     type="text"
-                                    placeholder="Search categories..."
+                                    placeholder="Search settings..."
                                     value={searchQuery}
                                     onChange={(e) => setSearchQuery(e.target.value)}
-                                    className="w-full pl-8 pr-3 py-1.5 text-xs font-medium rounded-lg border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-slate-900 dark:text-white placeholder:text-slate-400 outline-none focus:ring-1 focus:ring-slate-400 dark:focus:ring-zinc-600"
+                                    className="w-full pl-8 pr-7 py-1.5 text-xs font-medium rounded-lg border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-slate-900 dark:text-white placeholder:text-slate-400 outline-none focus:ring-1 focus:ring-teal-500"
                                 />
+                                {searchQuery && (
+                                    <button 
+                                        type="button" 
+                                        onClick={() => setSearchQuery('')}
+                                        className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-zinc-200"
+                                    >
+                                        <X className="w-3.5 h-3.5" />
+                                    </button>
+                                )}
                             </div>
 
                             <button
@@ -329,34 +389,38 @@ export default function TenantSettingsModal({ isOpen, onClose }: TenantSettingsM
                                 Preferences
                             </span>
 
-                            {filteredCategories.map((cat) => {
-                                const Icon = cat.icon;
-                                const isCurrent = activeTab === cat.id;
+                            {filteredCategories.length === 0 ? (
+                                <p className="text-[11px] text-slate-400 px-2 py-2">No matching categories.</p>
+                            ) : (
+                                filteredCategories.map((cat) => {
+                                    const Icon = cat.icon;
+                                    const isCurrent = activeTab === cat.id;
 
-                                return (
-                                    <button
-                                        key={cat.id}
-                                        onClick={() => setActiveTab(cat.id)}
-                                        className={`w-full text-left px-3 py-2 rounded-lg text-xs font-semibold flex items-center justify-between transition-colors cursor-pointer ${
-                                            isCurrent 
-                                                ? 'bg-slate-900 text-white dark:bg-white dark:text-zinc-900 shadow-xs' 
-                                                : 'text-slate-600 dark:text-zinc-400 hover:bg-slate-200/60 dark:hover:bg-zinc-800/60 hover:text-slate-900 dark:hover:text-white'
-                                        }`}
-                                    >
-                                        <div className="flex items-center gap-2.5 truncate">
-                                            <Icon className={`w-4 h-4 shrink-0 ${isCurrent ? 'text-white dark:text-zinc-900' : 'text-slate-500 dark:text-zinc-400'}`} />
-                                            <span className="truncate">{cat.label}</span>
-                                        </div>
-                                        <span className={`text-[9px] font-mono font-bold px-1.5 py-0.5 rounded shrink-0 ${
-                                            isCurrent 
-                                                ? 'bg-white/20 text-white dark:bg-zinc-900/20 dark:text-zinc-900' 
-                                                : 'bg-slate-200/80 dark:bg-zinc-800 text-slate-600 dark:text-zinc-400'
-                                        }`}>
-                                            {cat.badge}
-                                        </span>
-                                    </button>
-                                );
-                            })}
+                                    return (
+                                        <button
+                                            key={cat.id}
+                                            onClick={() => setActiveTab(cat.id)}
+                                            className={`w-full text-left px-3 py-2 rounded-lg text-xs font-semibold flex items-center justify-between transition-colors cursor-pointer ${
+                                                isCurrent 
+                                                    ? 'bg-teal-600 text-white dark:bg-teal-500 dark:text-white shadow-xs' 
+                                                    : 'text-slate-600 dark:text-zinc-400 hover:bg-slate-200/60 dark:hover:bg-zinc-800/60 hover:text-slate-900 dark:hover:text-white'
+                                            }`}
+                                        >
+                                            <div className="flex items-center gap-2.5 truncate">
+                                                <Icon className={`w-4 h-4 shrink-0 ${isCurrent ? 'text-white' : 'text-slate-500 dark:text-zinc-400'}`} />
+                                                <span className="truncate">{cat.label}</span>
+                                            </div>
+                                            <span className={`text-[9px] font-mono font-bold px-1.5 py-0.5 rounded shrink-0 ${
+                                                isCurrent 
+                                                    ? 'bg-white/20 text-white' 
+                                                    : 'bg-slate-200/80 dark:bg-zinc-800 text-slate-600 dark:text-zinc-400'
+                                            }`}>
+                                                {cat.badge}
+                                            </span>
+                                        </button>
+                                    );
+                                })
+                            )}
                         </div>
 
                         {/* Right Detail Pane */}
@@ -394,7 +458,7 @@ export default function TenantSettingsModal({ isOpen, onClose }: TenantSettingsM
                                                 disabled
                                                 className="w-full py-1.5 px-3 text-xs rounded-lg bg-slate-100 dark:bg-zinc-900/80 border border-slate-200 dark:border-zinc-800 text-slate-600 dark:text-zinc-400 font-semibold cursor-not-allowed"
                                             />
-                                            <p className="text-[10px] text-slate-400 dark:text-zinc-500">Contact admin to modify official lease name.</p>
+                                            <p className="text-[10px] text-slate-400 dark:text-zinc-500">Official tenant lease name registered with management.</p>
                                         </div>
 
                                         {/* Email */}
@@ -424,7 +488,7 @@ export default function TenantSettingsModal({ isOpen, onClose }: TenantSettingsM
                                                     placeholder="••••••••••••"
                                                     value={currentPassword}
                                                     onChange={(e) => setCurrentPassword(e.target.value)}
-                                                    className="w-full py-1.5 px-3 pr-8 text-xs rounded-lg bg-slate-50 dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 font-semibold text-slate-900 dark:text-white outline-none focus:border-teal-500"
+                                                    className="w-full py-1.5 px-3 pr-8 text-xs rounded-lg bg-slate-50 dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 font-semibold text-slate-900 dark:text-white outline-none focus:border-teal-500 font-mono"
                                                 />
                                                 <button
                                                     type="button"
@@ -454,10 +518,10 @@ export default function TenantSettingsModal({ isOpen, onClose }: TenantSettingsM
                                             </label>
                                             <input
                                                 type={showPasswords ? "text" : "password"}
-                                                placeholder="Enter new password"
+                                                placeholder="Enter new password (min. 6 chars)"
                                                 value={newPassword}
                                                 onChange={(e) => setNewPassword(e.target.value)}
-                                                className="w-full py-1.5 px-3 text-xs rounded-lg bg-slate-50 dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 font-semibold text-slate-900 dark:text-white outline-none focus:border-teal-500"
+                                                className="w-full py-1.5 px-3 text-xs rounded-lg bg-slate-50 dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 font-semibold text-slate-900 dark:text-white outline-none focus:border-teal-500 font-mono"
                                             />
                                             {newPassword && (
                                                 <div className="flex gap-1.5 pt-0.5">
@@ -479,7 +543,7 @@ export default function TenantSettingsModal({ isOpen, onClose }: TenantSettingsM
                                                 placeholder="Re-type new password"
                                                 value={confirmPassword}
                                                 onChange={(e) => setConfirmPassword(e.target.value)}
-                                                className="w-full py-1.5 px-3 text-xs rounded-lg bg-slate-50 dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 font-semibold text-slate-900 dark:text-white outline-none focus:border-teal-500"
+                                                className="w-full py-1.5 px-3 text-xs rounded-lg bg-slate-50 dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 font-semibold text-slate-900 dark:text-white outline-none focus:border-teal-500 font-mono"
                                             />
                                             {confirmPassword && newPassword !== confirmPassword && (
                                                 <p className="text-[11px] text-rose-500 font-semibold">Passwords do not match.</p>
@@ -560,20 +624,18 @@ export default function TenantSettingsModal({ isOpen, onClose }: TenantSettingsM
                                                 <button
                                                     key={m.key}
                                                     type="button"
-                                                    onClick={() => {
-                                                        setLocalTheme(m.key);
-                                                    }}
+                                                    onClick={() => setLocalTheme(m.key)}
                                                     className={`p-4 rounded-xl border text-left transition-all flex flex-col justify-between h-32 cursor-pointer ${
                                                         isSelected
-                                                            ? 'border-slate-900 dark:border-white bg-slate-100 dark:bg-zinc-800 text-slate-950 dark:text-white ring-2 ring-slate-900/10 dark:ring-white/20 shadow-xs'
+                                                            ? 'border-teal-500 dark:border-teal-400 bg-teal-50/40 dark:bg-teal-950/20 text-teal-950 dark:text-teal-200 ring-2 ring-teal-500/20 shadow-xs'
                                                             : 'border-slate-200 dark:border-zinc-800 text-slate-600 dark:text-zinc-400 hover:border-slate-300 dark:hover:border-zinc-700'
                                                     }`}
                                                 >
                                                     <div className="flex items-center justify-between">
-                                                        <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${isSelected ? 'bg-slate-900 dark:bg-white text-white dark:text-zinc-900' : 'bg-slate-100 dark:bg-zinc-800 text-slate-500'}`}>
+                                                        <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${isSelected ? 'bg-teal-600 text-white' : 'bg-slate-100 dark:bg-zinc-800 text-slate-500'}`}>
                                                             <Icon className="w-4 h-4" />
                                                         </div>
-                                                        {isSelected && <span className="w-2 h-2 rounded-full bg-slate-900 dark:bg-white"></span>}
+                                                        {isSelected && <span className="w-2 h-2 rounded-full bg-teal-600 dark:bg-teal-400"></span>}
                                                     </div>
 
                                                     <div>
@@ -655,7 +717,7 @@ export default function TenantSettingsModal({ isOpen, onClose }: TenantSettingsM
                             <button
                                 onClick={handleSaveChanges}
                                 disabled={isSaving}
-                                className="px-4 py-1.5 text-xs font-bold rounded-lg bg-slate-900 hover:bg-slate-800 dark:bg-white dark:hover:bg-zinc-200 text-white dark:text-zinc-900 transition-all flex items-center gap-1.5 shadow-xs cursor-pointer"
+                                className="px-4 py-1.5 text-xs font-bold rounded-lg bg-teal-600 hover:bg-teal-700 text-white transition-all flex items-center gap-1.5 shadow-xs cursor-pointer"
                             >
                                 {isSaving ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
                                 <span>Save Changes</span>

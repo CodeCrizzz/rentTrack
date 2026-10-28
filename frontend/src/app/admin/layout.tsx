@@ -120,7 +120,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
         try {
             const user = JSON.parse(userStr);
-            if (user.role !== 'admin') {
+            if (user.role !== 'admin' && user.role !== 'owner') {
                 toast.error("Access restricted: Administrator privileges required.");
                 router.replace('/tenant/dashboard');
                 return;
@@ -214,7 +214,6 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         { name: 'Maintenance Requests', path: '/admin/requests', icon: Wrench },
         { name: 'Messages', path: '/admin/chat', icon: MessageSquareMore },
         { name: 'CCTV Monitoring', path: '/admin/cctv', icon: Cctv },
-        { name: 'Activity Logs', path: '/admin/activity-logs', icon: Activity },
         { name: 'Settings', path: '/admin/settings', icon: Settings },
     ];
 

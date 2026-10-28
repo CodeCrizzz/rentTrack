@@ -98,7 +98,7 @@ export function AppSidebar({
           {/* User Account: Profile in the left, Name in the right */}
           <div
             onClick={handleProfileClick}
-            className="w-full flex items-center gap-3 p-2.5 rounded-xl bg-[#0b1f3c] hover:bg-[#102a50] dark:bg-zinc-900/80 dark:hover:bg-zinc-800 border border-[#14325c] dark:border-zinc-800/80 shadow-xs transition-all text-left group cursor-pointer outline-none select-none group-data-[collapsible=icon]:p-1.5 group-data-[collapsible=icon]:justify-center"
+            className="w-full flex items-center gap-3 p-2.5 rounded-xl bg-[#0b1f3c] hover:bg-[#102a50] dark:bg-zinc-900/80 dark:hover:bg-zinc-800 border border-[#14325c] dark:border-zinc-800/80 shadow-xs transition-all text-left group/account cursor-pointer outline-none select-none group-data-[collapsible=icon]:p-1.5 group-data-[collapsible=icon]:justify-center"
             title={`${currentUser.name} (${currentUser.role || "User"}) - View Profile`}
             role="button"
             tabIndex={0}
@@ -115,10 +115,10 @@ export function AppSidebar({
                 <img
                   src={currentUser.avatar}
                   alt={currentUser.name}
-                  className="w-10 h-10 rounded-xl object-cover border border-blue-400/30 group-hover:scale-105 transition-transform"
+                  className="w-10 h-10 rounded-xl object-cover border border-blue-400/30 group-hover/account:scale-105 transition-transform"
                 />
               ) : (
-                <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-600 border border-blue-400/30 flex items-center justify-center text-white font-bold text-sm shadow-sm group-hover:scale-105 transition-transform">
+                <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-600 border border-blue-400/30 flex items-center justify-center text-white font-bold text-sm shadow-sm group-hover/account:scale-105 transition-transform">
                   {initials}
                 </div>
               )}
@@ -127,7 +127,7 @@ export function AppSidebar({
 
             {/* Name in the right */}
             <div className="grid flex-1 text-left min-w-0 group-data-[collapsible=icon]:hidden">
-              <span className="truncate font-bold text-white text-xs sm:text-sm leading-tight group-hover:text-blue-300 transition-colors">
+              <span className="truncate font-bold text-white text-xs sm:text-sm leading-tight group-hover/account:text-blue-300 transition-colors">
                 {currentUser.name}
               </span>
               <span className="truncate text-[11px] text-blue-200/70 dark:text-zinc-400 font-medium leading-tight mt-0.5">
@@ -140,10 +140,10 @@ export function AppSidebar({
           <button
             type="button"
             onClick={onLogout}
-            className="w-full mt-2 flex items-center justify-center gap-2 px-3 py-2 rounded-xl text-xs font-semibold text-rose-300 hover:text-white bg-rose-500/10 hover:bg-rose-600/30 border border-rose-500/20 hover:border-rose-500/40 transition-all cursor-pointer group active:scale-[0.98] group-data-[collapsible=icon]:p-2 group-data-[collapsible=icon]:mt-1.5"
+            className="w-full mt-2 flex items-center justify-center gap-2 px-3 py-2 rounded-xl text-xs font-semibold text-rose-300 hover:text-white bg-rose-500/10 hover:bg-rose-600/30 border border-rose-500/20 hover:border-rose-500/40 transition-all cursor-pointer group/logout active:scale-[0.98] group-data-[collapsible=icon]:p-2 group-data-[collapsible=icon]:mt-1.5"
             title="Log out"
           >
-            <LogOutIcon className="w-4 h-4 shrink-0 transition-transform group-hover:-translate-x-0.5" />
+            <LogOutIcon className="w-4 h-4 shrink-0 transition-transform group-hover/logout:-translate-x-0.5" />
             <span className="group-data-[collapsible=icon]:hidden">Log out</span>
           </button>
 

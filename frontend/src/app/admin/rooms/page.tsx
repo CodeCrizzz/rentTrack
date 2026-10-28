@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useState, useMemo } from "react";
-import { useRouter } from "next/navigation";
+import { useEffect, useState, useMemo, Suspense } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import Image from "next/image";
 import api from "@/lib/api";
 import {
@@ -76,14 +76,16 @@ const AMENITY_PRESETS = [
   "Individual Submeter",
 ];
 
-export default function AdminRooms() {
+function RoomsContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [rooms, setRooms] = useState<Room[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Selected Room for the Right-Side Drawer
   const [selectedRoom, setSelectedRoom] = useState<Room | null>(null);
+  const [highlightedRoomId, setHighlightedRoomId] = useState<number | null>(null);
 
   // Modals & Popups
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -137,6 +139,92 @@ export default function AdminRooms() {
   useEffect(() => {
     fetchRooms();
   }, []);
+
+  // Handle URL search params (e.g. ?room=203 or ?tenant=Maria%20Santos)
+  useEffect(() => {
+    if (!searchParams || rooms.length === 0) return;
+
+    const roomParam = searchParams.get("room");
+    const tenantParam = searchParams.get("tenant");
+    const searchParam = searchParams.get("search");
+
+    if (!roomParam && !tenantParam && !searchParam) return;
+
+    let matched: Room | undefined = undefined;
+
+    // 1. Try matching by room_number (e.g. "203", "Room 203")
+    if (roomParam) {
+      const cleanParam = roomParam.toLowerCase().replace(/^room\s*/i, "").trim();
+      matched = rooms.find((r) => {
+        const cleanRoomNum = (r.room_number || "")
+          .toLowerCase()
+          .replace(/^room\s*/i, "")
+          .trim();
+        return cleanRoomNum === cleanParam || String(r.id) === cleanParam;
+      });
+    }
+
+    // 2. Try matching by tenant name inside room occupants
+    if (!matched && tenantParam) {
+      const cleanTenant = tenantParam.toLowerCase().trim();
+      matched = rooms.find((r) =>
+        r.occupants?.some((occ) =>
+          (occ.name || "").toLowerCase().includes(cleanTenant)
+        )
+      );
+    }
+
+    // 3. Fallback to general search query
+    if (!matched && searchParam) {
+      const cleanSearch = searchParam.toLowerCase().trim();
+      matched = rooms.find(
+        (r) =>
+          (r.room_number || "").toLowerCase().includes(cleanSearch) ||
+          r.occupants?.some((occ) =>
+            (occ.name || "").toLowerCase().includes(cleanSearch)
+          )
+      );
+    }
+
+    if (matched) {
+      setSelectedRoom(matched);
+      setHighlightedRoomId(matched.id);
+
+      // Ensure room card is not hidden by active filters
+      setSelectedFloorTab("All Floors");
+      setStatusFilter("All Statuses");
+      setTypeFilter("All Room Types");
+      setRentalTypeFilter("All Rental Models");
+      setSearchQuery("");
+
+      const targetId = matched.id;
+      const targetRoomNum = matched.room_number;
+
+      // Smooth scroll to the target room card
+      const scrollTimer = setTimeout(() => {
+        const cardEl =
+          document.getElementById(`room-card-${targetId}`) ||
+          document.querySelector(`[data-room-number="${targetRoomNum}"]`);
+        if (cardEl) {
+          cardEl.scrollIntoView({
+            behavior: "smooth",
+            block: "center",
+            inline: "center",
+          });
+        }
+      }, 300);
+
+      // Remove the highlight pulse after 3.5s
+      const pulseTimer = setTimeout(() => {
+        setHighlightedRoomId(null);
+      }, 3500);
+
+      return () => {
+        clearTimeout(scrollTimer);
+        clearTimeout(pulseTimer);
+      };
+    }
+  }, [searchParams, rooms]);
 
   const handleOpenModal = (room?: Room) => {
     if (room) {
@@ -985,6 +1073,7 @@ export default function AdminRooms() {
                     {group.rooms.map((room) => {
                       const cat = getRoomCategory(room);
                       const isSelected = selectedRoom?.id === room.id;
+                      const isHighlighted = highlightedRoomId === room.id;
                       const availBeds = getAvailableBeds(room);
                       const totalBeds = Math.max(1, room.capacity || 1);
                       const bedRowsCount = Math.ceil(totalBeds / 5);
@@ -993,11 +1082,15 @@ export default function AdminRooms() {
                       return (
                         <div
                           key={room.id}
+                          id={`room-card-${room.id}`}
+                          data-room-number={room.room_number}
                           onClick={() => setSelectedRoom(room)}
                           className={`w-[245px] sm:w-[260px] min-w-[245px] sm:min-w-[260px] shrink-0 bg-white dark:bg-zinc-900 rounded-2xl p-3.5 sm:p-4 border cursor-pointer transition-all flex flex-col justify-between relative shadow-2xs hover:shadow-xs group min-h-[215px] sm:min-h-[225px] ${
-                            isSelected
-                              ? "border-blue-600 dark:border-blue-500 ring-2 ring-blue-500/20 bg-blue-50/15 dark:bg-blue-950/25"
-                              : "border-slate-200/90 dark:border-zinc-800 hover:border-slate-300 dark:hover:border-zinc-700"
+                            isHighlighted
+                              ? "border-blue-600 dark:border-blue-400 ring-4 ring-blue-500/40 shadow-lg scale-[1.02] bg-blue-50/25 dark:bg-blue-950/35"
+                              : isSelected
+                                ? "border-blue-600 dark:border-blue-500 ring-2 ring-blue-500/20 bg-blue-50/15 dark:bg-blue-950/25"
+                                : "border-slate-200/90 dark:border-zinc-800 hover:border-slate-300 dark:hover:border-zinc-700"
                           }`}
                         >
                           <div>
@@ -1699,5 +1792,19 @@ export default function AdminRooms() {
         )}
       </AnimatePresence>
     </div>
+  );
+}
+
+export default function AdminRooms() {
+  return (
+    <Suspense
+      fallback={
+        <div className="w-full h-96 flex items-center justify-center">
+          <div className="w-8 h-8 border-2 border-slate-300 dark:border-zinc-700 border-t-blue-500 rounded-full animate-spin" />
+        </div>
+      }
+    >
+      <RoomsContent />
+    </Suspense>
   );
 }
