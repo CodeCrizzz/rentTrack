@@ -4,7 +4,7 @@ const { protect } = require('../middleware/authMiddleware');
 const { ROLES, requireRole } = require('../middleware/rbacMiddleware');
 const { 
     getTenantDashboard, getTenantProfile, updateTenantProfile, updateTenantPassword,
-    getTenantPayments, getCurrentBill, submitTenantPayment,
+    getTenantPayments, getCurrentBill, getTenantGcashQr, submitTenantPayment,
     getTenantMessages, sendTenantMessage, getUnreadCount,
     getTenantRooms, chooseRoom, getAnnouncements,
     getTenantNotifications, markNotificationRead, markAllNotificationsRead
@@ -42,6 +42,7 @@ router.get('/dashboard', getTenantDashboard);
 router.get('/payments', getTenantPayments);
 router.post('/payments', paymentLimiter, upload.single('proofOfPayment'), sanitizeInput, sqlInjectionProtector, submitTenantPayment);
 router.get('/bill/current', getCurrentBill);
+router.get('/gcash-qr', getTenantGcashQr);
 
 router.get('/profile', getTenantProfile);
 router.put('/profile', updateTenantProfile);
