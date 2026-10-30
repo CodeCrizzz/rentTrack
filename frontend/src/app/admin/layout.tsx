@@ -120,7 +120,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
         try {
             const user = JSON.parse(userStr);
-            if (user.role !== 'admin' && user.role !== 'owner') {
+            if (user.role !== 'admin') {
                 toast.error("Access restricted: Administrator privileges required.");
                 router.replace('/tenant/dashboard');
                 return;
@@ -318,7 +318,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                                         <div className="flex items-center gap-2">
                                             <span className="font-bold text-sm text-slate-800 dark:text-white">Offline Activity Catch-up</span>
                                             {notifUnreadCount > 0 && (
-                                                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-200 dark:border-rose-900/30">
+                                                <span className="text-[10px] font-bold text-rose-600 dark:text-rose-400">
                                                     {notifUnreadCount} new
                                                 </span>
                                             )}
@@ -411,7 +411,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                     {(() => {
                         const isManageRooms = pathname?.startsWith('/admin/rooms');
                         const isManageTenants = pathname?.startsWith('/admin/tenants');
-                        const isNoPageScroll = isManageRooms || isManageTenants;
+                        const isRequests = pathname?.startsWith('/admin/requests');
+                        const isNoPageScroll = isManageRooms || isManageTenants || isRequests;
                         return (
                             <div className={`flex-1 flex flex-col ${isNoPageScroll ? 'overflow-hidden' : 'overflow-y-auto'} overflow-x-hidden ${isNoPageScroll ? '' : 'custom-scrollbar'} bg-[#f4f7fb] dark:bg-zinc-950`}>
                                 <div className={`px-4 pt-3 pb-2 sm:px-5 sm:pt-3.5 sm:pb-2.5 lg:px-6 lg:pt-3.5 lg:pb-2.5 relative ${isNoPageScroll ? 'h-full flex-1 flex flex-col min-h-0 overflow-hidden' : ''}`}>
