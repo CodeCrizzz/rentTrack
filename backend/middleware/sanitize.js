@@ -7,7 +7,9 @@ const SENSITIVE_FIELDS = new Set([
     'newpassword',
     'confirmpassword',
     'token',
-    'authorization'
+    'authorization',
+    'gcashqrcode',
+    'logourl'
 ]);
 
 // Prototype pollution forbidden keys
