@@ -582,7 +582,7 @@ export default function AdminReportModal({ isOpen, onClose }: AdminReportModalPr
                   <h2 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white leading-tight">
                     Operational & Financial Master Report
                   </h2>
-                  <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-teal-100 dark:bg-teal-950/80 text-teal-700 dark:text-teal-300 border border-teal-200 dark:border-teal-800/60">
+                  <span className="text-[10px] font-mono font-bold text-teal-600 dark:text-teal-400">
                     Official Hub
                   </span>
                 </div>
@@ -977,7 +977,7 @@ export default function AdminReportModal({ isOpen, onClose }: AdminReportModalPr
                                   {acc.due_date ? new Date(acc.due_date).toLocaleDateString() : "-"}
                                 </td>
                                 <td className="py-2.5 px-3">
-                                  <span className="inline-block px-2 py-0.5 rounded text-[10px] font-bold bg-rose-100 dark:bg-rose-950/60 text-rose-700 dark:text-rose-400">
+                                  <span className="inline-block text-[10px] font-bold text-rose-600 dark:text-rose-400">
                                     {acc.days_overdue} days late
                                   </span>
                                 </td>
@@ -1087,7 +1087,7 @@ export default function AdminReportModal({ isOpen, onClose }: AdminReportModalPr
                                   {p.billing_month || "-"}
                                 </td>
                                 <td className="py-2.5 px-3">
-                                  <span className="inline-block px-2 py-0.5 rounded text-[10px] font-semibold bg-slate-100 dark:bg-zinc-800 text-slate-700 dark:text-zinc-300">
+                                  <span className="inline-block text-[10px] font-semibold text-slate-700 dark:text-zinc-300">
                                     {p.payment_method || "Cash"}
                                   </span>
                                 </td>
@@ -1177,14 +1177,14 @@ export default function AdminReportModal({ isOpen, onClose }: AdminReportModalPr
                                   </td>
                                   <td className="py-2.5 px-3">
                                     <span
-                                      className={`inline-block px-2 py-0.5 rounded text-[10px] font-bold ${
+                                      className={`inline-block text-[10px] font-bold ${
                                         r.status === "Maintenance"
-                                          ? "bg-amber-100 text-amber-700 dark:bg-amber-950/60 dark:text-amber-400"
+                                          ? "text-amber-600 dark:text-amber-400"
                                           : isFull
-                                          ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-400"
+                                          ? "text-emerald-600 dark:text-emerald-400"
                                           : isVacant
-                                          ? "bg-slate-100 text-slate-600 dark:bg-zinc-800 dark:text-zinc-300"
-                                          : "bg-blue-100 text-blue-700 dark:bg-blue-950/60 dark:text-blue-400"
+                                          ? "text-slate-600 dark:text-zinc-400"
+                                          : "text-blue-600 dark:text-blue-400"
                                       }`}
                                     >
                                       {r.status === "Maintenance" ? "Maintenance" : isFull ? "Fully Occupied" : isVacant ? "Vacant" : "Partial"}
@@ -1279,7 +1279,7 @@ export default function AdminReportModal({ isOpen, onClose }: AdminReportModalPr
                                   {acc.due_date ? new Date(acc.due_date).toLocaleDateString() : "-"}
                                 </td>
                                 <td className="py-2.5 px-3">
-                                  <span className="inline-block px-2 py-0.5 rounded text-[10px] font-bold bg-rose-100 dark:bg-rose-950/60 text-rose-700 dark:text-rose-400">
+                                  <span className="inline-block text-[10px] font-bold text-rose-600 dark:text-rose-400">
                                     {acc.days_overdue} days
                                   </span>
                                 </td>
@@ -1404,12 +1404,12 @@ export default function AdminReportModal({ isOpen, onClose }: AdminReportModalPr
                                 <td className="py-2.5 px-3 text-slate-700 dark:text-zinc-200 font-medium">{t.category}</td>
                                 <td className="py-2.5 px-3">
                                   <span
-                                    className={`inline-block px-2 py-0.5 rounded text-[10px] font-bold ${
+                                    className={`inline-block text-[10px] font-bold ${
                                       t.priority === "Urgent"
-                                        ? "bg-rose-100 text-rose-700 dark:bg-rose-950/60 dark:text-rose-400"
+                                        ? "text-rose-600 dark:text-rose-400"
                                         : t.priority === "High"
-                                        ? "bg-amber-100 text-amber-700 dark:bg-amber-950/60 dark:text-amber-400"
-                                        : "bg-slate-100 text-slate-700 dark:bg-zinc-800 dark:text-zinc-300"
+                                        ? "text-amber-600 dark:text-amber-400"
+                                        : "text-slate-600 dark:text-zinc-400"
                                     }`}
                                   >
                                     {t.priority}
@@ -1423,12 +1423,12 @@ export default function AdminReportModal({ isOpen, onClose }: AdminReportModalPr
                                 </td>
                                 <td className="py-2.5 px-3">
                                   <span
-                                    className={`inline-block px-2 py-0.5 rounded text-[10px] font-bold ${
+                                    className={`inline-block text-[10px] font-bold ${
                                       t.status === "Resolved"
-                                        ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-400"
+                                        ? "text-emerald-600 dark:text-emerald-400"
                                         : t.status === "In Progress"
-                                        ? "bg-blue-100 text-blue-700 dark:bg-blue-950/60 dark:text-blue-400"
-                                        : "bg-amber-100 text-amber-700 dark:bg-amber-950/60 dark:text-amber-400"
+                                        ? "text-blue-600 dark:text-blue-400"
+                                        : "text-amber-600 dark:text-amber-400"
                                     }`}
                                   >
                                     {t.status}
