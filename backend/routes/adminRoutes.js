@@ -5,7 +5,8 @@ const {
     ROLES, 
     PERMISSIONS, 
     requireRole, 
-    hasPermission 
+    hasPermission,
+    hasAnyPermission
 } = require('../middleware/rbacMiddleware');
 
 const { 
@@ -25,6 +26,8 @@ const {
     getActivityLogs,
     getSystemSettings,
     updateSystemSettings,
+    getGcashQrCode,
+    updateGcashQrCode,
     purgeSystemCache,
     getSystemDiagnostic
 } = require('../controllers/adminController');
@@ -32,7 +35,7 @@ const { updateRequest, deleteRequest } = require('../controllers/requestControll
 
 // All admin routes require valid authentication and administrative roles (RBAC)
 router.use(protect);
-router.use(requireRole([ROLES.ADMIN, ROLES.OWNER]));
+router.use(requireRole([ROLES.ADMIN]));
 
 // Analytics & Financial Dashboards
 router.get('/dashboard', hasPermission(PERMISSIONS.REPORTS_READ), getDashboardStats);
@@ -82,6 +85,8 @@ router.get('/activity-logs', hasPermission(PERMISSIONS.ACTIVITY_LOGS_READ), getA
 // System Settings & High-Privilege Diagnostics (Least Privilege Protected)
 router.get('/settings', hasPermission(PERMISSIONS.SETTINGS_READ), getSystemSettings);
 router.put('/settings', hasPermission(PERMISSIONS.SETTINGS_UPDATE), updateSystemSettings);
+router.get('/settings/gcash-qr', hasAnyPermission([PERMISSIONS.BILLS_READ, PERMISSIONS.SETTINGS_READ]), getGcashQrCode);
+router.put('/settings/gcash-qr', hasAnyPermission([PERMISSIONS.BILLS_UPDATE, PERMISSIONS.SETTINGS_UPDATE]), updateGcashQrCode);
 router.post('/settings/purge-cache', hasPermission(PERMISSIONS.SETTINGS_PURGE_CACHE), purgeSystemCache);
 router.get('/settings/diagnostic', hasPermission(PERMISSIONS.SETTINGS_DIAGNOSTIC), getSystemDiagnostic);
 
