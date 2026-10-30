@@ -131,7 +131,7 @@ export default function MaintenanceRequestBoard({
     const p = priority?.toLowerCase() || "normal";
     if (p === "urgent" || p === "emergency") {
       return (
-        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-rose-100 dark:bg-rose-950/60 text-rose-700 dark:text-rose-400 border border-rose-200 dark:border-rose-900/50">
+        <span className="inline-flex items-center gap-1 text-[10px] font-extrabold text-rose-600 dark:text-rose-400">
           <span className="w-1.5 h-1.5 rounded-full bg-rose-600 animate-pulse" />
           Urgent
         </span>
@@ -139,15 +139,15 @@ export default function MaintenanceRequestBoard({
     }
     if (p === "high") {
       return (
-        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 dark:bg-amber-950/60 text-amber-700 dark:text-amber-400 border border-amber-200 dark:border-amber-900/50">
+        <span className="inline-flex items-center gap-1 text-[10px] font-bold text-amber-600 dark:text-amber-400">
           <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
           High
         </span>
       );
     }
     return (
-      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-slate-100 dark:bg-zinc-800 text-slate-600 dark:text-zinc-400">
-        <span className="w-1.5 h-1.5 rounded-full bg-slate-400" />
+      <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-teal-600 dark:text-teal-400">
+        <span className="w-1.5 h-1.5 rounded-full bg-teal-500" />
         {priority || "Normal"}
       </span>
     );
@@ -202,7 +202,7 @@ export default function MaintenanceRequestBoard({
             <h2 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white">
               Maintenance & Work Order Pipeline
             </h2>
-            <span className="px-2 py-0.5 rounded-full text-[11px] font-bold bg-teal-100 dark:bg-teal-950/80 text-teal-700 dark:text-teal-300 border border-teal-200 dark:border-teal-800/60 flex items-center gap-1">
+            <span className="text-[11px] font-bold text-teal-600 dark:text-teal-400 flex items-center gap-1">
               <Sparkles className="w-3 h-3" />
               Live Kanban
             </span>
@@ -266,7 +266,7 @@ export default function MaintenanceRequestBoard({
                 Needs Review
               </h3>
             </div>
-            <span className="px-2 py-0.5 rounded-full text-[11px] font-mono font-bold bg-amber-100 dark:bg-amber-950/80 text-amber-800 dark:text-amber-300 border border-amber-200/80 dark:border-amber-800/50">
+            <span className="text-[11px] font-mono font-bold text-amber-600 dark:text-amber-400">
               {pendingTickets.length}
             </span>
           </div>
@@ -310,7 +310,7 @@ export default function MaintenanceRequestBoard({
                       {ticket.tenant_name}
                     </span>
                   </div>
-                  <span className="px-1.5 py-0.5 rounded bg-slate-100 dark:bg-zinc-800 font-mono text-[10px] font-semibold text-slate-700 dark:text-zinc-300 shrink-0">
+                  <span className="font-mono text-[10px] font-semibold text-slate-600 dark:text-zinc-400 shrink-0">
                     {ticket.room_number ? `Rm ${ticket.room_number}` : "Unit N/A"}
                   </span>
                 </div>
@@ -348,7 +348,7 @@ export default function MaintenanceRequestBoard({
                 Work In Progress
               </h3>
             </div>
-            <span className="px-2 py-0.5 rounded-full text-[11px] font-mono font-bold bg-blue-100 dark:bg-blue-950/80 text-blue-800 dark:text-blue-300 border border-blue-200/80 dark:border-blue-800/50">
+            <span className="text-[11px] font-mono font-bold text-blue-600 dark:text-blue-400">
               {inProgressTickets.length}
             </span>
           </div>
@@ -392,7 +392,7 @@ export default function MaintenanceRequestBoard({
                       {ticket.tenant_name}
                     </span>
                   </div>
-                  <span className="px-1.5 py-0.5 rounded bg-slate-100 dark:bg-zinc-800 font-mono text-[10px] font-semibold text-slate-700 dark:text-zinc-300 shrink-0">
+                  <span className="font-mono text-[10px] font-semibold text-slate-600 dark:text-zinc-400 shrink-0">
                     {ticket.room_number ? `Rm ${ticket.room_number}` : "Unit N/A"}
                   </span>
                 </div>
@@ -442,7 +442,7 @@ export default function MaintenanceRequestBoard({
                 Resolved & Closed
               </h3>
             </div>
-            <span className="px-2 py-0.5 rounded-full text-[11px] font-mono font-bold bg-emerald-100 dark:bg-emerald-950/80 text-emerald-800 dark:text-emerald-300 border border-emerald-200/80 dark:border-emerald-800/50">
+            <span className="text-[11px] font-mono font-bold text-emerald-600 dark:text-emerald-400">
               {resolvedTickets.length}
             </span>
           </div>
@@ -484,7 +484,7 @@ export default function MaintenanceRequestBoard({
                       {ticket.tenant_name}
                     </span>
                   </div>
-                  <span className="px-1.5 py-0.5 rounded bg-slate-100 dark:bg-zinc-800 font-mono text-[10px] font-semibold text-slate-700 dark:text-zinc-300 shrink-0">
+                  <span className="font-mono text-[10px] font-semibold text-slate-600 dark:text-zinc-400 shrink-0">
                     {ticket.room_number ? `Rm ${ticket.room_number}` : "Unit N/A"}
                   </span>
                 </div>
