@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useMemo } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import api from "@/lib/api";
@@ -47,6 +48,12 @@ interface ActivityLog {
 }
 
 export default function AdminActivityLogsPage() {
+  const router = useRouter();
+
+  useEffect(() => {
+    router.replace("/admin/settings#activity-logs");
+  }, [router]);
+
   const [logs, setLogs] = useState<ActivityLog[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -66,11 +73,15 @@ export default function AdminActivityLogsPage() {
       const { data } = await api.get("/admin/activity-logs");
       setLogs(Array.isArray(data) ? data : []);
       if (isManualRefresh) {
-        toast.success("Activity logs synchronized");
+        toast.success("Activity Logs Synchronized", {
+          description: "Latest administrative event entries loaded.",
+        });
       }
     } catch (error) {
       console.error("Failed to fetch activity logs:", error);
-      toast.error("Failed to load activity logs");
+      toast.error("Sync Failed", {
+        description: "Failed to load recent activity logs.",
+      });
     } finally {
       setIsLoading(false);
       setIsRefreshing(false);
@@ -222,7 +233,9 @@ export default function AdminActivityLogsPage() {
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-    toast.success("Activity logs CSV exported successfully!");
+    toast.success("Activity Logs Exported", {
+      description: "CSV audit spreadsheet downloaded successfully.",
+    });
   };
 
   const formatRelativeTime = (dateStr: string) => {
@@ -269,20 +282,20 @@ export default function AdminActivityLogsPage() {
   const getLogBadgeBg = (type: string) => {
     switch (type) {
       case "payment":
-        return "bg-emerald-50 dark:bg-emerald-950/40 border-emerald-200 dark:border-emerald-800/40 text-emerald-700 dark:text-emerald-300";
+        return "text-emerald-600 dark:text-emerald-400";
       case "maintenance":
-        return "bg-orange-50 dark:bg-orange-950/40 border-orange-200 dark:border-orange-800/40 text-orange-700 dark:text-orange-300";
+        return "text-orange-600 dark:text-orange-400";
       case "applicant":
-        return "bg-sky-50 dark:bg-sky-950/40 border-sky-200 dark:border-sky-800/40 text-sky-700 dark:text-sky-300";
+        return "text-sky-600 dark:text-sky-400";
       case "moveout":
-        return "bg-purple-50 dark:bg-purple-950/40 border-purple-200 dark:border-purple-800/40 text-purple-700 dark:text-purple-300";
+        return "text-purple-600 dark:text-purple-400";
       case "announcement":
-        return "bg-cyan-50 dark:bg-cyan-950/40 border-cyan-200 dark:border-cyan-800/40 text-cyan-700 dark:text-cyan-300";
+        return "text-cyan-600 dark:text-cyan-400";
       case "message":
-        return "bg-indigo-50 dark:bg-indigo-950/40 border-indigo-200 dark:border-indigo-800/40 text-indigo-700 dark:text-indigo-300";
+        return "text-indigo-600 dark:text-indigo-400";
       case "tenant":
       default:
-        return "bg-blue-50 dark:bg-blue-950/40 border-blue-200 dark:border-blue-800/40 text-blue-700 dark:text-blue-300";
+        return "text-blue-600 dark:text-blue-400";
     }
   };
 
@@ -496,13 +509,13 @@ export default function AdminActivityLogsPage() {
               >
                 <span>{tab.label}</span>
                 <span
-                  className={`px-1.5 py-0.5 rounded-full text-[10px] font-mono font-bold ${
+                  className={`text-[10px] font-mono font-bold ${
                     isActive
-                      ? "bg-white/20 text-white"
-                      : "bg-slate-100 dark:bg-zinc-800 text-slate-600 dark:text-zinc-400"
+                      ? "text-white/90"
+                      : "text-slate-500 dark:text-zinc-400"
                   }`}
                 >
-                  {tab.count}
+                  ({tab.count})
                 </span>
               </button>
             );
@@ -585,13 +598,13 @@ export default function AdminActivityLogsPage() {
                         </h4>
 
                         <span
-                          className={`px-2 py-0.5 rounded-md text-[10px] font-bold border ${badgeBg}`}
+                          className={`text-[10px] font-bold ${badgeBg}`}
                         >
                           {log.type.toUpperCase()}
                         </span>
 
                         {log.status && (
-                          <span className="px-2 py-0.5 rounded-md text-[10px] font-mono font-bold bg-slate-100 dark:bg-zinc-800 text-slate-700 dark:text-zinc-300 border border-slate-200 dark:border-zinc-700">
+                          <span className="text-[10px] font-mono font-bold text-slate-600 dark:text-zinc-400">
                             {log.status}
                           </span>
                         )}
@@ -602,29 +615,29 @@ export default function AdminActivityLogsPage() {
                       </p>
 
                       {/* Detail Chips */}
-                      <div className="flex flex-wrap items-center gap-2 pt-0.5 text-[11px] text-slate-500 dark:text-zinc-400 font-medium">
+                      <div className="flex flex-wrap items-center gap-3 pt-0.5 text-[11px] text-slate-500 dark:text-zinc-400 font-medium">
                         {log.tenant_name && (
-                          <span className="inline-flex items-center gap-1 bg-slate-100 dark:bg-zinc-800/80 px-2 py-0.5 rounded-md text-slate-800 dark:text-zinc-200">
+                          <span className="inline-flex items-center gap-1 font-semibold text-slate-700 dark:text-zinc-300">
                             <Users className="w-3 h-3 text-slate-400" />
                             <span>{log.tenant_name}</span>
                           </span>
                         )}
 
                         {log.room_number && (
-                          <span className="inline-flex items-center gap-1 bg-slate-100 dark:bg-zinc-800/80 px-2 py-0.5 rounded-md text-slate-800 dark:text-zinc-200">
-                            <Building2 className="w-3 h-3 text-slate-400" />
+                          <span className="inline-flex items-center gap-1 font-semibold text-blue-600 dark:text-blue-400">
+                            <Building2 className="w-3 h-3 text-blue-500" />
                             <span>{log.room_number}</span>
                           </span>
                         )}
 
                         {log.reference_number && (
-                          <span className="font-mono bg-slate-100 dark:bg-zinc-800/80 px-2 py-0.5 rounded-md text-slate-800 dark:text-zinc-200">
+                          <span className="font-mono font-semibold text-slate-700 dark:text-zinc-300">
                             {log.reference_number}
                           </span>
                         )}
 
                         {log.amount !== undefined && (
-                          <span className="font-mono font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 px-2 py-0.5 rounded-md">
+                          <span className="font-mono font-bold text-emerald-600 dark:text-emerald-400">
                             ₱ {log.amount.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                           </span>
                         )}

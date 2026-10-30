@@ -109,7 +109,123 @@ experience in the full software development lifecycle (planning, coding,
 PR review, and issue tracking).
 ================================================================================
 
-commit each file and put a commit message for each file to their specific changes and apply the github contribution guide for issues,, pull request, code review and commit
-- git checkout main
-- git pull origin main
+================================================================================
+4. READY-TO-USE GITHUB ISSUE TEMPLATES (FOR YOUR PROFILE)
+================================================================================
+Copy and paste each of the following 5 issues into:
+https://github.com/CodeCrizzz/rent_Flow/issues -> "New issue"
+
+--------------------------------------------------------------------------------
+ISSUE #1
+--------------------------------------------------------------------------------
+Title: feat(rooms): visual bed capacity matrix with 5-column layout and scrollable container
+Labels: enhancement, frontend
+
+Description:
+### Summary
+Refactor the room card bed slot visualization to arrange icons strictly in 5 columns per row, with a minimum display height of 2 rows. When a room has 3 or more rows (capacity > 10), provide an internal vertical scrollbar so room cards maintain a consistent vertical rhythm. Replace tenant names with descriptive room status badges and display floor status summaries with clean borderless text.
+
+### Acceptance Criteria
+- [x] Bed double icons arranged in 5 columns (`grid grid-cols-5 gap-1`).
+- [x] Card container displays a minimum of 2 bed rows (`min-h-[38px] max-h-[38px]`).
+- [x] Rooms with >= 3 rows (capacity > 10) feature a custom styled vertical scrollbar (`overflow-y-auto`).
+- [x] Replaced tenant name display on room cards with formatted status badges (`Under Maintenance`, `Full`, `Occupied with X beds`, `Vacant - Ready for Move-in`).
+- [x] Floor status summaries on floor header bars rendered as borderless colored text (`Full: X`, `Vacant: X`, etc.) without background box outlines.
+
+--------------------------------------------------------------------------------
+ISSUE #2
+--------------------------------------------------------------------------------
+Title: feat(auth): integrate inline modals for Privacy Policy and Terms & Conditions
+Labels: enhancement, security
+
+Description:
+### Summary
+Eliminate standalone route redirects for `/privacy` and `/terms` by embedding accessible, animated inline legal modals directly inside the login and registration authentication flows.
+
+### Acceptance Criteria
+- [x] Embedded modal with spring transition in `login/page.tsx` and `signup/page.tsx`.
+- [x] Direct toggle buttons for Privacy Policy and Terms and Conditions in authentication footers.
+- [x] Scrollable policy contents covering data collection, account usage, billing, and maintenance rules.
+- [x] Removed obsolete standalone pages `/privacy/page.tsx` and `/terms/page.tsx`.
+- [x] Enforced public registration strictly for `tenant` role with `Pending` verification status.
+
+--------------------------------------------------------------------------------
+ISSUE #3
+--------------------------------------------------------------------------------
+Title: feat(ui): standardize Sonner toast notifications with titles and structured feedback
+Labels: ui, polish
+
+Description:
+### Summary
+Upgrade all system feedback popups across billing, room management, CCTV, activity logs, and resident settings to use structured Sonner toasts with concise titles and contextual descriptions.
+
+### Acceptance Criteria
+- [x] Customized `components/ui/sonner.tsx` with high-contrast borders and brand accents.
+- [x] Updated all `toast.success`, `toast.error`, and `toast.info` calls in admin modules to provide title and description parameters.
+- [x] Removed redundant generic single-string snackbar toasts.
+- [x] Verified bottom-right positioning and close button accessibility.
+
+--------------------------------------------------------------------------------
+ISSUE #4
+--------------------------------------------------------------------------------
+Title: feat(dashboard): integrate floor room matrix with 5-column layout and inline announcements
+Labels: enhancement, dashboard
+
+Description:
+### Summary
+Enhance the executive administrative dashboard by bringing in the synchronized multi-column floor & room matrix and an inline announcement composer modal, removing obsolete redirect routes.
+
+### Acceptance Criteria
+- [x] Dashboard floor matrix displays units with 5-column bed grid and 2-row scrollable heights.
+- [x] Floor status counters styled borderless with colored text indicators.
+- [x] "Add Announcement" action button triggers an animated inline composer modal without routing away.
+- [x] Removed obsolete standalone redirect route `frontend/src/app/admin/announcements/page.tsx`.
+
+--------------------------------------------------------------------------------
+ISSUE #5
+--------------------------------------------------------------------------------
+Title: feat(ux): enlarge percentage metrics on Room Manager operational stats cards
+Labels: ux, rooms
+
+Description:
+### Summary
+Increase the font size, contrast, and font weight of the percentage chips across all 4 operational stats overview cards (Full, Occupied w/ Beds, Vacant, Maintenance) in Room Manager for instant scannability.
+
+### Acceptance Criteria
+- [x] Upgraded percentage chip typography from `text-[11px] font-semibold` to `text-sm sm:text-base font-extrabold font-mono`.
+- [x] High-contrast color styling (`text-slate-800 dark:text-zinc-100 bg-slate-100 dark:bg-zinc-800 px-2 py-0.5 rounded-md`).
+- [x] Applied `shrink-0` to guarantee badges do not clip or wrap on mobile devices.
+- [x] Card titles truncated gracefully on smaller viewports.
+
+================================================================================
+5. PULL REQUEST DESCRIPTION TEMPLATE
+================================================================================
+When creating your Pull Request on GitHub, use this description:
+
+Title:
+feat: Auth flow overhaul, room matrix refinements, and portal enhancements
+
+Description:
+### Summary
+Comprehensive update across the RentTrack platform delivering an enhanced Room Manager bed matrix, embedded authentication legal modals, standardized toast notifications, and executive dashboard refinements.
+
+### Linked Issues
+- Closes #1 (Visual bed capacity matrix with 5-column layout)
+- Closes #2 (Inline modals for Privacy Policy & Terms)
+- Closes #3 (Standardized Sonner toast notifications)
+- Closes #4 (Dashboard floor matrix and inline announcements)
+- Closes #5 (Enlarged Room Manager stats percentage metrics)
+
+### Key Changes
+- **Room Management**: Replaced tenant names with status badges, implemented 5-column bed slots with $\ge 3$ row vertical scroll, and enlarged stats percentages.
+- **Auth Flow**: Added inline legal modals for Privacy Policy & Terms in login and signup; removed standalone legal pages.
+- **Feedback & Notifications**: Standardized Sonner toasts with structured title and description across all admin pages.
+- **Dashboard**: Added synchronized floor room matrix and inline announcement modal.
+
+### Next Steps after Merge:
+```bash
+git checkout main
+git pull origin main
+```
+
 

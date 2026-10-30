@@ -1,0 +1,45 @@
+name: Security Vulnerability & Dependency Audit
+
+on:
+  push:
+    branches: [ main, master, feature/** ]
+  pull_request:
+    branches: [ main, master ]
+  schedule:
+    # Run every Monday at 04:00 AM UTC
+    - cron: '0 4 * * 1'
+
+jobs:
+  audit-backend:
+    name: Backend Dependency Audit
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Run Backend Security Audit
+        run: |
+          cd backend
+          npm audit --audit-level=high || true
+
+  audit-frontend:
+    name: Frontend Dependency Audit
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Run Frontend Security Audit
+        run: |
+          cd frontend
+          npm audit --audit-level=high || true

@@ -1,16 +1,17 @@
 const db = require('../config/db');
-const bcrypt = require('bcryptjs');
+const { hashPassword, comparePassword } = require('../utils/passwordUtils');
 const { formatPhoneNumber } = require('../utils/phoneUtils');
 const { generateUniqueInvoiceNumber } = require('../utils/invoiceNumberGenerator');
+const { normalizeRoomGender, ensureRoomGenderColumn } = require('../utils/roomGenderUtils');
 
 // Get Tenant Dashboard Data
 const getTenantDashboard = async (req, res) => {
     const tenantId = req.user.id;
 
     try {
-        // Get tenant's current status and room
+        // Get tenant's current status, name and room
         const userResult = await db.query(
-            "SELECT u.status, r.room_number FROM users u LEFT JOIN rooms r ON u.room_id = r.id WHERE u.id = $1",
+            "SELECT u.name, u.status, r.room_number FROM users u LEFT JOIN rooms r ON u.room_id = r.id WHERE u.id = $1",
             [tenantId]
         );
         const user = userResult.rows[0];
@@ -20,16 +21,24 @@ const getTenantDashboard = async (req, res) => {
             [tenantId]
         );
 
+        // Get all bills for this tenant
+        const billsResult = await db.query(
+            "SELECT id, billing_month, rent_amount, water_charges, electricity_charges, other_fees, total_amount, amount_paid, balance, status, TO_CHAR(due_date, 'YYYY-MM-DD') AS due_date, invoice_number, created_at FROM bills WHERE tenant_id = $1 ORDER BY due_date DESC, id DESC",
+            [tenantId]
+        );
+
         // Get recent payment history
         const historyResult = await db.query(
-            "SELECT p.*, b.billing_month FROM payments p JOIN bills b ON p.bill_id = b.id WHERE b.tenant_id = $1 ORDER BY p.payment_date DESC LIMIT 15",
+            "SELECT p.*, TO_CHAR(p.payment_date, 'YYYY-MM-DD') AS date, b.billing_month, b.invoice_number FROM payments p JOIN bills b ON p.bill_id = b.id WHERE b.tenant_id = $1 ORDER BY p.payment_date DESC, p.id DESC LIMIT 15",
             [tenantId]
         );
 
         res.status(200).json({
-            status: user.status,
-            roomNumber: user.room_number,
-            balanceDue: balanceResult.rows[0].sum || 0,
+            name: user ? user.name : null,
+            status: user ? user.status : 'Active',
+            roomNumber: user ? user.room_number : null,
+            balanceDue: parseFloat(balanceResult.rows[0]?.sum || 0),
+            bills: billsResult.rows,
             recentTransactions: historyResult.rows
         });
     } catch (error) {
@@ -43,7 +52,7 @@ const getTenantProfile = async (req, res) => {
     const tenantId = req.user.id;
     try {
         const result = await db.query(
-            `SELECT u.name, u.email, u.phone, u.status, u.created_at, u.date_moved_in, u.contract_end_date, r.room_number, r.capacity, r.price, r.type 
+            `SELECT u.name, u.email, u.phone, u.status, u.created_at, u.date_moved_in, u.contract_end_date, u.bed_space, r.room_number, r.capacity, r.price, r.type 
              FROM users u 
              LEFT JOIN rooms r ON u.room_id = r.id 
              WHERE u.id = $1`,
@@ -206,6 +215,7 @@ const sendTenantMessage = async (req, res) => {
             VALUES ($1, $2, $3, 'tenant', 'sent') 
             RETURNING *;
         `;
+        const result = await db.query(query, [tenantId, adminId, message]);
         const sentMsg = result.rows[0];
 
         // Notify admin if offline when tenant sends message
@@ -247,41 +257,86 @@ const getUnreadCount = async (req, res) => {
 
 // Update Tenant Profile
 const updateTenantProfile = async (req, res) => {
-    const tenantId = req.user.id;
+    const tenantId = req.user?.id;
+    if (!tenantId) {
+        return res.status(401).json({ message: 'Authentication required' });
+    }
     const { name, email, phone } = req.body;
     try {
-        const formattedPhone = phone ? formatPhoneNumber(phone) : null;
+        const cleanName = (name && typeof name === 'string' && name.trim()) ? name.trim() : null;
+        const cleanEmail = (email && typeof email === 'string' && email.trim()) ? email.trim().toLowerCase() : null;
+        const formattedPhone = (phone && typeof phone === 'string' && phone.trim()) ? formatPhoneNumber(phone) : null;
+
+        // Check for email conflicts with other users if an email is provided
+        if (cleanEmail) {
+            const conflict = await db.query(
+                'SELECT id FROM users WHERE email = $1 AND id != $2',
+                [cleanEmail, tenantId]
+            );
+            if (conflict.rows.length > 0) {
+                return res.status(400).json({ message: 'The provided email is already in use by another account' });
+            }
+        }
+
         const result = await db.query(
-            "UPDATE users SET name = $1, email = $2, phone = $3 WHERE id = $4 RETURNING id, name, email, phone",
-            [name, email, formattedPhone, tenantId]
+            `UPDATE users 
+             SET name = COALESCE($1, name), 
+                 email = COALESCE($2, email), 
+                 phone = COALESCE($3, phone) 
+             WHERE id = $4 
+             RETURNING id, name, email, phone, role, status`,
+            [cleanName, cleanEmail, formattedPhone, tenantId]
         );
-        res.status(200).json({ message: 'Profile updated successfully', user: result.rows[0] });
+
+        if (result.rows.length === 0) {
+            return res.status(404).json({ message: 'Tenant record not found' });
+        }
+
+        res.status(200).json({ 
+            message: 'Profile updated successfully', 
+            user: result.rows[0] 
+        });
     } catch (error) {
         console.error('Update Profile Error:', error);
-        res.status(500).json({ message: 'Server error updating profile' });
+        res.status(500).json({ message: error.message || 'Server error updating profile' });
     }
 };
 
 // Update Tenant Password
 const updateTenantPassword = async (req, res) => {
-    const tenantId = req.user.id;
+    const tenantId = req.user?.id;
+    if (!tenantId) {
+        return res.status(401).json({ message: 'Authentication required' });
+    }
     const { currentPassword, newPassword } = req.body;
     try {
-        const userResult = await db.query("SELECT password FROM users WHERE id = $1", [tenantId]);
+        if (!currentPassword) {
+            return res.status(400).json({ message: 'Current password is required to authorize this change' });
+        }
+        if (!newPassword || typeof newPassword !== 'string' || newPassword.trim().length < 6) {
+            return res.status(400).json({ message: 'New password must be at least 6 characters long' });
+        }
+
+        const userResult = await db.query("SELECT id, password FROM users WHERE id = $1", [tenantId]);
+        if (userResult.rows.length === 0) {
+            return res.status(404).json({ message: 'Tenant record not found' });
+        }
         const user = userResult.rows[0];
 
-        // Bcrypt compare
-        const isMatch = await bcrypt.compare(currentPassword, user.password);
-        if (!isMatch) return res.status(401).json({ message: 'Incorrect current password' });
+        // Bcrypt / legacy compare
+        const isMatch = await comparePassword(currentPassword, user.password);
+        if (!isMatch) {
+            return res.status(401).json({ message: 'Current password does not match' });
+        }
         
-        // Hash the new password
-        const salt = await bcrypt.genSalt(10);
-        const hashedPassword = await bcrypt.hash(newPassword, salt);
+        // Hash the new password with bcrypt
+        const hashedPassword = await hashPassword(newPassword.trim());
         
         await db.query("UPDATE users SET password = $1 WHERE id = $2", [hashedPassword, tenantId]);
         res.status(200).json({ message: 'Password updated successfully' });
     } catch (error) {
-        res.status(500).json({ message: 'Server error updating password' });
+        console.error('Update Password Error:', error);
+        res.status(500).json({ message: error.message || 'Server error updating password' });
     }
 };
 
@@ -359,15 +414,14 @@ const getCurrentBill = async (req, res) => {
                 }
             }
 
-            const now = new Date();
-            const currentMonthName = now.toLocaleString('default', { month: 'long', year: 'numeric' });
             return res.status(200).json({
-                month: currentMonthName,
+                month: "No bill yet",
                 dueDate: null,
                 totalAmount: 0,
                 amountPaid: 0,
                 remainingBalance: 0,
-                status: "Clear",
+                status: "No bill yet",
+                hasBill: false,
                 createdAt,
                 creationDay,
                 breakdown: { 
@@ -403,6 +457,20 @@ const getCurrentBill = async (req, res) => {
     } catch (error) {
         console.error('Get Current Bill Error:', error);
         res.status(500).json({ message: 'Server error fetching current bill' });
+    }
+};
+
+// Get Admin-Uploaded GCash QR Code Screenshot for Online Payment
+const getTenantGcashQr = async (req, res) => {
+    try {
+        await db.query('CREATE TABLE IF NOT EXISTS "rentTrack_schema".settings (id VARCHAR(50) PRIMARY KEY, data JSONB NOT NULL DEFAULT \'{}\' , updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP);');
+        const settingsResult = await db.query('SELECT data FROM "rentTrack_schema".settings WHERE id = $1', ['global']);
+        const storedSettings = settingsResult.rows.length > 0 ? settingsResult.rows[0].data : {};
+        const gcashQrCode = storedSettings?.gcashQrCode || storedSettings?.billing?.gcashQrCode || '';
+        res.status(200).json({ gcashQrCode });
+    } catch (error) {
+        console.error('Get Tenant GCash QR Error:', error);
+        res.status(500).json({ message: 'Server error retrieving GCash QR code' });
     }
 };
 
@@ -515,18 +583,20 @@ const submitTenantPayment = async (req, res) => {
 // Get Available Rooms for Tenant View
 const getTenantRooms = async (req, res) => {
     try {
+        await ensureRoomGenderColumn();
         const tenantId = req.user.id;
         
         // Check if tenant is already assigned to a room
-        const userResult = await db.query("SELECT room_id FROM users WHERE id = $1", [tenantId]);
+        const userResult = await db.query("SELECT room_id, gender FROM users WHERE id = $1", [tenantId]);
         const roomId = userResult.rows[0]?.room_id;
+        const tenantGender = userResult.rows[0]?.gender || null;
 
         if (roomId) {
             // Fetch their assigned room details
             const roomQuery = `
                 SELECT 
                     r.id, r.room_number, r.capacity, r.price, r.status,
-                    r.type, r.floor, r.description, r.amenities,
+                    r.type, r.rental_type, r.gender, r.floor, r.description, r.amenities,
                     CAST(COUNT(u.id) AS INTEGER) as current_occupants,
                     CAST((r.capacity - COUNT(u.id)) AS INTEGER) as available_slots
                 FROM rooms r
@@ -538,7 +608,7 @@ const getTenantRooms = async (req, res) => {
             
             // Fetch roommates
             const roommatesQuery = `
-                SELECT id, name, phone, email, date_moved_in 
+                SELECT id, name, phone, email, gender, date_moved_in 
                 FROM users 
                 WHERE room_id = $1 AND role = 'tenant' AND status != 'Moved Out'
             `;
@@ -548,6 +618,16 @@ const getTenantRooms = async (req, res) => {
                 ...mate,
                 is_me: mate.id === tenantId
             }));
+
+            const assignedRoom = roomData.rows[0]
+                ? {
+                    ...roomData.rows[0],
+                    gender: normalizeRoomGender(
+                        roomData.rows[0].gender,
+                        roommates.map(m => m.gender)
+                    )
+                }
+                : null;
 
             // Fetch room maintenance history
             const maintenanceQuery = `
@@ -564,7 +644,7 @@ const getTenantRooms = async (req, res) => {
 
             return res.status(200).json({
                 isAssigned: true,
-                room: roomData.rows[0],
+                room: assignedRoom,
                 roommates: roommates,
                 maintenance_history: maintenanceData.rows
             });
@@ -573,18 +653,32 @@ const getTenantRooms = async (req, res) => {
         const query = `
             SELECT 
                 r.id, r.room_number, r.capacity, r.price, r.status,
-                r.type, r.floor, r.description, r.amenities,
+                r.type, r.rental_type, r.gender, r.floor, r.description, r.amenities,
                 CAST(COUNT(u.id) AS INTEGER) as current_occupants,
-                CAST((r.capacity - COUNT(u.id)) AS INTEGER) as available_slots
+                CAST(GREATEST(0, r.capacity - COUNT(u.id)) AS INTEGER) as available_slots,
+                COALESCE(
+                    json_agg(u.gender) FILTER (WHERE u.id IS NOT NULL AND u.gender IS NOT NULL),
+                    '[]'::json
+                ) as occupant_genders
             FROM rooms r
             LEFT JOIN users u ON r.id = u.room_id AND u.role = 'tenant' AND u.status != 'Moved Out'
             GROUP BY r.id
             ORDER BY r.room_number ASC
         `;
         const rooms = await db.query(query);
+        const mappedRooms = rooms.rows.map(room => {
+            const occupantGenders = Array.isArray(room.occupant_genders) ? room.occupant_genders : [];
+            const effectiveGender = normalizeRoomGender(room.gender, occupantGenders);
+            return {
+                ...room,
+                gender: effectiveGender
+            };
+        });
+
         res.status(200).json({
             isAssigned: false,
-            rooms: rooms.rows
+            tenantGender,
+            rooms: mappedRooms
         });
     } catch (error) {
         console.error("Get Tenant Rooms Error:", error); 
@@ -600,13 +694,21 @@ const chooseRoom = async (req, res) => {
     if (!room_id) return res.status(400).json({ message: 'Room ID is required' });
 
     try {
+        await ensureRoomGenderColumn();
+
         // 1. Check if room exists and has available slots
         const roomQuery = `
-            SELECT r.capacity, CAST(COUNT(u.id) AS INTEGER) as current_occupants
+            SELECT 
+                r.id, r.room_number, r.capacity, r.status, r.gender,
+                CAST(COUNT(u.id) AS INTEGER) as current_occupants,
+                COALESCE(
+                    json_agg(u.gender) FILTER (WHERE u.id IS NOT NULL AND u.gender IS NOT NULL),
+                    '[]'::json
+                ) as occupant_genders
             FROM rooms r
             LEFT JOIN users u ON r.id = u.room_id AND u.role = 'tenant' AND u.status != 'Moved Out'
             WHERE r.id = $1
-            GROUP BY r.capacity
+            GROUP BY r.id
         `;
         const roomResult = await db.query(roomQuery, [room_id]);
         
@@ -614,19 +716,47 @@ const chooseRoom = async (req, res) => {
             return res.status(404).json({ message: 'Room not found' });
         }
 
-        const { capacity, current_occupants } = roomResult.rows[0];
-        if (current_occupants >= capacity) {
+        const room = roomResult.rows[0];
+        if (room.status === 'Maintenance' || room.status === 'Unavailable') {
+            return res.status(400).json({ message: 'This room is currently unavailable for selection' });
+        }
+
+        if (room.current_occupants >= room.capacity) {
             return res.status(400).json({ message: 'This room is fully occupied' });
         }
+
+        const effectiveRoomGender = normalizeRoomGender(
+            room.gender,
+            Array.isArray(room.occupant_genders) ? room.occupant_genders : []
+        );
+
+        const tenantResult = await db.query("SELECT gender FROM users WHERE id = $1", [tenantId]);
+        const currentTenantGender = (tenantResult.rows[0]?.gender || '').trim().toLowerCase();
+
+        if (currentTenantGender === 'male' && effectiveRoomGender === 'Female Only') {
+            return res.status(400).json({ message: `Room ${room.room_number} is designated for Female Only.` });
+        }
+        if (currentTenantGender === 'female' && effectiveRoomGender === 'Male Only') {
+            return res.status(400).json({ message: `Room ${room.room_number} is designated for Male Only.` });
+        }
+
+        const inferredTenantGender = effectiveRoomGender === 'Female Only' ? 'Female' : 'Male';
 
         // 2. Update tenant profile to Active and assign room
         const updateQuery = `
             UPDATE users 
-            SET room_id = $1, status = 'Active', date_moved_in = CURRENT_DATE 
+            SET room_id = $1,
+                status = 'Active',
+                date_moved_in = CURRENT_DATE,
+                gender = CASE
+                    WHEN gender IS NULL OR TRIM(gender) = '' OR LOWER(TRIM(gender)) = 'not specified'
+                    THEN $3
+                    ELSE gender
+                END
             WHERE id = $2 AND role = 'tenant'
-            RETURNING id, name, room_id, status
+            RETURNING id, name, room_id, status, gender
         `;
-        const updatedUser = await db.query(updateQuery, [room_id, tenantId]);
+        const updatedUser = await db.query(updateQuery, [room_id, tenantId, inferredTenantGender]);
 
         res.status(200).json({ 
             message: 'Room selected successfully! You are now an Active tenant.',
@@ -712,7 +842,7 @@ const markAllNotificationsRead = async (req, res) => {
 
 module.exports = { 
     getTenantDashboard, getTenantProfile, updateTenantProfile, updateTenantPassword, 
-    getTenantPayments, getCurrentBill, submitTenantPayment,
+    getTenantPayments, getCurrentBill, getTenantGcashQr, submitTenantPayment,
     getTenantMessages, sendTenantMessage, getUnreadCount,
     getTenantRooms, chooseRoom, getAnnouncements,
     getTenantNotifications, markNotificationRead, markAllNotificationsRead

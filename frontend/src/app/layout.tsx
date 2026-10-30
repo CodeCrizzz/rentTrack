@@ -21,8 +21,8 @@ export const metadata: Metadata = {
   title: "RentTrack",
   description: "Boarding House Management System",
   icons: {
-    icon: "/images/renttrack_logo_tab.png",
-    apple: "/images/renttrack_app_logo.png",
+    icon: "/images/logo/rentTrack_icon.png",
+    apple: "/images/logo/rentTrack_icon.png",
   },
 };
 
@@ -49,7 +49,7 @@ export default function RootLayout({
         <ThemeProvider attribute="class" defaultTheme="light" enableSystem>
           <TooltipProvider>
             {children}
-            <Toaster position="bottom-right" richColors closeButton />
+            <Toaster position="bottom-right" closeButton />
           </TooltipProvider>
         </ThemeProvider>
       </body>

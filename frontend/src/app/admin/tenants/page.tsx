@@ -426,23 +426,36 @@ function TenantsContent() {
 
   const handleSubmitTenant = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!formData.name || !formData.phone) {
+      toast.warning("Incomplete Resident Profile", {
+        description: "Please fill in the resident's full name and contact number.",
+      });
+      return;
+    }
+
     setIsSubmitting(true);
     setError("");
 
     try {
       if (editingTenant) {
         await api.put(`/admin/tenants/${editingTenant.id}`, formData);
-        toast.success(`Resident ${formData.name} updated successfully`);
+        toast.success("Resident Profile Updated", {
+          description: `${formData.name}'s profile and lease details have been saved.`,
+        });
       } else {
         await api.post("/admin/tenants", formData);
-        toast.success(`Resident ${formData.name} registered successfully`);
+        toast.success("Resident Registered Successfully", {
+          description: `${formData.name} has been enrolled in the directory.`,
+        });
       }
       setIsModalOpen(false);
       fetchTenants(true);
     } catch (err: any) {
       const errMsg = err.response?.data?.message || "Failed to save tenant information.";
       setError(errMsg);
-      toast.error(errMsg);
+      toast.error(editingTenant ? "Failed to Update Resident" : "Failed to Register Resident", {
+        description: errMsg,
+      });
     } finally {
       setIsSubmitting(false);
     }
@@ -456,7 +469,10 @@ function TenantsContent() {
       const status = confirmStatus.action === "Approve" ? "Active" : "Declined";
       await api.put(`/admin/tenants/${confirmStatus.id}`, { status });
       toast.success(
-        `Application for ${confirmStatus.name} ${confirmStatus.action === "Approve" ? "approved" : "declined"}!`
+        confirmStatus.action === "Approve" ? "Application Approved" : "Application Declined",
+        {
+          description: `Resident application for ${confirmStatus.name} was ${confirmStatus.action === "Approve" ? "approved" : "declined"}.`,
+        }
       );
       fetchTenants(true);
       if (selectedTenant?.id === confirmStatus.id) {
@@ -464,7 +480,9 @@ function TenantsContent() {
       }
     } catch (err: any) {
       console.error(err);
-      toast.error("Failed to update resident status");
+      toast.error("Application Status Failed", {
+        description: "Failed to update resident application status.",
+      });
     } finally {
       setIsStatusUpdating(null);
       setConfirmStatus(null);
@@ -479,13 +497,17 @@ function TenantsContent() {
     setIsDeletingTenantId(tenant.id);
     try {
       await api.delete(`/admin/tenants/${tenant.id}`);
-      toast.success(`Resident ${tenant.name} deleted`);
+      toast.success("Resident Record Removed", {
+        description: `Resident ${tenant.name} has been deleted from the directory.`,
+      });
       fetchTenants(true);
       if (selectedTenant?.id === tenant.id) {
         setSelectedTenant(null);
       }
     } catch (err: any) {
-      toast.error(err.response?.data?.message || "Could not delete resident");
+      toast.error("Deletion Failed", {
+        description: err.response?.data?.message || "Could not delete resident record.",
+      });
     } finally {
       setIsDeletingTenantId(null);
     }
@@ -493,39 +515,13 @@ function TenantsContent() {
 
 
 
-  // Helper for Initials / Avatar
-  const getInitials = (name: string) => {
+  // Helper for Initials / Avatar: Default profile picture for all tenants is a single letter
+  const getInitials = (name?: string) => {
     if (!name) return "T";
-    const parts = name.trim().split(" ");
-    if (parts.length >= 2) {
-      return (parts[0][0] + parts[1][0]).toUpperCase();
-    }
-    return name.slice(0, 2).toUpperCase();
+    return name.trim().charAt(0).toUpperCase();
   };
 
-  // Realistic portrait avatars matching Mockup UI
-  const getTenantPhoto = (tenant: Tenant) => {
-    const name = (tenant.name || "").toLowerCase();
-    const email = (tenant.email || "").toLowerCase();
-
-    if (name.includes("juan") || email.includes("juan")) {
-      return "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=120&h=120&fit=crop&crop=faces";
-    }
-    if (name.includes("maria") || email.includes("maria") || name.includes("jane") || name.includes("beatrice")) {
-      return "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=120&h=120&fit=crop&crop=faces";
-    }
-    if (name.includes("carlo") || email.includes("carlo") || name.includes("david") || name.includes("john")) {
-      return "https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?w=120&h=120&fit=crop&crop=faces";
-    }
-    if (name.includes("lianne") || email.includes("lianne") || name.includes("camille") || name.includes("jessica")) {
-      return "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=120&h=120&fit=crop&crop=faces";
-    }
-    if (name.includes("mark") || email.includes("mark") || name.includes("joshua") || name.includes("christian")) {
-      return "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=120&h=120&fit=crop&crop=faces";
-    }
-    if (name.includes("daniel") || email.includes("daniel") || name.includes("gabriel")) {
-      return "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=120&h=120&fit=crop&crop=faces";
-    }
+  const getTenantPhoto = (_tenant: Tenant) => {
     return null;
   };
 
@@ -1318,50 +1314,6 @@ function TenantsContent() {
               })()}
             </div>
 
-            {/* Documents Section */}
-            <div className="space-y-2 pt-1 border-t border-slate-100 dark:border-zinc-800/80">
-              <h5 className="text-[11px] font-bold text-slate-900 dark:text-white uppercase tracking-wider">
-                Documents
-              </h5>
-              <div className="space-y-1.5 text-xs">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2 text-slate-700 dark:text-zinc-300 font-medium">
-                    <FileText className="w-3.5 h-3.5 text-slate-400" />
-                    <span>Valid ID</span>
-                  </div>
-                  <button
-                    onClick={() => setIsViewModalOpen(true)}
-                    className="text-blue-600 dark:text-blue-400 font-bold hover:underline cursor-pointer"
-                  >
-                    View
-                  </button>
-                </div>
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2 text-slate-700 dark:text-zinc-300 font-medium">
-                    <FileText className="w-3.5 h-3.5 text-slate-400" />
-                    <span>Application Form</span>
-                  </div>
-                  <button
-                    onClick={() => setIsViewModalOpen(true)}
-                    className="text-blue-600 dark:text-blue-400 font-bold hover:underline cursor-pointer"
-                  >
-                    View
-                  </button>
-                </div>
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2 text-slate-700 dark:text-zinc-300 font-medium">
-                    <FileText className="w-3.5 h-3.5 text-slate-400" />
-                    <span>Lease Agreement</span>
-                  </div>
-                  <button
-                    onClick={() => setIsViewModalOpen(true)}
-                    className="text-blue-600 dark:text-blue-400 font-bold hover:underline cursor-pointer"
-                  >
-                    View
-                  </button>
-                </div>
-              </div>
-            </div>
 
             {/* Quick Actions Section */}
             <div className="space-y-2 pt-1 border-t border-slate-100 dark:border-zinc-800/80">

@@ -4,11 +4,47 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import api from "@/lib/api";
-import { User, Mail, Phone, Lock, Eye, EyeOff, ArrowRight, Loader2 } from "lucide-react";
+import {
+  User,
+  Mail,
+  Phone,
+  Lock,
+  Eye,
+  EyeOff,
+  ArrowRight,
+  Loader2,
+  X,
+  Home,
+  CreditCard,
+  Wrench,
+  MessageSquare,
+} from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
 import { formatPhoneInput } from "@/lib/phone-utils";
-import AuthHeroCard from "@/components/auth-hero-card";
+
+const authFeatures = [
+  {
+    icon: Home,
+    title: "Room Management",
+    description: "Track occupancy and room status",
+  },
+  {
+    icon: CreditCard,
+    title: "Easy Payments",
+    description: "Simplify billing and payments",
+  },
+  {
+    icon: Wrench,
+    title: "Maintenance Tracking",
+    description: "Resolve issues faster",
+  },
+  {
+    icon: MessageSquare,
+    title: "Better Communication",
+    description: "Stay connected with your tenants",
+  },
+];
 
 export default function SignupPage() {
   const [name, setName] = useState("");
@@ -16,8 +52,9 @@ export default function SignupPage() {
   const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-  const [showPassword, setShowPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [showPasswords, setShowPasswords] = useState(false);
+  const [agreedToTerms, setAgreedToTerms] = useState(false);
+  const [legalModal, setLegalModal] = useState<"privacy" | "terms" | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
 
@@ -26,13 +63,24 @@ export default function SignupPage() {
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
 
+    if (!agreedToTerms) {
+      toast.warning("Terms Agreement Required", {
+        description: "Please accept the Terms of Service and Privacy Policy to continue.",
+      });
+      return;
+    }
+
     if (password !== confirmPassword) {
-      toast.error("Passwords do not match. Please try again.");
+      toast.warning("Passwords Do Not Match", {
+        description: "Please verify that both password entries are identical.",
+      });
       return;
     }
 
     if (password.length < 6) {
-      toast.error("Password must be at least 6 characters.");
+      toast.warning("Password Too Short", {
+        description: "Password must contain at least 6 characters.",
+      });
       return;
     }
 
@@ -47,11 +95,12 @@ export default function SignupPage() {
       });
       setShowSuccessModal(true);
     } catch (err: any) {
-      toast.error(
-        err.response?.data?.message ||
+      toast.error("Registration Failed", {
+        description:
+          err.response?.data?.message ||
           err.message ||
-          "Registration failed. Please try again."
-      );
+          "Could not create account. Please verify details and try again.",
+      });
     } finally {
       setIsLoading(false);
     }
@@ -70,38 +119,110 @@ export default function SignupPage() {
         initial={{ opacity: 0, y: 16, scale: 0.98 }}
         animate={{ opacity: 1, y: 0, scale: 1 }}
         transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
-        className="relative z-10 w-full max-w-5xl flex flex-col md:flex-row items-stretch justify-center rounded-[2rem] overflow-hidden shadow-2xl border border-white/10"
+        className="relative z-10 w-full max-w-md md:max-w-[820px] lg:max-w-[850px] flex flex-col md:flex-row items-stretch rounded-[2rem] overflow-hidden shadow-2xl"
       >
         {/* Left Card: Brand & Features Hero */}
-        <AuthHeroCard />
+        <div className="relative w-full md:w-[420px] lg:w-[440px] shrink-0 bg-[#061834] p-7 sm:p-9 text-white flex flex-col justify-between overflow-hidden">
+          {/* Decorative Wave Accent in bottom right corner */}
+          <svg
+            className="absolute bottom-0 right-0 w-[80%] h-auto pointer-events-none select-none z-0"
+            viewBox="0 0 340 180"
+            fill="none"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path
+              d="M0 180C55 140 115 165 175 125C235 85 285 105 340 45V180H0Z"
+              fill="url(#auth-wave-grad)"
+            />
+            <defs>
+              <linearGradient
+                id="auth-wave-grad"
+                x1="0"
+                y1="180"
+                x2="340"
+                y2="45"
+                gradientUnits="userSpaceOnUse"
+              >
+                <stop stopColor="#0052cc" stopOpacity="0.85" />
+                <stop offset="1" stopColor="#0099ff" stopOpacity="0.95" />
+              </linearGradient>
+            </defs>
+          </svg>
 
-        {/* Right Card: Sign Up Form */}
-        <div className="w-full md:w-[480px] lg:w-[500px] bg-white p-7 sm:p-9 md:p-10 flex flex-col justify-between text-slate-900">
-          <div>
-            {/* Top Logo Lockup */}
+          {/* Top Section */}
+          <div className="relative z-10 flex flex-col">
+            {/* Brand Header */}
             <div className="flex items-center gap-3 select-none">
               <img
                 src="/images/logo/rentTrack_icon.png"
                 alt="RentTrack"
-                className="w-10 h-10 object-contain shrink-0"
+                className="w-11 h-11 object-contain shrink-0"
               />
               <div className="flex flex-col">
-                <span className="text-xl font-extrabold text-slate-900 tracking-tight leading-tight">
-                  RentTrack
+                <span className="text-xl sm:text-2xl font-black tracking-tight leading-tight">
+                  <span className="text-white">Rent</span>
+                  <span className="text-teal-400">Track</span>
                 </span>
-                <span className="text-[11px] font-medium text-slate-500 leading-tight">
+                <span className="text-[11px] sm:text-xs font-medium text-blue-200/70 leading-tight">
                   Boarding House Management System
                 </span>
               </div>
             </div>
 
-            {/* Title & Subtitle */}
-            <div className="mt-6 mb-5">
+            {/* Hero Title & Pitch */}
+            <div className="mt-8 sm:mt-10 mb-2">
+              <h1 className="text-2xl sm:text-[28px] font-black tracking-tight leading-[1.25] text-white">
+                Smarter Management,
+                <br />
+                <span className="text-[#00a8ff]">Better Living.</span>
+              </h1>
+              <p className="text-xs sm:text-sm text-slate-300 font-normal leading-relaxed mt-3 max-w-sm">
+                Easily manage your boarding house, track payments, and keep your
+                residents happy — all in one place.
+              </p>
+            </div>
+
+            {/* Feature List */}
+            <div className="mt-7 sm:mt-8 space-y-4 sm:space-y-4.5">
+              {authFeatures.map((feat, idx) => (
+                <div key={idx} className="flex items-center gap-3.5 group">
+                  <div className="w-10 h-10 rounded-full bg-[#0d2a58] border border-blue-400/25 flex items-center justify-center text-[#38bdf8] shrink-0 group-hover:scale-105 transition-transform shadow-sm">
+                    <feat.icon className="w-5 h-5" strokeWidth={2} />
+                  </div>
+                  <div className="flex flex-col min-w-0">
+                    <span className="text-xs sm:text-sm font-bold text-white leading-tight">
+                      {feat.title}
+                    </span>
+                    <span className="text-[11px] sm:text-xs text-slate-300/80 font-normal leading-tight mt-0.5">
+                      {feat.description}
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Bottom Tagline */}
+          <div className="relative z-10 pt-8 sm:pt-10">
+            <p className="text-[11px] sm:text-xs font-semibold text-slate-400 tracking-wide">
+              Your Property. Our Priority.
+            </p>
+          </div>
+        </div>
+
+        {/* Right Card: Sign Up Form */}
+        <div
+          className="w-full md:w-[380px] lg:w-[410px] shrink-0 bg-white p-6 sm:p-8 md:p-9 flex flex-col justify-between text-slate-900 light-form-card [color-scheme:light]"
+          style={{ colorScheme: "light" }}
+        >
+          <div>
+            {/* Form Header */}
+            <div className="mb-5">
               <h2 className="text-2xl sm:text-[28px] font-black text-slate-900 tracking-tight leading-tight">
                 Create Your Account
               </h2>
-              <p className="text-xs sm:text-sm text-slate-500 font-normal mt-1.5">
-                Join RentTrack and get started with your property management.
+              <p className="text-xs sm:text-sm text-slate-500 font-medium mt-1">
+                Fill in your details below to request residency onboarding.
               </p>
             </div>
 
@@ -200,22 +321,22 @@ export default function SignupPage() {
                   />
                   <input
                     id="password"
-                    type={showPassword ? "text" : "password"}
+                    type={showPasswords ? "text" : "password"}
                     placeholder="Create a password"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     required
                     minLength={6}
                     disabled={isLoading}
-                    className="w-full bg-transparent text-sm text-slate-900 placeholder:text-slate-400 outline-none font-medium pr-8"
+                    className="w-full bg-transparent text-sm text-slate-900 placeholder:text-slate-400 outline-none font-medium pr-10"
                   />
                   <button
                     type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3.5 text-slate-400 hover:text-slate-600 transition-colors p-1"
-                    aria-label={showPassword ? "Hide password" : "Show password"}
+                    onClick={() => setShowPasswords(!showPasswords)}
+                    className="absolute right-3.5 z-20 text-slate-400 hover:text-slate-600 transition-colors p-1 cursor-pointer"
+                    aria-label={showPasswords ? "Hide password" : "Show password"}
                   >
-                    {showPassword ? (
+                    {showPasswords ? (
                       <EyeOff className="w-5 h-5" strokeWidth={1.8} />
                     ) : (
                       <Eye className="w-5 h-5" strokeWidth={1.8} />
@@ -239,35 +360,60 @@ export default function SignupPage() {
                   />
                   <input
                     id="confirmPassword"
-                    type={showConfirmPassword ? "text" : "password"}
+                    type={showPasswords ? "text" : "password"}
                     placeholder="Confirm your password"
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
                     required
                     minLength={6}
                     disabled={isLoading}
-                    className="w-full bg-transparent text-sm text-slate-900 placeholder:text-slate-400 outline-none font-medium pr-8"
+                    className="w-full bg-transparent text-sm text-slate-900 placeholder:text-slate-400 outline-none font-medium"
                   />
+                </div>
+              </div>
+
+              {/* Terms & Privacy Agreement Checkbox */}
+              <div className="flex items-start gap-2.5 pt-1 pb-1 select-none">
+                <input
+                  id="agree-terms"
+                  type="checkbox"
+                  checked={agreedToTerms}
+                  onChange={(e) => setAgreedToTerms(e.target.checked)}
+                  disabled={isLoading}
+                  className="mt-0.5 w-4 h-4 rounded border-slate-300 text-[#0066ee] focus:ring-[#0066ee] focus:ring-offset-0 cursor-pointer accent-[#0066ee]"
+                />
+                <label
+                  htmlFor="agree-terms"
+                  className="text-xs text-slate-600 font-medium leading-relaxed cursor-pointer"
+                >
+                  I agree to the{" "}
                   <button
                     type="button"
-                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                    className="absolute right-3.5 text-slate-400 hover:text-slate-600 transition-colors p-1"
-                    aria-label={showConfirmPassword ? "Hide password" : "Show password"}
+                    onClick={() => setLegalModal("terms")}
+                    className="text-[#0066ee] font-bold hover:underline cursor-pointer focus:outline-none"
                   >
-                    {showConfirmPassword ? (
-                      <EyeOff className="w-5 h-5" strokeWidth={1.8} />
-                    ) : (
-                      <Eye className="w-5 h-5" strokeWidth={1.8} />
-                    )}
+                    Terms and Conditions
+                  </button>{" "}
+                  and{" "}
+                  <button
+                    type="button"
+                    onClick={() => setLegalModal("privacy")}
+                    className="text-[#0066ee] font-bold hover:underline cursor-pointer focus:outline-none"
+                  >
+                    Privacy Policy
                   </button>
-                </div>
+                </label>
               </div>
 
               {/* Create Account Button */}
               <button
                 type="submit"
-                disabled={isLoading}
-                className="w-full h-12 mt-2 bg-[#0066ee] hover:bg-[#0055d4] text-white font-bold rounded-xl text-sm flex items-center justify-center gap-2 shadow-md shadow-blue-500/25 active:scale-[0.99] transition-all cursor-pointer disabled:opacity-60"
+                disabled={isLoading || !agreedToTerms}
+                className={`w-full h-12 mt-2 font-bold rounded-xl text-sm flex items-center justify-center gap-2 transition-all ${
+                  agreedToTerms && !isLoading
+                    ? "bg-[#0066ee] hover:bg-[#0055d4] text-white shadow-md shadow-blue-500/25 active:scale-[0.99] cursor-pointer"
+                    : "bg-slate-200 text-slate-400 border border-slate-300 cursor-not-allowed shadow-none"
+                }`}
               >
                 {isLoading ? (
                   <>
@@ -355,6 +501,156 @@ export default function SignupPage() {
               >
                 Proceed to Sign In
               </button>
+            </motion.div>
+          </motion.div>
+        )}
+
+        {/* --- PRIVACY POLICY / TERMS & CONDITIONS MODAL --- */}
+        {legalModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm"
+          >
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0, y: 15 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.95, opacity: 0, y: 10 }}
+              transition={{ type: "spring", damping: 28, stiffness: 350 }}
+              className="bg-white rounded-2xl p-6 sm:p-8 max-w-lg w-full shadow-2xl relative flex flex-col max-h-[85vh] border border-slate-100 text-slate-900"
+            >
+              {/* Header */}
+              <div className="flex items-start justify-between pb-4 border-b border-slate-100 shrink-0">
+                <div>
+                  <h3 className="text-xl font-bold text-slate-900 tracking-tight">
+                    {legalModal === "privacy"
+                      ? "Privacy Policy"
+                      : "Terms and Conditions"}
+                  </h3>
+                  <p className="text-xs text-slate-500 font-medium mt-0.5">
+                    {legalModal === "privacy"
+                      ? "How RentTrack protects and manages your personal information"
+                      : "Rules and terms governing use of the RentTrack platform"}
+                  </p>
+                </div>
+                <button
+                  onClick={() => setLegalModal(null)}
+                  className="text-slate-400 hover:text-slate-600 transition-colors p-1.5 rounded-lg hover:bg-slate-100"
+                  aria-label="Close"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              {/* Scrollable Content */}
+              <div className="overflow-y-auto py-5 pr-2 space-y-4 text-xs sm:text-sm text-slate-600 custom-scrollbar leading-relaxed">
+                {legalModal === "privacy" ? (
+                  <>
+                    <div>
+                      <h4 className="font-bold text-slate-900 mb-1">
+                        1. Information We Collect
+                      </h4>
+                      <p>
+                        We collect personal details you provide upon
+                        registration, account verification, and lease
+                        management, including your full name, email address,
+                        contact phone number, and residency records.
+                      </p>
+                    </div>
+                    <div>
+                      <h4 className="font-bold text-slate-900 mb-1">
+                        2. How We Use Your Data
+                      </h4>
+                      <p>
+                        Your information is utilized solely to process tenancy
+                        records, generate automated billing invoices, coordinate
+                        maintenance work orders, and facilitate
+                        resident-administrator communication.
+                      </p>
+                    </div>
+                    <div>
+                      <h4 className="font-bold text-slate-900 mb-1">
+                        3. Security & Storage
+                      </h4>
+                      <p>
+                        All user credentials and sensitive records are stored
+                        using industry-standard hashing and role-based access
+                        control. We do not sell or disclose your personal data
+                        to unauthorized third parties.
+                      </p>
+                    </div>
+                    <div>
+                      <h4 className="font-bold text-slate-900 mb-1">
+                        4. Contact & Inquiries
+                      </h4>
+                      <p>
+                        For any privacy-related requests or data deletion
+                        questions, please reach out to our administration team
+                        via the portal messaging system or at
+                        support@renttrack.com.
+                      </p>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div>
+                      <h4 className="font-bold text-slate-900 mb-1">
+                        1. Acceptance of Terms
+                      </h4>
+                      <p>
+                        By accessing or signing into the RentTrack platform, you
+                        agree to comply with all operational guidelines, leasing
+                        agreements, and community policies established for your
+                        boarding facility.
+                      </p>
+                    </div>
+                    <div>
+                      <h4 className="font-bold text-slate-900 mb-1">
+                        2. User Account Responsibilities
+                      </h4>
+                      <p>
+                        You are responsible for maintaining the confidentiality
+                        of your login credentials and for all actions that occur
+                        under your registered resident or administrator profile.
+                      </p>
+                    </div>
+                    <div>
+                      <h4 className="font-bold text-slate-900 mb-1">
+                        3. Rental Payments & Billing
+                      </h4>
+                      <p>
+                        Monthly rental dues and utility obligations must be
+                        settled on or before the stated due dates. Payment
+                        verification receipts submitted through the portal are
+                        subject to administrative audit.
+                      </p>
+                    </div>
+                    <div>
+                      <h4 className="font-bold text-slate-900 mb-1">
+                        4. Maintenance Reporting
+                      </h4>
+                      <p>
+                        Residents are required to report room repairs and
+                        facility issues promptly through the Maintenance
+                        Requests system to prevent property damage and ensure
+                        timely resolution.
+                      </p>
+                    </div>
+                  </>
+                )}
+              </div>
+
+              {/* Footer with centered button */}
+              <div className="pt-4 border-t border-slate-100 flex items-center justify-center shrink-0">
+                <button
+                  type="button"
+                  onClick={() => setLegalModal(null)}
+                  className="w-full sm:w-auto min-w-[160px] px-8 py-2.5 bg-[#0066ee] hover:bg-[#0055d4] text-white font-bold rounded-xl text-xs sm:text-sm transition-all cursor-pointer shadow-sm active:scale-[0.98]"
+                >
+                  I Understand
+                </button>
+              </div>
             </motion.div>
           </motion.div>
         )}

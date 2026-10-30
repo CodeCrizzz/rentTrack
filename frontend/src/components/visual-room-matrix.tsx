@@ -278,19 +278,12 @@ export default function VisualRoomMatrix({
     });
 
     const bedRows: { slotIdx: number; isFilled: boolean }[][] = [];
-    for (let i = 0; i < bedSlots.length; i += 4) {
-      bedRows.push(bedSlots.slice(i, i + 4));
+    for (let i = 0; i < bedSlots.length; i += 5) {
+      bedRows.push(bedSlots.slice(i, i + 5));
     }
 
-    // Dynamic min-height based on number of bed rows to allow card to expand
-    const cardMinHeight =
-      bedRows.length <= 1
-        ? "min-h-[160px]"
-        : bedRows.length === 2
-          ? "min-h-[188px]"
-          : bedRows.length === 3
-            ? "min-h-[216px]"
-            : "min-h-[244px]";
+    const hasBedScroll = bedRows.length >= 3;
+    const cardMinHeight = "min-h-[190px]";
 
     // Subtitle type string (e.g., "Single • Standard")
     const subType = `${room.type || "Single"} • ${room.rental_type || "Standard"}`;
@@ -323,8 +316,14 @@ export default function VisualRoomMatrix({
             {subType}
           </p>
 
-          {/* Visual Bed Slot Icons (Max 4 beds per row; additional beds create new rows) */}
-          <div className="flex flex-col gap-1.5 my-2">
+          {/* Visual Bed Slot Icons (5 columns only, minimum 2 rows display, scrollable if >= 3 rows) */}
+          <div
+            className={`flex flex-col gap-1.5 my-2 min-h-[46px] max-h-[46px] ${
+              hasBedScroll
+                ? "overflow-y-auto pr-1 [scrollbar-width:thin] [&::-webkit-scrollbar]:w-1 [&::-webkit-scrollbar-thumb]:bg-slate-300 dark:[&::-webkit-scrollbar-thumb]:bg-zinc-700 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-track]:bg-transparent"
+                : "overflow-hidden"
+            }`}
+          >
             {bedRows.map((row, rowIdx) => (
               <div key={rowIdx} className="flex items-center gap-1.5">
                 {row.map(({ slotIdx, isFilled }) => (
@@ -501,27 +500,27 @@ export default function VisualRoomMatrix({
                   });
 
                   return (
-                    <div className="flex flex-wrap items-center gap-1 text-[10px] font-bold">
+                    <div className="flex flex-wrap items-center gap-2.5 sm:gap-3 text-[10px] font-bold">
                       {fFull > 0 && (
-                        <span className="px-1.5 py-0.2 rounded bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 border border-emerald-200/60 flex items-center gap-1">
+                        <span className="text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
                           <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
                           Full: {fFull}
                         </span>
                       )}
                       {fWithBeds > 0 && (
-                        <span className="px-1.5 py-0.2 rounded bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400 border border-amber-200/60 flex items-center gap-1">
+                        <span className="text-amber-600 dark:text-amber-400 flex items-center gap-1">
                           <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
                           Occupied w/ Beds: {fWithBeds}
                         </span>
                       )}
                       {fVacant > 0 && (
-                        <span className="px-1.5 py-0.2 rounded bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 border border-blue-200/60 flex items-center gap-1">
+                        <span className="text-blue-600 dark:text-blue-400 flex items-center gap-1">
                           <span className="w-1.5 h-1.5 rounded-full bg-blue-500" />
                           Vacant: {fVacant}
                         </span>
                       )}
                       {fMaint > 0 && (
-                        <span className="px-1.5 py-0.2 rounded bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400 border border-rose-200/60 flex items-center gap-1">
+                        <span className="text-rose-600 dark:text-rose-400 flex items-center gap-1">
                           <span className="w-1.5 h-1.5 rounded-full bg-rose-500" />
                           Maint: {fMaint}
                         </span>
@@ -686,7 +685,11 @@ export default function VisualRoomMatrix({
 
               <div className="p-4 border-t border-slate-200 dark:border-zinc-800 bg-slate-50/50 dark:bg-zinc-900/40 flex items-center justify-between">
                 <Link
-                  href="/admin/rooms"
+                  href={
+                    activeRoomModal?.room_number
+                      ? `/admin/rooms?room=${encodeURIComponent(activeRoomModal.room_number)}`
+                      : "/admin/rooms"
+                  }
                   className="text-xs text-blue-600 dark:text-blue-400 font-semibold hover:underline flex items-center gap-1"
                 >
                   <span>Edit in Room Manager</span>

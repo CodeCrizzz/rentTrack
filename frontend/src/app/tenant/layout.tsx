@@ -12,9 +12,10 @@ import {
 } from "@/components/ui/sidebar";
 import { AppSidebar } from '@/components/app-sidebar';
 import { FullscreenToggle } from '@/components/fullscreen-toggle';
+import TenantSettingsModal from '@/components/tenant-settings-modal';
 import { 
   LayoutDashboard, Building2, CreditCard, Wrench, User, MessageSquare, 
-  Bell, RefreshCw, AlertTriangle, Clock, CheckCheck, ChevronRight 
+  Bell, Settings, RefreshCw, AlertTriangle, Clock, CheckCheck, ChevronRight 
 } from 'lucide-react';
 import {
   DropdownMenu,
@@ -35,6 +36,7 @@ export default function TenantLayout({ children }: { children: React.ReactNode }
     const [showAllNotifications, setShowAllNotifications] = useState(false);
     const [isAllRead, setIsAllRead] = useState(true);
     const [refreshKey, setRefreshKey] = useState(0);
+    const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
     const fetchNotificationsAndUnread = async () => {
         try {
@@ -129,6 +131,7 @@ export default function TenantLayout({ children }: { children: React.ReactNode }
         { name: 'Rooms', path: '/tenant/rooms', icon: Building2 },
         { name: 'My Payments', path: '/tenant/payments', icon: CreditCard },
         { name: 'Chat', path: '/tenant/chat', icon: MessageSquare },
+        { name: 'Settings', path: '/tenant/settings', icon: Settings },
     ];
 
     const mappedNavItems = rawNavItems.map(item => {
@@ -200,6 +203,14 @@ export default function TenantLayout({ children }: { children: React.ReactNode }
                                 <RefreshCw className="w-5 h-5 group-hover:rotate-180 group-active:scale-90 transition-all duration-500" strokeWidth={2} />
                             </button>
                             <FullscreenToggle />
+                            <button 
+                                onClick={() => setIsSettingsOpen(true)}
+                                className="group p-2 text-slate-500 hover:text-slate-900 dark:text-zinc-400 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/5 rounded-full transition-colors outline-none cursor-pointer"
+                                title="Resident Settings"
+                                aria-label="Resident Settings"
+                            >
+                                <Settings className="w-5 h-5 group-hover:rotate-45 group-active:scale-90 transition-all duration-300" strokeWidth={2} />
+                            </button>
                             <DropdownMenu>
                                 <DropdownMenuTrigger className="group relative p-2 text-slate-500 hover:text-slate-900 dark:text-zinc-400 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/5 rounded-full transition-colors outline-none">
                                     <Bell className="w-5 h-5 group-hover:rotate-12 group-active:-rotate-12 group-active:scale-90 transition-all duration-200 origin-top" strokeWidth={2} />
@@ -214,7 +225,7 @@ export default function TenantLayout({ children }: { children: React.ReactNode }
                                         <div className="flex items-center gap-2">
                                             <span className="font-bold text-sm text-slate-800 dark:text-white">Notifications</span>
                                             {unreadCount > 0 && (
-                                                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-200 dark:border-rose-900/30">
+                                                <span className="text-[10px] font-bold text-rose-600 dark:text-rose-400">
                                                     {unreadCount} new
                                                 </span>
                                             )}
@@ -240,7 +251,7 @@ export default function TenantLayout({ children }: { children: React.ReactNode }
                                                 <div className="flex-1 min-w-0">
                                                     <div className="flex items-center justify-between gap-1">
                                                         <p className="text-xs font-bold text-slate-800 dark:text-white truncate">New Admin Messages</p>
-                                                        <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-zinc-200 dark:bg-zinc-800 text-zinc-900 dark:text-zinc-200">Chat</span>
+                                                        <span className="text-[10px] font-bold text-blue-600 dark:text-blue-400">Chat</span>
                                                     </div>
                                                     <p className="text-xs text-slate-500 dark:text-zinc-400 mt-0.5">You have {chatUnread} unread message{chatUnread > 1 ? 's' : ''}.</p>
                                                 </div>
@@ -325,16 +336,22 @@ export default function TenantLayout({ children }: { children: React.ReactNode }
                     </header>
 
                     {/* Main Content Area */}
-                    <div className="flex-1 flex flex-col overflow-y-auto overflow-x-hidden custom-scrollbar bg-background">
-                        <div className="px-3 pt-3 pb-2 md:px-4 md:pt-4 md:pb-3 lg:px-5 lg:pt-5 lg:pb-3 relative z-10 flex-1 flex flex-col">
+                    <div className={`flex-1 flex flex-col ${pathname === '/tenant/dashboard' ? 'overflow-hidden h-full' : 'overflow-y-auto overflow-x-hidden custom-scrollbar'} bg-background`}>
+                        <div className={`px-3 pt-2 pb-2 md:px-4 md:pt-2.5 md:pb-2.5 lg:px-5 lg:pt-2.5 lg:pb-2.5 relative z-10 flex-1 flex flex-col ${pathname === '/tenant/dashboard' ? 'overflow-hidden h-full max-h-full' : ''}`}>
                             <AnimatePresence mode="wait">
-                                <div key={`${pathname}-${refreshKey}`} className="w-full flex-1 flex flex-col">
+                                <div key={`${pathname}-${refreshKey}`} className={`w-full flex-1 flex flex-col ${pathname === '/tenant/dashboard' ? 'overflow-hidden h-full max-h-full' : ''}`}>
                                     {children}
                                 </div>
                             </AnimatePresence>
                         </div>
                     </div>
                 </SidebarInset>
+
+                {/* Resident Settings Modal */}
+                <TenantSettingsModal 
+                    isOpen={isSettingsOpen} 
+                    onClose={() => setIsSettingsOpen(false)} 
+                />
             </div>
         </SidebarProvider>
     );

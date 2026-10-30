@@ -1,34 +1,26 @@
 "use client";
 
-import React, { useState, useEffect, useMemo, useRef } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { createPortal } from "react-dom";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import {
   X,
   FileSpreadsheet,
   Printer,
   Download,
-  Calendar,
   RefreshCw,
   Search,
   Building2,
   DollarSign,
-  Users,
   AlertTriangle,
   Wrench,
   CheckCircle2,
-  Clock,
   ArrowUpRight,
   ShieldAlert,
   Wallet,
-  Receipt,
   Layers,
-  ChevronDown,
-  Filter,
   FileText,
-  BadgePercent,
-  TrendingUp,
-  FileCheck
+  FileCheck,
 } from "lucide-react";
 import api from "@/lib/api";
 import { toast } from "sonner";
@@ -40,7 +32,7 @@ interface AdminReportModalProps {
   onClose: () => void;
 }
 
-type ReportTab = "overview" | "financials" | "occupancy" | "delinquent" | "maintenance";
+export type ReportTab = "all" | "overview" | "financials" | "occupancy" | "delinquent" | "maintenance";
 
 interface ReportMeta {
   propertyName: string;
@@ -145,9 +137,18 @@ interface ReportData {
   maintenance: MaintenanceData;
 }
 
+const TABS: Array<{ id: ReportTab; label: string; icon: any }> = [
+  { id: "all", label: "All Reports (Master)", icon: Layers },
+  { id: "overview", label: "Executive Summary", icon: FileText },
+  { id: "financials", label: "Financials & Cash Flow", icon: DollarSign },
+  { id: "occupancy", label: "Rent Roll & Rooms", icon: Building2 },
+  { id: "delinquent", label: "Delinquent Accounts", icon: AlertTriangle },
+  { id: "maintenance", label: "Maintenance Audit", icon: Wrench },
+];
+
 export default function AdminReportModal({ isOpen, onClose }: AdminReportModalProps) {
   const [mounted, setMounted] = useState(false);
-  const [activeTab, setActiveTab] = useState<ReportTab>("overview");
+  const [activeTab, setActiveTab] = useState<ReportTab>("all");
   const [dateRange, setDateRange] = useState("this_month");
   const [isLoading, setIsLoading] = useState(false);
   const [reportData, setReportData] = useState<ReportData | null>(null);
@@ -157,7 +158,7 @@ export default function AdminReportModal({ isOpen, onClose }: AdminReportModalPr
     propertyAddress: "123 Katipunan Ave, Loyola Heights, Quezon City",
     contactPhone: "+63 917 123 4567",
     landlordName: "Property Management Office",
-    taxId: "TIN: 432-891-002-000"
+    taxId: "TIN: 432-891-002-000",
   });
 
   // Load custom settings from localStorage if configured by admin
@@ -166,13 +167,13 @@ export default function AdminReportModal({ isOpen, onClose }: AdminReportModalPr
       const stored = localStorage.getItem("renttrack_admin_settings");
       if (stored) {
         const parsed = JSON.parse(stored);
-        setPropertyProfile(prev => ({
+        setPropertyProfile((prev) => ({
           ...prev,
           propertyName: parsed.propertyName || prev.propertyName,
           propertyAddress: parsed.propertyAddress || prev.propertyAddress,
           contactPhone: parsed.contactPhone || prev.contactPhone,
           landlordName: parsed.landlordName || prev.landlordName,
-          taxId: parsed.taxId || prev.taxId
+          taxId: parsed.taxId || prev.taxId,
         }));
       }
     } catch (e) {
@@ -214,8 +215,26 @@ export default function AdminReportModal({ isOpen, onClose }: AdminReportModalPr
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [isOpen, onClose]);
 
+  // Before & After Print listener to ensure searchFilter does not hide rows during printing
+  useEffect(() => {
+    let savedSearch = "";
+    const handleBeforePrint = () => {
+      savedSearch = searchFilter;
+      if (searchFilter) setSearchFilter("");
+    };
+    const handleAfterPrint = () => {
+      if (savedSearch) setSearchFilter(savedSearch);
+    };
+    window.addEventListener("beforeprint", handleBeforePrint);
+    window.addEventListener("afterprint", handleAfterPrint);
+    return () => {
+      window.removeEventListener("beforeprint", handleBeforePrint);
+      window.removeEventListener("afterprint", handleAfterPrint);
+    };
+  }, [searchFilter]);
+
   // CSV Export utility
-  const handleExportCSV = (mode: "all" | "active" = "active") => {
+  const handleExportCSV = (mode: "all" | "active" = "all") => {
     if (!reportData) {
       toast.error("No report data available to export.");
       return;
@@ -224,7 +243,6 @@ export default function AdminReportModal({ isOpen, onClose }: AdminReportModalPr
     const rows: string[][] = [];
     const dateStamp = new Date().toISOString().split("T")[0];
 
-    // Helper to escape CSV values
     const clean = (val: any) => {
       if (val === null || val === undefined) return '""';
       const str = String(val).replace(/"/g, '""');
@@ -233,14 +251,14 @@ export default function AdminReportModal({ isOpen, onClose }: AdminReportModalPr
 
     // Header Meta
     rows.push(["PROPERTY AUDIT REPORT"]);
-    rows.push(["Property Name", propertyProfile.propertyName]);
+    rows.push(["Property Name", reportData.meta.propertyName || propertyProfile.propertyName]);
     rows.push(["Property Address", propertyProfile.propertyAddress]);
     rows.push(["Date Range", reportData.meta.dateRange]);
     rows.push(["Generated At", new Date().toLocaleString()]);
     rows.push(["Generated By", reportData.meta.generatedBy]);
     rows.push([]);
 
-    const shouldExportAll = mode === "all";
+    const shouldExportAll = mode === "all" || activeTab === "all";
 
     // Financials
     if (shouldExportAll || activeTab === "overview" || activeTab === "financials") {
@@ -258,14 +276,14 @@ export default function AdminReportModal({ isOpen, onClose }: AdminReportModalPr
 
       rows.push(["--- PAYMENT METHODS BREAKDOWN ---"]);
       rows.push(["Payment Method", "Transaction Count", "Total Amount (PHP)"]);
-      reportData.financials.methodBreakdown.forEach(m => {
+      reportData.financials.methodBreakdown.forEach((m) => {
         rows.push([m.method, String(m.count), String(m.total)]);
       });
       rows.push([]);
 
       rows.push(["--- PAYMENT AUDIT LEDGER ---"]);
       rows.push(["Reference #", "Date", "Tenant Name", "Room", "Billing Month", "Method", "Amount Paid (PHP)", "Status"]);
-      reportData.financials.ledger.forEach(p => {
+      reportData.financials.ledger.forEach((p) => {
         rows.push([
           p.reference_number || `TXN-${p.id}`,
           p.payment_date ? new Date(p.payment_date).toLocaleDateString() : "-",
@@ -274,7 +292,7 @@ export default function AdminReportModal({ isOpen, onClose }: AdminReportModalPr
           p.billing_month || "-",
           p.payment_method || "-",
           String(p.amount_paid),
-          p.status
+          p.status,
         ]);
       });
       rows.push([]);
@@ -295,7 +313,7 @@ export default function AdminReportModal({ isOpen, onClose }: AdminReportModalPr
 
       rows.push(["--- ROOM INVENTORY DETAILS ---"]);
       rows.push(["Room #", "Type", "Rental Type", "Floor", "Capacity", "Occupants Count", "Monthly Price", "Status", "Current Occupants"]);
-      reportData.occupancy.rooms.forEach(r => {
+      reportData.occupancy.rooms.forEach((r) => {
         rows.push([
           r.room_number,
           r.type,
@@ -305,7 +323,7 @@ export default function AdminReportModal({ isOpen, onClose }: AdminReportModalPr
           String(r.current_occupants),
           String(r.price),
           r.status,
-          r.occupants_list || "Vacant"
+          r.occupants_list || "Vacant",
         ]);
       });
       rows.push([]);
@@ -320,7 +338,7 @@ export default function AdminReportModal({ isOpen, onClose }: AdminReportModalPr
 
       rows.push(["--- OVERDUE TENANT LIST ---"]);
       rows.push(["Tenant Name", "Room #", "Phone Number", "Billing Month", "Due Date", "Days Overdue", "Total Billed", "Paid", "Balance Due"]);
-      reportData.overdue.accounts.forEach(a => {
+      reportData.overdue.accounts.forEach((a) => {
         rows.push([
           a.tenant_name,
           a.room_number || "-",
@@ -330,7 +348,7 @@ export default function AdminReportModal({ isOpen, onClose }: AdminReportModalPr
           String(a.days_overdue),
           String(a.total_amount),
           String(a.amount_paid),
-          String(a.balance)
+          String(a.balance),
         ]);
       });
       rows.push([]);
@@ -347,7 +365,7 @@ export default function AdminReportModal({ isOpen, onClose }: AdminReportModalPr
 
       rows.push(["--- RECENT WORK ORDERS ---"]);
       rows.push(["Ticket #", "Date Filed", "Tenant", "Room", "Category", "Priority", "Title", "Assigned To", "Status"]);
-      reportData.maintenance.tickets.forEach(t => {
+      reportData.maintenance.tickets.forEach((t) => {
         rows.push([
           t.request_number || `REQ-${t.id}`,
           t.created_at ? new Date(t.created_at).toLocaleDateString() : "-",
@@ -357,19 +375,16 @@ export default function AdminReportModal({ isOpen, onClose }: AdminReportModalPr
           t.priority,
           t.title,
           t.assigned_to || "Unassigned",
-          t.status
+          t.status,
         ]);
       });
     }
 
-    const csvContent = rows
-      .map(r => r.map(clean).join(","))
-      .join("\r\n");
-
+    const csvContent = rows.map((r) => r.map(clean).join(",")).join("\r\n");
     const blob = new Blob(["\uFEFF" + csvContent], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
-    const filename = `RentTrack_Report_${dateRange}_${dateStamp}.csv`;
+    const filename = `RentTrack_Master_Report_${dateRange}_${dateStamp}.csv`;
     link.setAttribute("href", url);
     link.setAttribute("download", filename);
     document.body.appendChild(link);
@@ -377,11 +392,22 @@ export default function AdminReportModal({ isOpen, onClose }: AdminReportModalPr
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
 
-    toast.success(`Exported ${filename} successfully!`);
+    toast.success("Report Exported", {
+      description: `${filename} downloaded successfully.`,
+    });
   };
 
   const handlePrint = () => {
-    window.print();
+    const currentSearch = searchFilter;
+    if (currentSearch) {
+      setSearchFilter("");
+      setTimeout(() => {
+        window.print();
+        setTimeout(() => setSearchFilter(currentSearch), 600);
+      }, 80);
+    } else {
+      window.print();
+    }
   };
 
   // Filtered lists for quick search in active tab
@@ -390,7 +416,7 @@ export default function AdminReportModal({ isOpen, onClose }: AdminReportModalPr
     if (!searchFilter.trim()) return reportData.financials.ledger;
     const q = searchFilter.toLowerCase();
     return reportData.financials.ledger.filter(
-      p =>
+      (p) =>
         p.tenant_name?.toLowerCase().includes(q) ||
         p.room_number?.toLowerCase().includes(q) ||
         p.reference_number?.toLowerCase().includes(q) ||
@@ -403,7 +429,7 @@ export default function AdminReportModal({ isOpen, onClose }: AdminReportModalPr
     if (!searchFilter.trim()) return reportData.occupancy.rooms;
     const q = searchFilter.toLowerCase();
     return reportData.occupancy.rooms.filter(
-      r =>
+      (r) =>
         r.room_number?.toLowerCase().includes(q) ||
         r.type?.toLowerCase().includes(q) ||
         r.occupants_list?.toLowerCase().includes(q) ||
@@ -416,7 +442,7 @@ export default function AdminReportModal({ isOpen, onClose }: AdminReportModalPr
     if (!searchFilter.trim()) return reportData.overdue.accounts;
     const q = searchFilter.toLowerCase();
     return reportData.overdue.accounts.filter(
-      a =>
+      (a) =>
         a.tenant_name?.toLowerCase().includes(q) ||
         a.room_number?.toLowerCase().includes(q) ||
         a.phone?.toLowerCase().includes(q)
@@ -428,7 +454,7 @@ export default function AdminReportModal({ isOpen, onClose }: AdminReportModalPr
     if (!searchFilter.trim()) return reportData.maintenance.tickets;
     const q = searchFilter.toLowerCase();
     return reportData.maintenance.tickets.filter(
-      t =>
+      (t) =>
         t.title?.toLowerCase().includes(q) ||
         t.tenant_name?.toLowerCase().includes(q) ||
         t.room_number?.toLowerCase().includes(q) ||
@@ -447,21 +473,79 @@ export default function AdminReportModal({ isOpen, onClose }: AdminReportModalPr
           body * {
             visibility: hidden !important;
           }
-          #printable-report-area, #printable-report-area * {
+          #printable-report-area,
+          #printable-report-area * {
             visibility: visible !important;
           }
+          .report-modal-overlay {
+            position: static !important;
+            width: 100% !important;
+            height: auto !important;
+            min-height: 0 !important;
+            max-height: none !important;
+            overflow: visible !important;
+            background: transparent !important;
+            backdrop-filter: none !important;
+            padding: 0 !important;
+            margin: 0 !important;
+            display: block !important;
+            z-index: auto !important;
+          }
+          .report-modal-container {
+            position: static !important;
+            width: 100% !important;
+            max-width: 100% !important;
+            height: auto !important;
+            min-height: 0 !important;
+            max-height: none !important;
+            overflow: visible !important;
+            background: #ffffff !important;
+            border: none !important;
+            box-shadow: none !important;
+            padding: 0 !important;
+            margin: 0 !important;
+            display: block !important;
+            transform: none !important;
+          }
           #printable-report-area {
-            position: absolute !important;
+            position: relative !important;
             left: 0 !important;
             top: 0 !important;
             width: 100% !important;
-            margin: 0 !important;
-            padding: 24px !important;
+            min-height: 0 !important;
+            height: auto !important;
+            max-height: none !important;
+            overflow: visible !important;
             background: #ffffff !important;
             color: #0f172a !important;
-            z-index: 999999 !important;
-            box-shadow: none !important;
             border: none !important;
+            box-shadow: none !important;
+            padding: 0 !important;
+            margin: 0 !important;
+            display: block !important;
+          }
+          .report-print-section {
+            display: block !important;
+            visibility: visible !important;
+          }
+          .report-print-section * {
+            visibility: visible !important;
+          }
+          .report-page-break {
+            page-break-before: always !important;
+            break-before: page !important;
+            padding-top: 16px !important;
+          }
+          .report-avoid-break {
+            page-break-inside: avoid !important;
+            break-inside: avoid !important;
+          }
+          thead {
+            display: table-header-group !important;
+          }
+          tr {
+            page-break-inside: avoid !important;
+            break-inside: avoid !important;
           }
           .no-print {
             display: none !important;
@@ -469,13 +553,13 @@ export default function AdminReportModal({ isOpen, onClose }: AdminReportModalPr
         }
       `}</style>
 
-      <div className="fixed inset-0 z-[100] flex items-center justify-center p-2 sm:p-4 bg-black/60 backdrop-blur-md font-sans text-slate-900 dark:text-zinc-100">
+      <div className="fixed inset-0 z-[100] flex items-center justify-center p-2 sm:p-4 bg-black/60 backdrop-blur-md font-sans text-slate-900 dark:text-zinc-100 report-modal-overlay">
         {/* Backdrop click */}
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="fixed inset-0"
+          className="fixed inset-0 no-print"
           onClick={onClose}
         />
 
@@ -485,7 +569,7 @@ export default function AdminReportModal({ isOpen, onClose }: AdminReportModalPr
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.96, y: 10 }}
           transition={{ duration: 0.2, ease: "easeOut" }}
-          className="relative w-full max-w-6xl h-[94vh] max-h-[920px] rounded-2xl bg-white dark:bg-zinc-950 border border-slate-200 dark:border-zinc-800 shadow-2xl flex flex-col overflow-hidden z-10"
+          className="relative w-full max-w-6xl h-[94vh] max-h-[920px] rounded-2xl bg-white dark:bg-zinc-950 border border-slate-200 dark:border-zinc-800 shadow-2xl flex flex-col overflow-hidden z-10 report-modal-container"
         >
           {/* Header Bar */}
           <div className="shrink-0 flex flex-wrap items-center justify-between gap-3 px-5 py-4 border-b border-slate-200 dark:border-zinc-800 bg-slate-50/70 dark:bg-zinc-900/60 no-print">
@@ -496,9 +580,9 @@ export default function AdminReportModal({ isOpen, onClose }: AdminReportModalPr
               <div>
                 <div className="flex items-center gap-2">
                   <h2 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white leading-tight">
-                    Generate Operational & Financial Report
+                    Operational & Financial Master Report
                   </h2>
-                  <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-teal-100 dark:bg-teal-950/80 text-teal-700 dark:text-teal-300 border border-teal-200 dark:border-teal-800/60">
+                  <span className="text-[10px] font-mono font-bold text-teal-600 dark:text-teal-400">
                     Official Hub
                   </span>
                 </div>
@@ -512,7 +596,7 @@ export default function AdminReportModal({ isOpen, onClose }: AdminReportModalPr
             <div className="flex items-center gap-2">
               <button
                 type="button"
-                onClick={() => handleExportCSV("active")}
+                onClick={() => handleExportCSV(activeTab === "all" ? "all" : "active")}
                 className="px-3 py-1.5 text-xs font-semibold rounded-lg bg-white dark:bg-zinc-900 hover:bg-slate-50 dark:hover:bg-zinc-800 text-slate-700 dark:text-zinc-200 border border-slate-200 dark:border-zinc-700 shadow-xs transition-colors flex items-center gap-1.5 cursor-pointer"
                 title="Export active view as CSV"
               >
@@ -534,9 +618,10 @@ export default function AdminReportModal({ isOpen, onClose }: AdminReportModalPr
                 type="button"
                 onClick={handlePrint}
                 className="px-3.5 py-1.5 text-xs font-semibold rounded-lg bg-teal-700 hover:bg-teal-800 text-white shadow-xs transition-colors flex items-center gap-1.5 cursor-pointer"
+                title="Print all report sections as an official master PDF or physical document"
               >
                 <Printer className="w-3.5 h-3.5" />
-                <span>Print / Save PDF</span>
+                <span>Print All Reports</span>
               </button>
 
               <button
@@ -554,20 +639,14 @@ export default function AdminReportModal({ isOpen, onClose }: AdminReportModalPr
           <div className="shrink-0 px-5 py-3 border-b border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 flex flex-col md:flex-row md:items-center justify-between gap-3 no-print">
             {/* Tabs */}
             <div className="flex items-center gap-1 overflow-x-auto pb-1 md:pb-0 scrollbar-none">
-              {[
-                { id: "overview", label: "Executive Summary", icon: FileText },
-                { id: "financials", label: "Financials & Cash Flow", icon: DollarSign },
-                { id: "occupancy", label: "Rent Roll & Rooms", icon: Building2 },
-                { id: "delinquent", label: "Delinquent Accounts", icon: AlertTriangle },
-                { id: "maintenance", label: "Maintenance Audit", icon: Wrench }
-              ].map(tab => {
+              {TABS.map((tab) => {
                 const Icon = tab.icon;
                 const isActive = activeTab === tab.id;
                 return (
                   <button
                     key={tab.id}
                     type="button"
-                    onClick={() => setActiveTab(tab.id as ReportTab)}
+                    onClick={() => setActiveTab(tab.id)}
                     className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-2 whitespace-nowrap cursor-pointer ${
                       isActive
                         ? "bg-teal-50 dark:bg-teal-950/60 text-teal-700 dark:text-teal-300 border border-teal-200 dark:border-teal-800"
@@ -586,7 +665,7 @@ export default function AdminReportModal({ isOpen, onClose }: AdminReportModalPr
               <div className="w-40 sm:w-44 shrink-0">
                 <DropdownSelect
                   value={dateRange}
-                  onChange={val => setDateRange(val)}
+                  onChange={(val) => setDateRange(val)}
                   options={[
                     { value: "this_month", label: "Current Month" },
                     { value: "last_month", label: "Previous Month" },
@@ -604,7 +683,7 @@ export default function AdminReportModal({ isOpen, onClose }: AdminReportModalPr
                   <input
                     type="text"
                     value={searchFilter}
-                    onChange={e => setSearchFilter(e.target.value)}
+                    onChange={(e) => setSearchFilter(e.target.value)}
                     placeholder="Search records..."
                     className="w-full bg-slate-50 dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-lg pl-8 pr-2.5 py-1 text-xs text-slate-900 dark:text-zinc-100 placeholder:text-slate-500 dark:placeholder:text-zinc-400 focus:outline-none focus:ring-1 focus:ring-teal-500"
                   />
@@ -638,14 +717,14 @@ export default function AdminReportModal({ isOpen, onClose }: AdminReportModalPr
             className="flex-1 overflow-y-auto p-5 sm:p-6 space-y-6 bg-slate-50/40 dark:bg-zinc-950"
           >
             {/* Printable Formal Letterhead (Visible in both PDF and screen) */}
-            <div className="bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-xl p-5 shadow-xs">
+            <div className="bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-xl p-5 shadow-xs report-avoid-break">
               <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 pb-4 border-b border-slate-200 dark:border-zinc-800">
                 <div>
                   <span className="text-[10px] font-mono uppercase tracking-widest text-teal-600 dark:text-teal-400 font-bold">
                     Official Property Audit Document
                   </span>
                   <h1 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white mt-0.5">
-                    {propertyProfile.propertyName}
+                    {reportData?.meta?.propertyName || propertyProfile.propertyName}
                   </h1>
                   <p className="text-xs text-slate-600 dark:text-zinc-300 mt-1 font-medium">
                     {propertyProfile.propertyAddress} • {propertyProfile.contactPhone}
@@ -730,535 +809,680 @@ export default function AdminReportModal({ isOpen, onClose }: AdminReportModalPr
               </div>
             )}
 
-            {/* TAB 1: EXECUTIVE SUMMARY */}
-            {reportData && activeTab === "overview" && (
-              <div className="space-y-6">
-                {/* 2-Column Split: Revenue Composition & Occupancy Split */}
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-                  {/* Revenue Composition */}
-                  <div className="bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-xl p-5 shadow-xs">
-                    <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-zinc-800">
-                      <div className="flex items-center gap-2">
-                        <Wallet className="w-4 h-4 text-emerald-600" />
-                        <h3 className="text-sm font-bold text-slate-900 dark:text-white">Revenue & Billing Breakdown</h3>
-                      </div>
-                      <span className="text-xs font-mono font-bold text-slate-700 dark:text-zinc-300">
-                        Total: ₱{reportData.financials.totalBilled.toLocaleString()}
-                      </span>
-                    </div>
-
-                    <div className="space-y-3 mt-4">
-                      {[
-                        { label: "Base Rent", amount: reportData.financials.rentTotal, color: "bg-teal-500" },
-                        { label: "Electricity Charges", amount: reportData.financials.electricityTotal, color: "bg-amber-500" },
-                        { label: "Water Charges", amount: reportData.financials.waterTotal, color: "bg-blue-500" },
-                        { label: "Other Fees / Penalties", amount: reportData.financials.otherTotal, color: "bg-purple-500" }
-                      ].map((item, idx) => {
-                        const pct = reportData.financials.totalBilled > 0
-                          ? Math.round((item.amount / reportData.financials.totalBilled) * 100)
-                          : 0;
-                        return (
-                          <div key={idx} className="space-y-1">
-                            <div className="flex justify-between text-xs">
-                              <span className="font-semibold text-slate-700 dark:text-zinc-200">{item.label}</span>
-                              <span className="font-mono font-bold text-slate-900 dark:text-white">
-                                ₱{item.amount.toLocaleString()} ({pct}%)
-                              </span>
-                            </div>
-                            <div className="w-full bg-slate-100 dark:bg-zinc-800 rounded-full h-1.5 overflow-hidden">
-                              <div className={`${item.color} h-full rounded-full`} style={{ width: `${pct}%` }} />
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-
-                    <div className="mt-5 pt-3 border-t border-slate-100 dark:border-zinc-800 flex items-center justify-between text-xs text-slate-600 dark:text-zinc-300 font-medium">
-                      <span>Total Collections Completed:</span>
-                      <span className="font-mono font-bold text-emerald-600 dark:text-emerald-400">
-                        ₱{reportData.financials.totalCollected.toLocaleString()}
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* Occupancy Status Distribution */}
-                  <div className="bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-xl p-5 shadow-xs">
-                    <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-zinc-800">
-                      <div className="flex items-center gap-2">
-                        <Building2 className="w-4 h-4 text-blue-600" />
-                        <h3 className="text-sm font-bold text-slate-900 dark:text-white">Room Inventory & Capacity</h3>
-                      </div>
-                      <span className="text-xs font-mono font-bold text-slate-700 dark:text-zinc-300">
-                        {reportData.occupancy.totalRooms} Total Rooms
-                      </span>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-3 mt-4">
-                      <div className="p-3 rounded-lg border border-slate-100 dark:border-zinc-800 bg-slate-50/50 dark:bg-zinc-900/50">
-                        <span className="text-xs text-slate-600 dark:text-zinc-300 font-semibold">Total Capacity</span>
-                        <div className="text-lg font-bold font-mono text-slate-900 dark:text-white mt-1">
-                          {reportData.occupancy.totalCapacity} Beds
-                        </div>
-                      </div>
-                      <div className="p-3 rounded-lg border border-slate-100 dark:border-zinc-800 bg-slate-50/50 dark:bg-zinc-900/50">
-                        <span className="text-xs text-slate-600 dark:text-zinc-300 font-semibold">Current Occupants</span>
-                        <div className="text-lg font-bold font-mono text-slate-900 dark:text-white mt-1">
-                          {reportData.occupancy.totalOccupants} Tenants
-                        </div>
-                      </div>
-                      <div className="p-3 rounded-lg border border-slate-100 dark:border-zinc-800 bg-slate-50/50 dark:bg-zinc-900/50">
-                        <span className="text-xs text-slate-600 dark:text-zinc-300 font-semibold">Fully Occupied Rooms</span>
-                        <div className="text-lg font-bold font-mono text-emerald-600 dark:text-emerald-400 mt-1">
-                          {reportData.occupancy.occupiedRooms} Rooms
-                        </div>
-                      </div>
-                      <div className="p-3 rounded-lg border border-slate-100 dark:border-zinc-800 bg-slate-50/50 dark:bg-zinc-900/50">
-                        <span className="text-xs text-slate-600 dark:text-zinc-300 font-semibold">Vacant / Available</span>
-                        <div className="text-lg font-bold font-mono text-blue-600 dark:text-blue-400 mt-1">
-                          {reportData.occupancy.availableRooms} Rooms
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="mt-4 pt-3 border-t border-slate-100 dark:border-zinc-800 flex items-center justify-between text-xs text-slate-600 dark:text-zinc-300 font-medium">
-                      <span>Rooms in Maintenance:</span>
-                      <span className="font-mono font-bold text-amber-600">
-                        {reportData.occupancy.maintenanceRooms} Units
-                      </span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Overdue Delinquency High-Priority Highlight */}
-                <div className="bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-xl p-5 shadow-xs">
-                  <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-zinc-800">
+            {/* REPORT SECTIONS */}
+            {reportData && (
+              <>
+                {/* =========================================================================
+                    SECTION 1: EXECUTIVE SUMMARY
+                    ========================================================================= */}
+                <section
+                  className={`report-print-section space-y-6 ${
+                    activeTab === "all" || activeTab === "overview" ? "block" : "hidden"
+                  }`}
+                >
+                  <div className="flex items-center justify-between pb-2 border-b-2 border-slate-800 dark:border-zinc-700">
                     <div className="flex items-center gap-2">
-                      <ShieldAlert className="w-4 h-4 text-rose-600" />
-                      <h3 className="text-sm font-bold text-slate-900 dark:text-white">Delinquency Attention List</h3>
+                      <FileText className="w-4 h-4 text-teal-600 no-print" />
+                      <h2 className="text-sm sm:text-base font-extrabold uppercase tracking-wide text-slate-900 dark:text-white">
+                        Section 1: Executive Summary & Performance Indicators
+                      </h2>
                     </div>
-                    <button
-                      type="button"
-                      onClick={() => setActiveTab("delinquent")}
-                      className="text-xs text-teal-600 dark:text-teal-400 font-semibold hover:underline flex items-center gap-1 cursor-pointer no-print"
-                    >
-                      <span>View all {reportData.overdue.count} accounts</span>
-                      <ArrowUpRight className="w-3.5 h-3.5" />
-                    </button>
+                    <span className="text-[11px] font-mono text-slate-500 font-medium">Part 1 of 5</span>
                   </div>
 
-                  {reportData.overdue.accounts.length === 0 ? (
-                    <div className="py-6 text-center text-xs text-slate-600 dark:text-zinc-300 font-medium">
-                      No overdue accounts found in this period. Perfect standing!
-                    </div>
-                  ) : (
-                    <div className="overflow-x-auto mt-3">
-                      <table className="w-full text-left text-xs border-collapse">
-                        <thead>
-                          <tr className="border-b border-slate-200 dark:border-zinc-800 text-slate-600 dark:text-zinc-300 font-semibold">
-                            <th className="py-2 px-3 font-semibold">Tenant Name</th>
-                            <th className="py-2 px-3 font-semibold">Room</th>
-                            <th className="py-2 px-3 font-semibold">Month</th>
-                            <th className="py-2 px-3 font-semibold">Due Date</th>
-                            <th className="py-2 px-3 font-semibold">Days Overdue</th>
-                            <th className="py-2 px-3 font-semibold text-right">Balance Due</th>
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y divide-slate-100 dark:divide-zinc-800">
-                          {reportData.overdue.accounts.slice(0, 5).map(acc => (
-                            <tr key={acc.bill_id} className="hover:bg-slate-50/50 dark:hover:bg-zinc-800/30">
-                              <td className="py-2.5 px-3 font-semibold text-slate-900 dark:text-white">
-                                {acc.tenant_name}
-                              </td>
-                              <td className="py-2.5 px-3 font-mono text-slate-800 dark:text-zinc-200 font-medium">{acc.room_number || "-"}</td>
-                              <td className="py-2.5 px-3 text-slate-600 dark:text-zinc-300 font-medium">{acc.billing_month}</td>
-                              <td className="py-2.5 px-3 text-slate-600 dark:text-zinc-300 font-medium">
-                                {acc.due_date ? new Date(acc.due_date).toLocaleDateString() : "-"}
-                              </td>
-                              <td className="py-2.5 px-3">
-                                <span className="inline-block px-2 py-0.5 rounded text-[10px] font-bold bg-rose-100 dark:bg-rose-950/60 text-rose-700 dark:text-rose-400">
-                                  {acc.days_overdue} days late
-                                </span>
-                              </td>
-                              <td className="py-2.5 px-3 text-right font-mono font-bold text-rose-600 dark:text-rose-400">
-                                ₱{Number(acc.balance).toLocaleString()}
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
-
-            {/* TAB 2: FINANCIALS & REVENUE LEDGER */}
-            {reportData && activeTab === "financials" && (
-              <div className="space-y-6">
-                {/* Payment Methods Cards */}
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                  {reportData.financials.methodBreakdown.map((m, idx) => (
-                    <div
-                      key={idx}
-                      className="p-3.5 rounded-xl bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 shadow-xs"
-                    >
-                      <span className="text-[10px] uppercase font-bold tracking-wider text-slate-600 dark:text-zinc-300">
-                        {m.method}
-                      </span>
-                      <div className="text-lg font-bold font-mono text-slate-900 dark:text-white mt-1">
-                        ₱{Number(m.total).toLocaleString()}
+                  {/* 2-Column Split: Revenue Composition & Occupancy Split */}
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+                    {/* Revenue Composition */}
+                    <div className="bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-xl p-5 shadow-xs report-avoid-break">
+                      <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-zinc-800">
+                        <div className="flex items-center gap-2">
+                          <Wallet className="w-4 h-4 text-emerald-600" />
+                          <h3 className="text-sm font-bold text-slate-900 dark:text-white">Revenue & Billing Breakdown</h3>
+                        </div>
+                        <span className="text-xs font-mono font-bold text-slate-700 dark:text-zinc-300">
+                          Total: ₱{reportData.financials.totalBilled.toLocaleString()}
+                        </span>
                       </div>
-                      <span className="text-[11px] text-slate-600 dark:text-zinc-300 font-medium">
-                        {m.count} transactions
+
+                      <div className="space-y-3 mt-4">
+                        {[
+                          { label: "Base Rent", amount: reportData.financials.rentTotal, color: "bg-teal-500" },
+                          { label: "Electricity Charges", amount: reportData.financials.electricityTotal, color: "bg-amber-500" },
+                          { label: "Water Charges", amount: reportData.financials.waterTotal, color: "bg-blue-500" },
+                          { label: "Other Fees / Penalties", amount: reportData.financials.otherTotal, color: "bg-purple-500" },
+                        ].map((item, idx) => {
+                          const pct =
+                            reportData.financials.totalBilled > 0
+                              ? Math.round((item.amount / reportData.financials.totalBilled) * 100)
+                              : 0;
+                          return (
+                            <div key={idx} className="space-y-1">
+                              <div className="flex justify-between text-xs">
+                                <span className="font-semibold text-slate-700 dark:text-zinc-200">{item.label}</span>
+                                <span className="font-mono font-bold text-slate-900 dark:text-white">
+                                  ₱{item.amount.toLocaleString()} ({pct}%)
+                                </span>
+                              </div>
+                              <div className="w-full bg-slate-100 dark:bg-zinc-800 rounded-full h-1.5 overflow-hidden">
+                                <div className={`${item.color} h-full rounded-full`} style={{ width: `${pct}%` }} />
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+
+                      <div className="mt-5 pt-3 border-t border-slate-100 dark:border-zinc-800 flex items-center justify-between text-xs text-slate-600 dark:text-zinc-300 font-medium">
+                        <span>Total Collections Completed:</span>
+                        <span className="font-mono font-bold text-emerald-600 dark:text-emerald-400">
+                          ₱{reportData.financials.totalCollected.toLocaleString()}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Occupancy Status Distribution */}
+                    <div className="bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-xl p-5 shadow-xs report-avoid-break">
+                      <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-zinc-800">
+                        <div className="flex items-center gap-2">
+                          <Building2 className="w-4 h-4 text-blue-600" />
+                          <h3 className="text-sm font-bold text-slate-900 dark:text-white">Room Inventory & Capacity</h3>
+                        </div>
+                        <span className="text-xs font-mono font-bold text-slate-700 dark:text-zinc-300">
+                          {reportData.occupancy.totalRooms} Total Rooms
+                        </span>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-3 mt-4">
+                        <div className="p-3 rounded-lg border border-slate-100 dark:border-zinc-800 bg-slate-50/50 dark:bg-zinc-900/50">
+                          <span className="text-xs text-slate-600 dark:text-zinc-300 font-semibold">Total Capacity</span>
+                          <div className="text-lg font-bold font-mono text-slate-900 dark:text-white mt-1">
+                            {reportData.occupancy.totalCapacity} Beds
+                          </div>
+                        </div>
+                        <div className="p-3 rounded-lg border border-slate-100 dark:border-zinc-800 bg-slate-50/50 dark:bg-zinc-900/50">
+                          <span className="text-xs text-slate-600 dark:text-zinc-300 font-semibold">Current Occupants</span>
+                          <div className="text-lg font-bold font-mono text-slate-900 dark:text-white mt-1">
+                            {reportData.occupancy.totalOccupants} Tenants
+                          </div>
+                        </div>
+                        <div className="p-3 rounded-lg border border-slate-100 dark:border-zinc-800 bg-slate-50/50 dark:bg-zinc-900/50">
+                          <span className="text-xs text-slate-600 dark:text-zinc-300 font-semibold">Fully Occupied Rooms</span>
+                          <div className="text-lg font-bold font-mono text-emerald-600 dark:text-emerald-400 mt-1">
+                            {reportData.occupancy.occupiedRooms} Rooms
+                          </div>
+                        </div>
+                        <div className="p-3 rounded-lg border border-slate-100 dark:border-zinc-800 bg-slate-50/50 dark:bg-zinc-900/50">
+                          <span className="text-xs text-slate-600 dark:text-zinc-300 font-semibold">Vacant / Available</span>
+                          <div className="text-lg font-bold font-mono text-blue-600 dark:text-blue-400 mt-1">
+                            {reportData.occupancy.availableRooms} Rooms
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="mt-4 pt-3 border-t border-slate-100 dark:border-zinc-800 flex items-center justify-between text-xs text-slate-600 dark:text-zinc-300 font-medium">
+                        <span>Rooms in Maintenance:</span>
+                        <span className="font-mono font-bold text-amber-600">
+                          {reportData.occupancy.maintenanceRooms} Units
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Overdue Delinquency High-Priority Highlight */}
+                  <div className="bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-xl p-5 shadow-xs report-avoid-break">
+                    <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-zinc-800">
+                      <div className="flex items-center gap-2">
+                        <ShieldAlert className="w-4 h-4 text-rose-600" />
+                        <h3 className="text-sm font-bold text-slate-900 dark:text-white">Delinquency Attention Summary</h3>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setActiveTab("delinquent")}
+                        className="text-xs text-teal-600 dark:text-teal-400 font-semibold hover:underline flex items-center gap-1 cursor-pointer no-print"
+                      >
+                        <span>View all {reportData.overdue.count} accounts</span>
+                        <ArrowUpRight className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+
+                    {reportData.overdue.accounts.length === 0 ? (
+                      <div className="py-6 text-center text-xs text-emerald-600 dark:text-emerald-400 font-semibold">
+                        ✓ All tenant accounts are in good standing! No overdue receivables in this billing cycle.
+                      </div>
+                    ) : (
+                      <div className="overflow-x-auto mt-3">
+                        <table className="w-full text-left text-xs border-collapse">
+                          <thead>
+                            <tr className="border-b border-slate-200 dark:border-zinc-800 text-slate-600 dark:text-zinc-300 font-semibold">
+                              <th className="py-2 px-3 font-semibold">Tenant Name</th>
+                              <th className="py-2 px-3 font-semibold">Room</th>
+                              <th className="py-2 px-3 font-semibold">Month</th>
+                              <th className="py-2 px-3 font-semibold">Due Date</th>
+                              <th className="py-2 px-3 font-semibold">Days Overdue</th>
+                              <th className="py-2 px-3 font-semibold text-right">Balance Due</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-slate-100 dark:divide-zinc-800">
+                            {reportData.overdue.accounts.slice(0, 5).map((acc) => (
+                              <tr key={acc.bill_id} className="hover:bg-slate-50/50 dark:hover:bg-zinc-800/30">
+                                <td className="py-2.5 px-3 font-semibold text-slate-900 dark:text-white">
+                                  {acc.tenant_name}
+                                </td>
+                                <td className="py-2.5 px-3 font-mono text-slate-800 dark:text-zinc-200 font-medium">
+                                  {acc.room_number || "-"}
+                                </td>
+                                <td className="py-2.5 px-3 text-slate-600 dark:text-zinc-300 font-medium">
+                                  {acc.billing_month}
+                                </td>
+                                <td className="py-2.5 px-3 text-slate-600 dark:text-zinc-300 font-medium">
+                                  {acc.due_date ? new Date(acc.due_date).toLocaleDateString() : "-"}
+                                </td>
+                                <td className="py-2.5 px-3">
+                                  <span className="inline-block text-[10px] font-bold text-rose-600 dark:text-rose-400">
+                                    {acc.days_overdue} days late
+                                  </span>
+                                </td>
+                                <td className="py-2.5 px-3 text-right font-mono font-bold text-rose-600 dark:text-rose-400">
+                                  ₱{Number(acc.balance).toLocaleString()}
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+                  </div>
+                </section>
+
+                {/* =========================================================================
+                    SECTION 2: FINANCIALS & CASH FLOW LEDGER
+                    ========================================================================= */}
+                <section
+                  className={`report-print-section space-y-6 report-page-break ${
+                    activeTab === "all" || activeTab === "financials" ? "block" : "hidden"
+                  }`}
+                >
+                  <div className="flex items-center justify-between pb-2 border-b-2 border-slate-800 dark:border-zinc-700">
+                    <div className="flex items-center gap-2">
+                      <DollarSign className="w-4 h-4 text-emerald-600 no-print" />
+                      <h2 className="text-sm sm:text-base font-extrabold uppercase tracking-wide text-slate-900 dark:text-white">
+                        Section 2: Financial Statements & Payment Transaction Ledger
+                      </h2>
+                    </div>
+                    <span className="text-[11px] font-mono text-slate-500 font-medium">Part 2 of 5</span>
+                  </div>
+
+                  {/* Payment Methods Cards */}
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 report-avoid-break">
+                    {reportData.financials.methodBreakdown.map((m, idx) => (
+                      <div
+                        key={idx}
+                        className="p-3.5 rounded-xl bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 shadow-xs"
+                      >
+                        <span className="text-[10px] uppercase font-bold tracking-wider text-slate-600 dark:text-zinc-300">
+                          {m.method}
+                        </span>
+                        <div className="text-lg font-bold font-mono text-slate-900 dark:text-white mt-1">
+                          ₱{Number(m.total).toLocaleString()}
+                        </div>
+                        <span className="text-[11px] text-slate-600 dark:text-zinc-300 font-medium">
+                          {m.count} transactions
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Payments Ledger Table */}
+                  <div className="bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-xl p-5 shadow-xs">
+                    <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-zinc-800">
+                      <div>
+                        <h3 className="text-sm font-bold text-slate-900 dark:text-white">Transaction Payment Ledger</h3>
+                        <p className="text-xs text-slate-600 dark:text-zinc-300 font-medium">
+                          Showing {filteredLedger.length} verified payment entries{" "}
+                          {searchFilter ? `(filtered by "${searchFilter}")` : ""}
+                        </p>
+                      </div>
+                      <div className="text-right">
+                        <span className="text-[10px] uppercase font-bold text-emerald-600 block">Total Ledger Revenue</span>
+                        <span className="text-sm font-extrabold font-mono text-emerald-700 dark:text-emerald-400">
+                          ₱{reportData.financials.totalCollected.toLocaleString()}
+                        </span>
+                      </div>
+                    </div>
+
+                    {filteredLedger.length === 0 ? (
+                      <div className="py-8 text-center text-xs text-slate-500 dark:text-zinc-400">
+                        No payment transactions recorded for this period.
+                      </div>
+                    ) : (
+                      <div className="overflow-x-auto mt-3">
+                        <table className="w-full text-left text-xs border-collapse">
+                          <thead>
+                            <tr className="border-b border-slate-200 dark:border-zinc-800 text-slate-600 dark:text-zinc-300 font-semibold">
+                              <th className="py-2.5 px-3 font-semibold">Ref Number</th>
+                              <th className="py-2.5 px-3 font-semibold">Date</th>
+                              <th className="py-2.5 px-3 font-semibold">Tenant</th>
+                              <th className="py-2.5 px-3 font-semibold">Room</th>
+                              <th className="py-2.5 px-3 font-semibold">Billing Period</th>
+                              <th className="py-2.5 px-3 font-semibold">Method</th>
+                              <th className="py-2.5 px-3 font-semibold text-right">Amount</th>
+                              <th className="py-2.5 px-3 font-semibold">Status</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-slate-100 dark:divide-zinc-800">
+                            {filteredLedger.map((p) => (
+                              <tr key={p.id} className="hover:bg-slate-50/50 dark:hover:bg-zinc-800/30">
+                                <td className="py-2.5 px-3 font-mono font-medium text-slate-700 dark:text-zinc-300">
+                                  {p.reference_number || `TXN-${p.id}`}
+                                </td>
+                                <td className="py-2.5 px-3 text-slate-600 dark:text-zinc-300 font-medium">
+                                  {p.payment_date ? new Date(p.payment_date).toLocaleDateString() : "-"}
+                                </td>
+                                <td className="py-2.5 px-3 font-semibold text-slate-900 dark:text-white">
+                                  {p.tenant_name}
+                                </td>
+                                <td className="py-2.5 px-3 font-mono text-slate-800 dark:text-zinc-200 font-medium">
+                                  {p.room_number || "-"}
+                                </td>
+                                <td className="py-2.5 px-3 text-slate-600 dark:text-zinc-300 font-medium">
+                                  {p.billing_month || "-"}
+                                </td>
+                                <td className="py-2.5 px-3">
+                                  <span className="inline-block text-[10px] font-semibold text-slate-700 dark:text-zinc-300">
+                                    {p.payment_method || "Cash"}
+                                  </span>
+                                </td>
+                                <td className="py-2.5 px-3 text-right font-mono font-bold text-emerald-600 dark:text-emerald-400">
+                                  ₱{Number(p.amount_paid).toLocaleString()}
+                                </td>
+                                <td className="py-2.5 px-3">
+                                  <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-700 dark:text-emerald-400">
+                                    <CheckCircle2 className="w-3 h-3" />
+                                    {p.status || "Completed"}
+                                  </span>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+                  </div>
+                </section>
+
+                {/* =========================================================================
+                    SECTION 3: RENT ROLL & ROOM INVENTORY
+                    ========================================================================= */}
+                <section
+                  className={`report-print-section space-y-6 report-page-break ${
+                    activeTab === "all" || activeTab === "occupancy" ? "block" : "hidden"
+                  }`}
+                >
+                  <div className="flex items-center justify-between pb-2 border-b-2 border-slate-800 dark:border-zinc-700">
+                    <div className="flex items-center gap-2">
+                      <Building2 className="w-4 h-4 text-blue-600 no-print" />
+                      <h2 className="text-sm sm:text-base font-extrabold uppercase tracking-wide text-slate-900 dark:text-white">
+                        Section 3: Rent Roll & Room Inventory Directory
+                      </h2>
+                    </div>
+                    <span className="text-[11px] font-mono text-slate-500 font-medium">Part 3 of 5</span>
+                  </div>
+
+                  <div className="bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-xl p-5 shadow-xs">
+                    <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-zinc-800">
+                      <div>
+                        <h3 className="text-sm font-bold text-slate-900 dark:text-white">Rent Roll & Census</h3>
+                        <p className="text-xs text-slate-600 dark:text-zinc-300 font-medium">
+                          {filteredRooms.length} rooms listed with active occupants and monthly tariffs
+                        </p>
+                      </div>
+                      <div className="text-right">
+                        <span className="text-[10px] uppercase font-bold text-blue-600 block">Occupancy Census</span>
+                        <span className="text-sm font-extrabold font-mono text-blue-700 dark:text-blue-400">
+                          {reportData.occupancy.totalOccupants} / {reportData.occupancy.totalCapacity} Beds ({reportData.occupancy.occupancyRate}%)
+                        </span>
+                      </div>
+                    </div>
+
+                    {filteredRooms.length === 0 ? (
+                      <div className="py-8 text-center text-xs text-slate-500 dark:text-zinc-400">
+                        No room inventory records found.
+                      </div>
+                    ) : (
+                      <div className="overflow-x-auto mt-3">
+                        <table className="w-full text-left text-xs border-collapse">
+                          <thead>
+                            <tr className="border-b border-slate-200 dark:border-zinc-800 text-slate-600 dark:text-zinc-300 font-semibold">
+                              <th className="py-2.5 px-3 font-semibold">Room #</th>
+                              <th className="py-2.5 px-3 font-semibold">Type</th>
+                              <th className="py-2.5 px-3 font-semibold">Floor</th>
+                              <th className="py-2.5 px-3 font-semibold">Capacity</th>
+                              <th className="py-2.5 px-3 font-semibold">Occupancy Status</th>
+                              <th className="py-2.5 px-3 font-semibold">Occupant Names</th>
+                              <th className="py-2.5 px-3 font-semibold text-right">Monthly Rent</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-slate-100 dark:divide-zinc-800">
+                            {filteredRooms.map((r) => {
+                              const isFull = r.current_occupants >= r.capacity;
+                              const isVacant = r.current_occupants === 0;
+                              return (
+                                <tr key={r.id} className="hover:bg-slate-50/50 dark:hover:bg-zinc-800/30">
+                                  <td className="py-2.5 px-3 font-mono font-bold text-slate-900 dark:text-white">
+                                    {r.room_number}
+                                  </td>
+                                  <td className="py-2.5 px-3 text-slate-700 dark:text-zinc-200 font-medium">{r.type}</td>
+                                  <td className="py-2.5 px-3 font-mono text-slate-600 dark:text-zinc-300 font-medium">Floor {r.floor}</td>
+                                  <td className="py-2.5 px-3 font-mono text-slate-700 dark:text-zinc-200 font-medium">
+                                    {r.current_occupants} / {r.capacity} beds
+                                  </td>
+                                  <td className="py-2.5 px-3">
+                                    <span
+                                      className={`inline-block text-[10px] font-bold ${
+                                        r.status === "Maintenance"
+                                          ? "text-amber-600 dark:text-amber-400"
+                                          : isFull
+                                          ? "text-emerald-600 dark:text-emerald-400"
+                                          : isVacant
+                                          ? "text-slate-600 dark:text-zinc-400"
+                                          : "text-blue-600 dark:text-blue-400"
+                                      }`}
+                                    >
+                                      {r.status === "Maintenance" ? "Maintenance" : isFull ? "Fully Occupied" : isVacant ? "Vacant" : "Partial"}
+                                    </span>
+                                  </td>
+                                  <td className="py-2.5 px-3 text-slate-700 dark:text-zinc-300 font-medium">
+                                    {r.occupants_list || "Vacant"}
+                                  </td>
+                                  <td className="py-2.5 px-3 text-right font-mono font-bold text-slate-900 dark:text-white">
+                                    ₱{Number(r.price).toLocaleString()}
+                                  </td>
+                                </tr>
+                              );
+                            })}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+                  </div>
+                </section>
+
+                {/* =========================================================================
+                    SECTION 4: DELINQUENT ACCOUNTS SCHEDULE
+                    ========================================================================= */}
+                <section
+                  className={`report-print-section space-y-6 report-page-break ${
+                    activeTab === "all" || activeTab === "delinquent" ? "block" : "hidden"
+                  }`}
+                >
+                  <div className="flex items-center justify-between pb-2 border-b-2 border-slate-800 dark:border-zinc-700">
+                    <div className="flex items-center gap-2">
+                      <AlertTriangle className="w-4 h-4 text-rose-600 no-print" />
+                      <h2 className="text-sm sm:text-base font-extrabold uppercase tracking-wide text-slate-900 dark:text-white">
+                        Section 4: Delinquent & Overdue Accounts Schedule
+                      </h2>
+                    </div>
+                    <span className="text-[11px] font-mono text-slate-500 font-medium">Part 4 of 5</span>
+                  </div>
+
+                  <div className="bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-xl p-5 shadow-xs">
+                    <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-zinc-800">
+                      <div>
+                        <h3 className="text-sm font-bold text-slate-900 dark:text-white">
+                          Delinquent / Overdue Accounts Schedule
+                        </h3>
+                        <p className="text-xs text-slate-600 dark:text-zinc-300 font-medium">
+                          {filteredOverdue.length} delinquent accounts with unpaid balances
+                        </p>
+                      </div>
+                      <div className="text-right">
+                        <span className="text-[10px] uppercase font-bold text-rose-500 block">Total Overdue Receivables</span>
+                        <span className="text-base font-extrabold font-mono text-rose-600 dark:text-rose-400">
+                          ₱{reportData.overdue.totalOverdueBalance.toLocaleString()}
+                        </span>
+                      </div>
+                    </div>
+
+                    {filteredOverdue.length === 0 ? (
+                      <div className="py-8 text-center text-xs text-emerald-600 dark:text-emerald-400 font-semibold bg-emerald-50/50 dark:bg-emerald-950/20 rounded-lg border border-emerald-100 dark:border-emerald-800/40">
+                        ✓ All tenant accounts are in good standing! No overdue receivables in this billing period.
+                      </div>
+                    ) : (
+                      <div className="overflow-x-auto mt-3">
+                        <table className="w-full text-left text-xs border-collapse">
+                          <thead>
+                            <tr className="border-b border-slate-200 dark:border-zinc-800 text-slate-600 dark:text-zinc-300 font-semibold">
+                              <th className="py-2.5 px-3 font-semibold">Tenant Name</th>
+                              <th className="py-2.5 px-3 font-semibold">Room</th>
+                              <th className="py-2.5 px-3 font-semibold">Contact #</th>
+                              <th className="py-2.5 px-3 font-semibold">Billing Month</th>
+                              <th className="py-2.5 px-3 font-semibold">Due Date</th>
+                              <th className="py-2.5 px-3 font-semibold">Days Overdue</th>
+                              <th className="py-2.5 px-3 font-semibold text-right">Total Billed</th>
+                              <th className="py-2.5 px-3 font-semibold text-right">Amount Paid</th>
+                              <th className="py-2.5 px-3 font-semibold text-right">Balance Due</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-slate-100 dark:divide-zinc-800">
+                            {filteredOverdue.map((acc) => (
+                              <tr key={acc.bill_id} className="hover:bg-slate-50/50 dark:hover:bg-zinc-800/30">
+                                <td className="py-2.5 px-3 font-semibold text-slate-900 dark:text-white">
+                                  {acc.tenant_name}
+                                </td>
+                                <td className="py-2.5 px-3 font-mono text-slate-800 dark:text-zinc-200 font-medium">
+                                  {acc.room_number || "-"}
+                                </td>
+                                <td className="py-2.5 px-3 font-mono text-slate-600 dark:text-zinc-300 font-medium">
+                                  {formatPhoneNumber(acc.phone, "-")}
+                                </td>
+                                <td className="py-2.5 px-3 text-slate-700 dark:text-zinc-300 font-medium">{acc.billing_month}</td>
+                                <td className="py-2.5 px-3 text-slate-600 dark:text-zinc-300 font-medium">
+                                  {acc.due_date ? new Date(acc.due_date).toLocaleDateString() : "-"}
+                                </td>
+                                <td className="py-2.5 px-3">
+                                  <span className="inline-block text-[10px] font-bold text-rose-600 dark:text-rose-400">
+                                    {acc.days_overdue} days
+                                  </span>
+                                </td>
+                                <td className="py-2.5 px-3 text-right font-mono text-slate-700 dark:text-zinc-300 font-medium">
+                                  ₱{Number(acc.total_amount).toLocaleString()}
+                                </td>
+                                <td className="py-2.5 px-3 text-right font-mono text-emerald-600 dark:text-emerald-400">
+                                  ₱{Number(acc.amount_paid).toLocaleString()}
+                                </td>
+                                <td className="py-2.5 px-3 text-right font-mono font-bold text-rose-600 dark:text-rose-400">
+                                  ₱{Number(acc.balance).toLocaleString()}
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+                  </div>
+                </section>
+
+                {/* =========================================================================
+                    SECTION 5: MAINTENANCE & WORK ORDERS
+                    ========================================================================= */}
+                <section
+                  className={`report-print-section space-y-6 report-page-break ${
+                    activeTab === "all" || activeTab === "maintenance" ? "block" : "hidden"
+                  }`}
+                >
+                  <div className="flex items-center justify-between pb-2 border-b-2 border-slate-800 dark:border-zinc-700">
+                    <div className="flex items-center gap-2">
+                      <Wrench className="w-4 h-4 text-purple-600 no-print" />
+                      <h2 className="text-sm sm:text-base font-extrabold uppercase tracking-wide text-slate-900 dark:text-white">
+                        Section 5: Maintenance Health & Work Orders Audit
+                      </h2>
+                    </div>
+                    <span className="text-[11px] font-mono text-slate-500 font-medium">Part 5 of 5</span>
+                  </div>
+
+                  {/* Stats row */}
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 report-avoid-break">
+                    <div className="p-3.5 rounded-xl bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 shadow-xs">
+                      <span className="text-[10px] uppercase font-bold tracking-wider text-slate-600 dark:text-zinc-300">
+                        Total Requests
                       </span>
+                      <div className="text-xl font-bold font-mono text-slate-900 dark:text-white mt-1">
+                        {reportData.maintenance.stats.total || 0}
+                      </div>
                     </div>
-                  ))}
-                </div>
+                    <div className="p-3.5 rounded-xl bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 shadow-xs">
+                      <span className="text-[10px] uppercase font-bold tracking-wider text-emerald-600">
+                        Resolved
+                      </span>
+                      <div className="text-xl font-bold font-mono text-emerald-600 mt-1">
+                        {reportData.maintenance.stats.resolved_count || 0}
+                      </div>
+                    </div>
+                    <div className="p-3.5 rounded-xl bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 shadow-xs">
+                      <span className="text-[10px] uppercase font-bold tracking-wider text-blue-600">
+                        In Progress
+                      </span>
+                      <div className="text-xl font-bold font-mono text-blue-600 mt-1">
+                        {reportData.maintenance.stats.in_progress_count || 0}
+                      </div>
+                    </div>
+                    <div className="p-3.5 rounded-xl bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 shadow-xs">
+                      <span className="text-[10px] uppercase font-bold tracking-wider text-amber-600">
+                        Pending Action
+                      </span>
+                      <div className="text-xl font-bold font-mono text-amber-600 mt-1">
+                        {reportData.maintenance.stats.pending_count || 0}
+                      </div>
+                    </div>
+                  </div>
 
-                {/* Payments Ledger Table */}
-                <div className="bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-xl p-5 shadow-xs">
-                  <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-zinc-800">
-                    <div>
-                      <h3 className="text-sm font-bold text-slate-900 dark:text-white">Transaction Payment Ledger</h3>
-                      <p className="text-xs text-slate-600 dark:text-zinc-300 font-medium">
-                        Showing {filteredLedger.length} verified payment entries
+                  {/* Tickets Table */}
+                  <div className="bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-xl p-5 shadow-xs">
+                    <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-zinc-800">
+                      <div>
+                        <h3 className="text-sm font-bold text-slate-900 dark:text-white">Maintenance Work Order Ledger</h3>
+                        <p className="text-xs text-slate-600 dark:text-zinc-300 font-medium">
+                          {filteredTickets.length} tickets recorded
+                        </p>
+                      </div>
+                    </div>
+
+                    {filteredTickets.length === 0 ? (
+                      <div className="py-8 text-center text-xs text-slate-500 dark:text-zinc-400">
+                        No maintenance requests recorded for this period.
+                      </div>
+                    ) : (
+                      <div className="overflow-x-auto mt-3">
+                        <table className="w-full text-left text-xs border-collapse">
+                          <thead>
+                            <tr className="border-b border-slate-200 dark:border-zinc-800 text-slate-600 dark:text-zinc-300 font-semibold">
+                              <th className="py-2.5 px-3 font-semibold">Ticket #</th>
+                              <th className="py-2.5 px-3 font-semibold">Date Filed</th>
+                              <th className="py-2.5 px-3 font-semibold">Tenant</th>
+                              <th className="py-2.5 px-3 font-semibold">Room</th>
+                              <th className="py-2.5 px-3 font-semibold">Category</th>
+                              <th className="py-2.5 px-3 font-semibold">Priority</th>
+                              <th className="py-2.5 px-3 font-semibold">Issue Title</th>
+                              <th className="py-2.5 px-3 font-semibold">Assigned To</th>
+                              <th className="py-2.5 px-3 font-semibold">Status</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-slate-100 dark:divide-zinc-800">
+                            {filteredTickets.map((t) => (
+                              <tr key={t.id} className="hover:bg-slate-50/50 dark:hover:bg-zinc-800/30">
+                                <td className="py-2.5 px-3 font-mono font-medium text-slate-700 dark:text-zinc-300">
+                                  {t.request_number || `REQ-${t.id}`}
+                                </td>
+                                <td className="py-2.5 px-3 text-slate-600 dark:text-zinc-300 font-medium">
+                                  {t.created_at ? new Date(t.created_at).toLocaleDateString() : "-"}
+                                </td>
+                                <td className="py-2.5 px-3 font-semibold text-slate-900 dark:text-white">
+                                  {t.tenant_name || "-"}
+                                </td>
+                                <td className="py-2.5 px-3 font-mono text-slate-800 dark:text-zinc-200 font-medium">
+                                  {t.room_number || "-"}
+                                </td>
+                                <td className="py-2.5 px-3 text-slate-700 dark:text-zinc-200 font-medium">{t.category}</td>
+                                <td className="py-2.5 px-3">
+                                  <span
+                                    className={`inline-block text-[10px] font-bold ${
+                                      t.priority === "Urgent"
+                                        ? "text-rose-600 dark:text-rose-400"
+                                        : t.priority === "High"
+                                        ? "text-amber-600 dark:text-amber-400"
+                                        : "text-slate-600 dark:text-zinc-400"
+                                    }`}
+                                  >
+                                    {t.priority}
+                                  </span>
+                                </td>
+                                <td className="py-2.5 px-3 font-medium text-slate-800 dark:text-zinc-200">
+                                  {t.title}
+                                </td>
+                                <td className="py-2.5 px-3 text-slate-600 dark:text-zinc-300 font-medium">
+                                  {t.assigned_to || "Unassigned"}
+                                </td>
+                                <td className="py-2.5 px-3">
+                                  <span
+                                    className={`inline-block text-[10px] font-bold ${
+                                      t.status === "Resolved"
+                                        ? "text-emerald-600 dark:text-emerald-400"
+                                        : t.status === "In Progress"
+                                        ? "text-blue-600 dark:text-blue-400"
+                                        : "text-amber-600 dark:text-amber-400"
+                                    }`}
+                                  >
+                                    {t.status}
+                                  </span>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+                  </div>
+                </section>
+
+                {/* =========================================================================
+                    SECTION 6: OFFICIAL CERTIFICATION & SIGN-OFF
+                    ========================================================================= */}
+                <div className="report-print-section pt-8 mt-6 border-t-2 border-slate-900 dark:border-zinc-700 report-avoid-break">
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6">
+                    <div className="max-w-md">
+                      <div className="flex items-center gap-2 mb-1">
+                        <FileCheck className="w-4 h-4 text-teal-600 no-print" />
+                        <h4 className="text-xs font-bold uppercase tracking-wider text-slate-900 dark:text-white">
+                          Certified System Audit Statement
+                        </h4>
+                      </div>
+                      <p className="text-[11px] text-slate-600 dark:text-zinc-400 leading-relaxed font-medium">
+                        This document contains the certified operational, tenant occupancy, delinquency, maintenance, and cash flow records generated from the RentTrack Management Information System for <span className="font-semibold text-slate-800 dark:text-zinc-200">{reportData?.meta?.dateRange || "the selected billing cycle"}</span>.
                       </p>
                     </div>
-                  </div>
 
-                  <div className="overflow-x-auto mt-3">
-                    <table className="w-full text-left text-xs border-collapse">
-                      <thead>
-                        <tr className="border-b border-slate-200 dark:border-zinc-800 text-slate-600 dark:text-zinc-300 font-semibold">
-                          <th className="py-2.5 px-3 font-semibold">Ref Number</th>
-                          <th className="py-2.5 px-3 font-semibold">Date</th>
-                          <th className="py-2.5 px-3 font-semibold">Tenant</th>
-                          <th className="py-2.5 px-3 font-semibold">Room</th>
-                          <th className="py-2.5 px-3 font-semibold">Billing Period</th>
-                          <th className="py-2.5 px-3 font-semibold">Method</th>
-                          <th className="py-2.5 px-3 font-semibold text-right">Amount</th>
-                          <th className="py-2.5 px-3 font-semibold">Status</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-slate-100 dark:divide-zinc-800">
-                        {filteredLedger.map(p => (
-                          <tr key={p.id} className="hover:bg-slate-50/50 dark:hover:bg-zinc-800/30">
-                            <td className="py-2.5 px-3 font-mono font-medium text-slate-700 dark:text-zinc-300">
-                              {p.reference_number || `TXN-${p.id}`}
-                            </td>
-                            <td className="py-2.5 px-3 text-slate-600 dark:text-zinc-300 font-medium">
-                              {p.payment_date ? new Date(p.payment_date).toLocaleDateString() : "-"}
-                            </td>
-                            <td className="py-2.5 px-3 font-semibold text-slate-900 dark:text-white">
-                              {p.tenant_name}
-                            </td>
-                            <td className="py-2.5 px-3 font-mono text-slate-800 dark:text-zinc-200 font-medium">{p.room_number || "-"}</td>
-                            <td className="py-2.5 px-3 text-slate-600 dark:text-zinc-300 font-medium">{p.billing_month || "-"}</td>
-                            <td className="py-2.5 px-3">
-                              <span className="inline-block px-2 py-0.5 rounded text-[10px] font-semibold bg-slate-100 dark:bg-zinc-800 text-slate-700 dark:text-zinc-300">
-                                {p.payment_method || "Cash"}
-                              </span>
-                            </td>
-                            <td className="py-2.5 px-3 text-right font-mono font-bold text-emerald-600 dark:text-emerald-400">
-                              ₱{Number(p.amount_paid).toLocaleString()}
-                            </td>
-                            <td className="py-2.5 px-3">
-                              <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-700 dark:text-emerald-400">
-                                <CheckCircle2 className="w-3 h-3" />
-                                {p.status || "Completed"}
-                              </span>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
+                    <div className="flex items-center gap-10 pt-4 sm:pt-0">
+                      <div className="text-center min-w-[140px]">
+                        <div className="border-b border-slate-400 dark:border-zinc-600 pb-1 mb-1.5 font-mono text-xs font-bold text-slate-900 dark:text-zinc-100">
+                          {reportData?.meta?.generatedBy || "Administrator"}
+                        </div>
+                        <span className="text-[10px] text-slate-500 dark:text-zinc-400 uppercase tracking-wider font-semibold block">
+                          Prepared By (Admin)
+                        </span>
+                      </div>
+
+                      <div className="text-center min-w-[140px]">
+                        <div className="border-b border-slate-400 dark:border-zinc-600 pb-1 mb-1.5 font-mono text-xs font-bold text-slate-900 dark:text-zinc-100">
+                          {propertyProfile.landlordName || "Property Manager"}
+                        </div>
+                        <span className="text-[10px] text-slate-500 dark:text-zinc-400 uppercase tracking-wider font-semibold block">
+                          Authorized Officer
+                        </span>
+                      </div>
+                    </div>
                   </div>
                 </div>
-              </div>
+              </>
             )}
-
-            {/* TAB 3: RENT ROLL & ROOM INVENTORY */}
-            {reportData && activeTab === "occupancy" && (
-              <div className="bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-xl p-5 shadow-xs">
-                <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-zinc-800">
-                  <div>
-                    <h3 className="text-sm font-bold text-slate-900 dark:text-white">Rent Roll & Room Directory</h3>
-                    <p className="text-xs text-slate-600 dark:text-zinc-300 font-medium">
-                      {filteredRooms.length} rooms listed with active occupants and tariffs
-                    </p>
-                  </div>
-                </div>
-
-                <div className="overflow-x-auto mt-3">
-                  <table className="w-full text-left text-xs border-collapse">
-                    <thead>
-                      <tr className="border-b border-slate-200 dark:border-zinc-800 text-slate-600 dark:text-zinc-300 font-semibold">
-                        <th className="py-2.5 px-3 font-semibold">Room #</th>
-                        <th className="py-2.5 px-3 font-semibold">Type</th>
-                        <th className="py-2.5 px-3 font-semibold">Floor</th>
-                        <th className="py-2.5 px-3 font-semibold">Capacity</th>
-                        <th className="py-2.5 px-3 font-semibold">Occupancy Status</th>
-                        <th className="py-2.5 px-3 font-semibold">Occupant Names</th>
-                        <th className="py-2.5 px-3 font-semibold text-right">Monthly Rent</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-100 dark:divide-zinc-800">
-                      {filteredRooms.map(r => {
-                        const isFull = r.current_occupants >= r.capacity;
-                        const isVacant = r.current_occupants === 0;
-                        return (
-                          <tr key={r.id} className="hover:bg-slate-50/50 dark:hover:bg-zinc-800/30">
-                            <td className="py-2.5 px-3 font-mono font-bold text-slate-900 dark:text-white">
-                              {r.room_number}
-                            </td>
-                            <td className="py-2.5 px-3 text-slate-700 dark:text-zinc-200 font-medium">{r.type}</td>
-                            <td className="py-2.5 px-3 font-mono text-slate-600 dark:text-zinc-300 font-medium">Floor {r.floor}</td>
-                            <td className="py-2.5 px-3 font-mono text-slate-700 dark:text-zinc-200 font-medium">
-                              {r.current_occupants} / {r.capacity} beds
-                            </td>
-                            <td className="py-2.5 px-3">
-                              <span
-                                className={`inline-block px-2 py-0.5 rounded text-[10px] font-bold ${
-                                  r.status === "Maintenance"
-                                    ? "bg-amber-100 text-amber-700 dark:bg-amber-950/60 dark:text-amber-400"
-                                    : isFull
-                                    ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-400"
-                                    : isVacant
-                                    ? "bg-slate-100 text-slate-600 dark:bg-zinc-800 dark:text-zinc-300"
-                                    : "bg-blue-100 text-blue-700 dark:bg-blue-950/60 dark:text-blue-400"
-                                }`}
-                              >
-                                {r.status === "Maintenance" ? "Maintenance" : isFull ? "Fully Occupied" : isVacant ? "Vacant" : "Partial"}
-                              </span>
-                            </td>
-                            <td className="py-2.5 px-3 text-slate-700 dark:text-zinc-300 font-medium">
-                              {r.occupants_list || "Vacant"}
-                            </td>
-                            <td className="py-2.5 px-3 text-right font-mono font-bold text-slate-900 dark:text-white">
-                              ₱{Number(r.price).toLocaleString()}
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            )}
-
-            {/* TAB 4: DELINQUENT ACCOUNTS */}
-            {reportData && activeTab === "delinquent" && (
-              <div className="bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-xl p-5 shadow-xs">
-                <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-zinc-800">
-                  <div>
-                    <h3 className="text-sm font-bold text-slate-900 dark:text-white">
-                      Delinquent / Overdue Accounts Schedule
-                    </h3>
-                    <p className="text-xs text-slate-600 dark:text-zinc-300 font-medium">
-                      {filteredOverdue.length} delinquent accounts with unpaid balances
-                    </p>
-                  </div>
-                  <div className="text-right">
-                    <span className="text-[10px] uppercase font-bold text-rose-500 block">Total Overdue</span>
-                    <span className="text-base font-extrabold font-mono text-rose-600 dark:text-rose-400">
-                      ₱{reportData.overdue.totalOverdueBalance.toLocaleString()}
-                    </span>
-                  </div>
-                </div>
-
-                <div className="overflow-x-auto mt-3">
-                  <table className="w-full text-left text-xs border-collapse">
-                    <thead>
-                      <tr className="border-b border-slate-200 dark:border-zinc-800 text-slate-600 dark:text-zinc-300 font-semibold">
-                        <th className="py-2.5 px-3 font-semibold">Tenant Name</th>
-                        <th className="py-2.5 px-3 font-semibold">Room</th>
-                        <th className="py-2.5 px-3 font-semibold">Contact #</th>
-                        <th className="py-2.5 px-3 font-semibold">Billing Month</th>
-                        <th className="py-2.5 px-3 font-semibold">Due Date</th>
-                        <th className="py-2.5 px-3 font-semibold">Days Overdue</th>
-                        <th className="py-2.5 px-3 font-semibold text-right">Total Billed</th>
-                        <th className="py-2.5 px-3 font-semibold text-right">Amount Paid</th>
-                        <th className="py-2.5 px-3 font-semibold text-right">Balance Due</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-100 dark:divide-zinc-800">
-                      {filteredOverdue.map(acc => (
-                        <tr key={acc.bill_id} className="hover:bg-slate-50/50 dark:hover:bg-zinc-800/30">
-                          <td className="py-2.5 px-3 font-semibold text-slate-900 dark:text-white">
-                            {acc.tenant_name}
-                          </td>
-                          <td className="py-2.5 px-3 font-mono text-slate-800 dark:text-zinc-200 font-medium">{acc.room_number || "-"}</td>
-                          <td className="py-2.5 px-3 font-mono text-slate-600 dark:text-zinc-300 font-medium">{formatPhoneNumber(acc.phone, "-")}</td>
-                          <td className="py-2.5 px-3 text-slate-700 dark:text-zinc-300 font-medium">{acc.billing_month}</td>
-                          <td className="py-2.5 px-3 text-slate-600 dark:text-zinc-300 font-medium">
-                            {acc.due_date ? new Date(acc.due_date).toLocaleDateString() : "-"}
-                          </td>
-                          <td className="py-2.5 px-3">
-                            <span className="inline-block px-2 py-0.5 rounded text-[10px] font-bold bg-rose-100 dark:bg-rose-950/60 text-rose-700 dark:text-rose-400">
-                              {acc.days_overdue} days
-                            </span>
-                          </td>
-                          <td className="py-2.5 px-3 text-right font-mono text-slate-700 dark:text-zinc-300 font-medium">
-                            ₱{Number(acc.total_amount).toLocaleString()}
-                          </td>
-                          <td className="py-2.5 px-3 text-right font-mono text-emerald-600 dark:text-emerald-400">
-                            ₱{Number(acc.amount_paid).toLocaleString()}
-                          </td>
-                          <td className="py-2.5 px-3 text-right font-mono font-bold text-rose-600 dark:text-rose-400">
-                            ₱{Number(acc.balance).toLocaleString()}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            )}
-
-            {/* TAB 5: MAINTENANCE & WORK ORDERS */}
-            {reportData && activeTab === "maintenance" && (
-              <div className="space-y-6">
-                {/* Stats row */}
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                  <div className="p-3.5 rounded-xl bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 shadow-xs">
-                    <span className="text-[10px] uppercase font-bold tracking-wider text-slate-600 dark:text-zinc-300">
-                      Total Requests
-                    </span>
-                    <div className="text-xl font-bold font-mono text-slate-900 dark:text-white mt-1">
-                      {reportData.maintenance.stats.total || 0}
-                    </div>
-                  </div>
-                  <div className="p-3.5 rounded-xl bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 shadow-xs">
-                    <span className="text-[10px] uppercase font-bold tracking-wider text-emerald-600">
-                      Resolved
-                    </span>
-                    <div className="text-xl font-bold font-mono text-emerald-600 mt-1">
-                      {reportData.maintenance.stats.resolved_count || 0}
-                    </div>
-                  </div>
-                  <div className="p-3.5 rounded-xl bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 shadow-xs">
-                    <span className="text-[10px] uppercase font-bold tracking-wider text-blue-600">
-                      In Progress
-                    </span>
-                    <div className="text-xl font-bold font-mono text-blue-600 mt-1">
-                      {reportData.maintenance.stats.in_progress_count || 0}
-                    </div>
-                  </div>
-                  <div className="p-3.5 rounded-xl bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 shadow-xs">
-                    <span className="text-[10px] uppercase font-bold tracking-wider text-amber-600">
-                      Pending Action
-                    </span>
-                    <div className="text-xl font-bold font-mono text-amber-600 mt-1">
-                      {reportData.maintenance.stats.pending_count || 0}
-                    </div>
-                  </div>
-                </div>
-
-                {/* Tickets Table */}
-                <div className="bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-xl p-5 shadow-xs">
-                  <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-zinc-800">
-                    <div>
-                      <h3 className="text-sm font-bold text-slate-900 dark:text-white">Maintenance Work Order Ledger</h3>
-                      <p className="text-xs text-slate-600 dark:text-zinc-300 font-medium">
-                        {filteredTickets.length} tickets recorded
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="overflow-x-auto mt-3">
-                    <table className="w-full text-left text-xs border-collapse">
-                      <thead>
-                        <tr className="border-b border-slate-200 dark:border-zinc-800 text-slate-600 dark:text-zinc-300 font-semibold">
-                          <th className="py-2.5 px-3 font-semibold">Ticket #</th>
-                          <th className="py-2.5 px-3 font-semibold">Date Filed</th>
-                          <th className="py-2.5 px-3 font-semibold">Tenant</th>
-                          <th className="py-2.5 px-3 font-semibold">Room</th>
-                          <th className="py-2.5 px-3 font-semibold">Category</th>
-                          <th className="py-2.5 px-3 font-semibold">Priority</th>
-                          <th className="py-2.5 px-3 font-semibold">Issue Title</th>
-                          <th className="py-2.5 px-3 font-semibold">Assigned To</th>
-                          <th className="py-2.5 px-3 font-semibold">Status</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-slate-100 dark:divide-zinc-800">
-                        {filteredTickets.map(t => (
-                          <tr key={t.id} className="hover:bg-slate-50/50 dark:hover:bg-zinc-800/30">
-                            <td className="py-2.5 px-3 font-mono font-medium text-slate-700 dark:text-zinc-300">
-                              {t.request_number || `REQ-${t.id}`}
-                            </td>
-                            <td className="py-2.5 px-3 text-slate-600 dark:text-zinc-300 font-medium">
-                              {t.created_at ? new Date(t.created_at).toLocaleDateString() : "-"}
-                            </td>
-                            <td className="py-2.5 px-3 font-semibold text-slate-900 dark:text-white">
-                              {t.tenant_name || "-"}
-                            </td>
-                            <td className="py-2.5 px-3 font-mono text-slate-800 dark:text-zinc-200 font-medium">{t.room_number || "-"}</td>
-                            <td className="py-2.5 px-3 text-slate-700 dark:text-zinc-200 font-medium">{t.category}</td>
-                            <td className="py-2.5 px-3">
-                              <span
-                                className={`inline-block px-2 py-0.5 rounded text-[10px] font-bold ${
-                                  t.priority === "Urgent"
-                                    ? "bg-rose-100 text-rose-700 dark:bg-rose-950/60 dark:text-rose-400"
-                                    : t.priority === "High"
-                                    ? "bg-amber-100 text-amber-700 dark:bg-amber-950/60 dark:text-amber-400"
-                                    : "bg-slate-100 text-slate-700 dark:bg-zinc-800 dark:text-zinc-300"
-                                }`}
-                              >
-                                {t.priority}
-                              </span>
-                            </td>
-                            <td className="py-2.5 px-3 font-medium text-slate-800 dark:text-zinc-200">
-                              {t.title}
-                            </td>
-                            <td className="py-2.5 px-3 text-slate-600 dark:text-zinc-300 font-medium">{t.assigned_to || "Unassigned"}</td>
-                            <td className="py-2.5 px-3">
-                              <span
-                                className={`inline-block px-2 py-0.5 rounded text-[10px] font-bold ${
-                                  t.status === "Resolved"
-                                    ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-400"
-                                    : t.status === "In Progress"
-                                    ? "bg-blue-100 text-blue-700 dark:bg-blue-950/60 dark:text-blue-400"
-                                    : "bg-amber-100 text-amber-700 dark:bg-amber-950/60 dark:text-amber-400"
-                                }`}
-                              >
-                                {t.status}
-                              </span>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Formal Report Sign-Off Footer */}
-            <div className="pt-6 border-t border-slate-200 dark:border-zinc-800 text-xs text-slate-600 dark:text-zinc-300 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 font-medium">
-              <div>
-                <p className="font-semibold text-slate-800 dark:text-zinc-100">
-                  {propertyProfile.propertyName} Management Information System
-                </p>
-                <p className="text-[11px] text-slate-500 dark:text-zinc-400">
-                  This report is computer-generated and certified for official accounting and auditing records.
-                </p>
-              </div>
-
-              <div className="flex items-center gap-8 pt-2 sm:pt-0">
-                <div className="text-center">
-                  <div className="w-32 border-b border-slate-300 dark:border-zinc-700 pb-1 mb-1 font-mono text-[11px] text-slate-800 dark:text-zinc-200">
-                    {reportData?.meta?.generatedBy || "Administrator"}
-                  </div>
-                  <span className="text-[10px] text-slate-500 dark:text-zinc-400 uppercase tracking-wider font-semibold">Prepared By</span>
-                </div>
-                <div className="text-center">
-                  <div className="w-32 border-b border-slate-300 dark:border-zinc-700 pb-1 mb-1 font-mono text-[11px] text-slate-800 dark:text-zinc-200">
-                    {propertyProfile.landlordName}
-                  </div>
-                  <span className="text-[10px] text-slate-500 dark:text-zinc-400 uppercase tracking-wider font-semibold">Authorized Officer</span>
-                </div>
-              </div>
-            </div>
           </div>
         </motion.div>
       </div>

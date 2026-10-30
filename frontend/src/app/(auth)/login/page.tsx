@@ -4,10 +4,44 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import api from "@/lib/api";
-import { Mail, Lock, Eye, EyeOff, ArrowRight, Loader2 } from "lucide-react";
+import {
+  Mail,
+  Lock,
+  Eye,
+  EyeOff,
+  ArrowRight,
+  Loader2,
+  X,
+  Home,
+  CreditCard,
+  Wrench,
+  MessageSquare,
+} from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
-import AuthHeroCard from "@/components/auth-hero-card";
+
+const authFeatures = [
+  {
+    icon: Home,
+    title: "Room Management",
+    description: "Track occupancy and room status",
+  },
+  {
+    icon: CreditCard,
+    title: "Easy Payments",
+    description: "Simplify billing and payments",
+  },
+  {
+    icon: Wrench,
+    title: "Maintenance Tracking",
+    description: "Resolve issues faster",
+  },
+  {
+    icon: MessageSquare,
+    title: "Better Communication",
+    description: "Stay connected with your tenants",
+  },
+];
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
@@ -16,6 +50,9 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [showPendingModal, setShowPendingModal] = useState(false);
+  const [legalModal, setLegalModal] = useState<"privacy" | "terms" | null>(
+    null,
+  );
   const router = useRouter();
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -44,11 +81,12 @@ export default function LoginPage() {
       ) {
         setShowPendingModal(true);
       } else {
-        toast.error(
-          err.response?.data?.message ||
+        toast.error("Authentication Failed", {
+          description:
+            err.response?.data?.message ||
             err.message ||
-            "Login failed. Please check credentials.",
-        );
+            "Please verify your credentials and try again.",
+        });
       }
       setIsLoading(false);
     }
@@ -67,38 +105,110 @@ export default function LoginPage() {
         initial={{ opacity: 0, y: 16, scale: 0.98 }}
         animate={{ opacity: 1, y: 0, scale: 1 }}
         transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
-        className="relative z-10 w-full max-w-5xl flex flex-col md:flex-row items-stretch justify-center rounded-[2rem] overflow-hidden shadow-2xl border border-white/10"
+        className="relative z-10 w-full max-w-md md:max-w-[820px] lg:max-w-[850px] flex flex-col md:flex-row items-stretch rounded-[2rem] overflow-hidden shadow-2xl"
       >
         {/* Left Card: Brand & Features Hero */}
-        <AuthHeroCard />
+        <div className="relative w-full md:w-[420px] lg:w-[440px] shrink-0 bg-[#061834] p-7 sm:p-9 text-white flex flex-col justify-between overflow-hidden">
+          {/* Decorative Wave Accent in bottom right corner */}
+          <svg
+            className="absolute bottom-0 right-0 w-[80%] h-auto pointer-events-none select-none z-0"
+            viewBox="0 0 340 180"
+            fill="none"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path
+              d="M0 180C55 140 115 165 175 125C235 85 285 105 340 45V180H0Z"
+              fill="url(#auth-wave-grad)"
+            />
+            <defs>
+              <linearGradient
+                id="auth-wave-grad"
+                x1="0"
+                y1="180"
+                x2="340"
+                y2="45"
+                gradientUnits="userSpaceOnUse"
+              >
+                <stop stopColor="#0052cc" stopOpacity="0.85" />
+                <stop offset="1" stopColor="#0099ff" stopOpacity="0.95" />
+              </linearGradient>
+            </defs>
+          </svg>
 
-        {/* Right Card: Login Form */}
-        <div className="w-full md:w-[480px] lg:w-[500px] bg-white p-7 sm:p-9 md:p-10 flex flex-col justify-between text-slate-900">
-          <div>
-            {/* Top Logo Lockup */}
+          {/* Top Section */}
+          <div className="relative z-10 flex flex-col">
+            {/* Brand Header */}
             <div className="flex items-center gap-3 select-none">
               <img
                 src="/images/logo/rentTrack_icon.png"
                 alt="RentTrack"
-                className="w-10 h-10 object-contain shrink-0"
+                className="w-11 h-11 object-contain shrink-0"
               />
               <div className="flex flex-col">
-                <span className="text-xl font-extrabold text-slate-900 tracking-tight leading-tight">
-                  RentTrack
+                <span className="text-xl sm:text-2xl font-black tracking-tight leading-tight">
+                  <span className="text-white">Rent</span>
+                  <span className="text-teal-400">Track</span>
                 </span>
-                <span className="text-[11px] font-medium text-slate-500 leading-tight">
+                <span className="text-[11px] sm:text-xs font-medium text-blue-200/70 leading-tight">
                   Boarding House Management System
                 </span>
               </div>
             </div>
 
-            {/* Title & Subtitle */}
-            <div className="mt-7 mb-6">
+            {/* Hero Title & Pitch */}
+            <div className="mt-8 sm:mt-10 mb-2">
+              <h1 className="text-2xl sm:text-[28px] font-black tracking-tight leading-[1.25] text-white">
+                Smarter Management,
+                <br />
+                <span className="text-[#00a8ff]">Better Living.</span>
+              </h1>
+              <p className="text-xs sm:text-sm text-slate-300 font-normal leading-relaxed mt-3 max-w-sm">
+                Easily manage rooms, track payments, and keep tenants happy -
+                all in one place.
+              </p>
+            </div>
+
+            {/* Feature List */}
+            <div className="mt-7 sm:mt-8 space-y-4 sm:space-y-4.5">
+              {authFeatures.map((feat, idx) => (
+                <div key={idx} className="flex items-center gap-3.5 group">
+                  <div className="w-10 h-10 rounded-full bg-[#0d2a58] border border-blue-400/25 flex items-center justify-center text-[#38bdf8] shrink-0 group-hover:scale-105 transition-transform shadow-sm">
+                    <feat.icon className="w-5 h-5" strokeWidth={2} />
+                  </div>
+                  <div className="flex flex-col min-w-0">
+                    <span className="text-xs sm:text-sm font-bold text-white leading-tight">
+                      {feat.title}
+                    </span>
+                    <span className="text-[11px] sm:text-xs text-slate-300/80 font-normal leading-tight mt-0.5">
+                      {feat.description}
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Bottom Tagline */}
+          <div className="relative z-10 pt-8 sm:pt-10">
+            <p className="text-[11px] sm:text-xs font-semibold text-slate-400 tracking-wide">
+              Your Property. Our Priority.
+            </p>
+          </div>
+        </div>
+
+        {/* Right Card: Login Form */}
+        <div
+          className="w-full md:w-[380px] lg:w-[410px] shrink-0 bg-white p-6 sm:p-8 md:p-9 flex flex-col justify-between text-slate-900 light-form-card [color-scheme:light]"
+          style={{ colorScheme: "light" }}
+        >
+          <div>
+            {/* Form Header */}
+            <div className="mb-6">
               <h2 className="text-2xl sm:text-[28px] font-black text-slate-900 tracking-tight leading-tight">
                 Welcome
               </h2>
-              <p className="text-xs sm:text-sm text-slate-500 font-normal mt-1.5">
-                Sign in to your account to continue
+              <p className="text-xs sm:text-sm text-slate-500 font-medium mt-1.5">
+                Enter your credentials to access your account.
               </p>
             </div>
 
@@ -120,6 +230,7 @@ export default function LoginPage() {
                   <input
                     id="email"
                     type="email"
+                    autoComplete="email"
                     placeholder="Enter your email address"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
@@ -146,17 +257,18 @@ export default function LoginPage() {
                   <input
                     id="password"
                     type={showPassword ? "text" : "password"}
+                    autoComplete="current-password"
                     placeholder="Enter your password"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     required
                     disabled={isLoading}
-                    className="w-full bg-transparent text-sm text-slate-900 placeholder:text-slate-400 outline-none font-medium pr-8"
+                    className="w-full bg-transparent text-sm text-slate-900 placeholder:text-slate-400 outline-none font-medium pr-10"
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3.5 text-slate-400 hover:text-slate-600 transition-colors p-1"
+                    className="absolute right-3.5 z-20 text-slate-400 hover:text-slate-600 transition-colors p-1 cursor-pointer"
                     aria-label={
                       showPassword ? "Hide password" : "Show password"
                     }
@@ -256,15 +368,36 @@ export default function LoginPage() {
             </button>
           </div>
 
-          {/* Bottom Switch Link */}
-          <div className="text-center text-xs sm:text-sm text-slate-600 font-medium mt-6">
-            Don&apos;t have an account?{" "}
-            <Link
-              href="/signup"
-              className="text-[#0066ee] font-bold hover:underline ml-1"
-            >
-              Create one
-            </Link>
+          {/* Bottom Switch Link & Legal Policies */}
+          <div className="text-center text-xs sm:text-sm text-slate-600 font-medium mt-6 flex flex-col items-center gap-2">
+            <p>
+              Don&apos;t have an account?{" "}
+              <Link
+                href="/signup"
+                className="text-[#0066ee] font-bold hover:underline ml-1"
+              >
+                Apply for Residency
+              </Link>
+            </p>
+
+            {/* Privacy Policy and Terms and Conditions buttons */}
+            <div className="flex items-center justify-center gap-3 text-[11px] text-slate-400 font-medium pt-1">
+              <button
+                type="button"
+                onClick={() => setLegalModal("privacy")}
+                className="hover:text-slate-700 hover:underline transition-colors cursor-pointer"
+              >
+                Privacy Policy
+              </button>
+              <span className="text-slate-300">•</span>
+              <button
+                type="button"
+                onClick={() => setLegalModal("terms")}
+                className="hover:text-slate-700 hover:underline transition-colors cursor-pointer"
+              >
+                Terms and Conditions
+              </button>
+            </div>
           </div>
         </div>
       </motion.div>
@@ -342,6 +475,156 @@ export default function LoginPage() {
                   className="w-full py-3 bg-white hover:bg-zinc-200 text-zinc-950 rounded-xl font-bold transition-all text-sm cursor-pointer"
                 >
                   Understood
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+
+        {/* --- PRIVACY POLICY / TERMS & CONDITIONS MODAL --- */}
+        {legalModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm"
+          >
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0, y: 15 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.95, opacity: 0, y: 10 }}
+              transition={{ type: "spring", damping: 28, stiffness: 350 }}
+              className="bg-white rounded-2xl p-6 sm:p-8 max-w-lg w-full shadow-2xl relative flex flex-col max-h-[85vh] border border-slate-100 text-slate-900"
+            >
+              {/* Header */}
+              <div className="flex items-start justify-between pb-4 border-b border-slate-100 shrink-0">
+                <div>
+                  <h3 className="text-xl font-bold text-slate-900 tracking-tight">
+                    {legalModal === "privacy"
+                      ? "Privacy Policy"
+                      : "Terms and Conditions"}
+                  </h3>
+                  <p className="text-xs text-slate-500 font-medium mt-0.5">
+                    {legalModal === "privacy"
+                      ? "How RentTrack protects and manages your personal information"
+                      : "Rules and terms governing use of the RentTrack platform"}
+                  </p>
+                </div>
+                <button
+                  onClick={() => setLegalModal(null)}
+                  className="text-slate-400 hover:text-slate-600 transition-colors p-1.5 rounded-lg hover:bg-slate-100"
+                  aria-label="Close"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              {/* Scrollable Content */}
+              <div className="overflow-y-auto py-5 pr-2 space-y-4 text-xs sm:text-sm text-slate-600 custom-scrollbar leading-relaxed">
+                {legalModal === "privacy" ? (
+                  <>
+                    <div>
+                      <h4 className="font-bold text-slate-900 mb-1">
+                        1. Information We Collect
+                      </h4>
+                      <p>
+                        We collect personal details you provide upon
+                        registration, account verification, and lease
+                        management, including your full name, email address,
+                        contact phone number, and residency records.
+                      </p>
+                    </div>
+                    <div>
+                      <h4 className="font-bold text-slate-900 mb-1">
+                        2. How We Use Your Data
+                      </h4>
+                      <p>
+                        Your information is utilized solely to process tenancy
+                        records, generate automated billing invoices, coordinate
+                        maintenance work orders, and facilitate
+                        resident-administrator communication.
+                      </p>
+                    </div>
+                    <div>
+                      <h4 className="font-bold text-slate-900 mb-1">
+                        3. Security & Storage
+                      </h4>
+                      <p>
+                        All user credentials and sensitive records are stored
+                        using industry-standard hashing and role-based access
+                        control. We do not sell or disclose your personal data
+                        to unauthorized third parties.
+                      </p>
+                    </div>
+                    <div>
+                      <h4 className="font-bold text-slate-900 mb-1">
+                        4. Contact & Inquiries
+                      </h4>
+                      <p>
+                        For any privacy-related requests or data deletion
+                        questions, please reach out to our administration team
+                        via the portal messaging system or at
+                        support@renttrack.com.
+                      </p>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div>
+                      <h4 className="font-bold text-slate-900 mb-1">
+                        1. Acceptance of Terms
+                      </h4>
+                      <p>
+                        By accessing or signing into the RentTrack platform, you
+                        agree to comply with all operational guidelines, leasing
+                        agreements, and community policies established for your
+                        boarding facility.
+                      </p>
+                    </div>
+                    <div>
+                      <h4 className="font-bold text-slate-900 mb-1">
+                        2. User Account Responsibilities
+                      </h4>
+                      <p>
+                        You are responsible for maintaining the confidentiality
+                        of your login credentials and for all actions that occur
+                        under your registered resident or administrator profile.
+                      </p>
+                    </div>
+                    <div>
+                      <h4 className="font-bold text-slate-900 mb-1">
+                        3. Rental Payments & Billing
+                      </h4>
+                      <p>
+                        Monthly rental dues and utility obligations must be
+                        settled on or before the stated due dates. Payment
+                        verification receipts submitted through the portal are
+                        subject to administrative audit.
+                      </p>
+                    </div>
+                    <div>
+                      <h4 className="font-bold text-slate-900 mb-1">
+                        4. Maintenance Reporting
+                      </h4>
+                      <p>
+                        Residents are required to report room repairs and
+                        facility issues promptly through the Maintenance
+                        Requests system to prevent property damage and ensure
+                        timely resolution.
+                      </p>
+                    </div>
+                  </>
+                )}
+              </div>
+
+              {/* Footer */}
+              <div className="pt-4 border-t border-slate-100 flex items-center justify-center shrink-0">
+                <button
+                  type="button"
+                  onClick={() => setLegalModal(null)}
+                  className="w-full sm:w-auto min-w-[160px] px-8 py-2.5 bg-[#0066ee] hover:bg-[#0055d4] text-white font-bold rounded-xl text-xs sm:text-sm transition-all cursor-pointer shadow-sm active:scale-[0.98]"
+                >
+                  I Understand
                 </button>
               </div>
             </motion.div>

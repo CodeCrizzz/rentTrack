@@ -11,25 +11,25 @@ export default function manifest(): MetadataRoute.Manifest {
     theme_color: '#000000',
     icons: [
       {
-        src: '/images/renttrack_app_logo.png',
+        src: '/images/logo/rentTrack_icon.png',
         sizes: '192x192',
         type: 'image/png',
         purpose: 'any'
       },
       {
-        src: '/images/renttrack_app_logo.png',
+        src: '/images/logo/rentTrack_icon.png',
         sizes: '512x512',
         type: 'image/png',
         purpose: 'any'
       },
       {
-        src: '/images/renttrack_app_logo.png',
+        src: '/images/logo/rentTrack_icon.png',
         sizes: '192x192',
         type: 'image/png',
         purpose: 'maskable'
       },
       {
-        src: '/images/renttrack_app_logo.png',
+        src: '/images/logo/rentTrack_icon.png',
         sizes: '512x512',
         type: 'image/png',
         purpose: 'maskable'

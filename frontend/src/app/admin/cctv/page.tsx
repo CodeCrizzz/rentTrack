@@ -1,843 +1,476 @@
 "use client";
 
-import { useState, useEffect, useRef, useMemo, useCallback } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Video,
-  Maximize2,
+  VideoOff,
   Camera,
-  WifiOff,
-  Volume2,
-  VolumeX,
-  Eye,
-  ShieldCheck,
   HardDrive,
-  Radio,
   X,
-  AlertTriangle,
+  Radio,
+  AlertCircle,
 } from "lucide-react";
 import { toast } from "sonner";
 
-interface CameraFeed {
+interface CameraItem {
   id: string;
+  camNumber: string;
   name: string;
-  zone: "Perimeter" | "Hallways" | "Common";
+  fullName: string;
+  location: string;
   status: "online" | "offline";
   resolution: string;
   fps: number;
-  channel: string;
 }
 
-const CAMERAS: CameraFeed[] = [
+const CAMERAS: CameraItem[] = [
   {
-    id: "cam-1",
-    name: "Main Gate & Turnstile",
-    zone: "Perimeter",
-    status: "online",
-    resolution: "4K",
-    fps: 30,
-    channel: "CH-01",
-  },
-  {
-    id: "cam-2",
-    name: "Lobby & Reception Desk",
-    zone: "Common",
-    status: "online",
-    resolution: "1080p",
-    fps: 30,
-    channel: "CH-02",
-  },
-  {
-    id: "cam-3",
-    name: "Resident Parking Lot A",
-    zone: "Perimeter",
-    status: "online",
-    resolution: "4K",
-    fps: 24,
-    channel: "CH-03",
-  },
-  {
-    id: "cam-4",
-    name: "1st Floor South Hallway",
-    zone: "Hallways",
-    status: "online",
-    resolution: "1080p",
-    fps: 30,
-    channel: "CH-04",
-  },
-  {
-    id: "cam-5",
-    name: "2nd Floor North Corridor",
-    zone: "Hallways",
-    status: "online",
-    resolution: "1080p",
-    fps: 30,
-    channel: "CH-05",
-  },
-  {
-    id: "cam-6",
-    name: "3rd Floor Hallway & Study",
-    zone: "Hallways",
-    status: "online",
-    resolution: "1080p",
-    fps: 30,
-    channel: "CH-06",
-  },
-  {
-    id: "cam-7",
-    name: "Communal Kitchen & Dining",
-    zone: "Common",
-    status: "online",
-    resolution: "1080p",
-    fps: 30,
-    channel: "CH-07",
-  },
-  {
-    id: "cam-8",
-    name: "Laundry & Drying Area",
-    zone: "Common",
-    status: "online",
-    resolution: "1080p",
-    fps: 30,
-    channel: "CH-08",
-  },
-  {
-    id: "cam-9",
-    name: "Rear Fire Exit & Stairwell",
-    zone: "Perimeter",
+    id: "cam-01",
+    camNumber: "CAM 01",
+    name: "Main Entrance",
+    fullName: "CAM 01 - Main Entrance",
+    location: "Front Gate",
     status: "offline",
     resolution: "1080p",
     fps: 0,
-    channel: "CH-09",
   },
   {
-    id: "cam-10",
-    name: "4th Floor Hallway West",
-    zone: "Hallways",
-    status: "online",
+    id: "cam-02",
+    camNumber: "CAM 02",
+    name: "Hallway (1st Floor)",
+    fullName: "CAM 02 - Hallway (1st Floor)",
+    location: "1st Floor Hallway",
+    status: "offline",
     resolution: "1080p",
-    fps: 30,
-    channel: "CH-10",
+    fps: 0,
   },
   {
-    id: "cam-11",
-    name: "Rooftop Water Tanks & HVAC",
-    zone: "Perimeter",
-    status: "online",
+    id: "cam-03",
+    camNumber: "CAM 03",
+    name: "Stairs",
+    fullName: "CAM 03 - Stairs",
+    location: "Stairwell",
+    status: "offline",
     resolution: "1080p",
-    fps: 24,
-    channel: "CH-11",
+    fps: 0,
   },
   {
-    id: "cam-12",
-    name: "Basement Storage & Metering",
-    zone: "Common",
-    status: "online",
+    id: "cam-04",
+    camNumber: "CAM 04",
+    name: "Parking Area",
+    fullName: "CAM 04 - Parking Area",
+    location: "Parking Lot",
+    status: "offline",
     resolution: "1080p",
-    fps: 30,
-    channel: "CH-12",
+    fps: 0,
+  },
+  {
+    id: "cam-05",
+    camNumber: "CAM 05",
+    name: "Common Area",
+    fullName: "CAM 05 - Common Area",
+    location: "Lobby / Common Area",
+    status: "offline",
+    resolution: "1080p",
+    fps: 0,
+  },
+  {
+    id: "cam-06",
+    camNumber: "CAM 06",
+    name: "Kitchen",
+    fullName: "CAM 06 - Kitchen",
+    location: "Kitchen",
+    status: "offline",
+    resolution: "1080p",
+    fps: 0,
+  },
+  {
+    id: "cam-07",
+    camNumber: "CAM 07",
+    name: "Laundry Room",
+    fullName: "CAM 07 - Laundry Room",
+    location: "Laundry Area",
+    status: "offline",
+    resolution: "1080p",
+    fps: 0,
+  },
+  {
+    id: "cam-08",
+    camNumber: "CAM 08",
+    name: "Back Area",
+    fullName: "CAM 08 - Back Area",
+    location: "Backyard",
+    status: "offline",
+    resolution: "1080p",
+    fps: 0,
   },
 ];
 
 export default function CCTVPage() {
-  const [isLoading, setIsLoading] = useState(true);
-  const [currentTime, setCurrentTime] = useState(new Date());
-  const [selectedZone, setSelectedZone] = useState<
-    "All" | "Perimeter" | "Hallways" | "Common"
-  >("All");
-  const [focusedCam, setFocusedCam] = useState<CameraFeed | null>(null);
-  const [nightVisionMap, setNightVisionMap] = useState<Record<string, boolean>>(
-    {},
-  );
-  const [mutedMap, setMutedMap] = useState<Record<string, boolean>>({});
+  const [recordingState, setRecordingState] = useState<Record<string, number>>({});
+  const [focusedModalCam, setFocusedModalCam] = useState<CameraItem | null>(null);
 
-  // Initial mount loading timer for smooth skeleton transition
+  const isAnyRecording = Object.keys(recordingState).length > 0;
+
+  // Interval timer for all actively recording cameras
   useEffect(() => {
-    const timer = setTimeout(() => setIsLoading(false), 250);
-    return () => clearTimeout(timer);
-  }, []);
+    if (!isAnyRecording) return;
+    const interval = setInterval(() => {
+      setRecordingState((prev) => {
+        const next: Record<string, number> = {};
+        for (const [id, secs] of Object.entries(prev)) {
+          next[id] = secs + 1;
+        }
+        return next;
+      });
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [isAnyRecording]);
 
-  // Dynamic viewport container height calculation
-  const [containerHeight, setContainerHeight] = useState<number>(0);
-  const scrollContainerRef = useRef<HTMLDivElement | null>(null);
-  const resizeObserverRef = useRef<ResizeObserver | null>(null);
-
-  // Callback ref ensures the ResizeObserver attaches the moment the container is mounted (after loading)
-  const containerCallbackRef = useCallback((node: HTMLDivElement | null) => {
-    if (resizeObserverRef.current) {
-      resizeObserverRef.current.disconnect();
-      resizeObserverRef.current = null;
-    }
-
-    scrollContainerRef.current = node;
-
-    if (node) {
-      const update = () => {
-        setContainerHeight(node.clientHeight);
-      };
-      update();
-
-      const observer = new ResizeObserver(update);
-      observer.observe(node);
-      resizeObserverRef.current = observer;
-    }
-  }, []);
-
-  // Cleanup ResizeObserver on unmount
-  useEffect(() => {
-    return () => {
-      if (resizeObserverRef.current) {
-        resizeObserverRef.current.disconnect();
-      }
-    };
-  }, []);
-
-  // Live clock ticker
-  useEffect(() => {
-    const timer = setInterval(() => setCurrentTime(new Date()), 1000);
-    return () => clearInterval(timer);
-  }, []);
-
-  const toggleNightVision = (camId: string, e: React.MouseEvent) => {
-    e.stopPropagation();
-    setNightVisionMap((prev) => {
-      const next = !prev[camId];
-      toast.info(
-        `IR Night Vision ${next ? "Engaged" : "Disengaged"} on ${camId.toUpperCase()}`,
-      );
-      return { ...prev, [camId]: next };
-    });
+  const formatTimer = (secs: number = 0) => {
+    const mins = Math.floor(secs / 60);
+    const remainingSecs = secs % 60;
+    return `${String(mins).padStart(2, "0")}:${String(remainingSecs).padStart(2, "0")}`;
   };
 
-  const toggleAudio = (camId: string, e: React.MouseEvent) => {
-    e.stopPropagation();
-    setMutedMap((prev) => ({ ...prev, [camId]: !prev[camId] }));
-  };
-
-  const takeSnapshot = (camName: string, e: React.MouseEvent) => {
-    e.stopPropagation();
-    toast.success(`Surveillance snapshot captured for ${camName}`);
-  };
-
-  const filteredCameras = useMemo(() => {
-    return CAMERAS.filter(
-      (c) => selectedZone === "All" || c.zone === selectedZone,
-    );
-  }, [selectedZone]);
-
-  // --- DYNAMIC TELEMETRY CALCULATIONS ---
-  const totalCameras = CAMERAS.length;
-  const onlineCameras = useMemo(() => CAMERAS.filter((c) => c.status === "online"), []);
-  const offlineCameras = useMemo(() => CAMERAS.filter((c) => c.status === "offline"), []);
-  const onlineCount = onlineCameras.length;
-  const offlineCount = offlineCameras.length;
-  const uptimePercent = Math.round((onlineCount / totalCameras) * 100);
-
-  // 1. Perimeter Coverage Calculations
-  const perimeterCameras = useMemo(() => CAMERAS.filter((c) => c.zone === "Perimeter"), []);
-  const onlinePerimeterCount = useMemo(
-    () => perimeterCameras.filter((c) => c.status === "online").length,
-    [perimeterCameras],
-  );
-  const perimeterCoverage = Math.round(
-    (onlinePerimeterCount / perimeterCameras.length) * 100,
-  );
-
-  // 2. Storage & Retention Calculations (derived from active stream resolutions)
-  const count4K = useMemo(() => onlineCameras.filter((c) => c.resolution === "4K").length, [onlineCameras]);
-  const count1080p = useMemo(() => onlineCameras.filter((c) => c.resolution === "1080p").length, [onlineCameras]);
-  // 4K stream ~ 15.8 GB/day, 1080p ~ 4.2 GB/day (standard H.265 compression)
-  const dailyIngestGB = Math.round(count4K * 15.8 + count1080p * 4.2);
-  const nvrCapacityGB = 4096; // 4.0 TB RAID-5 array
-  const estimatedUsedGB = Math.min(nvrCapacityGB, Math.round(dailyIngestGB * 26)); // 26 days of rolling buffer
-  const storageUsedPercent = Math.round((estimatedUsedGB / nvrCapacityGB) * 100);
-  const storageUsedTB = (estimatedUsedGB / 1024).toFixed(1);
-  const storageTotalTB = (nvrCapacityGB / 1024).toFixed(1);
-
-  // 3. Security & Night Vision Calculations
-  const activeNightVisionCount = useMemo(
-    () => Object.values(nightVisionMap).filter(Boolean).length,
-    [nightVisionMap],
-  );
-
-  // 4. Bandwidth & Frame Rate Calculations
-  // 4K stream @ 15 Mbps, 1080p stream @ 4 Mbps
-  const totalBandwidthMbps = count4K * 15 + count1080p * 4;
-  const totalIngestFPS = useMemo(
-    () => onlineCameras.reduce((acc, c) => acc + c.fps, 0),
-    [onlineCameras],
-  );
-  // Dynamic UDP latency jitter
-  const dynamicLatencyMs = useMemo(() => {
-    return 15 + (currentTime.getSeconds() % 4);
-  }, [currentTime]);
-  const cardHeight = useMemo(() => {
-    const gap = 10;
-    const totalGaps = 10;
-    if (containerHeight > 0) {
-      const computed = Math.floor((containerHeight - totalGaps) / 2);
-      return Math.max(180, computed);
+  const handleToggleCamRecord = (cam: CameraItem) => {
+    if (recordingState[cam.id] !== undefined) {
+      const duration = formatTimer(recordingState[cam.id]);
+      setRecordingState((prev) => {
+        const next = { ...prev };
+        delete next[cam.id];
+        return next;
+      });
+      toast.info("Recording Saved", {
+        description: `Video recording saved for ${cam.fullName} (${duration}).`,
+      });
+    } else {
+      setRecordingState((prev) => ({ ...prev, [cam.id]: 0 }));
+      toast.success("Recording Started", {
+        description: `Capturing live surveillance stream buffer for ${cam.fullName}.`,
+      });
     }
-    if (typeof window !== "undefined") {
-      const estimated = Math.max(450, window.innerHeight - 270);
-      return Math.floor((estimated - totalGaps) / 2);
-    }
-    return 260;
-  }, [containerHeight]);
-
-  if (isLoading) {
-    return (
-      <div className="w-full h-[calc(100vh-6.2rem)] md:h-[calc(100vh-7.2rem)] lg:h-[calc(100dvh-7.2rem)] flex flex-col font-sans text-slate-900 dark:text-zinc-100 overflow-hidden space-y-2 animate-pulse">
-        {/* Header Toolbar */}
-        <div className="shrink-0 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-          <div>
-            <div className="flex items-center gap-2">
-              <div className="h-6 w-72 bg-slate-200 dark:bg-zinc-800 rounded-md"></div>
-              <div className="h-5 w-20 bg-slate-200 dark:bg-zinc-800 rounded-full"></div>
-            </div>
-            <div className="h-3 w-80 bg-slate-200 dark:bg-zinc-800 rounded-md mt-1.5"></div>
-          </div>
-
-          <div className="flex items-center gap-2">
-            <div className="h-7 w-48 bg-slate-100 dark:bg-zinc-800 rounded-lg"></div>
-          </div>
-        </div>
-
-        {/* Compact Telemetry Ribbon (4 Tiles) */}
-        <div className="shrink-0 grid grid-cols-2 lg:grid-cols-4 gap-2">
-          {[...Array(4)].map((_, i) => (
-            <div
-              key={i}
-              className="bg-card border border-slate-200 dark:border-zinc-800 rounded-xl px-3 py-2 shadow-xs flex items-center justify-between"
-            >
-              <div className="space-y-1 flex-1">
-                <div className="h-2.5 w-20 bg-slate-200 dark:bg-zinc-800 rounded"></div>
-                <div className="h-5 w-28 bg-slate-200 dark:bg-zinc-800 rounded-md"></div>
-                <div className="h-2 w-32 bg-slate-200 dark:bg-zinc-800 rounded"></div>
-              </div>
-              <div className="w-8 h-8 rounded-lg bg-slate-100 dark:bg-zinc-800 shrink-0"></div>
-            </div>
-          ))}
-        </div>
-
-        {/* 3. Zone Filters Strip */}
-        <div className="shrink-0 bg-card border border-slate-200 dark:border-zinc-800 rounded-xl p-2 shadow-xs flex items-center justify-between">
-          <div className="flex items-center gap-1 overflow-x-auto">
-            {[...Array(4)].map((_, i) => (
-              <div
-                key={i}
-                className="h-7 w-28 bg-slate-100 dark:bg-zinc-800 rounded-md"
-              ></div>
-            ))}
-          </div>
-          <div className="h-3 w-64 bg-slate-100 dark:bg-zinc-800 rounded hidden sm:block"></div>
-        </div>
-
-        {/* 4. Surveillance Grid */}
-        <div className="flex-1 min-h-0 bg-card border border-slate-200 dark:border-zinc-800 rounded-xl overflow-hidden shadow-xs flex flex-col p-2.5">
-          <div className="overflow-hidden flex-1 grid gap-2.5 grid-cols-1 sm:grid-cols-2 md:grid-cols-3">
-            {[...Array(6)].map((_, i) => (
-              <div
-                key={i}
-                style={{ height: `${cardHeight}px` }}
-                className="relative rounded-xl overflow-hidden border border-slate-200/80 dark:border-zinc-800 bg-slate-100/60 dark:bg-zinc-900/60 flex flex-col justify-between p-2.5 shrink-0"
-              >
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-1.5">
-                    <div className="w-2 h-2 rounded-full bg-slate-300 dark:bg-zinc-700"></div>
-                    <div className="h-3 w-12 bg-slate-200 dark:bg-zinc-800 rounded"></div>
-                    <div className="h-3 w-28 bg-slate-200 dark:bg-zinc-800 rounded"></div>
-                  </div>
-                  <div className="h-3.5 w-10 bg-slate-200 dark:bg-zinc-800 rounded"></div>
-                </div>
-
-                <div className="flex flex-col items-center justify-center my-auto py-2">
-                  <div className="w-10 h-10 rounded-full border border-dashed border-slate-300 dark:border-zinc-700 flex items-center justify-center">
-                    <div className="w-2.5 h-2.5 rounded-full bg-slate-300 dark:bg-zinc-700"></div>
-                  </div>
-                </div>
-
-                <div className="flex items-center justify-between border-t border-slate-200/60 dark:border-zinc-800/60 pt-2">
-                  <div className="h-3 w-20 bg-slate-200 dark:bg-zinc-800 rounded"></div>
-                  <div className="flex gap-1">
-                    <div className="w-5 h-5 rounded-md bg-slate-200 dark:bg-zinc-800"></div>
-                    <div className="w-5 h-5 rounded-md bg-slate-200 dark:bg-zinc-800"></div>
-                    <div className="w-5 h-5 rounded-md bg-slate-200 dark:bg-zinc-800"></div>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-    );
-  }
+  };
 
   return (
-    <div className="w-full h-[calc(100vh-6.2rem)] md:h-[calc(100vh-7.2rem)] lg:h-[calc(100dvh-7.2rem)] flex flex-col font-sans text-slate-900 dark:text-zinc-100 overflow-hidden space-y-2">
-      {/* 1. Header Toolbar */}
-      <div className="shrink-0 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-        <div>
-          <div className="flex items-center gap-2">
-            <h1 className="text-xl font-black text-slate-900 dark:text-white tracking-tight flex items-center gap-2">
-              <span>Security Surveillance & CCTV Hub</span>
-            </h1>
+    <div className="w-full flex flex-col font-sans text-slate-900 dark:text-zinc-100 space-y-4 pb-6">
+      {/* ========================================================= */}
+      {/* 1. TOP METRIC / STATUS RIBBON (4 KPI CARDS)               */}
+      {/* ========================================================= */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5 sm:gap-4">
+        {/* Card 1: Total Cameras */}
+        <div className="bg-white dark:bg-zinc-900 border border-slate-200/90 dark:border-zinc-800 rounded-xl p-4 shadow-xs flex items-center gap-3.5 hover:border-slate-300 dark:hover:border-zinc-700 transition-colors">
+          <div className="w-12 h-12 rounded-full bg-blue-100 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0">
+            <Video className="w-5 h-5 stroke-[2]" />
           </div>
-          <p className="text-xs text-slate-500 dark:text-zinc-400 mt-0.5 font-mono">
-            System Time:{" "}
-            {currentTime.toISOString().replace("T", " ").slice(0, 19)} PHT ·
-            RTSP Relay Stream
-          </p>
+          <div className="min-w-0 flex-1">
+            <span className="text-xs font-medium text-slate-500 dark:text-zinc-400 block">
+              Total Cameras
+            </span>
+            <span className="text-2xl sm:text-3xl font-bold text-slate-900 dark:text-white leading-tight block">
+              8
+            </span>
+            <span className="text-[11px] font-medium text-amber-600 dark:text-amber-400 flex items-center gap-1 mt-0.5">
+              <AlertCircle className="w-3 h-3 stroke-[2.5]" />
+              All cameras offline
+            </span>
+          </div>
         </div>
 
-        <div className="flex items-center gap-2">
-          <div className="flex items-center gap-2 px-3 py-1 rounded-lg border border-slate-200 dark:border-zinc-800 bg-slate-50/70 dark:bg-zinc-900/60 text-xs font-mono font-bold text-slate-700 dark:text-zinc-300">
-            <span
-              className={`w-2 h-2 rounded-full ${
-                offlineCount > 0 ? "bg-amber-500 animate-pulse" : "bg-emerald-500 animate-pulse"
-              }`}
-            ></span>
-            <span>
-              {onlineCount} OF {totalCameras} CHANNELS ONLINE ({uptimePercent}%)
+        {/* Card 2: Online */}
+        <div className="bg-white dark:bg-zinc-900 border border-slate-200/90 dark:border-zinc-800 rounded-xl p-4 shadow-xs flex items-center gap-3.5 hover:border-slate-300 dark:hover:border-zinc-700 transition-colors">
+          <div className="w-12 h-12 rounded-full bg-slate-100 dark:bg-zinc-800 text-slate-400 dark:text-zinc-500 flex items-center justify-center shrink-0">
+            <div className="w-4 h-4 rounded-full bg-slate-400 dark:bg-zinc-600" />
+          </div>
+          <div className="min-w-0 flex-1">
+            <span className="text-xs font-medium text-slate-500 dark:text-zinc-400 block">
+              Online
+            </span>
+            <span className="text-2xl sm:text-3xl font-bold text-slate-900 dark:text-white leading-tight block">
+              0
+            </span>
+            <span className="text-[11px] font-medium text-slate-400 dark:text-zinc-500 flex items-center gap-1 mt-0.5">
+              <Radio className="w-3 h-3" />
+              0% operational
+            </span>
+          </div>
+        </div>
+
+        {/* Card 3: Offline */}
+        <div className="bg-white dark:bg-zinc-900 border border-slate-200/90 dark:border-zinc-800 rounded-xl p-4 shadow-xs flex items-center gap-3.5 hover:border-slate-300 dark:hover:border-zinc-700 transition-colors">
+          <div className="w-12 h-12 rounded-full bg-rose-100 dark:bg-rose-950/60 text-rose-600 dark:text-rose-400 flex items-center justify-center shrink-0">
+            <VideoOff className="w-5 h-5 stroke-[2]" />
+          </div>
+          <div className="min-w-0 flex-1">
+            <span className="text-xs font-medium text-slate-500 dark:text-zinc-400 block">
+              Offline
+            </span>
+            <span className="text-2xl sm:text-3xl font-bold text-slate-900 dark:text-white leading-tight block">
+              8
+            </span>
+            <span className="text-[11px] font-medium text-rose-600 dark:text-rose-400 flex items-center gap-1 mt-0.5">
+              <AlertCircle className="w-3 h-3 stroke-[2]" />
+              8 cameras offline
+            </span>
+          </div>
+        </div>
+
+        {/* Card 4: Storage Usage */}
+        <div className="bg-white dark:bg-zinc-900 border border-slate-200/90 dark:border-zinc-800 rounded-xl p-4 shadow-xs flex items-center gap-3.5 hover:border-slate-300 dark:hover:border-zinc-700 transition-colors">
+          <div className="w-12 h-12 rounded-full bg-blue-100 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0">
+            <HardDrive className="w-5 h-5 stroke-[2]" />
+          </div>
+          <div className="min-w-0 flex-1">
+            <span className="text-xs font-medium text-slate-500 dark:text-zinc-400 block">
+              Storage Usage
+            </span>
+            <span className="text-2xl sm:text-3xl font-bold text-slate-900 dark:text-white leading-tight block">
+              42%
+            </span>
+            {/* Progress bar */}
+            <div className="w-full h-1.5 bg-slate-100 dark:bg-zinc-800 rounded-full overflow-hidden mt-1.5">
+              <div
+                className="h-full bg-blue-600 rounded-full transition-all duration-500"
+                style={{ width: "42%" }}
+              />
+            </div>
+            <span className="text-[11px] font-medium text-slate-400 dark:text-zinc-500 block mt-1">
+              168 GB / 400 GB
             </span>
           </div>
         </div>
       </div>
 
-      {/* 2. Compact Telemetry Ribbon (Interactive & Computed Dynamically) */}
-      <div className="shrink-0 grid grid-cols-2 lg:grid-cols-4 gap-2">
-        {/* Card 1: Camera Matrix */}
-        <div
-          onClick={() => {
-            setSelectedZone("All");
-            toast.info(`Camera Matrix: ${onlineCount} active, ${offlineCount} signal loss out of ${totalCameras} total feeds`);
-          }}
-          className={`bg-card border rounded-xl px-3 py-2 shadow-xs flex items-center justify-between cursor-pointer transition-all hover:shadow-md hover:border-emerald-500/50 active:scale-[0.99] group ${
-            selectedZone === "All"
-              ? "border-emerald-500/60 ring-1 ring-emerald-500/20"
-              : "border-slate-200 dark:border-zinc-800"
-          }`}
-          title="Click to view all camera channels"
-        >
-          <div>
-            <div className="flex items-center gap-1.5">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 group-hover:text-emerald-500 transition-colors">
-                Camera Matrix
+      {/* ========================================================= */}
+      {/* 2. MAIN SECTION: LIVE VIEW SURVEILLANCE PANEL             */}
+      {/* ========================================================= */}
+      <div className="w-full bg-white dark:bg-zinc-900 border border-slate-200/90 dark:border-zinc-800 rounded-xl p-4 sm:p-5 shadow-xs flex flex-col justify-between">
+        {/* Header */}
+        <div className="flex items-center justify-between gap-3 pb-3 border-b border-slate-100 dark:border-zinc-800/80">
+          {/* Left: Title & Live indicator & Active Recordings */}
+          <div className="flex items-center gap-2.5">
+            <h2 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white tracking-tight">
+              Live View
+            </h2>
+            <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-rose-600 dark:text-rose-400">
+              <span className="w-2 h-2 rounded-full bg-rose-500" />
+              No Signal (All Offline)
+            </span>
+            {isAnyRecording && (
+              <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-rose-600 dark:text-rose-400 ml-2 animate-pulse">
+                <span className="w-2 h-2 rounded-full bg-rose-600" />
+                REC ({Object.keys(recordingState).length} Active)
               </span>
-              <span className="px-1 py-0.2 rounded text-[9px] font-mono font-bold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
-                {uptimePercent}% Active
-              </span>
-            </div>
-            <div className="text-lg font-extrabold font-mono text-emerald-600 dark:text-emerald-400 mt-0.5 leading-tight">
-              {onlineCount} / {totalCameras}{" "}
-              <span className="text-xs font-semibold text-slate-500 dark:text-zinc-400">
-                Online
-              </span>
-            </div>
-            <div className="text-[10px] font-semibold text-slate-500 dark:text-zinc-400 mt-0.5 flex items-center gap-1">
-              <span>{count4K} 4K · {count1080p} 1080p</span>
-              <span className="text-slate-300 dark:text-zinc-700">·</span>
-              <span className={offlineCount > 0 ? "text-rose-500 font-bold" : "text-emerald-600"}>
-                {offlineCount > 0 ? `${offlineCount} Alert` : "All Signals OK"}
-              </span>
-            </div>
-          </div>
-          <div className="w-8 h-8 rounded-lg bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
-            <Radio className="w-4 h-4" />
+            )}
           </div>
         </div>
 
-        {/* Card 2: RAID Storage Ring */}
-        <div
-          onClick={() => {
-            toast.info(
-              `NVR Storage: ${storageUsedTB} TB used of ${storageTotalTB} TB (${storageUsedPercent}%) · Recording Rate: ~${dailyIngestGB} GB/day · 30-day buffer loop active`,
-            );
-          }}
-          className="bg-card border border-slate-200 dark:border-zinc-800 hover:border-teal-500/50 rounded-xl px-3 py-2 shadow-xs flex items-center justify-between cursor-pointer transition-all hover:shadow-md active:scale-[0.99] group"
-          title="Click to view NVR storage breakdown"
-        >
-          <div>
-            <div className="flex items-center gap-1.5">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 group-hover:text-teal-500 transition-colors">
-                RAID Storage Pool
-              </span>
-              <span className="px-1 py-0.2 rounded text-[9px] font-mono font-bold bg-teal-500/10 text-teal-600 dark:text-teal-400">
-                {storageUsedTB} / {storageTotalTB} TB
-              </span>
-            </div>
-            <div className="text-lg font-extrabold font-mono text-teal-600 dark:text-teal-400 mt-0.5 leading-tight">
-              {storageUsedPercent}%{" "}
-              <span className="text-xs font-semibold text-slate-500 dark:text-zinc-400">
-                Capacity
-              </span>
-            </div>
-            <div className="text-[10px] font-semibold text-slate-500 dark:text-zinc-400 mt-0.5">
-              ~{dailyIngestGB} GB/day · 30-day rolling loop
-            </div>
-          </div>
-          <div className="w-8 h-8 rounded-lg bg-teal-50 dark:bg-teal-500/10 text-teal-600 dark:text-teal-400 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
-            <HardDrive className="w-4 h-4" />
-          </div>
-        </div>
+        {/* Video Feed Area (3x3 Grid) */}
+        <div className="mt-4 flex-1">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5 sm:gap-4">
+            {CAMERAS.map((cam) => {
+              const isCamRecording = recordingState[cam.id] !== undefined;
+              const camTimer = recordingState[cam.id] || 0;
 
-        {/* Card 3: Perimeter Status */}
-        <div
-          onClick={() => {
-            setSelectedZone("Perimeter");
-            toast.info(`Filtered view to Perimeter Zone (${onlinePerimeterCount}/${perimeterCameras.length} armed)`);
-          }}
-          className={`bg-card border rounded-xl px-3 py-2 shadow-xs flex items-center justify-between cursor-pointer transition-all hover:shadow-md hover:border-indigo-500/50 active:scale-[0.99] group ${
-            selectedZone === "Perimeter"
-              ? "border-indigo-500/60 ring-1 ring-indigo-500/20"
-              : "border-slate-200 dark:border-zinc-800"
-          }`}
-          title="Click to filter camera grid to Perimeter zone"
-        >
-          <div>
-            <div className="flex items-center gap-1.5">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 group-hover:text-indigo-500 transition-colors">
-                Perimeter Defense
-              </span>
-              <span
-                className={`px-1 py-0.2 rounded text-[9px] font-mono font-bold ${
-                  perimeterCoverage === 100
-                    ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
-                    : "bg-amber-500/10 text-amber-600 dark:text-amber-400"
-                }`}
-              >
-                {perimeterCoverage}% Coverage
-              </span>
-            </div>
-            <div className="text-lg font-extrabold font-mono text-indigo-600 dark:text-indigo-400 mt-0.5 leading-tight">
-              {onlinePerimeterCount} / {perimeterCameras.length}{" "}
-              <span className="text-xs font-semibold text-slate-500 dark:text-zinc-400">
-                Armed
-              </span>
-            </div>
-            <div className="text-[10px] font-semibold text-slate-500 dark:text-zinc-400 mt-0.5">
-              {activeNightVisionCount > 0 ? `${activeNightVisionCount} IR active · ` : ""}
-              {perimeterCameras.some((c) => c.status === "offline")
-                ? "1 Sector Signal Loss"
-                : "All Sectors Monitored"}
-            </div>
-          </div>
-          <div className="w-8 h-8 rounded-lg bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
-            <ShieldCheck className="w-4 h-4" />
-          </div>
-        </div>
+              return (
+                <div
+                  key={cam.id}
+                  onClick={() => setFocusedModalCam(cam)}
+                  className="group relative aspect-[16/11] sm:aspect-[4/3] rounded-xl overflow-hidden bg-slate-950 dark:bg-zinc-950 border border-slate-800 dark:border-zinc-850 shadow-xs hover:border-slate-700 dark:hover:border-zinc-700 transition-all cursor-pointer flex flex-col justify-between p-3.5 select-none"
+                >
+                  {/* Top Bar: Camera Channel & Offline / REC Badge */}
+                  <div className="flex items-center justify-between z-10 w-full">
+                    <div className="flex items-center gap-1.5 bg-black/60 backdrop-blur-xs px-2 py-0.5 rounded text-[11px] font-semibold text-white/90">
+                      <span className="text-blue-400 font-mono">{cam.camNumber}</span>
+                      <span className="text-white/40">·</span>
+                      <span className="truncate max-w-[120px] sm:max-w-[150px]">{cam.name}</span>
+                    </div>
 
-        {/* Card 4: Stream Latency & Throughput */}
-        <div
-          onClick={() => {
-            toast.info(
-              `Network Diagnostics: ${totalBandwidthMbps} Mbps aggregate throughput across ${totalIngestFPS} total FPS ingest. Latency: ${dynamicLatencyMs}ms UDP.`,
-            );
-          }}
-          className="bg-card border border-slate-200 dark:border-zinc-800 hover:border-cyan-500/50 rounded-xl px-3 py-2 shadow-xs flex items-center justify-between cursor-pointer transition-all hover:shadow-md active:scale-[0.99] group"
-          title="Click to view network throughput diagnostics"
-        >
-          <div>
-            <div className="flex items-center gap-1.5">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 group-hover:text-cyan-500 transition-colors">
-                Stream Throughput
-              </span>
-              <span className="px-1 py-0.2 rounded text-[9px] font-mono font-bold bg-cyan-500/10 text-cyan-600 dark:text-cyan-400">
-                {totalBandwidthMbps} Mbps
-              </span>
-            </div>
-            <div className="text-lg font-extrabold font-mono text-slate-900 dark:text-white mt-0.5 leading-tight">
-              {dynamicLatencyMs}ms{" "}
-              <span className="text-xs font-semibold text-slate-500 dark:text-zinc-400">
-                UDP
-              </span>
-            </div>
-            <div className="text-[10px] font-semibold text-slate-500 dark:text-zinc-400 mt-0.5">
-              {totalIngestFPS} FPS ingest · {offlineCount > 0 ? "1 Stream Standby" : "0 dropped frames"}
-            </div>
-          </div>
-          <div className="w-8 h-8 rounded-lg bg-slate-100 dark:bg-zinc-800 text-slate-600 dark:text-zinc-400 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
-            <Eye className="w-4 h-4" />
-          </div>
-        </div>
-      </div>
-
-      {/* 3. Zone Filters Strip */}
-      <div className="shrink-0 bg-card border border-slate-200 dark:border-zinc-800 rounded-xl p-2 shadow-xs flex items-center justify-between">
-        <div className="flex items-center gap-1 overflow-x-auto text-xs">
-          {[
-            { key: "All", label: "All Cameras", count: CAMERAS.length },
-            {
-              key: "Perimeter",
-              label: "Perimeter & Gates",
-              count: CAMERAS.filter((c) => c.zone === "Perimeter").length,
-            },
-            {
-              key: "Hallways",
-              label: "Corridors & Floors",
-              count: CAMERAS.filter((c) => c.zone === "Hallways").length,
-            },
-            {
-              key: "Common",
-              label: "Common Amenities",
-              count: CAMERAS.filter((c) => c.zone === "Common").length,
-            },
-          ].map((tab) => (
-            <button
-              key={tab.key}
-              onClick={() => setSelectedZone(tab.key as any)}
-              className={`px-3 py-1 rounded-md text-xs font-semibold transition-all flex items-center gap-1.5 ${
-                selectedZone === tab.key
-                  ? "bg-teal-600 text-white font-bold shadow-xs"
-                  : "bg-slate-100 dark:bg-zinc-800/60 text-slate-600 dark:text-zinc-400 hover:bg-slate-200"
-              }`}
-            >
-              <span>{tab.label}</span>
-              <span
-                className={`px-1.5 py-0.2 rounded-full text-[10px] font-mono font-bold ${
-                  selectedZone === tab.key
-                    ? "bg-white/20 text-white"
-                    : "bg-slate-200 dark:bg-zinc-700 text-slate-700 dark:text-zinc-300"
-                }`}
-              >
-                {tab.count}
-              </span>
-            </button>
-          ))}
-        </div>
-
-        <div className="text-[11px] text-slate-400 font-mono hidden sm:block">
-          Click any feed to expand into High-Definition PTZ mode
-        </div>
-      </div>
-
-      {/* 4. Surveillance Grid (3 Columns and 2 Rows in main display; additional cameras scroll cleanly) */}
-      <div className="flex-1 min-h-0 bg-card border border-slate-200 dark:border-zinc-800 rounded-xl overflow-hidden shadow-xs flex flex-col p-2.5">
-        <div
-          ref={containerCallbackRef}
-          className="overflow-y-auto flex-1 custom-scrollbar grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2.5 pr-1 scroll-smooth"
-        >
-          {filteredCameras.map((cam) => {
-            const isNightVision = !!nightVisionMap[cam.id];
-            const isMuted = mutedMap[cam.id] ?? true;
-
-            return (
-              <div
-                key={cam.id}
-                onClick={() => setFocusedCam(cam)}
-                style={{ height: cardHeight ? `${cardHeight}px` : undefined }}
-                className={`group relative rounded-xl overflow-hidden border border-red-600 hover:border-red-500 cursor-pointer transition-all flex flex-col justify-between shrink-0 ${
-                  cam.status === "offline"
-                    ? "bg-zinc-950"
-                    : isNightVision
-                      ? "bg-emerald-950/60"
-                      : "bg-black"
-                }`}
-              >
-                {/* Surveillance CRT Scanline Overlay */}
-                <div className="absolute inset-0 pointer-events-none opacity-20 bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(0,0,0,0.5)_50%)] bg-[length:100%_4px] z-10"></div>
-
-                {/* Top Feed HUD */}
-                <div className="relative z-20 px-2.5 py-1.5 flex items-start justify-between text-[11px] font-mono text-white/90 drop-shadow-md">
-                  <div className="flex items-center gap-1.5">
-                    <span
-                      className={`w-2 h-2 rounded-full ${cam.status === "online" ? "bg-emerald-500 animate-pulse" : "bg-rose-500"}`}
-                    ></span>
-                    <span className="font-bold tracking-wider">
-                      {cam.channel}
-                    </span>
-                    <span className="text-white/60">·</span>
-                    <span className="truncate max-w-[130px] font-sans font-semibold">
-                      {cam.name}
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-1.5 text-[10px]">
-                    <span className="px-1.5 py-0.2 bg-black/60 rounded border border-white/10 font-bold">
-                      {cam.resolution}
-                    </span>
-                    <span className="px-1.5 py-0.2 bg-black/60 rounded border border-white/10">
-                      {cam.fps} FPS
-                    </span>
-                  </div>
-                </div>
-
-                {/* No Signal status */}
-                <div className="relative z-10 flex-1 min-h-0 flex items-center justify-center p-2">
-                  <div className="text-center select-none">
-                    <p className="text-xs sm:text-sm font-mono font-bold uppercase tracking-widest text-zinc-500 dark:text-zinc-400">
-                      NO SIGNAL
-                    </p>
-                  </div>
-
-                  {/* Hover Focus Overlay */}
-                  <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/40 backdrop-blur-[1px]">
-                    <div className="text-center">
-                      <div className="w-8 h-8 rounded-full bg-white/20 backdrop-blur-xs flex items-center justify-center text-white mx-auto shadow-lg">
-                        <Maximize2 className="w-4 h-4" />
-                      </div>
-                      <span className="text-[9px] text-white/80 font-mono mt-0.5 block">
-                        FOCUS STREAM
+                    {isCamRecording ? (
+                      <span className="px-2 py-0.5 rounded bg-rose-600 text-[10px] font-semibold text-white flex items-center gap-1 shadow-xs animate-pulse">
+                        <span className="w-1.5 h-1.5 rounded-full bg-white" />
+                        REC {formatTimer(camTimer)}
                       </span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Bottom Feed HUD & Actions */}
-                <div className="relative z-20 px-2.5 py-1.5 bg-linear-to-t from-black/80 to-transparent flex items-center justify-between text-[10px] font-mono text-white/80">
-                  <div className="flex items-center gap-2">
-                    <span className="text-[9px] px-1 bg-rose-500/80 text-white rounded font-bold">
-                      REC
-                    </span>
-                    <span className="text-white/50 text-[10px]">
-                      {currentTime.toLocaleTimeString()}
-                    </span>
+                    ) : (
+                      <span className="text-[10px] font-semibold text-rose-400 flex items-center gap-1">
+                        <span className="w-1.5 h-1.5 rounded-full bg-rose-500" />
+                        No Signal
+                      </span>
+                    )}
                   </div>
 
-                  {cam.status === "online" && (
-                    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <button
-                        onClick={(e) => toggleNightVision(cam.id, e)}
-                        className={`p-1 rounded bg-black/70 hover:bg-black text-white ${isNightVision ? "text-emerald-400" : ""}`}
-                        title="Night Vision"
-                      >
-                        <Eye className="w-3.5 h-3.5" />
-                      </button>
-                      <button
-                        onClick={(e) => toggleAudio(cam.id, e)}
-                        className="p-1 rounded bg-black/70 hover:bg-black text-white"
-                        title="Audio Stream"
-                      >
-                        {isMuted ? (
-                          <VolumeX className="w-3.5 h-3.5" />
-                        ) : (
-                          <Volume2 className="w-3.5 h-3.5 text-teal-400" />
-                        )}
-                      </button>
-                      <button
-                        onClick={(e) => takeSnapshot(cam.name, e)}
-                        className="p-1 rounded bg-black/70 hover:bg-black text-white"
-                        title="Snapshot"
-                      >
-                        <Camera className="w-3.5 h-3.5" />
-                      </button>
+                  {/* Center: VideoOff Icon + Camera Offline + No Signal */}
+                  <div className="flex flex-col items-center justify-center my-auto py-2 text-center">
+                    <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-xl bg-zinc-900/90 border border-zinc-800/80 flex items-center justify-center text-zinc-500 group-hover:text-rose-400 group-hover:border-rose-500/30 transition-colors shadow-inner">
+                      <VideoOff className="w-5 h-5 sm:w-6 sm:h-6 stroke-[1.75]" />
                     </div>
-                  )}
+                    <span className="text-xs sm:text-sm font-bold text-slate-200 dark:text-zinc-200 mt-2 block tracking-tight">
+                      Camera Offline
+                    </span>
+                    <span className="text-[11px] font-mono font-semibold text-rose-400/90 dark:text-rose-400 mt-0.5 block tracking-wider uppercase">
+                      No Signal
+                    </span>
+                  </div>
+
+                  {/* Bottom Bar: Location & Record Video Button inside Card */}
+                  <div className="flex items-center justify-between pt-2 border-t border-zinc-855/80 z-10 gap-2">
+                    <div className="min-w-0 flex items-center gap-1 text-[10px] text-zinc-400 font-mono">
+                      <span className="truncate">{cam.location}</span>
+                      <span className="text-zinc-600 hidden sm:inline">·</span>
+                      <span className="text-zinc-500 hidden sm:inline">{cam.resolution}</span>
+                    </div>
+
+                    {/* Record Video Button inside CCTV card */}
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleToggleCamRecord(cam);
+                      }}
+                      className={`px-2.5 py-1 text-[11px] font-semibold rounded-md flex items-center gap-1.5 transition-all cursor-pointer shrink-0 shadow-2xs ${
+                        isCamRecording
+                          ? "bg-rose-600 hover:bg-rose-700 text-white animate-pulse"
+                          : "bg-zinc-900 hover:bg-zinc-800 text-zinc-200 border border-zinc-800 hover:border-zinc-700 hover:text-white"
+                      }`}
+                      title={isCamRecording ? "Stop Recording" : "Record Video"}
+                    >
+                      <Video
+                        className={`w-3 h-3 shrink-0 ${
+                          isCamRecording ? "text-white" : "text-rose-400"
+                        }`}
+                      />
+                      <span>{isCamRecording ? `Stop (${formatTimer(camTimer)})` : "Record Video"}</span>
+                    </button>
+                  </div>
                 </div>
+              );
+            })}
+
+            {/* 9th Slot: Camera Offline */}
+            <div className="group relative aspect-[16/11] sm:aspect-[4/3] rounded-xl overflow-hidden bg-slate-950 dark:bg-zinc-950 border border-dashed border-slate-800 dark:border-zinc-850 p-3.5 flex flex-col justify-between select-none">
+              <div className="flex items-center justify-between z-10 w-full">
+                <div className="flex items-center gap-1.5 bg-black/60 backdrop-blur-xs px-2 py-0.5 rounded text-[11px] font-semibold text-white/90">
+                  <span className="text-zinc-400 font-mono">CAM 09</span>
+                  <span className="text-white/40">·</span>
+                  <span className="text-zinc-400">Unassigned</span>
+                </div>
+
+                <span className="text-[10px] font-semibold text-rose-400 flex items-center gap-1">
+                  <span className="w-1.5 h-1.5 rounded-full bg-rose-500" />
+                  No Signal
+                </span>
               </div>
-            );
-          })}
+
+              <div className="flex flex-col items-center justify-center my-auto py-2 text-center">
+                <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-xl bg-zinc-900/90 border border-zinc-800/80 flex items-center justify-center text-zinc-500 shadow-inner">
+                  <VideoOff className="w-5 h-5 sm:w-6 sm:h-6 stroke-[1.75]" />
+                </div>
+                <span className="text-xs sm:text-sm font-bold text-slate-300 dark:text-zinc-300 mt-2 block tracking-tight">
+                  Camera Offline
+                </span>
+                <span className="text-[11px] font-mono font-semibold text-rose-400/90 dark:text-rose-400 mt-0.5 block tracking-wider uppercase">
+                  No Signal
+                </span>
+              </div>
+
+              <div className="flex items-center justify-between text-[10px] text-zinc-500 font-mono pt-2 border-t border-zinc-850 z-10">
+                <span>Slot 09 · Spare Port</span>
+                <span>Disconnected</span>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 
-      {/* FULLSCREEN FOCUS MODAL */}
+      {/* ========================================================= */}
+      {/* 3. MODAL: FOCUSED CAMERA INSPECTION MODAL                 */}
+      {/* ========================================================= */}
       <AnimatePresence>
-        {focusedCam && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/90 backdrop-blur-md z-50 flex items-center justify-center p-4"
-          >
+        {focusedModalCam && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-xs">
             <motion.div
-              initial={{ scale: 0.96 }}
-              animate={{ scale: 1 }}
-              exit={{ scale: 0.96 }}
-              className="w-full max-w-5xl bg-zinc-950 border border-red-600/70 rounded-2xl overflow-hidden shadow-2xl flex flex-col"
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              transition={{ duration: 0.15 }}
+              className="w-full max-w-4xl bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-2xl overflow-hidden shadow-2xl flex flex-col"
             >
               {/* Modal Header */}
-              <div className="p-3.5 border-b border-zinc-800 bg-zinc-900/80 flex items-center justify-between text-white font-mono text-xs">
-                <div className="flex items-center gap-2">
-                  <span className="w-2 h-2 rounded-full bg-rose-500 animate-pulse"></span>
-                  <span className="font-bold text-sm text-rose-400">
-                    {focusedCam.channel}
-                  </span>
-                  <span>·</span>
-                  <span className="font-sans font-bold text-sm text-white">
-                    {focusedCam.name}
-                  </span>
-                  <span className="text-zinc-500">
-                    ({focusedCam.zone} Zone)
-                  </span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="px-2 py-0.5 rounded bg-rose-950/80 border border-rose-800 text-rose-300 font-bold">
-                    NO SIGNAL
-                  </span>
-                  <span className="px-2 py-0.5 rounded bg-zinc-800 border border-zinc-700 font-bold">
-                    {focusedCam.resolution}
-                  </span>
-                  <button
-                    onClick={() => setFocusedCam(null)}
-                    className="p-1.5 rounded-lg hover:bg-zinc-800 text-zinc-400 hover:text-white"
-                  >
-                    <X className="w-5 h-5" />
-                  </button>
-                </div>
-              </div>
-
-              {/* Main Video Stage */}
-              <div className="relative aspect-video bg-black flex items-center justify-center overflow-hidden">
-                <div className="absolute inset-0 pointer-events-none opacity-20 bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(0,0,0,0.5)_50%)] bg-[length:100%_4px] z-10"></div>
-                
-                {/* Warning Sign and No Signal Content */}
-                <div className="text-center font-mono z-20 select-none px-4">
-                  <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-amber-500/10 border border-amber-500/30 flex items-center justify-center mx-auto mb-3 shadow-[0_0_25px_rgba(245,158,11,0.2)]">
-                    <AlertTriangle className="w-8 h-8 sm:w-10 sm:h-10 text-amber-500 animate-pulse" />
+              <div className="p-4 border-b border-slate-200 dark:border-zinc-800 flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-lg bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400 flex items-center justify-center">
+                    <VideoOff className="w-5 h-5 stroke-[2]" />
                   </div>
-                  <p className="text-lg sm:text-2xl font-bold tracking-widest uppercase text-zinc-400">
-                    NO SIGNAL
-                  </p>
-                  <p className="text-xs text-zinc-500 mt-1 font-mono">
-                    Video loss detected · Camera feed is offline or disconnected
-                  </p>
-                </div>
-
-                {/* Crosshairs & Telemetry HUD */}
-                <div className="absolute top-4 left-4 z-20 font-mono text-xs text-white/80 space-y-0.5 drop-shadow">
-                  <div>LAT: 11.2444° N · LON: 125.0039° E</div>
-                  <div>TIME: {currentTime.toISOString()}</div>
-                </div>
-
-                <div className="absolute bottom-4 left-4 z-20 font-mono text-xs text-rose-400 flex items-center gap-2">
-                  <span className="w-2.5 h-2.5 rounded-full bg-rose-500 animate-ping"></span>
-                  <span>SIGNAL LOSS DETECTED · STANDBY</span>
-                </div>
-              </div>
-
-              {/* Modal Control Footer */}
-              <div className="p-3.5 border-t border-zinc-800 bg-zinc-900/60 flex items-center justify-between text-xs">
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={() => toast.success("PTZ Camera Reset to Center")}
-                    className="px-3 py-1.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-white font-semibold"
-                  >
-                    PTZ Center
-                  </button>
-                  <button
-                    onClick={(e) => toggleNightVision(focusedCam.id, e)}
-                    className="px-3 py-1.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-white font-semibold flex items-center gap-1.5"
-                  >
-                    <Eye className="w-3.5 h-3.5 text-emerald-400" />
-                    <span>Night Vision</span>
-                  </button>
-                  <button
-                    onClick={(e) => takeSnapshot(focusedCam.name, e)}
-                    className="px-3 py-1.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-white font-semibold flex items-center gap-1.5"
-                  >
-                    <Camera className="w-3.5 h-3.5" />
-                    <span>Capture Frame</span>
-                  </button>
+                  <div>
+                    <h3 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                      {focusedModalCam.fullName}
+                      <span className="text-xs text-rose-600 dark:text-rose-400 font-semibold">
+                        No Signal
+                      </span>
+                    </h3>
+                    <p className="text-xs text-slate-500 dark:text-zinc-400">
+                      Location: {focusedModalCam.location} · Channel {focusedModalCam.camNumber} · Offline
+                    </p>
+                  </div>
                 </div>
 
                 <button
-                  onClick={() => setFocusedCam(null)}
-                  className="px-4 py-1.5 rounded-lg bg-teal-600 hover:bg-teal-700 text-white font-bold"
+                  onClick={() => setFocusedModalCam(null)}
+                  className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-zinc-800 cursor-pointer"
                 >
-                  Close Feed
+                  <X className="w-5 h-5" />
                 </button>
               </div>
+
+              {/* Modal Body: Large Stream (Offline) */}
+              <div className="relative aspect-[16/9] w-full bg-slate-950 flex flex-col items-center justify-center p-6 text-center select-none">
+                <div className="w-16 h-16 rounded-2xl bg-zinc-900/90 border border-zinc-800 flex items-center justify-center text-zinc-500 mb-3 shadow-inner">
+                  <VideoOff className="w-8 h-8 stroke-[1.75] text-rose-500/80" />
+                </div>
+                <span className="text-lg font-bold text-zinc-200">Camera Offline</span>
+                <span className="text-xs text-rose-400 font-mono mt-1 font-semibold tracking-wider uppercase">
+                  No Signal
+                </span>
+                <span className="text-xs text-zinc-500 mt-2 max-w-sm">
+                  RTSP stream unreachable on channel {focusedModalCam.camNumber}. Video carrier signal lost.
+                </span>
+
+                <div className="absolute top-3 left-3 bg-black/70 px-2.5 py-1 rounded text-xs font-mono text-zinc-300 flex items-center gap-2 border border-zinc-800">
+                  <span className="w-2 h-2 rounded-full bg-rose-500" />
+                  RTSP // {focusedModalCam.id.toUpperCase()} // OFFLINE
+                </div>
+
+                <div className="absolute bottom-3 right-3 flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => handleToggleCamRecord(focusedModalCam)}
+                    className={`px-3 py-1.5 text-xs font-semibold rounded-lg flex items-center gap-1.5 cursor-pointer transition-all shadow-xs ${
+                      recordingState[focusedModalCam.id] !== undefined
+                        ? "bg-rose-600 hover:bg-rose-700 text-white animate-pulse"
+                        : "bg-zinc-800/90 hover:bg-zinc-700 text-white border border-zinc-700"
+                    }`}
+                  >
+                    <Video className="w-3.5 h-3.5 text-rose-400" />
+                    <span>
+                      {recordingState[focusedModalCam.id] !== undefined
+                        ? `Stop REC (${formatTimer(recordingState[focusedModalCam.id])})`
+                        : "Record Video"}
+                    </span>
+                  </button>
+                  <button
+                    onClick={() => {
+                      toast.info(`Camera is offline (${focusedModalCam.fullName})`);
+                    }}
+                    className="px-3 py-1.5 bg-white/20 hover:bg-white/30 backdrop-blur-xs text-white text-xs font-semibold rounded-lg flex items-center gap-1.5 cursor-pointer"
+                  >
+                    <Camera className="w-3.5 h-3.5" />
+                    Snapshot
+                  </button>
+                </div>
+              </div>
             </motion.div>
-          </motion.div>
+          </div>
         )}
       </AnimatePresence>
     </div>
