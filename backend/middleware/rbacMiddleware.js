@@ -2,13 +2,11 @@ const db = require('../config/db');
 
 /**
  * System Roles Hierarchy
- * - owner: Full system authority, system settings, cache purge, diagnostics, complete CRUD
  * - admin: Property manager with administrative access to rooms, tenants, billing, maintenance
  * - staff: Front desk & maintenance operations with read/write access to tasks & rooms
  * - tenant: Resident with least-privilege scoped strictly to own resources
  */
 const ROLES = {
-    OWNER: 'owner',
     ADMIN: 'admin',
     STAFF: 'staff',
     TENANT: 'tenant'
@@ -78,8 +76,8 @@ const PERMISSIONS = {
  * Role-Based Permissions Mapping
  */
 const ROLE_PERMISSIONS = {
-    [ROLES.OWNER]: [PERMISSIONS.ALL],
     [ROLES.ADMIN]: [
+        PERMISSIONS.ALL,
         PERMISSIONS.ROOMS_READ, PERMISSIONS.ROOMS_CREATE, PERMISSIONS.ROOMS_UPDATE, PERMISSIONS.ROOMS_DELETE,
         PERMISSIONS.TENANTS_READ, PERMISSIONS.TENANTS_APPROVE, PERMISSIONS.TENANTS_UPDATE, PERMISSIONS.TENANTS_DELETE,
         PERMISSIONS.BILLS_READ, PERMISSIONS.BILLS_CREATE, PERMISSIONS.BILLS_UPDATE, PERMISSIONS.BILLS_DELETE,
@@ -178,8 +176,8 @@ const requireRole = (allowedRoles) => {
             return res.status(401).json({ message: 'Authentication required' });
         }
 
-        // Owner role inherits complete administrative bypass
-        if (req.user.role === ROLES.OWNER || rolesArray.includes(req.user.role)) {
+        // Check role permission
+        if (rolesArray.includes(req.user.role)) {
             return next();
         }
 
@@ -199,13 +197,13 @@ const requireRole = (allowedRoles) => {
  * @param {string} options.table Database table name (e.g. 'requests', 'bills', 'payments')
  * @param {string} [options.idParam='id'] Parameter name in req.params
  * @param {string} [options.ownerColumn='tenant_id'] Column name holding the owner's user ID
- * @param {string[]} [options.adminRoles=['admin', 'owner']] Roles exempt from ownership check
+ * @param {string[]} [options.adminRoles=['admin']] Roles exempt from ownership check
  */
 const enforceOwnership = ({
     table,
     idParam = 'id',
     ownerColumn = 'tenant_id',
-    adminRoles = [ROLES.ADMIN, ROLES.OWNER]
+    adminRoles = [ROLES.ADMIN]
 }) => {
     return async (req, res, next) => {
         try {
