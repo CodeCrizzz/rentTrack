@@ -25,6 +25,18 @@ const createRequest = async (req, res) => {
 
         const createdReq = newRequest.rows[0];
 
+        // Automatically post the requested maintenance ticket into the tenant-admin chat conversation
+        try {
+            const ticketMsg = `[MAINTENANCE_REQUEST#${createdReq.id}] ${title}`;
+            await db.query(
+                `INSERT INTO messages (sender_id, receiver_id, message, sender_type, status)
+                 VALUES ($1, 1, $2, 'tenant', 'sent')`,
+                [tenant_id, ticketMsg]
+            );
+        } catch (chatErr) {
+            console.error('Error posting maintenance ticket to chat:', chatErr.message);
+        }
+
         // Notify admin if offline when maintenance request is submitted
         try {
             const adminNotificationService = require('../services/adminNotificationService');
