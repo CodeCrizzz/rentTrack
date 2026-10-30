@@ -106,7 +106,7 @@ const loginUser = async (req, res) => {
         }
 
         // 5. Generate Modern JWT Token with RFC 7519 standard claims
-        const sessionExpiry = process.env.JWT_EXPIRES_IN || (user.role === 'admin' || user.role === 'owner' ? '8h' : '24h');
+        const sessionExpiry = process.env.JWT_EXPIRES_IN || (user.role === 'admin' ? '8h' : '24h');
         const jwtId = crypto.randomUUID();
 
         const token = jwt.sign(
