@@ -7,9 +7,14 @@ const { rateLimit } = require('express-rate-limit');
  */
 const apiLimiter = rateLimit({
     windowMs: 15 * 60 * 1000, // 15 minutes
-    limit: 300, // Limit each IP to 300 requests per `window`
-    standardHeaders: 'draft-8', // Return rate limit info in the `RateLimit-*` headers
-    legacyHeaders: false, // Disable the `X-RateLimit-*` headers
+    limit: 2500, // Limit each IP to 2500 requests per 15 min window (supports active portal use)
+    standardHeaders: 'draft-8',
+    legacyHeaders: false,
+    skip: (req) => {
+        // Exclude lightweight recurring real-time polling from global DDoS limits
+        const url = req.originalUrl || req.url || '';
+        return url.includes('/chat') || url.includes('/notifications');
+    },
     message: {
         status: 429,
         message: 'Too many requests from this IP address. Please try again after 15 minutes.'
