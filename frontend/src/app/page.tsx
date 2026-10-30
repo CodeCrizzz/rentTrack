@@ -62,34 +62,34 @@ export default function Home() {
       await iconControls.start({
         opacity: 1,
         scale: 1,
-        transition: { duration: 0.85, ease: [0.16, 1, 0.3, 1] },
+        transition: { duration: 0.65, ease: [0.16, 1, 0.3, 1] },
       });
       if (isCancelled) return;
 
       // Brief hold so user sees the icon logo centered alone
-      await new Promise((r) => setTimeout(r, 350));
+      await new Promise((r) => setTimeout(r, 200));
       if (isCancelled) return;
 
       // Step 2: Icon slides to the left & Text logo starts showing and emerges from behind the logo
       await Promise.all([
         iconControls.start({
           x: 0,
-          transition: { duration: 0.85, ease: [0.16, 1, 0.3, 1] },
+          transition: { duration: 0.65, ease: [0.16, 1, 0.3, 1] },
         }),
         textControls.start({
           opacity: 1,
           x: 0,
           transition: {
-            duration: 0.85,
+            duration: 0.65,
             ease: [0.16, 1, 0.3, 1],
-            opacity: { duration: 0.65, ease: "easeOut" },
+            opacity: { duration: 0.45, ease: "easeOut" },
           },
         }),
       ]);
       if (isCancelled) return;
 
       // Brief pause after logo lockup is complete so user sees the full brand lockup
-      await new Promise((r) => setTimeout(r, 250));
+      await new Promise((r) => setTimeout(r, 150));
       if (isCancelled) return;
 
       // Probe real-time internet connection speed (RTT, bandwidth, throttling)
@@ -154,12 +154,10 @@ export default function Home() {
       setShowProgress(true);
 
       // Brief wait for progress container to fade into view before starting fill animation
-      await new Promise((r) => setTimeout(r, 200));
+      await new Promise((r) => setTimeout(r, 120));
       if (isCancelled) return;
 
-      // Step 4: Progress bar runs according to real internet connection speed:
-      // - Fast internet: goes to 100% quickly (~650ms)
-      // - Slow internet: runs slowly (~4200ms) until it reaches 100%
+      // Step 4: Progress bar runs according to real internet connection speed
       await new Promise<void>((resolve) => {
         let currentProgress = 0;
         let speedProfile: "fast" | "moderate" | "slow" = "fast";
@@ -191,16 +189,16 @@ export default function Home() {
           if (isCancelled) return;
           const elapsed = now - startTime;
 
-          // Dynamic duration: minimum 5 seconds (5000ms) even on fast connections as requested
+          // Snappy, faster progress: ~1.8s on fast connections, ~2.4s moderate, ~3.2s slow
           const duration =
             speedProfile === "fast"
-              ? 5000
+              ? 1800
               : speedProfile === "slow"
-              ? 7500
-              : 6000;
+              ? 3200
+              : 2400;
 
           const t = Math.min(elapsed / duration, 1);
-          // Easing: easeInOutQuad for natural, steady walking progression across the 5 seconds
+          // Easing: easeInOutQuad for natural, steady walking progression
           const eased = t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
           const current = Math.min(100, Math.round(eased * 100));
 
@@ -223,7 +221,7 @@ export default function Home() {
       setProgress(100);
 
       // Brief delay after reaching 100% so user sees arrival at the house before redirecting to login
-      await new Promise((r) => setTimeout(r, 600));
+      await new Promise((r) => setTimeout(r, 300));
       if (!isCancelled) {
         router.push("/login");
       }
@@ -272,12 +270,12 @@ export default function Home() {
 
         {/* 3. Loading Progress Journey: Human figure walking from the left to reach the RentTrack house on the right */}
         <div
-          className={`mt-6 sm:mt-7 flex flex-col items-center gap-3 w-full max-w-[360px] sm:max-w-[480px] md:max-w-[540px] px-3 transition-opacity duration-300 select-none ${
+          className={`mt-2 sm:mt-2.5 flex flex-col items-center gap-2 sm:gap-2.5 w-full max-w-[360px] sm:max-w-[480px] md:max-w-[540px] px-3 transition-opacity duration-300 select-none ${
             showProgress ? "opacity-100" : "opacity-0 pointer-events-none"
           }`}
         >
           {/* Journey Track Arena */}
-          <div className="relative w-full h-16 sm:h-20 flex items-end">
+          <div className="relative w-full h-14 sm:h-16 flex items-end">
             {/* Ground Road Track Line */}
             <div className="absolute bottom-2 sm:bottom-2.5 left-0 right-14 sm:right-16 md:right-20 h-[3px] sm:h-1 bg-white/15 rounded-full overflow-hidden">
               {/* Traveled Path (filled teal line with soft glow) */}
@@ -294,7 +292,7 @@ export default function Home() {
                 className="absolute bottom-2 sm:bottom-2.5 -translate-x-1/2 transition-all duration-75 z-10"
                 style={{
                   left: `${progress}%`,
-                  ["--walk-speed" as any]: isSlowConnection ? "0.65s" : "0.50s",
+                  ["--walk-speed" as any]: isSlowConnection ? "0.45s" : "0.36s",
                 }}
               >
                 <div className={progress < 100 ? "animate-walk-bob" : ""}>
