@@ -1,18 +1,13 @@
-/**
- * Universal Philippine Phone Number Formatter
- * Strict Target Format: +63 999 123 7654
- */
-
 function formatPhoneNumber(phone) {
-  if (!phone || typeof phone !== 'string' || !phone.trim()) return phone;
+  if (!phone || typeof phone !== "string" || !phone.trim()) return phone;
 
-  let digits = phone.replace(/\D/g, '');
+  let digits = phone.replace(/\D/g, "");
 
-  if (digits.startsWith('63')) {
+  if (digits.startsWith("63")) {
     digits = digits.slice(2);
   }
 
-  if (digits.startsWith('0')) {
+  if (digits.startsWith("0")) {
     digits = digits.slice(1);
   }
 
@@ -21,7 +16,7 @@ function formatPhoneNumber(phone) {
     const p1 = digits.slice(0, 3);
     const p2 = digits.slice(3, 6);
     const p3 = digits.slice(6, 10);
-    return `+63 ${[p1, p2, p3].filter(Boolean).join(' ')}`.trim();
+    return `+63 ${[p1, p2, p3].filter(Boolean).join(" ")}`.trim();
   }
 
   const target = digits.slice(0, 10);
