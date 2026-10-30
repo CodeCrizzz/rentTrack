@@ -293,7 +293,7 @@ export default function CCTVPage() {
                         REC {formatTimer(camTimer)}
                       </span>
                     ) : (
-                      <span className="px-2 py-0.5 rounded bg-rose-500/15 border border-rose-500/30 text-[10px] font-semibold text-rose-400 flex items-center gap-1">
+                      <span className="text-[10px] font-semibold text-rose-400 flex items-center gap-1">
                         <span className="w-1.5 h-1.5 rounded-full bg-rose-500" />
                         No Signal
                       </span>
@@ -356,7 +356,7 @@ export default function CCTVPage() {
                   <span className="text-zinc-400">Unassigned</span>
                 </div>
 
-                <span className="px-2 py-0.5 rounded bg-rose-500/15 border border-rose-500/30 text-[10px] font-semibold text-rose-400 flex items-center gap-1">
+                <span className="text-[10px] font-semibold text-rose-400 flex items-center gap-1">
                   <span className="w-1.5 h-1.5 rounded-full bg-rose-500" />
                   No Signal
                 </span>
@@ -405,7 +405,7 @@ export default function CCTVPage() {
                   <div>
                     <h3 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
                       {focusedModalCam.fullName}
-                      <span className="text-xs px-2 py-0.5 rounded-full bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400 font-semibold border border-rose-200 dark:border-rose-800/40">
+                      <span className="text-xs text-rose-600 dark:text-rose-400 font-semibold">
                         No Signal
                       </span>
                     </h3>
