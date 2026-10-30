@@ -2,10 +2,12 @@ const db = require('../config/db');
 const { hashPassword, comparePassword } = require('../utils/passwordUtils');
 const presenceService = require('../services/presenceService');
 const { formatPhoneNumber } = require('../utils/phoneUtils');
+const { normalizeRoomGender, ensureRoomGenderColumn } = require('../utils/roomGenderUtils');
 
 // @desc    Get Admin Dashboard Statistics
 const getDashboardStats = async (req, res) => {
     try {
+        await ensureRoomGenderColumn();
         const [
             roomsResult, roomStatusResult, 
             tenantsResult, tenantStatusResult, recentTenantsResult,
@@ -19,7 +21,7 @@ const getDashboardStats = async (req, res) => {
             db.query('SELECT COUNT(*) FROM rooms'),
             db.query(`
                 SELECT 
-                    r.id, r.room_number, r.type, r.rental_type, r.capacity, r.price, r.floor, r.status,
+                    r.id, r.room_number, r.type, r.rental_type, r.gender, r.capacity, r.price, r.floor, r.status,
                     CAST(COUNT(u.id) AS INTEGER) as current_occupants,
                     COALESCE(
                         json_agg(
@@ -27,7 +29,8 @@ const getDashboardStats = async (req, res) => {
                                 'id', u.id,
                                 'name', u.name,
                                 'phone', u.phone,
-                                'email', u.email
+                                'email', u.email,
+                                'gender', u.gender
                             )
                         ) FILTER (WHERE u.id IS NOT NULL),
                         '[]'
@@ -206,6 +209,10 @@ const getDashboardStats = async (req, res) => {
                 availableBeds += Math.max(0, cap - occ);
             }
             room.computed_status = status;
+            room.gender = normalizeRoomGender(
+                room.gender,
+                Array.isArray(room.tenants) ? room.tenants.map(t => t.gender) : []
+            );
             
             if (status === 'Occupied') occupiedRooms++;
             else if (status === 'Available') availableRooms++;
@@ -483,10 +490,11 @@ const getDashboardStats = async (req, res) => {
 // @route   GET /api/admin/rooms
 const getAllRooms = async (req, res) => {
     try {
+        await ensureRoomGenderColumn();
         const query = `
             SELECT 
                 r.id, r.room_number, r.capacity, r.price, r.status,
-                r.type, r.rental_type, r.amenities, r.floor, r.description,
+                r.type, r.rental_type, r.gender, r.amenities, r.floor, r.description,
                 CAST(COUNT(u.id) AS INTEGER) as current_occupants,
                 CAST((r.capacity - COUNT(u.id)) AS INTEGER) as available_slots,
                 COALESCE(
@@ -495,6 +503,8 @@ const getAllRooms = async (req, res) => {
                             'id', u.id,
                             'name', u.name,
                             'phone', u.phone,
+                            'email', u.email,
+                            'gender', u.gender,
                             'date_moved_in', u.date_moved_in,
                             'bed_space', u.bed_space,
                             'balance', COALESCE((
@@ -524,7 +534,11 @@ const getAllRooms = async (req, res) => {
                     computedStatus = `Occupied with ${avail} available ${avail === 1 ? 'bed' : 'beds'}`;
                 }
             }
-            return { ...room, status: computedStatus };
+            const normalizedGender = normalizeRoomGender(
+                room.gender,
+                Array.isArray(room.occupants) ? room.occupants.map(o => o.gender) : []
+            );
+            return { ...room, gender: normalizedGender, status: computedStatus };
         });
 
         res.status(200).json(mappedRooms);
@@ -538,8 +552,10 @@ const getAllRooms = async (req, res) => {
 // @desc    Create a new Room
 // @route   POST /api/admin/rooms
 const createRoom = async (req, res) => {
-    const { room_number, type, rental_type, capacity, price, floor, description, amenities, status } = req.body;
+    const { room_number, type, rental_type, gender, capacity, price, floor, description, amenities, status } = req.body;
     try {
+        await ensureRoomGenderColumn();
+
         // Check if room number already exists to prevent duplicates
         const roomExists = await db.query('SELECT * FROM rooms WHERE room_number = $1', [room_number]);
         if (roomExists.rows.length > 0) {
@@ -556,16 +572,19 @@ const createRoom = async (req, res) => {
             cleanFloor = match ? `Floor ${match[0].charAt(0)}` : 'Floor 1';
         }
 
+        const normalizedGender = normalizeRoomGender(gender);
+
         // Insert the new room
         const query = `
-            INSERT INTO rooms (room_number, type, rental_type, capacity, price, floor, description, amenities, status) 
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) 
+            INSERT INTO rooms (room_number, type, rental_type, gender, capacity, price, floor, description, amenities, status) 
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) 
             RETURNING *
         `;
         const newRoom = await db.query(query, [
             room_number, 
             type || 'Single', 
             rental_type || 'Whole Room',
+            normalizedGender,
             capacity, 
             price, 
             cleanFloor, 
@@ -585,9 +604,11 @@ const createRoom = async (req, res) => {
 // @route   PUT /api/admin/rooms/:id
 const updateRoom = async (req, res) => {
     const { id } = req.params;
-    const { room_number, type, rental_type, capacity, price, floor, description, amenities, status } = req.body;
+    const { room_number, type, rental_type, gender, capacity, price, floor, description, amenities, status } = req.body;
     
     try {
+        await ensureRoomGenderColumn();
+
         // Normalize floor to standard "Floor X" format
         let cleanFloor = null;
         if (floor) {
@@ -598,16 +619,19 @@ const updateRoom = async (req, res) => {
             cleanFloor = match ? `Floor ${match[0].charAt(0)}` : 'Floor 1';
         }
 
+        const normalizedGender = gender ? normalizeRoomGender(gender) : null;
+
         const query = `
             UPDATE rooms 
-            SET room_number = $1, type = $2, rental_type = $3, capacity = $4, price = $5, floor = $6, description = $7, amenities = $8, status = $9 
-            WHERE id = $10 
+            SET room_number = $1, type = $2, rental_type = $3, gender = COALESCE($4, gender), capacity = $5, price = $6, floor = $7, description = $8, amenities = $9, status = $10 
+            WHERE id = $11 
             RETURNING *
         `;
         const updatedRoom = await db.query(query, [
             room_number, 
             type || 'Single', 
             rental_type || 'Whole Room',
+            normalizedGender,
             capacity, 
             price, 
             cleanFloor, 
@@ -729,6 +753,9 @@ const getAllTenants = async (req, res) => {
                 r.rental_type,
                 r.floor,
                 COALESCE(r.price, 0) as monthly_rent,
+                (SELECT COUNT(*)::int FROM bills b WHERE b.tenant_id = u.id) as total_bills,
+                (SELECT COUNT(*)::int FROM requests req WHERE req.tenant_id = u.id) as total_requests,
+                (SELECT COUNT(*)::int FROM requests req WHERE req.tenant_id = u.id AND req.status IN ('Pending', 'In Progress')) as active_requests,
                 COALESCE((
                     SELECT SUM(b.balance) 
                     FROM bills b 
@@ -774,7 +801,7 @@ const updateTenant = async (req, res) => {
             return res.status(200).json({ message: 'Status updated', tenant: result.rows[0] });
         }
 
-        const { name, email, phone, room_id, gender, date_moved_in, contract_end_date, status } = req.body;
+        const { name, email, phone, room_id, gender, address, date_moved_in, contract_end_date, status } = req.body;
         const formattedPhone = phone ? formatPhoneNumber(phone) : null;
 
         const query = `
@@ -785,10 +812,11 @@ const updateTenant = async (req, res) => {
                 phone = $3, 
                 room_id = $4,
                 gender = $5,
-                date_moved_in = $6,
-                contract_end_date = $7,
-                status = $8
-            WHERE id = $9 AND role = 'tenant'
+                address = $6,
+                date_moved_in = $7,
+                contract_end_date = $8,
+                status = $9
+            WHERE id = $10 AND role = 'tenant'
             RETURNING *
         `;
         
@@ -798,6 +826,7 @@ const updateTenant = async (req, res) => {
             formattedPhone, 
             room_id || null, 
             gender || 'Not Specified',
+            address || null,
             date_moved_in || null,
             contract_end_date || null,
             status || 'Pending',
@@ -840,25 +869,40 @@ const getConversations = async (req, res) => {
     try {
         const query = `
             SELECT 
-                u.id, u.name, u.status as user_status, u.last_active_at, r.room_number,
-                (
-                    SELECT message FROM messages 
-                    WHERE (sender_id = u.id AND receiver_id = 1) OR (sender_id = 1 AND receiver_id = u.id)
-                    ORDER BY created_at DESC LIMIT 1
-                ) as last_message,
-                (
-                    SELECT created_at FROM messages 
-                    WHERE (sender_id = u.id AND receiver_id = 1) OR (sender_id = 1 AND receiver_id = u.id)
-                    ORDER BY created_at DESC LIMIT 1
-                ) as last_message_time,
+                u.id, u.name, u.email, u.phone, u.status as user_status, u.last_active_at,
+                r.room_number, r.type as room_type, r.rental_type,
+                latest.last_message,
+                latest.last_message_time,
                 (
                     SELECT COUNT(*) FROM messages 
                     WHERE sender_id = u.id AND receiver_id = 1 AND status != 'read'
                 ) as unread_count
             FROM users u
             LEFT JOIN rooms r ON u.room_id = r.id
+            LEFT JOIN LATERAL (
+                SELECT msg_text as last_message, created_at as last_message_time
+                FROM (
+                    SELECT 
+                        CASE 
+                            WHEN m.message LIKE '[MAINTENANCE_REQUEST%' THEN 
+                                'Maintenance Ticket: ' || REGEXP_REPLACE(m.message, '^\\[MAINTENANCE_REQUEST(#[0-9]+)?\\]\\s*', '', 'i')
+                            ELSE m.message
+                        END as msg_text,
+                        m.created_at
+                    FROM messages m
+                    WHERE (m.sender_id = u.id AND m.receiver_id = 1) OR (m.sender_id = 1 AND m.receiver_id = u.id)
+                    UNION ALL
+                    SELECT 
+                        'Maintenance Ticket: ' || COALESCE(req.title, 'Issue Reported') as msg_text,
+                        req.created_at
+                    FROM requests req
+                    WHERE req.tenant_id = u.id
+                ) combined
+                ORDER BY created_at DESC
+                LIMIT 1
+            ) latest ON TRUE
             WHERE u.role = 'tenant'
-            ORDER BY last_message_time DESC NULLS LAST
+            ORDER BY latest.last_message_time DESC NULLS LAST
         `;
         const result = await db.query(query);
         const conversations = result.rows.map(c => {
@@ -1640,12 +1684,12 @@ const updateSystemSettings = async (req, res) => {
             );
         }
 
-        // 3. Persist system settings in PostgreSQL JSONB
+        // 3. Persist system settings in PostgreSQL JSONB (merge with existing keys so gcashQrCode & other fields are preserved)
         const settingsPayload = settings || {};
         const upsertQuery = `
             INSERT INTO "rentTrack_schema".settings (id, data, updated_at)
-            VALUES ('global', $1, CURRENT_TIMESTAMP)
-            ON CONFLICT (id) DO UPDATE SET data = $1, updated_at = CURRENT_TIMESTAMP
+            VALUES ('global', $1::jsonb, CURRENT_TIMESTAMP)
+            ON CONFLICT (id) DO UPDATE SET data = COALESCE("rentTrack_schema".settings.data, '{}'::jsonb) || $1::jsonb, updated_at = CURRENT_TIMESTAMP
             RETURNING *;
         `;
         const updatedResult = await db.query(upsertQuery, [JSON.stringify(settingsPayload)]);
@@ -1662,6 +1706,56 @@ const updateSystemSettings = async (req, res) => {
     } catch (error) {
         console.error('Update System Settings Error:', error);
         res.status(500).json({ message: 'Server error saving system settings' });
+    }
+};
+
+// @desc    Get GCash QR Code Screenshot
+// @route   GET /api/admin/settings/gcash-qr
+const getGcashQrCode = async (req, res) => {
+    try {
+        await db.query('CREATE TABLE IF NOT EXISTS "rentTrack_schema".settings (id VARCHAR(50) PRIMARY KEY, data JSONB NOT NULL DEFAULT \'{}\' , updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP);');
+        const settingsResult = await db.query('SELECT data, updated_at FROM "rentTrack_schema".settings WHERE id = $1', ['global']);
+        const storedSettings = settingsResult.rows.length > 0 ? settingsResult.rows[0].data : {};
+        const gcashQrCode = storedSettings?.gcashQrCode || storedSettings?.billing?.gcashQrCode || '';
+        res.status(200).json({
+            gcashQrCode,
+            updated_at: settingsResult.rows.length > 0 ? settingsResult.rows[0].updated_at : null
+        });
+    } catch (error) {
+        console.error('Get GCash QR Code Error:', error);
+        res.status(500).json({ message: 'Server error retrieving GCash QR code' });
+    }
+};
+
+// @desc    Update GCash QR Code Screenshot
+// @route   PUT /api/admin/settings/gcash-qr
+const updateGcashQrCode = async (req, res) => {
+    try {
+        await db.query('CREATE TABLE IF NOT EXISTS "rentTrack_schema".settings (id VARCHAR(50) PRIMARY KEY, data JSONB NOT NULL DEFAULT \'{}\' , updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP);');
+        const rawQr = req.body?.gcashQrCode;
+        const cleanQr = typeof rawQr === 'string' ? rawQr.trim() : '';
+
+        if (cleanQr && !/^data:image\/(png|jpe?g|webp|gif);base64,[A-Za-z0-9+/=\s]+$/i.test(cleanQr) && !cleanQr.startsWith('/uploads/') && !/^https?:\/\//i.test(cleanQr)) {
+            return res.status(400).json({ message: 'Invalid image format. Please upload a PNG, JPG, or WEBP screenshot.' });
+        }
+
+        const patchPayload = { gcashQrCode: cleanQr };
+        const upsertQuery = `
+            INSERT INTO "rentTrack_schema".settings (id, data, updated_at)
+            VALUES ('global', $1::jsonb, CURRENT_TIMESTAMP)
+            ON CONFLICT (id) DO UPDATE SET data = COALESCE("rentTrack_schema".settings.data, '{}'::jsonb) || $1::jsonb, updated_at = CURRENT_TIMESTAMP
+            RETURNING *;
+        `;
+        const updatedResult = await db.query(upsertQuery, [JSON.stringify(patchPayload)]);
+
+        res.status(200).json({
+            message: cleanQr ? 'GCash QR code updated successfully.' : 'GCash QR code removed.',
+            gcashQrCode: updatedResult.rows[0].data?.gcashQrCode || '',
+            updated_at: updatedResult.rows[0].updated_at
+        });
+    } catch (error) {
+        console.error('Update GCash QR Code Error:', error);
+        res.status(500).json({ message: 'Server error updating GCash QR code' });
     }
 };
 
@@ -1760,6 +1854,8 @@ module.exports = {
     getActivityLogs,
     getSystemSettings,
     updateSystemSettings,
+    getGcashQrCode,
+    updateGcashQrCode,
     purgeSystemCache,
     getSystemDiagnostic
 };
