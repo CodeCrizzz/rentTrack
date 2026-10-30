@@ -12,7 +12,9 @@ const EXCLUDED_FIELDS = new Set([
     'confirmpassword',
     'token',
     'proofofpayment',
-    'attachment'
+    'attachment',
+    'gcashqrcode',
+    'logourl'
 ]);
 
 // Signatures of common SQL injection attack patterns
