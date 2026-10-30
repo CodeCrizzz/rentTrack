@@ -50,7 +50,7 @@ router.use(protect);
 // ==========================================
 router.post(
     '/', 
-    requireRole([ROLES.TENANT, ROLES.ADMIN, ROLES.OWNER]), 
+    requireRole([ROLES.TENANT, ROLES.ADMIN]), 
     requestLimiter, 
     upload.single('attachment'), 
     sanitizeInput, 
@@ -77,21 +77,21 @@ router.put(
 // ==========================================
 router.get(
     '/', 
-    requireRole([ROLES.ADMIN, ROLES.OWNER, ROLES.STAFF]), 
+    requireRole([ROLES.ADMIN, ROLES.STAFF]), 
     hasPermission(PERMISSIONS.REQUESTS_READ), 
     getAllRequests
 );
 
 router.put(
     '/:id', 
-    requireRole([ROLES.ADMIN, ROLES.OWNER, ROLES.STAFF]), 
+    requireRole([ROLES.ADMIN, ROLES.STAFF]), 
     hasPermission(PERMISSIONS.REQUESTS_UPDATE), 
     updateRequest
 );
 
 router.delete(
     '/:id', 
-    requireRole([ROLES.ADMIN, ROLES.OWNER]), 
+    requireRole([ROLES.ADMIN]), 
     hasPermission(PERMISSIONS.REQUESTS_DELETE), 
     deleteRequest
 );
