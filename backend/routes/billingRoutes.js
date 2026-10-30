@@ -20,12 +20,13 @@ const {
     getPendingPaymentsCount,
     verifyPayment,
     getAllPayments,
+    getPaymentHistory,
     triggerPaymentReminders
 } = require('../controllers/billingController');
 
 // All billing admin routes require authentication and authorized billing roles
 router.use(protect);
-router.use(requireRole([ROLES.ADMIN, ROLES.OWNER]));
+router.use(requireRole([ROLES.ADMIN]));
 
 // Automated Generation & Batch Reminders
 router.post('/generate', hasPermission(PERMISSIONS.BILLS_GENERATE), generateMonthlyBills);
@@ -33,6 +34,7 @@ router.post('/reminders', hasPermission(PERMISSIONS.BILLS_REMINDERS), triggerPay
 
 // Payment Review & Verification
 router.get('/payments', hasPermission(PERMISSIONS.BILLS_READ), getAllPayments);
+router.get('/payments/history', hasPermission(PERMISSIONS.BILLS_READ), getPaymentHistory);
 router.get('/payments/pending', hasPermission(PERMISSIONS.BILLS_READ), getPendingPayments);
 router.get('/payments/pending-count', hasPermission(PERMISSIONS.BILLS_READ), getPendingPaymentsCount);
 router.post('/payments/:paymentId/verify', hasPermission(PERMISSIONS.BILLS_VERIFY_PAYMENT), verifyPayment);
