@@ -384,7 +384,7 @@ const generateMonthlyBills = async (req, res) => {
 const getPendingPayments = async (req, res) => {
     try {
         const query = `
-            SELECT p.*, b.billing_month, b.invoice_number, b.total_amount as bill_total, b.balance as bill_balance, u.name as tenant_name, r.room_number 
+            SELECT p.*, b.tenant_id, b.billing_month, b.invoice_number, b.total_amount as bill_total, b.balance as bill_balance, u.name as tenant_name, r.room_number 
             FROM payments p
             JOIN bills b ON p.bill_id = b.id
             JOIN users u ON b.tenant_id = u.id
@@ -509,7 +509,7 @@ const verifyPayment = async (req, res) => {
 const getAllPayments = async (req, res) => {
     try {
         const query = `
-            SELECT p.*, b.billing_month, u.name as tenant_name, r.room_number 
+            SELECT p.*, b.tenant_id, b.billing_month, b.invoice_number, b.total_amount as bill_total, b.balance as bill_balance, u.name as tenant_name, r.room_number 
             FROM payments p
             JOIN bills b ON p.bill_id = b.id
             JOIN users u ON b.tenant_id = u.id
@@ -523,6 +523,35 @@ const getAllPayments = async (req, res) => {
     } catch (error) {
         console.error('Error fetching all payments:', error);
         res.status(500).json({ message: 'Server error fetching all payments' });
+    }
+};
+
+// @desc    Get full payment history across all statuses (optionally filtered by tenant_id)
+// @route   GET /api/admin/bills/payments/history
+// @access  Private/Admin
+const getPaymentHistory = async (req, res) => {
+    try {
+        const { tenant_id } = req.query;
+        const params = [];
+        let whereClause = '';
+        if (tenant_id) {
+            params.push(tenant_id);
+            whereClause = 'WHERE b.tenant_id = $1';
+        }
+        const query = `
+            SELECT p.*, b.tenant_id, b.billing_month, b.invoice_number, b.total_amount as bill_total, b.balance as bill_balance, u.name as tenant_name, r.room_number
+            FROM payments p
+            JOIN bills b ON p.bill_id = b.id
+            JOIN users u ON b.tenant_id = u.id
+            LEFT JOIN rooms r ON b.room_id = r.id
+            ${whereClause}
+            ORDER BY p.payment_date DESC, p.id DESC
+        `;
+        const { rows } = await db.query(query, params);
+        res.json(rows);
+    } catch (error) {
+        console.error('Error fetching payment history:', error);
+        res.status(500).json({ message: 'Server error fetching payment history' });
     }
 };
 
@@ -556,5 +585,6 @@ module.exports = {
     getPendingPaymentsCount,
     verifyPayment,
     getAllPayments,
+    getPaymentHistory,
     triggerPaymentReminders
 };
