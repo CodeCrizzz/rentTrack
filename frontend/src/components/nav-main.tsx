@@ -1,11 +1,11 @@
-"use client"
+"use client";
 
-import Link from "next/link"
+import Link from "next/link";
 import {
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger,
-} from "@/components/ui/collapsible"
+} from "@/components/ui/collapsible";
 import {
   SidebarGroup,
   SidebarGroupLabel,
@@ -15,39 +15,41 @@ import {
   SidebarMenuSub,
   SidebarMenuSubButton,
   SidebarMenuSubItem,
-} from "@/components/ui/sidebar"
-import { ChevronRightIcon } from "lucide-react"
+} from "@/components/ui/sidebar";
+import { ChevronRightIcon } from "lucide-react";
 
 export interface NavMainItem {
-  title: string
-  url: string
-  icon?: React.ReactNode
-  isActive?: boolean
-  badgeCount?: number
-  badgeColor?: string
+  title: string;
+  url: string;
+  icon?: React.ReactNode;
+  isActive?: boolean;
+  badgeCount?: number;
+  badgeColor?: string;
   items?: {
-    title: string
-    url: string
-  }[]
+    title: string;
+    url: string;
+  }[];
 }
 
 export function NavMain({
   label = "",
   items,
 }: {
-  label?: string
-  items: NavMainItem[]
+  label?: string;
+  items: NavMainItem[];
 }) {
   return (
     <SidebarGroup className="p-0">
       {label && (
-        <SidebarGroupLabel className="text-slate-400 font-semibold tracking-wider uppercase text-[10px] px-3.5 mb-1">
+        <SidebarGroupLabel className="text-slate-400 font-semibold tracking-wider uppercase text-[10px] px-3.5 mb-1 group-data-[collapsible=icon]:hidden">
           {label}
         </SidebarGroupLabel>
       )}
       <SidebarMenu className="gap-1.5 px-2">
         {items.map((item) => {
           const hasSubItems = item.items && item.items.length > 0;
+          const hasBadge =
+            typeof item.badgeCount === "number" && item.badgeCount > 0;
 
           if (hasSubItems) {
             return (
@@ -70,14 +72,21 @@ export function NavMain({
                     />
                   }
                 >
-                  {item.icon}
-                  <span className="flex-1 text-left text-sm">{item.title}</span>
-                  {item.badgeCount && item.badgeCount > 0 ? (
-                    <span className="px-1.5 py-0.5 text-[10px] font-bold rounded-full bg-rose-500 text-white leading-none mr-1">
+                  <div className="relative shrink-0 flex items-center justify-center">
+                    {item.icon}
+                    {hasBadge && (
+                      <span className="hidden group-data-[collapsible=icon]:block absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-rose-500 ring-2 ring-[#07152b] dark:ring-[#09090b] animate-pulse" />
+                    )}
+                  </div>
+                  <span className="flex-1 text-left text-sm group-data-[collapsible=icon]:hidden">
+                    {item.title}
+                  </span>
+                  {hasBadge && (
+                    <span className="px-1.5 py-0.5 text-[10px] font-bold rounded-full bg-rose-500 text-white leading-none mr-1 shadow-xs group-data-[collapsible=icon]:hidden animate-in fade-in duration-200">
                       {item.badgeCount}
                     </span>
-                  ) : null}
-                  <ChevronRightIcon className="ml-auto transition-transform duration-200 group-data-open/collapsible:rotate-90 size-4 text-slate-400" />
+                  )}
+                  <ChevronRightIcon className="ml-auto transition-transform duration-200 group-data-open/collapsible:rotate-90 size-4 text-slate-400 group-data-[collapsible=icon]:hidden" />
                 </CollapsibleTrigger>
                 <CollapsibleContent>
                   <SidebarMenuSub className="border-l border-white/15 ml-5 pl-2.5 my-1 space-y-1">
@@ -97,7 +106,6 @@ export function NavMain({
             );
           }
 
-          // Single menu item without sub-items
           return (
             <SidebarMenuItem key={item.title}>
               <SidebarMenuButton
@@ -110,18 +118,25 @@ export function NavMain({
                     : "text-slate-200 hover:bg-white/10 hover:text-white font-medium rounded-xl h-11 px-3.5 transition-colors"
                 }
               >
-                {item.icon}
-                <span className="flex-1 truncate text-sm">{item.title}</span>
-                {item.badgeCount && item.badgeCount > 0 ? (
-                  <span className="ml-auto px-1.5 py-0.5 text-[10px] font-bold rounded-full bg-rose-500 text-white leading-none">
+                <div className="relative shrink-0 flex items-center justify-center">
+                  {item.icon}
+                  {hasBadge && (
+                    <span className="hidden group-data-[collapsible=icon]:block absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-rose-500 ring-2 ring-[#07152b] dark:ring-[#09090b] animate-pulse" />
+                  )}
+                </div>
+                <span className="flex-1 truncate text-sm group-data-[collapsible=icon]:hidden">
+                  {item.title}
+                </span>
+                {hasBadge && (
+                  <span className="ml-auto px-1.5 py-0.5 text-[10px] font-bold rounded-full bg-rose-500 text-white leading-none shadow-xs group-data-[collapsible=icon]:hidden animate-in fade-in duration-200">
                     {item.badgeCount}
                   </span>
-                ) : null}
+                )}
               </SidebarMenuButton>
             </SidebarMenuItem>
           );
         })}
       </SidebarMenu>
     </SidebarGroup>
-  )
+  );
 }
