@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { AnimatePresence } from 'framer-motion';
@@ -13,7 +13,8 @@ import {
 } from "@/components/ui/sidebar";
 import { AppSidebar } from '@/components/app-sidebar';
 import { FullscreenToggle } from '@/components/fullscreen-toggle';
-import { Home, Building2, Users, Calculator, Wrench, MessageSquareMore, Bell, Settings, User, RefreshCw, Calendar, Cctv, UserPlus, CheckCheck, Clock, Bed, Receipt, Activity } from 'lucide-react';
+import { ThemeToggle } from '@/components/theme-toggle';
+import { Home, Building2, Users, Calculator, Wrench, MessageSquareMore, Bell, User, Calendar, Cctv, UserPlus, CheckCheck, Clock, Bed, Receipt, Activity } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -39,6 +40,30 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     const [unreadCount, setUnreadCount] = useState(0);
     const [pendingTenantsCount, setPendingTenantsCount] = useState(0);
     const [pendingPaymentsCount, setPendingPaymentsCount] = useState(0);
+    const [pendingRequestsCount, setPendingRequestsCount] = useState(0);
+
+    // Track seen counts when admin visits sections so notification counter is removed
+    const [seenTenantsCount, setSeenTenantsCount] = useState<number>(() => {
+        if (typeof window !== 'undefined') {
+            const v = localStorage.getItem('renttrack_seen_tenants_count');
+            return v ? parseInt(v, 10) || 0 : 0;
+        }
+        return 0;
+    });
+    const [seenPaymentsCount, setSeenPaymentsCount] = useState<number>(() => {
+        if (typeof window !== 'undefined') {
+            const v = localStorage.getItem('renttrack_seen_payments_count');
+            return v ? parseInt(v, 10) || 0 : 0;
+        }
+        return 0;
+    });
+    const [seenRequestsCount, setSeenRequestsCount] = useState<number>(() => {
+        if (typeof window !== 'undefined') {
+            const v = localStorage.getItem('renttrack_seen_requests_count');
+            return v ? parseInt(v, 10) || 0 : 0;
+        }
+        return 0;
+    });
     const [notifications, setNotifications] = useState<AdminNotification[]>([]);
     const [notifUnreadCount, setNotifUnreadCount] = useState(0);
     const [showAllNotifications, setShowAllNotifications] = useState(false);
@@ -90,6 +115,29 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         }
     };
 
+        const fetchPendingRequestsCount = async () => {
+        try {
+            const { data } = await api.get('/admin/requests/pending-count');
+            if (data && typeof data.pendingCount !== 'undefined') {
+                setPendingRequestsCount(data.pendingCount);
+            }
+        } catch (error: any) {
+            try {
+                const { data } = await api.get('/requests/pending-count');
+                if (data && typeof data.pendingCount !== 'undefined') {
+                    setPendingRequestsCount(data.pendingCount);
+                }
+            } catch (fallbackErr: any) {
+                if (fallbackErr.code === 'ERR_NETWORK') {
+                    console.warn('Network error: Backend might be unreachable', fallbackErr.message);
+                } else if (fallbackErr.response?.status !== 401) {
+                    console.warn('Failed to fetch pending requests count', fallbackErr);
+                }
+                setPendingRequestsCount(0);
+            }
+        }
+    };
+
     const fetchAdminNotifications = async () => {
         try {
             const { data } = await api.get('/admin/notifications');
@@ -137,12 +185,24 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             fetchUnreadCount();
             fetchPendingTenantCount();
             fetchPendingPaymentsCount();
+            fetchPendingRequestsCount();
             fetchAdminNotifications();
         };
 
         fetchData();
-        const interval = setInterval(fetchData, 15000);
-        return () => clearInterval(interval);
+        const interval = setInterval(fetchData, 8000);
+
+        const handleRefresh = () => {
+            fetchData();
+        };
+        window.addEventListener('renttrack-refresh-counts', handleRefresh);
+        window.addEventListener('focus', handleRefresh);
+
+        return () => {
+            clearInterval(interval);
+            window.removeEventListener('renttrack-refresh-counts', handleRefresh);
+            window.removeEventListener('focus', handleRefresh);
+        };
     }, [pathname, router]);
 
     const handleMarkAllRead = async () => {
@@ -197,6 +257,95 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         }
     };
 
+    // Synchronize seen counts and acknowledge notifications when admin enters that section
+    useEffect(() => {
+        if (!pathname) return;
+
+        if (pathname.startsWith('/admin/tenants')) {
+            setSeenTenantsCount(pendingTenantsCount);
+            if (typeof window !== 'undefined') {
+                localStorage.setItem('renttrack_seen_tenants_count', String(pendingTenantsCount));
+            }
+            const unreadTenants = notifications.filter(n => !n.is_read && n.type === 'account_approval');
+            if (unreadTenants.length > 0) {
+                setNotifications(prev => prev.map(n => n.type === 'account_approval' ? { ...n, is_read: true } : n));
+                setNotifUnreadCount(prev => Math.max(0, prev - unreadTenants.length));
+                unreadTenants.forEach(n => {
+                    api.patch(`/admin/notifications/${n.id}/read`).catch(() => {});
+                });
+            }
+        }
+
+        if (pathname.startsWith('/admin/billing')) {
+            setSeenPaymentsCount(pendingPaymentsCount);
+            if (typeof window !== 'undefined') {
+                localStorage.setItem('renttrack_seen_payments_count', String(pendingPaymentsCount));
+            }
+            const unreadBilling = notifications.filter(n => !n.is_read && n.type === 'payment_verification');
+            if (unreadBilling.length > 0) {
+                setNotifications(prev => prev.map(n => n.type === 'payment_verification' ? { ...n, is_read: true } : n));
+                setNotifUnreadCount(prev => Math.max(0, prev - unreadBilling.length));
+                unreadBilling.forEach(n => {
+                    api.patch(`/admin/notifications/${n.id}/read`).catch(() => {});
+                });
+            }
+        }
+
+        if (pathname.startsWith('/admin/requests')) {
+            setSeenRequestsCount(pendingRequestsCount);
+            if (typeof window !== 'undefined') {
+                localStorage.setItem('renttrack_seen_requests_count', String(pendingRequestsCount));
+            }
+            const unreadRequests = notifications.filter(n => !n.is_read && n.type === 'maintenance_request');
+            if (unreadRequests.length > 0) {
+                setNotifications(prev => prev.map(n => n.type === 'maintenance_request' ? { ...n, is_read: true } : n));
+                setNotifUnreadCount(prev => Math.max(0, prev - unreadRequests.length));
+                unreadRequests.forEach(n => {
+                    api.patch(`/admin/notifications/${n.id}/read`).catch(() => {});
+                });
+            }
+        }
+
+        if (pathname.startsWith('/admin/chat')) {
+            const unreadChat = notifications.filter(n => !n.is_read && n.type === 'chat_message');
+            if (unreadChat.length > 0) {
+                setNotifications(prev => prev.map(n => n.type === 'chat_message' ? { ...n, is_read: true } : n));
+                setNotifUnreadCount(prev => Math.max(0, prev - unreadChat.length));
+                unreadChat.forEach(n => {
+                    api.patch(`/admin/notifications/${n.id}/read`).catch(() => {});
+                });
+            }
+        }
+    }, [pathname, pendingTenantsCount, pendingPaymentsCount, pendingRequestsCount, notifications]);
+
+    // Keep seen counts clamped if pending count decreases due to approvals or resolution
+    useEffect(() => {
+        if (pendingTenantsCount < seenTenantsCount) {
+            setSeenTenantsCount(pendingTenantsCount);
+            if (typeof window !== 'undefined') {
+                localStorage.setItem('renttrack_seen_tenants_count', String(pendingTenantsCount));
+            }
+        }
+    }, [pendingTenantsCount, seenTenantsCount]);
+
+    useEffect(() => {
+        if (pendingPaymentsCount < seenPaymentsCount) {
+            setSeenPaymentsCount(pendingPaymentsCount);
+            if (typeof window !== 'undefined') {
+                localStorage.setItem('renttrack_seen_payments_count', String(pendingPaymentsCount));
+            }
+        }
+    }, [pendingPaymentsCount, seenPaymentsCount]);
+
+    useEffect(() => {
+        if (pendingRequestsCount < seenRequestsCount) {
+            setSeenRequestsCount(pendingRequestsCount);
+            if (typeof window !== 'undefined') {
+                localStorage.setItem('renttrack_seen_requests_count', String(pendingRequestsCount));
+            }
+        }
+    }, [pendingRequestsCount, seenRequestsCount]);
+
     const handleLogout = async () => {
         try {
             await api.post('/auth/logout');
@@ -209,26 +358,30 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     const rawNavItems = [
         { name: 'Dashboard', path: '/admin/dashboard', icon: Home },
         { name: 'Rooms', path: '/admin/rooms', icon: Bed },
-        { name: 'Tenants', path: '/admin/tenants', icon: Users },
+        { name: 'Manage Tenants', path: '/admin/tenants', icon: Users },
         { name: 'Bills and Payments', path: '/admin/billing', icon: Calculator },
         { name: 'Maintenance Requests', path: '/admin/requests', icon: Wrench },
         { name: 'Messages', path: '/admin/chat', icon: MessageSquareMore },
         { name: 'CCTV Monitoring', path: '/admin/cctv', icon: Cctv },
-        { name: 'Settings', path: '/admin/settings', icon: Settings },
     ];
 
     const mappedNavItems = rawNavItems.map(item => {
         const isActive = pathname === item.path || (item.path !== '/admin/dashboard' && pathname.startsWith(item.path));
         let badgeCount = 0;
 
-        if (item.name === 'Tenants' && pendingTenantsCount > 0) {
-            badgeCount = pendingTenantsCount;
-        }
-        if (item.name === 'Messages' && unreadCount > 0) {
-            badgeCount = unreadCount;
-        }
-        if (item.name === 'Bills and Payments' && pendingPaymentsCount > 0) {
-            badgeCount = pendingPaymentsCount;
+        // When the user is currently on that section, the notification counter is removed (0)
+        if (isActive) {
+            badgeCount = 0;
+        } else {
+            if (item.name === 'Manage Tenants' || item.name === 'Tenants') {
+                badgeCount = Math.max(0, pendingTenantsCount - seenTenantsCount);
+            } else if (item.name === 'Bills and Payments') {
+                badgeCount = Math.max(0, pendingPaymentsCount - seenPaymentsCount);
+            } else if (item.name === 'Maintenance Requests' || item.name === 'Maintenance Request') {
+                badgeCount = Math.max(0, pendingRequestsCount - seenRequestsCount);
+            } else if (item.name === 'Messages') {
+                badgeCount = unreadCount;
+            }
         }
 
         return {
@@ -246,6 +399,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     const getPageTitle = () => {
         const path = pathname.split('/').pop();
         if (!path) return 'Dashboard';
+        if (path === 'tenants') return 'Manage Tenants';
         if (path === 'billing') return 'Bills and Payments';
         if (path === 'requests') return 'Maintenance Requests';
         if (path === 'cctv') return 'CCTV Monitoring';
@@ -291,18 +445,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                                     {currentDate}
                                 </div>
                             )}
-                            <button 
-                                onClick={() => {
-                                    setRefreshKey(prev => prev + 1);
-                                    fetchUnreadCount();
-                                    fetchPendingTenantCount();
-                                    fetchPendingPaymentsCount();
-                                }} 
-                                className="group p-2 text-slate-500 hover:text-slate-900 dark:text-zinc-400 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/5 rounded-full transition-colors outline-none"
-                                title="Refresh Page"
-                            >
-                                <RefreshCw className="w-5 h-5 group-hover:rotate-180 group-active:scale-90 transition-all duration-500" strokeWidth={2} />
-                            </button>
+                            <ThemeToggle />
                             <FullscreenToggle />
                             <DropdownMenu>
                                 <DropdownMenuTrigger className="group relative p-2 text-slate-500 hover:text-slate-900 dark:text-zinc-400 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/5 rounded-full transition-colors outline-none cursor-pointer">
@@ -412,7 +555,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                         const isManageRooms = pathname?.startsWith('/admin/rooms');
                         const isManageTenants = pathname?.startsWith('/admin/tenants');
                         const isRequests = pathname?.startsWith('/admin/requests');
-                        const isNoPageScroll = isManageRooms || isManageTenants || isRequests;
+                        const isActivityLogs = pathname?.startsWith('/admin/activity-logs');
+                        const isNoPageScroll = isManageRooms || isManageTenants || isRequests || isActivityLogs;
                         return (
                             <div className={`flex-1 flex flex-col ${isNoPageScroll ? 'overflow-hidden' : 'overflow-y-auto'} overflow-x-hidden ${isNoPageScroll ? '' : 'custom-scrollbar'} bg-[#f4f7fb] dark:bg-zinc-950`}>
                                 <div className={`px-4 pt-3 pb-2 sm:px-5 sm:pt-3.5 sm:pb-2.5 lg:px-6 lg:pt-3.5 lg:pb-2.5 relative ${isNoPageScroll ? 'h-full flex-1 flex flex-col min-h-0 overflow-hidden' : ''}`}>
