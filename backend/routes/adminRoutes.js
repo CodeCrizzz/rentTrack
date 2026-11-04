@@ -13,7 +13,7 @@ const {
     getDashboardStats, getAllTenants, getAllRooms, getAllPayments, 
     getAllRequests, createAdminRequest, updateTenant, deleteTenant,
     getConversations, getMessages, sendMessage, getUnreadCount,
-    getPendingTenantsCount,
+    getPendingTenantsCount, getPendingRequestsCount,
     createRoom, updateRoom, deleteRoom,
     getCashFlowOverview,
     getAnnouncements,
@@ -24,12 +24,8 @@ const {
     markAdminNotificationRead,
     getReportData,
     getActivityLogs,
-    getSystemSettings,
-    updateSystemSettings,
     getGcashQrCode,
     updateGcashQrCode,
-    purgeSystemCache,
-    getSystemDiagnostic
 } = require('../controllers/adminController');
 const { updateRequest, deleteRequest } = require('../controllers/requestController');
 
@@ -57,6 +53,7 @@ router.delete('/rooms/:id', hasPermission(PERMISSIONS.ROOMS_DELETE), deleteRoom)
 router.get('/payments', hasPermission(PERMISSIONS.BILLS_READ), getAllPayments);
 
 // Maintenance Requests
+router.get('/requests/pending-count', hasPermission(PERMISSIONS.REQUESTS_READ), getPendingRequestsCount);
 router.get('/requests', hasPermission(PERMISSIONS.REQUESTS_READ), getAllRequests);
 router.post('/requests', hasPermission(PERMISSIONS.REQUESTS_CREATE), createAdminRequest);
 router.put('/requests/:id', hasPermission(PERMISSIONS.REQUESTS_UPDATE), updateRequest);
@@ -82,12 +79,8 @@ router.delete('/announcements/:id', hasPermission(PERMISSIONS.ANNOUNCEMENTS_DELE
 router.get('/reports', hasPermission(PERMISSIONS.REPORTS_READ), getReportData);
 router.get('/activity-logs', hasPermission(PERMISSIONS.ACTIVITY_LOGS_READ), getActivityLogs);
 
-// System Settings & High-Privilege Diagnostics (Least Privilege Protected)
-router.get('/settings', hasPermission(PERMISSIONS.SETTINGS_READ), getSystemSettings);
-router.put('/settings', hasPermission(PERMISSIONS.SETTINGS_UPDATE), updateSystemSettings);
-router.get('/settings/gcash-qr', hasAnyPermission([PERMISSIONS.BILLS_READ, PERMISSIONS.SETTINGS_READ]), getGcashQrCode);
-router.put('/settings/gcash-qr', hasAnyPermission([PERMISSIONS.BILLS_UPDATE, PERMISSIONS.SETTINGS_UPDATE]), updateGcashQrCode);
-router.post('/settings/purge-cache', hasPermission(PERMISSIONS.SETTINGS_PURGE_CACHE), purgeSystemCache);
-router.get('/settings/diagnostic', hasPermission(PERMISSIONS.SETTINGS_DIAGNOSTIC), getSystemDiagnostic);
+// GCash QR Code Configuration for Billing Operations
+router.get('/gcash-qr', hasPermission(PERMISSIONS.BILLS_READ), getGcashQrCode);
+router.put('/gcash-qr', hasPermission(PERMISSIONS.BILLS_UPDATE), updateGcashQrCode);
 
 module.exports = router;
