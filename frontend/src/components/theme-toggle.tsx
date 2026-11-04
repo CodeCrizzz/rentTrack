@@ -3,24 +3,45 @@
 import * as React from "react";
 import { Moon, Sun } from "lucide-react";
 import { useTheme } from "next-themes";
-import { usePathname } from "next/navigation";
 
-export function ThemeToggle() {
-  const { setTheme, theme } = useTheme();
-  const pathname = usePathname();
+export function ThemeToggle({ className }: { className?: string }) {
+  const { setTheme, resolvedTheme, theme } = useTheme();
+  const [mounted, setMounted] = React.useState(false);
 
-  const isAuthPage = pathname === "/" || pathname === "/signup";
+  React.useEffect(() => {
+    setMounted(true);
+  }, []);
 
-  if (isAuthPage) return null;
+  const currentTheme = mounted ? (resolvedTheme || theme) : "dark";
+  const isDark = currentTheme === "dark";
+
+  const toggleTheme = () => {
+    setTheme(isDark ? "light" : "dark");
+  };
 
   return (
     <button
-      onClick={() => setTheme(theme === "light" ? "dark" : "light")}
-      className="relative inline-flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-slate-800 dark:text-zinc-200 hover:bg-slate-100 dark:hover:bg-zinc-800 transition-colors cursor-pointer shadow-xs"
+      type="button"
+      onClick={toggleTheme}
+      className={
+        className ||
+        "group relative p-2 text-slate-500 hover:text-slate-900 dark:text-zinc-400 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/5 rounded-full transition-colors outline-none cursor-pointer"
+      }
       aria-label="Toggle theme"
+      title={isDark ? "Switch to light mode" : "Switch to dark mode"}
     >
-      <Sun className="h-4 w-4 rotate-0 scale-100 transition-all duration-300 dark:-rotate-90 dark:scale-0 text-amber-500" />
-      <Moon className="absolute h-4 w-4 rotate-90 scale-0 transition-all duration-300 dark:rotate-0 dark:scale-100 text-zinc-100" />
+      <Sun
+        className={`w-5 h-5 transition-transform duration-300 group-hover:rotate-45 group-active:scale-90 text-amber-500 ${
+          isDark ? "hidden" : "block"
+        }`}
+        strokeWidth={2}
+      />
+      <Moon
+        className={`w-5 h-5 transition-transform duration-300 group-hover:-rotate-12 group-active:scale-90 text-zinc-300 ${
+          isDark ? "block" : "hidden"
+        }`}
+        strokeWidth={2}
+      />
     </button>
   );
 }

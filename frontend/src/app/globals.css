@@ -431,6 +431,73 @@ input:-webkit-autofill:active {
   animation: walkBob calc(var(--walk-speed, 0.45s) / 2) infinite ease-in-out;
 }
 
+/* Dynamic Sprint / Run Animations */
+@keyframes runBody {
+  0%, 100% {
+    transform: rotate(15deg) translateY(0);
+  }
+  50% {
+    transform: rotate(18deg) translateY(-3.5px);
+  }
+}
+@keyframes runLegLeft {
+  0%, 100% {
+    transform: rotate(-52deg);
+  }
+  50% {
+    transform: rotate(48deg);
+  }
+}
+@keyframes runLegRight {
+  0%, 100% {
+    transform: rotate(48deg);
+  }
+  50% {
+    transform: rotate(-52deg);
+  }
+}
+@keyframes runArmLeft {
+  0%, 100% {
+    transform: rotate(50deg);
+  }
+  50% {
+    transform: rotate(-54deg);
+  }
+}
+@keyframes runArmRight {
+  0%, 100% {
+    transform: rotate(-54deg);
+  }
+  50% {
+    transform: rotate(50deg);
+  }
+}
+
+.animate-run-body {
+  transform-origin: 50% 90%;
+  animation: runBody calc(var(--run-speed, 0.25s) / 2) infinite ease-in-out;
+}
+.animate-run-leg-left {
+  transform-box: fill-box;
+  transform-origin: 50% 0%;
+  animation: runLegLeft var(--run-speed, 0.25s) infinite cubic-bezier(0.4, 0, 0.2, 1);
+}
+.animate-run-leg-right {
+  transform-box: fill-box;
+  transform-origin: 50% 0%;
+  animation: runLegRight var(--run-speed, 0.25s) infinite cubic-bezier(0.4, 0, 0.2, 1);
+}
+.animate-run-arm-left {
+  transform-box: fill-box;
+  transform-origin: 50% 0%;
+  animation: runArmLeft var(--run-speed, 0.25s) infinite cubic-bezier(0.4, 0, 0.2, 1);
+}
+.animate-run-arm-right {
+  transform-box: fill-box;
+  transform-origin: 50% 0%;
+  animation: runArmRight var(--run-speed, 0.25s) infinite cubic-bezier(0.4, 0, 0.2, 1);
+}
+
 /* ==========================================================================
    UI Mockup Snackbar / Toast Component
    ========================================================================== */

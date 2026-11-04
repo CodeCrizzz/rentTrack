@@ -1,3 +1,5 @@
+const fs = require('fs');
+const path = require('path');
 const db = require('../config/db');
 const { hashPassword, comparePassword } = require('../utils/passwordUtils');
 const presenceService = require('../services/presenceService');
@@ -166,7 +168,7 @@ const getDashboardStats = async (req, res) => {
                 JOIN bills b ON p.bill_id = b.id
                 JOIN users u ON b.tenant_id = u.id
                 LEFT JOIN rooms r ON u.room_id = r.id
-                WHERE p.status = 'Pending Verification'
+                WHERE p.status = 'Pending Verification' AND (p.payment_method IS NULL OR p.payment_method NOT ILIKE '%gcash%')
                 ORDER BY p.payment_date ASC
             `),
             
@@ -1009,6 +1011,20 @@ const getPendingTenantsCount = async (req, res) => {
 
 // @desc    Get Cash Flow Overview
 // @route   GET /api/admin/cashflow
+
+// @desc    Get pending maintenance requests count
+// @route   GET /api/admin/requests/pending-count
+const getPendingRequestsCount = async (req, res) => {
+    try {
+        const result = await db.query(
+            "SELECT COUNT(*) FROM requests WHERE LOWER(status) = 'pending'"
+        );
+        res.status(200).json({ pendingCount: parseInt(result.rows[0].count, 10) });
+    } catch (error) {
+        console.error('Pending Requests Count Error:', error);
+        res.status(500).json({ message: 'Server error fetching pending requests count' });
+    }
+};
 const getCashFlowOverview = async (req, res) => {
     try {
         const { range, startDate, endDate } = req.query;
@@ -1601,125 +1617,24 @@ const getActivityLogs = async (req, res) => {
     }
 };
 
-// @desc    Get Global System Settings & Active Admin Credentials
-// @route   GET /api/admin/settings
-const getSystemSettings = async (req, res) => {
-    try {
-        await db.query('CREATE TABLE IF NOT EXISTS "rentTrack_schema".settings (id VARCHAR(50) PRIMARY KEY, data JSONB NOT NULL DEFAULT \'{}\' , updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP);');
-
-        const settingsResult = await db.query('SELECT data, updated_at FROM "rentTrack_schema".settings WHERE id = $1', ['global']);
-        const storedSettings = settingsResult.rows.length > 0 ? settingsResult.rows[0].data : {};
-
-        // Fetch current logged in admin user info
-        let adminInfo = { email: 'admin@renttrack.com', name: 'Master Property Administrator', role: 'admin' };
-        if (req.user && req.user.id) {
-            const userResult = await db.query('SELECT id, name, email, role FROM users WHERE id = $1', [req.user.id]);
-            if (userResult.rows.length > 0) {
-                adminInfo = userResult.rows[0];
-            }
-        }
-
-        res.status(200).json({
-            settings: storedSettings,
-            admin: adminInfo,
-            updated_at: settingsResult.rows.length > 0 ? settingsResult.rows[0].updated_at : null
-        });
-    } catch (error) {
-        console.error('Get System Settings Error:', error);
-        res.status(500).json({ message: 'Server error retrieving system settings' });
-    }
-};
-
-// @desc    Update Global System Settings & Admin Credentials
-// @route   PUT /api/admin/settings
-const updateSystemSettings = async (req, res) => {
-    try {
-        await db.query('CREATE TABLE IF NOT EXISTS "rentTrack_schema".settings (id VARCHAR(50) PRIMARY KEY, data JSONB NOT NULL DEFAULT \'{}\' , updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP);');
-
-        const {
-            settings,
-            adminEmail,
-            landlordName,
-            currentPassword,
-            newPassword
-        } = req.body;
-
-        const userId = req.user && req.user.id;
-
-        // 1. Password change validation if requested
-        if (newPassword && newPassword.trim()) {
-            if (!currentPassword) {
-                return res.status(400).json({ message: 'Current password is required to set a new password.' });
-            }
-
-            const userCheck = await db.query('SELECT password FROM users WHERE id = $1', [userId]);
-            if (userCheck.rows.length === 0) {
-                return res.status(404).json({ message: 'Admin user account not found.' });
-            }
-
-            const isMatch = await comparePassword(currentPassword, userCheck.rows[0].password);
-            if (!isMatch) {
-                return res.status(400).json({ message: 'Current password does not match existing password.' });
-            }
-
-            const hashedNewPassword = await hashPassword(newPassword.trim());
-            await db.query('UPDATE users SET password = $1 WHERE id = $2', [hashedNewPassword, userId]);
-        }
-
-        // 2. Profile (Email / Name) update if provided
-        if (userId && (adminEmail || landlordName)) {
-            if (adminEmail) {
-                const emailConflict = await db.query('SELECT id FROM users WHERE email = $1 AND id != $2', [adminEmail.trim().toLowerCase(), userId]);
-                if (emailConflict.rows.length > 0) {
-                    return res.status(400).json({ message: 'The provided email is already in use by another account.' });
-                }
-            }
-
-            await db.query(
-                `UPDATE users 
-                 SET email = COALESCE($1, email), 
-                     name = COALESCE($2, name) 
-                 WHERE id = $3`,
-                [adminEmail ? adminEmail.trim().toLowerCase() : null, landlordName ? landlordName.trim() : null, userId]
-            );
-        }
-
-        // 3. Persist system settings in PostgreSQL JSONB (merge with existing keys so gcashQrCode & other fields are preserved)
-        const settingsPayload = settings || {};
-        const upsertQuery = `
-            INSERT INTO "rentTrack_schema".settings (id, data, updated_at)
-            VALUES ('global', $1::jsonb, CURRENT_TIMESTAMP)
-            ON CONFLICT (id) DO UPDATE SET data = COALESCE("rentTrack_schema".settings.data, '{}'::jsonb) || $1::jsonb, updated_at = CURRENT_TIMESTAMP
-            RETURNING *;
-        `;
-        const updatedResult = await db.query(upsertQuery, [JSON.stringify(settingsPayload)]);
-
-        // 4. Return refreshed admin details and updated settings
-        const refreshedUser = userId ? (await db.query('SELECT id, name, email, role FROM users WHERE id = $1', [userId])).rows[0] : null;
-
-        res.status(200).json({
-            message: 'All settings and administrative configurations saved successfully.',
-            settings: updatedResult.rows[0].data,
-            admin: refreshedUser,
-            updated_at: updatedResult.rows[0].updated_at
-        });
-    } catch (error) {
-        console.error('Update System Settings Error:', error);
-        res.status(500).json({ message: 'Server error saving system settings' });
-    }
-};
+const gcashQrFilePath = path.join(__dirname, '../uploads/gcash-qr.json');
 
 // @desc    Get GCash QR Code Screenshot
-// @route   GET /api/admin/settings/gcash-qr
+// @route   GET /api/admin/gcash-qr
 const getGcashQrCode = async (req, res) => {
     try {
-        await db.query('CREATE TABLE IF NOT EXISTS "rentTrack_schema".settings (id VARCHAR(50) PRIMARY KEY, data JSONB NOT NULL DEFAULT \'{}\' , updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP);');
-        const settingsResult = await db.query('SELECT data, updated_at FROM "rentTrack_schema".settings WHERE id = $1', ['global']);
-        const storedSettings = settingsResult.rows.length > 0 ? settingsResult.rows[0].data : {};
-        const gcashQrCode = storedSettings?.gcashQrCode || storedSettings?.billing?.gcashQrCode || '';
+        let gcashQrCode = '';
+        let updatedAt = null;
+        if (fs.existsSync(gcashQrFilePath)) {
+            try {
+                const fileData = JSON.parse(fs.readFileSync(gcashQrFilePath, 'utf8'));
+                gcashQrCode = fileData.gcashQrCode || '';
+                updatedAt = fileData.updated_at || null;
+            } catch (parseErr) {}
+        }
         res.status(200).json({
             gcashQrCode,
-            updated_at: settingsResult.rows.length > 0 ? settingsResult.rows[0].updated_at : null
+            updated_at: updatedAt
         });
     } catch (error) {
         console.error('Get GCash QR Code Error:', error);
@@ -1728,10 +1643,9 @@ const getGcashQrCode = async (req, res) => {
 };
 
 // @desc    Update GCash QR Code Screenshot
-// @route   PUT /api/admin/settings/gcash-qr
+// @route   PUT /api/admin/gcash-qr
 const updateGcashQrCode = async (req, res) => {
     try {
-        await db.query('CREATE TABLE IF NOT EXISTS "rentTrack_schema".settings (id VARCHAR(50) PRIMARY KEY, data JSONB NOT NULL DEFAULT \'{}\' , updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP);');
         const rawQr = req.body?.gcashQrCode;
         const cleanQr = typeof rawQr === 'string' ? rawQr.trim() : '';
 
@@ -1739,90 +1653,26 @@ const updateGcashQrCode = async (req, res) => {
             return res.status(400).json({ message: 'Invalid image format. Please upload a PNG, JPG, or WEBP screenshot.' });
         }
 
-        const patchPayload = { gcashQrCode: cleanQr };
-        const upsertQuery = `
-            INSERT INTO "rentTrack_schema".settings (id, data, updated_at)
-            VALUES ('global', $1::jsonb, CURRENT_TIMESTAMP)
-            ON CONFLICT (id) DO UPDATE SET data = COALESCE("rentTrack_schema".settings.data, '{}'::jsonb) || $1::jsonb, updated_at = CURRENT_TIMESTAMP
-            RETURNING *;
-        `;
-        const updatedResult = await db.query(upsertQuery, [JSON.stringify(patchPayload)]);
+        const now = new Date().toISOString();
+        const payload = {
+            gcashQrCode: cleanQr,
+            updated_at: now
+        };
+
+        const uploadsDir = path.dirname(gcashQrFilePath);
+        if (!fs.existsSync(uploadsDir)) {
+            fs.mkdirSync(uploadsDir, { recursive: true });
+        }
+        fs.writeFileSync(gcashQrFilePath, JSON.stringify(payload, null, 2), 'utf8');
 
         res.status(200).json({
             message: cleanQr ? 'GCash QR code updated successfully.' : 'GCash QR code removed.',
-            gcashQrCode: updatedResult.rows[0].data?.gcashQrCode || '',
-            updated_at: updatedResult.rows[0].updated_at
+            gcashQrCode: cleanQr,
+            updated_at: now
         });
     } catch (error) {
         console.error('Update GCash QR Code Error:', error);
         res.status(500).json({ message: 'Server error updating GCash QR code' });
-    }
-};
-
-// @desc    Purge System Cache
-// @route   POST /api/admin/settings/purge-cache
-const purgeSystemCache = async (req, res) => {
-    try {
-        res.status(200).json({
-            message: 'Application runtime memory and query caches cleared successfully.',
-            timestamp: new Date().toISOString()
-        });
-    } catch (error) {
-        console.error('Purge Cache Error:', error);
-        res.status(500).json({ message: 'Server error purging cache' });
-    }
-};
-
-// @desc    Get Live System Diagnostics & Database Telemetry
-// @route   GET /api/admin/settings/diagnostic
-const getSystemDiagnostic = async (req, res) => {
-    try {
-        const start = Date.now();
-        await db.query('SELECT 1 as ping');
-        const latencyMs = Date.now() - start;
-
-        const [versionRes, countsRes] = await Promise.all([
-            db.query('SELECT version()'),
-            db.query(`
-                SELECT 
-                    (SELECT COUNT(*) FROM rooms) as rooms_count,
-                    (SELECT COUNT(*) FROM users WHERE role = 'tenant') as tenants_count,
-                    (SELECT COUNT(*) FROM bills) as bills_count,
-                    (SELECT COUNT(*) FROM payments) as payments_count,
-                    (SELECT COUNT(*) FROM requests) as requests_count
-            `)
-        ]);
-
-        const dbVersion = versionRes.rows[0]?.version || 'PostgreSQL 16';
-        const counts = countsRes.rows[0] || {};
-
-        res.status(200).json({
-            status: 'healthy',
-            database: {
-                connected: true,
-                latencyMs,
-                version: (dbVersion.split(' on ')[0] || 'PostgreSQL 16').trim(),
-                tableCounts: {
-                    rooms: parseInt(counts.rooms_count || 0),
-                    tenants: parseInt(counts.tenants_count || 0),
-                    bills: parseInt(counts.bills_count || 0),
-                    payments: parseInt(counts.payments_count || 0),
-                    requests: parseInt(counts.requests_count || 0),
-                }
-            },
-            server: {
-                nodeVersion: process.version,
-                uptimeSeconds: Math.floor(process.uptime()),
-                memoryUsageMb: Math.round(process.memoryUsage().rss / 1024 / 1024),
-                environment: process.env.NODE_ENV || 'production'
-            }
-        });
-    } catch (error) {
-        console.error('Diagnostic Telemetry Error:', error);
-        res.status(500).json({
-            status: 'degraded',
-            database: { connected: false, error: error.message }
-        });
     }
 };
 
@@ -1843,6 +1693,7 @@ module.exports = {
     sendMessage,
     getUnreadCount,
     getPendingTenantsCount,
+    getPendingRequestsCount,
     getCashFlowOverview,
     getAnnouncements,
     createAnnouncement,
@@ -1852,10 +1703,6 @@ module.exports = {
     markAdminNotificationRead,
     getReportData,
     getActivityLogs,
-    getSystemSettings,
-    updateSystemSettings,
     getGcashQrCode,
     updateGcashQrCode,
-    purgeSystemCache,
-    getSystemDiagnostic
 };

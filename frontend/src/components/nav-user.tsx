@@ -104,10 +104,6 @@ export function NavUser({
                 <UserIcon className="size-4 text-slate-500" />
                 View Profile
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={handleProfile} className="cursor-pointer gap-2 text-xs font-medium">
-                <BadgeCheckIcon className="size-4 text-slate-500" />
-                Account Settings
-              </DropdownMenuItem>
             </DropdownMenuGroup>
             <DropdownMenuSeparator />
             <DropdownMenuItem 

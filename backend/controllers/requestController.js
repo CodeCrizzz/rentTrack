@@ -214,12 +214,28 @@ const deleteRequest = async (req, res) => {
     }
 };
 
+// @desc    Get pending maintenance requests count
+// @route   GET /api/requests/pending-count
+// @access  Admin, Staff
+const getPendingRequestsCount = async (req, res) => {
+    try {
+        const result = await db.query(
+            "SELECT COUNT(*) FROM requests WHERE LOWER(status) = 'pending'"
+        );
+        res.status(200).json({ pendingCount: parseInt(result.rows[0].count, 10) });
+    } catch (error) {
+        console.error('Pending Requests Count Error:', error);
+        res.status(500).json({ message: 'Server error fetching pending requests count' });
+    }
+};
+
 module.exports = {
     createRequest,
     getMyRequests,
     getAllRequests,
     updateRequest,
     cancelRequest,
-    deleteRequest
+    deleteRequest,
+    getPendingRequestsCount
 };
 
