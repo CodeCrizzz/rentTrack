@@ -1,3 +1,5 @@
+const fs = require('fs');
+const path = require('path');
 const db = require('../config/db');
 const { hashPassword, comparePassword } = require('../utils/passwordUtils');
 const { formatPhoneNumber } = require('../utils/phoneUtils');
@@ -463,10 +465,14 @@ const getCurrentBill = async (req, res) => {
 // Get Admin-Uploaded GCash QR Code Screenshot for Online Payment
 const getTenantGcashQr = async (req, res) => {
     try {
-        await db.query('CREATE TABLE IF NOT EXISTS "rentTrack_schema".settings (id VARCHAR(50) PRIMARY KEY, data JSONB NOT NULL DEFAULT \'{}\' , updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP);');
-        const settingsResult = await db.query('SELECT data FROM "rentTrack_schema".settings WHERE id = $1', ['global']);
-        const storedSettings = settingsResult.rows.length > 0 ? settingsResult.rows[0].data : {};
-        const gcashQrCode = storedSettings?.gcashQrCode || storedSettings?.billing?.gcashQrCode || '';
+        let gcashQrCode = '';
+        const gcashQrFilePath = path.join(__dirname, '../uploads/gcash-qr.json');
+        if (fs.existsSync(gcashQrFilePath)) {
+            try {
+                const fileData = JSON.parse(fs.readFileSync(gcashQrFilePath, 'utf8'));
+                gcashQrCode = fileData.gcashQrCode || '';
+            } catch (parseErr) {}
+        }
         res.status(200).json({ gcashQrCode });
     } catch (error) {
         console.error('Get Tenant GCash QR Error:', error);
@@ -498,20 +504,26 @@ const submitTenantPayment = async (req, res) => {
 
         await db.query('BEGIN');
 
+        const isGcash = payment_method && payment_method.toLowerCase().includes('gcash');
+        const paymentStatus = isGcash ? 'Verified' : 'Pending Verification';
+        const billStatus = isGcash ? 'Paid' : 'Pending Verification';
+
         const insertPaymentQuery = `
             INSERT INTO payments (bill_id, amount_paid, payment_date, payment_method, notes, receipt_url, status, reference_number) 
-            VALUES ($1, $2, CURRENT_TIMESTAMP, $3, $4, $5, 'Pending Verification', $6) 
+            VALUES ($1, $2, CURRENT_TIMESTAMP, $3, $4, $5, $7, $6) 
             RETURNING *
         `;
-        const paymentResult = await db.query(insertPaymentQuery, [bill_id, amount_paid, payment_method, notes, receipt_url, refNumber]);
+        const paymentResult = await db.query(insertPaymentQuery, [bill_id, amount_paid, payment_method, notes, receipt_url, refNumber, paymentStatus]);
         
         const updateBillQuery = `
             UPDATE bills
-            SET status = 'Pending Verification'
+            SET status = $3,
+                amount_paid = CASE WHEN $3 = 'Paid' THEN total_amount ELSE amount_paid END,
+                balance = CASE WHEN $3 = 'Paid' THEN 0 ELSE balance END
             WHERE id = $1 AND tenant_id = $2
             RETURNING id, billing_month, total_amount, amount_paid, balance, due_date, status
         `;
-        const billResult = await db.query(updateBillQuery, [bill_id, tenantId]);
+        const billResult = await db.query(updateBillQuery, [bill_id, tenantId, billStatus]);
 
         await db.query('COMMIT');
 
@@ -561,7 +573,7 @@ const submitTenantPayment = async (req, res) => {
             adminNotificationService.notifyAdminsIfOffline({
                 title: 'Payment Verification',
                 message: `${tenantName} submitted a ₱${Number(amount_paid).toLocaleString()} payment proof for verification.`,
-                type: 'payment_verification',
+                type: 'general',
                 link: '/admin/billing'
             });
         } catch (notifErr) {
@@ -840,9 +852,104 @@ const markAllNotificationsRead = async (req, res) => {
     }
 };
 
+// @desc    Complete GCash Payment Automatically
+// @route   POST /api/tenant/pay/gcash
+const completeGcashPayment = async (req, res) => {
+    const tenantId = req.user.id;
+    const { bill_id, amount } = req.body;
+
+    try {
+        let billQuery = 'SELECT id, tenant_id, billing_month, total_amount, amount_paid, balance, status FROM bills WHERE id = $1 AND tenant_id = $2';
+        let billParams = [bill_id, tenantId];
+
+        if (!bill_id) {
+            billQuery = `
+                SELECT id, tenant_id, billing_month, total_amount, amount_paid, balance, status 
+                FROM bills 
+                WHERE tenant_id = $1 AND status != 'Paid' 
+                ORDER BY due_date ASC, id DESC 
+                LIMIT 1
+            `;
+            billParams = [tenantId];
+        }
+
+        const billResult = await db.query(billQuery, billParams);
+        if (billResult.rows.length === 0) {
+            return res.status(404).json({ message: 'No active or outstanding bill found to pay.' });
+        }
+
+        const bill = billResult.rows[0];
+        const remainingBal = parseFloat(bill.balance) || 0;
+        const totalAmount = parseFloat(bill.total_amount) || 0;
+        const currentPaid = parseFloat(bill.amount_paid) || 0;
+        
+        const payAmount = amount ? Math.min(parseFloat(amount), remainingBal > 0 ? remainingBal : totalAmount) : (remainingBal > 0 ? remainingBal : totalAmount);
+
+        if (payAmount <= 0) {
+            return res.status(400).json({ message: 'Bill has already been completely settled.' });
+        }
+
+        // Generate authentic GCash reference number format: e.g. "GCASH-YYYYMMDD-XXXX"
+        const now = new Date();
+        const dateStr = now.toISOString().slice(0, 10).replace(/-/g, '');
+        const randomCode = Math.floor(1000 + Math.random() * 9000);
+        const refNumber = req.body.reference_number || `GCASH-${dateStr}-${randomCode}`;
+
+        const newTotalPaid = Math.min(totalAmount, currentPaid + payAmount);
+        const newBalance = Math.max(0, totalAmount - newTotalPaid);
+        const newStatus = newBalance <= 0 ? 'Paid' : 'Partial';
+
+        await db.query('BEGIN');
+
+        // Insert into payments as Paid
+        const insertPaymentQuery = `
+            INSERT INTO payments (bill_id, amount_paid, payment_date, payment_method, notes, receipt_url, status, reference_number)
+            VALUES ($1, $2, CURRENT_TIMESTAMP, 'GCash', 'Online GCash Payment', null, 'Verified', $3)
+            RETURNING *
+        `;
+        const paymentRes = await db.query(insertPaymentQuery, [bill.id, payAmount, refNumber]);
+
+        // Update bill status to Paid and balance to 0
+        const updateBillQuery = `
+            UPDATE bills
+            SET amount_paid = $1, balance = $2, status = $3
+            WHERE id = $4
+            RETURNING id, billing_month, total_amount, amount_paid, balance, due_date, status, invoice_number
+        `;
+        const updatedBillRes = await db.query(updateBillQuery, [newTotalPaid, newBalance, newStatus, bill.id]);
+
+        // Record notification for Admin
+        try {
+            const adminNotificationService = require('../services/adminNotificationService');
+            adminNotificationService.notifyAdminsIfOffline({
+                title: 'GCash Payment Received',
+                message: `Tenant paid ₱${payAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })} via GCash for ${bill.billing_month} (Ref: ${refNumber}). Automatically verified and marked as Paid. No admin action required.`,
+                type: 'payment_verification',
+                link: '/admin/billing'
+            });
+        } catch (notifErr) {}
+
+        await db.query('COMMIT');
+
+        res.status(200).json({
+            message: 'Payment complete',
+            payment: paymentRes.rows[0],
+            bill: updatedBillRes.rows[0],
+            reference_number: refNumber,
+            amount_paid: payAmount,
+            billing_month: bill.billing_month,
+            paid_at: now.toISOString()
+        });
+    } catch (error) {
+        await db.query('ROLLBACK').catch(() => {});
+        console.error('Complete GCash Payment Error:', error);
+        res.status(500).json({ message: 'Server error processing payment completion' });
+    }
+};
+
 module.exports = { 
     getTenantDashboard, getTenantProfile, updateTenantProfile, updateTenantPassword, 
-    getTenantPayments, getCurrentBill, getTenantGcashQr, submitTenantPayment,
+    getTenantPayments, getCurrentBill, getTenantGcashQr, submitTenantPayment, completeGcashPayment,
     getTenantMessages, sendTenantMessage, getUnreadCount,
     getTenantRooms, chooseRoom, getAnnouncements,
     getTenantNotifications, markNotificationRead, markAllNotificationsRead
