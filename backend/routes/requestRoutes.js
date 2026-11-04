@@ -15,7 +15,8 @@ const {
     getAllRequests, 
     updateRequest,
     cancelRequest,
-    deleteRequest
+    deleteRequest,
+    getPendingRequestsCount
 } = require('../controllers/requestController');
 
 const multer = require('multer');
@@ -75,6 +76,13 @@ router.put(
 // ==========================================
 // Administrative & Maintenance Staff Routes
 // ==========================================
+router.get(
+    '/pending-count', 
+    requireRole([ROLES.ADMIN, ROLES.STAFF]), 
+    hasPermission(PERMISSIONS.REQUESTS_READ), 
+    getPendingRequestsCount
+);
+
 router.get(
     '/', 
     requireRole([ROLES.ADMIN, ROLES.STAFF]), 
