@@ -25,6 +25,7 @@ export interface RoomTenant {
   name: string;
   phone?: string | null;
   email?: string | null;
+  gender?: string | null;
 }
 
 export interface RoomMatrixItem {
@@ -32,6 +33,7 @@ export interface RoomMatrixItem {
   room_number: string;
   type: string;
   rental_type?: string;
+  gender?: string | null;
   capacity: number;
   price: string | number;
   floor: string;
@@ -40,6 +42,24 @@ export interface RoomMatrixItem {
   computed_status?: string;
   tenants?: RoomTenant[];
 }
+
+const getRoomGenderLabel = (
+  room: Partial<RoomMatrixItem>,
+): "Male Only" | "Female Only" => {
+  const raw = (room.gender || "").trim().toLowerCase();
+  if (raw.includes("female") || raw === "f") return "Female Only";
+  if (raw.includes("male") || raw === "m") return "Male Only";
+  const hasFemaleTenant = room.tenants?.some((t) =>
+    ["female", "f", "female only"].includes(
+      (t.gender || "").trim().toLowerCase(),
+    ),
+  );
+  if (hasFemaleTenant) return "Female Only";
+  return "Male Only";
+};
+
+const isFemaleRoom = (room: Partial<RoomMatrixItem>): boolean =>
+  getRoomGenderLabel(room) === "Female Only";
 
 interface VisualRoomMatrixProps {
   rooms: RoomMatrixItem[];
@@ -301,10 +321,20 @@ export default function VisualRoomMatrix({
         className={`bg-white dark:bg-zinc-900 border border-slate-200/90 dark:border-zinc-800 rounded-xl p-3.5 sm:p-4 flex flex-col justify-between shadow-2xs hover:shadow-md hover:border-blue-400 dark:hover:border-blue-600 transition-all cursor-pointer ${cardMinHeight}`}
       >
         <div>
-          {/* Room Number */}
-          <div className="mb-1">
-            <span className="font-extrabold text-sm sm:text-base font-mono text-slate-900 dark:text-white">
+          {/* Room Number & Gender Restriction Label */}
+          <div className="flex items-center justify-between gap-1.5 mb-1">
+            <span className="font-extrabold text-sm sm:text-base font-mono text-slate-900 dark:text-white truncate">
               {room.room_number}
+            </span>
+            <span
+              className={`text-[11px] font-bold shrink-0 inline-flex items-center gap-0.5 ${
+                isFemaleRoom(room)
+                  ? "text-pink-600 dark:text-pink-400"
+                  : "text-sky-600 dark:text-sky-400"
+              }`}
+            >
+              <span aria-hidden="true">{isFemaleRoom(room) ? "♀" : "♂"}</span>
+              <span>{getRoomGenderLabel(room)}</span>
             </span>
           </div>
 
@@ -480,7 +510,7 @@ export default function VisualRoomMatrix({
                   <h3 className="font-extrabold text-sm text-slate-800 dark:text-zinc-200">
                     {fl}
                   </h3>
-                  <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-50 text-blue-600 dark:bg-blue-950/60 dark:text-blue-400 border border-blue-200/60">
+                  <span className="text-[10px] font-bold text-blue-600 dark:text-blue-400">
                     {countLabel}
                   </span>
                 </div>
@@ -574,13 +604,28 @@ export default function VisualRoomMatrix({
                     <h3 className="text-base font-bold text-slate-900 dark:text-white">
                       Room {activeRoomModal.room_number} Details
                     </h3>
-                    <p className="text-xs text-slate-600 dark:text-zinc-300 font-medium">
-                      {normalizeFloor(
-                        activeRoomModal.floor,
-                        activeRoomModal.room_number,
-                      )}{" "}
-                      • {activeRoomModal.type} •{" "}
-                      {activeRoomModal.rental_type || "Whole Room"}
+                    <p className="text-xs text-slate-600 dark:text-zinc-300 font-medium flex flex-wrap items-center gap-1.5">
+                      <span>
+                        {normalizeFloor(
+                          activeRoomModal.floor,
+                          activeRoomModal.room_number,
+                        )}{" "}
+                        • {activeRoomModal.type} •{" "}
+                        {activeRoomModal.rental_type || "Whole Room"}
+                      </span>
+                      <span>•</span>
+                      <span
+                        className={`font-bold inline-flex items-center gap-1 ${
+                          isFemaleRoom(activeRoomModal)
+                            ? "text-pink-600 dark:text-pink-400"
+                            : "text-sky-600 dark:text-sky-400"
+                        }`}
+                      >
+                        <span aria-hidden="true">
+                          {isFemaleRoom(activeRoomModal) ? "♀" : "♂"}
+                        </span>
+                        <span>{getRoomGenderLabel(activeRoomModal)}</span>
+                      </span>
                     </p>
                   </div>
                 </div>
