@@ -181,7 +181,7 @@ const updateBill = async (req, res) => {
         const other = parseFloat(other_fees || 0);
         
         const total_amount = rent + water + electricity + other;
-        const balance = total_amount - amount_paid;
+        const balance = Math.max(0, total_amount - amount_paid);
         
         let status = 'Unpaid';
         if (balance <= 0) {
@@ -244,7 +244,7 @@ const payBill = async (req, res) => {
 
         const bill = billRows[0];
         const newTotalPaid = parseFloat(bill.amount_paid) + paymentAmount;
-        const newBalance = parseFloat(bill.total_amount) - newTotalPaid;
+        const newBalance = Math.max(0, parseFloat(bill.total_amount) - newTotalPaid);
         
         let newStatus = 'Partial';
         if (newBalance <= 0) {
@@ -389,7 +389,7 @@ const getPendingPayments = async (req, res) => {
             JOIN bills b ON p.bill_id = b.id
             JOIN users u ON b.tenant_id = u.id
             LEFT JOIN rooms r ON b.room_id = r.id
-            WHERE p.status = 'Pending Verification'
+            WHERE p.status = 'Pending Verification' AND (p.payment_method IS NULL OR p.payment_method NOT ILIKE '%gcash%') AND (p.payment_method IS NULL OR p.payment_method NOT ILIKE '%gcash%')
             ORDER BY p.payment_date ASC
         `;
         const { rows } = await db.query(query);
@@ -454,7 +454,7 @@ const verifyPayment = async (req, res) => {
 
             // Deduct balance and update bill status
             const newTotalPaid = parseFloat(bill.amount_paid) + paymentAmount;
-            const newBalance = parseFloat(bill.total_amount) - newTotalPaid;
+            const newBalance = Math.max(0, parseFloat(bill.total_amount) - newTotalPaid);
             
             let newStatus = 'Partial';
             if (newBalance <= 0) {
