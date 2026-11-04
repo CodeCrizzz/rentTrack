@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 import { useEffect, useState, useMemo, useRef, Suspense, useCallback } from "react";
 import { useSearchParams } from "next/navigation";
 import api from "@/lib/api";
@@ -50,6 +50,8 @@ import {
   ChevronRight,
   MoreVertical,
   ArrowRight,
+  QrCode,
+  Upload,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -180,6 +182,35 @@ const CustomChartTooltip = ({ active, payload, label }: any) => {
   return null;
 };
 
+const getTenantAvatarColor = (name: string) => {
+  const palette = [
+    "bg-[#0062cc] text-white",
+    "bg-[#2563eb] text-white",
+    "bg-[#0284c7] text-white",
+    "bg-[#4f46e5] text-white",
+    "bg-[#0d9488] text-white",
+    "bg-[#6366f1] text-white",
+  ];
+  let hash = 0;
+  for (let i = 0; i < name.length; i++) {
+    hash = name.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  return palette[Math.abs(hash) % palette.length];
+};
+
+const resolveReceiptUrl = (url?: string | null): string | null => {
+  if (!url) return null;
+  if (url.startsWith("http://") || url.startsWith("https://") || url.startsWith("data:")) {
+    return url;
+  }
+  const base = process.env.NEXT_PUBLIC_API_URL
+    ? process.env.NEXT_PUBLIC_API_URL.replace(/\/api\/?$/, "")
+    : typeof window !== "undefined"
+      ? `http://${window.location.hostname}:5000`
+      : "http://localhost:5000";
+  return `${base}${url.startsWith("/") ? "" : "/"}${url}`;
+};
+
 function BillingContent() {
   const searchParams = useSearchParams();
   const [bills, setBills] = useState<Bill[]>([]);
@@ -187,6 +218,7 @@ function BillingContent() {
   const [rooms, setRooms] = useState<Room[]>([]);
   const [pendingPayments, setPendingPayments] = useState<PendingPayment[]>([]);
   const [allPayments, setAllPayments] = useState<any[]>([]);
+  const [paymentHistoryList, setPaymentHistoryList] = useState<any[] | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   // Active Tab
@@ -203,44 +235,65 @@ function BillingContent() {
   const [roomFilter, setRoomFilter] = useState("All Rooms");
   const [sortFilter, setSortFilter] = useState("Newest First");
 
-  // Deep Linking Highlight State
+  // Selected Tenant Row & Payment History Panel State
   const [highlightedBillId, setHighlightedBillId] = useState<number | null>(
     null,
   );
   const [highlightedTenant, setHighlightedTenant] = useState<string | null>(
     null,
   );
-  const hasAutoScrolledRef = useRef(false);
+  const [selectedBillRowId, setSelectedBillRowId] = useState<number | null>(
+    null,
+  );
+  const [selectedHistoryTenant, setSelectedHistoryTenant] = useState<{
+    id: number | null;
+    name: string;
+    room_number?: string | null;
+  } | null>(null);
+  const [previewReceiptUrl, setPreviewReceiptUrl] = useState<string | null>(
+    null,
+  );
+  const processedDeepLinkRef = useRef<string | null>(null);
 
-  // Handle incoming URL search parameters (e.g. from Action Center deep links)
+  const handleSelectTenantRow = useCallback(
+    (bill: Bill, scrollHistoryIntoView = false) => {
+      setSelectedBillRowId(bill.id);
+      setHighlightedBillId(bill.id);
+      setSelectedHistoryTenant({
+        id: bill.tenant_id ?? null,
+        name: bill.tenant_name || "Tenant",
+        room_number: bill.room_number || null,
+      });
+      if (scrollHistoryIntoView) {
+        setTimeout(() => {
+          document
+            .getElementById("tenant-payment-history-panel")
+            ?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+        }, 60);
+      }
+    },
+    [],
+  );
+
+  // Handle incoming URL search parameters (e.g. from Admin Chat "View Payment History" or Action Center)
   useEffect(() => {
     if (!searchParams) return;
-    const tenantParam =
-      searchParams.get("tenant") || searchParams.get("search");
-    const billIdParam = searchParams.get("billId");
     const statusParam = searchParams.get("status");
     const tabParam = searchParams.get("tab");
-    const isHighlight = searchParams.get("highlight") === "true";
-
-    // When deep linking to a specific item, do not filter out other bills so the full list remains visible
-    if (tenantParam) {
-      setHighlightedTenant(tenantParam);
-      // Only set searchQuery if NOT highlighting a specific tenant
-      if (!isHighlight && !billIdParam) {
-        setSearchQuery(tenantParam);
-      }
-    }
-    if (billIdParam) {
-      setHighlightedBillId(Number(billIdParam));
-    }
 
     if (statusParam) {
       if (statusParam === "Pending Verification" || statusParam === "Verification") {
         setStatusFilter("Verification");
+        setActiveTableTab("pending");
       } else if (statusParam === "All" || statusParam === "All Invoices") {
         setStatusFilter("All Invoices");
-      } else if (["Overdue", "Partial", "Unpaid"].includes(statusParam)) {
+        setActiveTableTab("all");
+      } else if (statusParam === "Overdue") {
+        setStatusFilter("Overdue");
+        setActiveTableTab("overdue");
+      } else if (statusParam === "Partial" || statusParam === "Unpaid") {
         setStatusFilter(statusParam as any);
+        setActiveTableTab("unpaid");
       }
     }
     if (tabParam === "payments" || tabParam === "invoices") {
@@ -248,36 +301,100 @@ function BillingContent() {
     }
   }, [searchParams]);
 
-  // Smoothly scroll to the targeted bill row or card ONCE on initial load
+  // Once billing data finishes loading, jump to the target tenant row, highlight it as clicked, and display Payment History
   useEffect(() => {
-    if (hasAutoScrolledRef.current) return;
-    if (!highlightedBillId && !highlightedTenant) return;
-    if (bills.length === 0) return;
+    if (!searchParams || isLoading) return;
 
-    const timer = setTimeout(() => {
-      let el: HTMLElement | null = null;
-      if (highlightedBillId) {
-        el = document.getElementById(`bill-row-${highlightedBillId}`);
-      }
-      if (!el && highlightedTenant) {
-        const matched = bills.find((b) =>
-          b.tenant_name
-            ?.toLowerCase()
-            .includes(highlightedTenant.toLowerCase()),
-        );
-        if (matched) {
-          el = document.getElementById(`bill-row-${matched.id}`);
-          if (!highlightedBillId) setHighlightedBillId(matched.id);
-        }
-      }
-      if (el) {
-        el.scrollIntoView({ behavior: "smooth", block: "center" });
-        hasAutoScrolledRef.current = true;
-      }
-    }, 300);
+    const paramKey = searchParams.toString();
+    if (!paramKey || processedDeepLinkRef.current === paramKey) return;
 
-    return () => clearTimeout(timer);
-  }, [highlightedBillId, highlightedTenant, bills]);
+    const tenantParam =
+      searchParams.get("tenant") || searchParams.get("search");
+    const tenantIdParam =
+      searchParams.get("tenantId") || searchParams.get("tenant_id");
+    const billIdParam = searchParams.get("billId");
+    const shouldVerify = searchParams.get("verify") === "true";
+
+    if (!tenantParam && !tenantIdParam && !billIdParam) return;
+    processedDeepLinkRef.current = paramKey;
+
+    if (shouldVerify) return;
+
+    // Ensure table filters do not hide the targeted tenant row
+    setActiveTableTab("all");
+    setTableFloorFilter("All Floors");
+    setTableRoomTypeFilter("All Room Types");
+    setTableSearchQuery("");
+    setSortField("none");
+
+    const parsedTenantId = tenantIdParam ? Number(tenantIdParam) : NaN;
+    const cleanTenantQuery = (tenantParam || "").trim().toLowerCase();
+    const sortedBills = [...bills].sort((a, b) => b.id - a.id);
+
+    let matchedIdx = -1;
+    if (billIdParam) {
+      matchedIdx = sortedBills.findIndex((b) => b.id === Number(billIdParam));
+    }
+    if (matchedIdx === -1 && !Number.isNaN(parsedTenantId)) {
+      matchedIdx = sortedBills.findIndex(
+        (b) => Number(b.tenant_id) === parsedTenantId,
+      );
+    }
+    if (matchedIdx === -1 && cleanTenantQuery) {
+      matchedIdx = sortedBills.findIndex(
+        (b) => (b.tenant_name || "").trim().toLowerCase() === cleanTenantQuery,
+      );
+    }
+    if (matchedIdx === -1 && cleanTenantQuery) {
+      matchedIdx = sortedBills.findIndex((b) =>
+        (b.tenant_name || "").trim().toLowerCase().includes(cleanTenantQuery),
+      );
+    }
+
+    const perPage = 5;
+    if (matchedIdx !== -1) {
+      const matchedBill = sortedBills[matchedIdx];
+      const targetPage = Math.floor(matchedIdx / perPage) + 1;
+      setCurrentPage(targetPage);
+      setSelectedBillRowId(matchedBill.id);
+      setHighlightedBillId(matchedBill.id);
+      setHighlightedTenant(matchedBill.tenant_name || tenantParam || null);
+      setSelectedHistoryTenant({
+        id:
+          matchedBill.tenant_id ??
+          (!Number.isNaN(parsedTenantId) ? parsedTenantId : null),
+        name: matchedBill.tenant_name || tenantParam || "Tenant",
+        room_number: matchedBill.room_number || null,
+      });
+    } else if (tenantParam || !Number.isNaN(parsedTenantId)) {
+      const matchedTenantObj = tenants.find(
+        (t) =>
+          (!Number.isNaN(parsedTenantId) && Number(t.id) === parsedTenantId) ||
+          (cleanTenantQuery &&
+            t.name.trim().toLowerCase() === cleanTenantQuery) ||
+          (cleanTenantQuery &&
+            t.name.trim().toLowerCase().includes(cleanTenantQuery)),
+      );
+      setSelectedBillRowId(null);
+      setHighlightedTenant(matchedTenantObj?.name || tenantParam || null);
+      setSelectedHistoryTenant({
+        id:
+          matchedTenantObj?.id ??
+          (!Number.isNaN(parsedTenantId) ? parsedTenantId : null),
+        name: matchedTenantObj?.name || tenantParam || "Tenant",
+        room_number: matchedTenantObj?.room_number || null,
+      });
+    }
+
+    const scrollTimer = setTimeout(() => {
+      const sectionEl = document.getElementById("bills-table-section");
+      if (sectionEl) {
+        sectionEl.scrollIntoView({ behavior: "smooth", block: "start" });
+      }
+    }, 150);
+
+    return () => clearTimeout(scrollTimer);
+  }, [searchParams, isLoading, bills, tenants]);
 
   // Automatically target and open verification modal if requested via URL
   useEffect(() => {
@@ -318,9 +435,74 @@ function BillingContent() {
   const [isVerifyModalOpen, setIsVerifyModalOpen] = useState(false);
   const [isGenerateConfirmOpen, setIsGenerateConfirmOpen] = useState(false);
   const [showReportModal, setShowReportModal] = useState(false);
+  const [isGcashQrModalOpen, setIsGcashQrModalOpen] = useState(false);
+  const [gcashQrImage, setGcashQrImage] = useState<string>("");
+  const [isSavingGcashQr, setIsSavingGcashQr] = useState(false);
+  const gcashQrFileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    api
+      .get("/admin/gcash-qr")
+      .then((res) => {
+        if (res?.data?.gcashQrCode !== undefined) {
+          setGcashQrImage(res.data.gcashQrCode || "");
+        }
+      })
+      .catch(() => {
+      });
+  }, []);
+
+  const handleGcashQrFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      toast.error("Invalid file format", {
+        description: "Please upload a PNG, JPG, or WEBP screenshot.",
+      });
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error("File too large", {
+        description: "Please upload a QR code screenshot smaller than 5MB.",
+      });
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const base64 = ev.target?.result as string;
+      setGcashQrImage(base64);
+    };
+    reader.readAsDataURL(file);
+    e.target.value = "";
+  };
+
+  const handleSaveGcashQr = async () => {
+    try {
+      setIsSavingGcashQr(true);
+      await api.put("/admin/gcash-qr", { gcashQrCode: gcashQrImage });
+      toast.success(
+        gcashQrImage
+          ? "GCash QR Code Saved"
+          : "GCash QR Code Removed",
+        {
+          description: gcashQrImage
+            ? "Tenants will now see this QR code when paying online via GCash."
+            : "GCash QR code screenshot has been cleared.",
+        },
+      );
+      setIsGcashQrModalOpen(false);
+    } catch (error: any) {
+      toast.error("Failed to save GCash QR Code", {
+        description:
+          error?.response?.data?.message || "Could not update GCash QR code.",
+      });
+    } finally {
+      setIsSavingGcashQr(false);
+    }
+  };
 
   // Quick Action & Filter Controls (Matching Mockup UI)
-  const [quickActionPeriod, setQuickActionPeriod] = useState("This Month");
+  const [quickActionPeriod, setQuickActionPeriod] = useState("This Year");
   const [chartPeriod, setChartPeriod] = useState<
     "This Month" | "Last Month" | "This Year" | "Last Year"
   >("This Year");
@@ -393,6 +575,7 @@ function BillingContent() {
         roomsRes,
         pendingRes,
         paymentsRes,
+        historyRes,
         thisMonthCf,
         lastMonthCf,
         thisYearCf,
@@ -403,6 +586,7 @@ function BillingContent() {
         api.get("/admin/rooms"),
         api.get("/admin/bills/payments/pending"),
         api.get("/admin/bills/payments"),
+        api.get("/admin/bills/payments/history").catch(() => ({ data: null })),
         api.get("/admin/cashflow?range=this_month"),
         api.get("/admin/cashflow?range=last_month"),
         api.get("/admin/cashflow?range=this_year"),
@@ -411,8 +595,19 @@ function BillingContent() {
       setBills(billsRes.data);
       setTenants(tenantsRes.data);
       setRooms(roomsRes.data);
-      setPendingPayments(pendingRes.data);
+      setPendingPayments(
+        Array.isArray(pendingRes.data)
+          ? pendingRes.data.filter(
+              (p: any) =>
+                !p.payment_method ||
+                !p.payment_method.toLowerCase().includes('gcash'),
+            )
+          : [],
+      );
       setAllPayments(paymentsRes.data);
+      if (Array.isArray(historyRes?.data)) {
+        setPaymentHistoryList(historyRes.data);
+      }
       setCashflowMap({
         "This Month": thisMonthCf.data || [],
         "Last Month": lastMonthCf.data || [],
@@ -428,6 +623,7 @@ function BillingContent() {
 
   useEffect(() => {
     fetchData();
+      if (typeof window !== 'undefined') window.dispatchEvent(new CustomEvent('renttrack-refresh-counts'));
   }, []);
 
   useEffect(() => {
@@ -559,21 +755,21 @@ function BillingContent() {
     const periodData = cashflowMap[quickActionPeriod] || [];
     let totalInvoiced = 0;
     let totalCollected = 0;
-    let totalBalance = 0;
 
     periodData.forEach((d: any) => {
       totalInvoiced += Number(d.billed) || 0;
       totalCollected += Number(d.collected) || 0;
-      totalBalance += Number(d.outstanding) || 0;
     });
 
+    // Perfectly accurate balance and rates ensuring 100% mathematical consistency
+    const totalBalance = Math.max(0, totalInvoiced - totalCollected);
     const collectionRate =
       totalInvoiced > 0
         ? Math.min(100, Math.round((totalCollected / totalInvoiced) * 100))
         : 0;
     const outstandingRate =
       totalInvoiced > 0
-        ? Math.min(100, Math.round((totalBalance / totalInvoiced) * 100))
+        ? Math.max(0, 100 - collectionRate)
         : 0;
 
     // Previous month comparison from cashflowMap
@@ -743,14 +939,14 @@ function BillingContent() {
   const chartSummary = useMemo(() => {
     let totalInvoiced = 0;
     let totalCollected = 0;
-    let totalOutstanding = 0;
 
     monthlyChartData.forEach((d) => {
       totalInvoiced += Number(d.invoiced ?? d.billed) || 0;
       totalCollected += Number(d.collected) || 0;
-      totalOutstanding += Number(d.outstanding) || 0;
     });
 
+    // Perfectly accurate balance ensuring Total Invoiced = Total Collected + Outstanding Balance
+    const totalOutstanding = Math.max(0, totalInvoiced - totalCollected);
     const collectionRate =
       totalInvoiced > 0
         ? Math.min(100, Math.round((totalCollected / totalInvoiced) * 100))
@@ -854,15 +1050,15 @@ function BillingContent() {
       periodData.forEach((d: any) => {
         totalInvoices += Number(d.billed) || 0;
         totalCollected += Number(d.collected) || 0;
-        outstandingBalance += Number(d.outstanding) || 0;
       });
     } else {
       currentMonthBills.forEach((b) => {
         totalInvoices += Number(b.total_amount) || 0;
         totalCollected += Number(b.amount_paid) || 0;
-        outstandingBalance += Number(b.balance) || 0;
       });
     }
+    // Mathematically exact: Total Invoices = Total Collected + Outstanding Balance
+    outstandingBalance = Math.max(0, totalInvoices - totalCollected);
 
     // Pending verification for current month only
     const pendingAmount = pendingPayments
@@ -890,9 +1086,9 @@ function BillingContent() {
       .reduce((sum, b) => sum + (Number(b.balance) || 0), 0);
 
     const collectionRate =
-      totalInvoices > 0 ? Math.round((totalCollected / totalInvoices) * 100) : 0;
+      totalInvoices > 0 ? Math.min(100, Math.round((totalCollected / totalInvoices) * 100)) : 0;
     const pendingRate =
-      totalInvoices > 0 ? Math.round((pendingAmount / totalInvoices) * 100) : 0;
+      totalInvoices > 0 ? Math.min(100 - collectionRate, Math.round((pendingAmount / totalInvoices) * 100)) : 0;
     const outstandingRate =
       totalInvoices > 0 ? Math.max(0, 100 - collectionRate - pendingRate) : 0;
 
@@ -940,7 +1136,8 @@ function BillingContent() {
         if (
           activeTableTab === "unpaid" &&
           bill.status !== "Unpaid" &&
-          bill.status !== "Partially Paid"
+          bill.status !== "Partially Paid" &&
+          bill.status !== "Partial"
         ) {
           return false;
         }
@@ -1187,6 +1384,166 @@ function BillingContent() {
       return isApproved && !isPendingOrRejected;
     }).length;
   }, [allPayments]);
+
+  // --- SELECTED TENANT PAYMENT HISTORY & FINANCIAL SUMMARY ---
+  const { selectedTenantPayments, selectedTenantSummary } = useMemo(() => {
+    if (!selectedHistoryTenant) {
+      return {
+        selectedTenantPayments: [] as any[],
+        selectedTenantSummary: {
+          totalInvoiced: 0,
+          totalPaid: 0,
+          totalBalance: 0,
+          roomDisplay: "Unassigned",
+        },
+      };
+    }
+
+    const targetId = selectedHistoryTenant.id;
+    const targetName = (selectedHistoryTenant.name || "").trim().toLowerCase();
+
+    const billsById = new Map<number, Bill>();
+    bills.forEach((b) => billsById.set(Number(b.id), b));
+
+    const matchesSelectedTenant = (
+      itemTenantId?: number | string | null,
+      itemTenantName?: string | null,
+    ) => {
+      if (
+        targetId !== null &&
+        targetId !== undefined &&
+        itemTenantId !== null &&
+        itemTenantId !== undefined &&
+        !Number.isNaN(Number(itemTenantId))
+      ) {
+        return Number(itemTenantId) === Number(targetId);
+      }
+      const normItemName = (itemTenantName || "").trim().toLowerCase();
+      return Boolean(targetName && normItemName === targetName);
+    };
+
+    const tenantBills = bills.filter((b) =>
+      matchesSelectedTenant(b.tenant_id, b.tenant_name),
+    );
+
+    // Combine payment sources without duplicates
+    let rawPool: any[] = [];
+    if (Array.isArray(paymentHistoryList)) {
+      rawPool = paymentHistoryList;
+    } else {
+      const seenIds = new Set<number>();
+      for (const p of [...pendingPayments, ...allPayments]) {
+        const pid = Number(p.id);
+        if (!seenIds.has(pid)) {
+          seenIds.add(pid);
+          rawPool.push(p);
+        }
+      }
+    }
+
+    const matchedPayments = rawPool
+      .filter((p) => {
+        const linkedBill = billsById.get(Number(p.bill_id));
+        const resolvedTenantId = p.tenant_id ?? linkedBill?.tenant_id ?? null;
+        const resolvedTenantName = p.tenant_name || linkedBill?.tenant_name || "";
+        return matchesSelectedTenant(resolvedTenantId, resolvedTenantName);
+      })
+      .map((p) => {
+        const linkedBill = billsById.get(Number(p.bill_id));
+        const rawStatus = String(p.status || "Paid");
+        let normalizedStatus: "Paid" | "Pending Verification" | "Rejected" = "Paid";
+        if (
+          rawStatus === "Pending Verification" ||
+          rawStatus === "Pending"
+        ) {
+          normalizedStatus = "Pending Verification";
+        } else if (rawStatus === "Rejected") {
+          normalizedStatus = "Rejected";
+        }
+
+        const refNo =
+          p.reference_number ||
+          p.referenceNumber ||
+          (p.notes ? String(p.notes).replace(/^Ref[:#]?\s*/i, "") : "") ||
+          `PAY-${String(p.id).padStart(4, "0")}`;
+
+        const invoiceNum =
+          p.invoice_number ||
+          (linkedBill ? formatInvoiceNumber(linkedBill) : `INV-${p.bill_id}`);
+
+        return {
+          ...p,
+          linkedBill: linkedBill || null,
+          invoiceNumber: invoiceNum,
+          billingMonth: p.billing_month || linkedBill?.billing_month || "—",
+          roomNumber:
+            p.room_number ||
+            linkedBill?.room_number ||
+            selectedHistoryTenant.room_number ||
+            null,
+          referenceNumber: refNo,
+          normalizedStatus,
+          receiptUrl: resolveReceiptUrl(p.receipt_url),
+        };
+      })
+      .sort((a, b) => {
+        const dateA = a.payment_date
+          ? new Date(a.payment_date).getTime()
+          : a.created_at
+            ? new Date(a.created_at).getTime()
+            : 0;
+        const dateB = b.payment_date
+          ? new Date(b.payment_date).getTime()
+          : b.created_at
+            ? new Date(b.created_at).getTime()
+            : 0;
+        if (dateB !== dateA) return dateB - dateA;
+        return Number(b.id || 0) - Number(a.id || 0);
+      });
+
+    const totalInvoiced = tenantBills.reduce(
+      (sum, b) => sum + (Number(b.total_amount) || 0),
+      0,
+    );
+    const verifiedPaidSum = matchedPayments
+      .filter((p) => p.normalizedStatus === "Paid")
+      .reduce((sum, p) => sum + (Number(p.amount_paid) || 0), 0);
+    const billsPaidSum = tenantBills.reduce(
+      (sum, b) => sum + (Number(b.amount_paid) || 0),
+      0,
+    );
+    const totalPaid = Math.max(verifiedPaidSum, billsPaidSum);
+    const totalBalance = Math.max(0, totalInvoiced - totalPaid);
+
+    const matchedTenantObj = tenants.find((t) =>
+      matchesSelectedTenant(t.id, t.name),
+    );
+    const resolvedRoomNum =
+      selectedHistoryTenant.room_number ||
+      tenantBills[0]?.room_number ||
+      matchedTenantObj?.room_number ||
+      (matchedTenantObj?.room_id
+        ? rooms.find((r) => r.id === matchedTenantObj.room_id)?.room_number
+        : null);
+
+    return {
+      selectedTenantPayments: matchedPayments,
+      selectedTenantSummary: {
+        totalInvoiced,
+        totalPaid,
+        totalBalance,
+        roomDisplay: resolvedRoomNum ? `Room ${resolvedRoomNum}` : "No Room Assigned",
+      },
+    };
+  }, [
+    selectedHistoryTenant,
+    bills,
+    paymentHistoryList,
+    pendingPayments,
+    allPayments,
+    tenants,
+    rooms,
+  ]);
 
   // --- FORM HANDLERS ---
   const handleTenantSelect = (tenantIdStr: string) => {
@@ -1469,14 +1826,25 @@ function BillingContent() {
           </p>
         </div>
 
-        {/* Period Selector */}
-        <div className="w-36">
-          <CustomSelect
-            value={quickActionPeriod}
-            onChange={(val) => setQuickActionPeriod(val)}
-            options={["This Month", "Last Month", "This Year", "Last Year"]}
-            className="w-full bg-white dark:bg-zinc-900 pl-3 pr-7 py-1.5 border border-slate-200 dark:border-zinc-700 rounded-lg text-xs font-semibold text-slate-700 dark:text-zinc-300 shadow-xs"
-          />
+        {/* GCash QR Code & Period Selector */}
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setIsGcashQrModalOpen(true)}
+            className="px-3 py-1.5 rounded-lg border border-slate-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 hover:bg-slate-50 dark:hover:bg-zinc-800 text-xs font-semibold text-slate-700 dark:text-zinc-200 shadow-xs flex items-center gap-1.5 transition-colors cursor-pointer"
+          >
+            <QrCode className="w-3.5 h-3.5 text-[#0066FF]" />
+            <span>GCash QR Code</span>
+          </button>
+
+          <div className="w-36">
+            <CustomSelect
+              value={quickActionPeriod}
+              onChange={(val) => setQuickActionPeriod(val)}
+              options={["This Year", "This Month", "Last Month", "Last Year"]}
+              className="w-full bg-white dark:bg-zinc-900 pl-3 pr-7 py-1.5 border border-slate-200 dark:border-zinc-700 rounded-lg text-xs font-semibold text-slate-700 dark:text-zinc-300 shadow-xs"
+            />
+          </div>
         </div>
       </div>
 
@@ -1674,24 +2042,18 @@ function BillingContent() {
                 </p>
               </div>
 
-              {/* 4 Pill Buttons */}
-              <div className="flex items-center gap-1 bg-slate-100 dark:bg-zinc-800 p-1 rounded-xl text-xs font-semibold">
-                {(["This Month", "Last Month", "This Year", "Last Year"] as const).map(
-                  (tab) => (
-                    <button
-                      key={tab}
-                      type="button"
-                      onClick={() => setChartPeriod(tab)}
-                      className={`px-2.5 py-1 rounded-lg transition-all cursor-pointer ${
-                        chartPeriod === tab
-                          ? "bg-[#0284c7] text-white shadow-xs"
-                          : "text-slate-600 dark:text-zinc-300 hover:text-slate-900 dark:hover:text-white"
-                      }`}
-                    >
-                      {tab}
-                    </button>
-                  ),
-                )}
+              {/* Period Dropdown */}
+              <div className="w-36">
+                <CustomSelect
+                  value={chartPeriod}
+                  onChange={(val) =>
+                    setChartPeriod(
+                      val as "This Month" | "Last Month" | "This Year" | "Last Year"
+                    )
+                  }
+                  options={["This Year", "This Month", "Last Month", "Last Year"]}
+                  className="w-full bg-white dark:bg-zinc-900 pl-3 pr-7 py-1.5 border border-slate-200 dark:border-zinc-700 rounded-lg text-xs font-semibold text-slate-700 dark:text-zinc-300 shadow-xs"
+                />
               </div>
             </div>
 
@@ -1937,18 +2299,6 @@ function BillingContent() {
                 </div>
               </div>
             </div>
-
-            {/* Stat 5 button */}
-            <button
-              onClick={() => {
-                setActiveTableTab("all");
-                document.getElementById("bills-table-section")?.scrollIntoView({ behavior: "smooth" });
-              }}
-              className="px-2.5 py-1 text-xs font-semibold text-blue-600 hover:text-blue-700 dark:text-blue-400 flex items-center gap-1 border border-blue-200 dark:border-blue-900/60 rounded-md bg-white dark:bg-zinc-800 transition-colors shadow-2xs cursor-pointer ml-auto"
-            >
-              <span>View Full Ledger</span>
-              <ArrowRight className="w-3.5 h-3.5" />
-            </button>
           </div>
         </div>
 
@@ -2035,7 +2385,7 @@ function BillingContent() {
               <h2 className="text-base font-bold text-slate-900 dark:text-white tracking-tight">
                 Billing Summary
               </h2>
-              <span className="px-2 py-0.5 rounded-md bg-slate-100 dark:bg-zinc-800 text-[11px] font-semibold text-slate-600 dark:text-zinc-400 border border-slate-200/60 dark:border-zinc-700/60">
+              <span className="text-[11px] font-semibold text-slate-500 dark:text-zinc-400">
                 This Month
               </span>
             </div>
@@ -2123,6 +2473,10 @@ function BillingContent() {
                     strokeDasharray="226.2"
                     strokeDashoffset={billingSummary.pendingOffset}
                     strokeLinecap="round"
+                    style={{
+                      transform: `rotate(${-90 + (billingSummary.collectionRate / 100) * 360}deg)`,
+                      transformOrigin: "50px 50px"
+                    }}
                   />
                 )}
               </svg>
@@ -2289,16 +2643,42 @@ function BillingContent() {
                   {paginatedBills.map((bill) => {
                     const formattedInv = formatInvoiceNumber(bill);
                     const roomDisplay = getBillRoomDisplay(bill);
+                    const isRowSelected =
+                      selectedBillRowId !== null
+                        ? selectedBillRowId === bill.id
+                        : Boolean(
+                            selectedHistoryTenant &&
+                              ((selectedHistoryTenant.id !== null &&
+                                Number(bill.tenant_id) ===
+                                  Number(selectedHistoryTenant.id)) ||
+                                (selectedHistoryTenant.name &&
+                                  (bill.tenant_name || "")
+                                    .trim()
+                                    .toLowerCase() ===
+                                    selectedHistoryTenant.name
+                                      .trim()
+                                      .toLowerCase())),
+                          );
 
                     return (
                       <tr
+                        id={`bill-row-${bill.id}`}
                         key={bill.id}
-                        className="h-[49px] hover:bg-slate-50/80 dark:hover:bg-zinc-800/40 transition-colors"
+                        onClick={() => handleSelectTenantRow(bill, true)}
+                        className={`h-[49px] transition-colors cursor-pointer ${
+                          isRowSelected
+                            ? "bg-blue-50/80 dark:bg-blue-950/30 shadow-[inset_3px_0_0_0_#0062cc]"
+                            : "hover:bg-slate-50/80 dark:hover:bg-zinc-800/40"
+                        }`}
                       >
                       {/* Invoice # */}
                       <td className="py-3 pl-4 pr-3 text-left whitespace-nowrap font-mono font-medium text-blue-600 dark:text-blue-400">
                         <button
-                          onClick={() => openViewModal(bill)}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleSelectTenantRow(bill);
+                            openViewModal(bill);
+                          }}
                           className="hover:underline cursor-pointer"
                         >
                           {formattedInv}
@@ -2306,7 +2686,11 @@ function BillingContent() {
                       </td>
 
                       {/* Tenant */}
-                      <td className="py-3 px-3 text-center whitespace-nowrap font-medium text-slate-900 dark:text-white">
+                      <td className={`py-3 px-3 text-center whitespace-nowrap ${
+                        isRowSelected
+                          ? "font-bold text-[#0062cc] dark:text-blue-400"
+                          : "font-medium text-slate-900 dark:text-white"
+                      }`}>
                         {bill.tenant_name}
                       </td>
 
@@ -2379,10 +2763,16 @@ function BillingContent() {
                       </td>
 
                       {/* Actions */}
-                      <td className="py-3 px-4 text-center whitespace-nowrap relative">
+                      <td
+                        className="py-3 px-4 text-center whitespace-nowrap relative"
+                        onClick={(e) => e.stopPropagation()}
+                      >
                         <div className="inline-flex items-center justify-center gap-2">
                           <button
-                            onClick={() => openViewModal(bill)}
+                            onClick={() => {
+                              handleSelectTenantRow(bill);
+                              openViewModal(bill);
+                            }}
                             className="text-xs font-semibold text-blue-600 hover:text-blue-700 dark:text-blue-400 hover:underline cursor-pointer"
                           >
                             View
@@ -2403,9 +2793,24 @@ function BillingContent() {
 
                             {activeMenuBillId === bill.id && (
                               <div
-                                className="absolute right-0 mt-1 w-44 bg-white dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 rounded-lg shadow-lg z-30 py-1 text-left"
+                                className="absolute right-0 mt-1 w-48 bg-white dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 rounded-lg shadow-lg z-30 py-1 text-left"
                                 onClick={(e) => e.stopPropagation()}
                               >
+                                <button
+                                  onClick={() => {
+                                    setActiveMenuBillId(null);
+                                    handleSelectTenantRow(bill);
+                                    setTimeout(() => {
+                                      document
+                                        .getElementById("tenant-payment-history-panel")
+                                        ?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+                                    }, 50);
+                                  }}
+                                  className="w-full px-3 py-1.5 text-xs text-slate-700 dark:text-zinc-200 hover:bg-slate-50 dark:hover:bg-zinc-700 flex items-center gap-2 cursor-pointer"
+                                >
+                                  <Receipt className="w-3.5 h-3.5 text-[#0062cc]" />
+                                  View Payment History
+                                </button>
                                 <button
                                   onClick={() => {
                                     setActiveMenuBillId(null);
@@ -2537,7 +2942,316 @@ function BillingContent() {
             </button>
           </div>
         </div>
+
+        {/* SELECTED TENANT PAYMENT HISTORY SECTION */}
+        <AnimatePresence>
+          {selectedHistoryTenant && (
+            <motion.div
+              id="tenant-payment-history-panel"
+              initial={{ opacity: 0, y: 6 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 6 }}
+              transition={{ duration: 0.18, ease: "easeOut" }}
+              className="border-t-2 border-blue-100 dark:border-blue-900/50 bg-slate-50/40 dark:bg-zinc-950/40"
+            >
+              {/* Tenant Payment History Header */}
+              <div className="px-4 py-3.5 border-b border-slate-200/80 dark:border-zinc-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-blue-50/30 dark:bg-blue-950/15">
+                <div className="flex items-center gap-3 min-w-0">
+                  <div
+                    className={`w-9 h-9 rounded-full flex items-center justify-center font-bold text-sm shrink-0 shadow-xs select-none ${getTenantAvatarColor(
+                      selectedHistoryTenant.name || "T",
+                    )}`}
+                  >
+                    {(selectedHistoryTenant.name || "T")
+                      .trim()
+                      .charAt(0)
+                      .toUpperCase()}
+                  </div>
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <h4 className="text-sm font-extrabold text-slate-900 dark:text-white truncate">
+                        Payment History — {selectedHistoryTenant.name}
+                      </h4>
+                      <span className="text-xs font-semibold text-[#0062cc] dark:text-blue-400">
+                        {selectedTenantSummary.roomDisplay}
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-slate-500 dark:text-zinc-400 mt-0.5">
+                      {selectedTenantPayments.length}{" "}
+                      {selectedTenantPayments.length === 1
+                        ? "recorded payment transaction"
+                        : "recorded payment transactions"}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Summary Totals & Close Button */}
+                <div className="flex items-center justify-between sm:justify-end gap-4 shrink-0">
+                  <div className="flex items-center gap-4 text-xs">
+                    <div>
+                      <span className="text-[10px] uppercase tracking-wider font-semibold text-slate-400 dark:text-zinc-500 block">
+                        Total Paid
+                      </span>
+                      <span className="font-mono font-bold text-emerald-600 dark:text-emerald-400">
+                        ₱{" "}
+                        {selectedTenantSummary.totalPaid.toLocaleString(
+                          "en-US",
+                          {
+                            minimumFractionDigits: 2,
+                            maximumFractionDigits: 2,
+                          },
+                        )}
+                      </span>
+                    </div>
+                    <div className="h-6 w-px bg-slate-200 dark:bg-zinc-800" />
+                    <div>
+                      <span className="text-[10px] uppercase tracking-wider font-semibold text-slate-400 dark:text-zinc-500 block">
+                        Balance
+                      </span>
+                      <span
+                        className={`font-mono font-bold ${
+                          selectedTenantSummary.totalBalance > 0
+                            ? "text-rose-600 dark:text-rose-400"
+                            : "text-slate-700 dark:text-zinc-300"
+                        }`}
+                      >
+                        ₱{" "}
+                        {selectedTenantSummary.totalBalance.toLocaleString(
+                          "en-US",
+                          {
+                            minimumFractionDigits: 2,
+                            maximumFractionDigits: 2,
+                          },
+                        )}
+                      </span>
+                    </div>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSelectedHistoryTenant(null);
+                      setSelectedBillRowId(null);
+                    }}
+                    title="Close payment history"
+                    className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 dark:hover:text-zinc-200 hover:bg-slate-200/60 dark:hover:bg-zinc-800 transition-colors cursor-pointer"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+
+              {/* Tenant Payment History Table */}
+              <div className="overflow-x-auto max-h-[320px] overflow-y-auto custom-scrollbar">
+                {selectedTenantPayments.length === 0 ? (
+                  <div className="py-10 px-4 text-center text-slate-400 dark:text-zinc-500">
+                    <Receipt className="w-7 h-7 mx-auto mb-2 opacity-40" />
+                    <p className="text-xs font-semibold text-slate-600 dark:text-zinc-300">
+                      No payment history recorded yet for{" "}
+                      {selectedHistoryTenant.name}
+                    </p>
+                    <p className="text-[11px] mt-0.5">
+                      Payments settled via Cash or verified via GCash will appear
+                      here automatically.
+                    </p>
+                  </div>
+                ) : (
+                  <table className="w-full text-xs border-collapse">
+                    <thead className="sticky top-0 bg-slate-50 dark:bg-zinc-900 z-10 border-b border-slate-200/80 dark:border-zinc-800 text-slate-500 dark:text-zinc-400 font-semibold">
+                      <tr>
+                        <th className="py-2.5 pl-4 pr-3 text-left whitespace-nowrap">
+                          Payment Date
+                        </th>
+                        <th className="py-2.5 px-3 text-left whitespace-nowrap">
+                          Reference #
+                        </th>
+                        <th className="py-2.5 px-3 text-center whitespace-nowrap">
+                          Invoice / Period
+                        </th>
+                        <th className="py-2.5 px-3 text-center whitespace-nowrap">
+                          Method
+                        </th>
+                        <th className="py-2.5 px-3 text-right whitespace-nowrap">
+                          Amount Paid
+                        </th>
+                        <th className="py-2.5 px-3 text-center whitespace-nowrap">
+                          Status
+                        </th>
+                        <th className="py-2.5 pr-4 pl-3 text-right whitespace-nowrap">
+                          Details
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100 dark:divide-zinc-800/70 bg-white dark:bg-zinc-900">
+                      {selectedTenantPayments.map((payment: any) => {
+                        const rawDate =
+                          payment.payment_date || payment.created_at;
+                        const formattedDate = rawDate
+                          ? new Date(rawDate).toLocaleDateString("en-US", {
+                              month: "short",
+                              day: "numeric",
+                              year: "numeric",
+                            })
+                          : "—";
+
+                        return (
+                          <tr
+                            key={`hist-${payment.id}`}
+                            className="hover:bg-slate-50/80 dark:hover:bg-zinc-800/40 transition-colors"
+                          >
+                            {/* Payment Date */}
+                            <td className="py-2.5 pl-4 pr-3 text-left whitespace-nowrap font-medium text-slate-800 dark:text-zinc-200">
+                              {formattedDate}
+                            </td>
+
+                            {/* Reference # */}
+                            <td className="py-2.5 px-3 text-left whitespace-nowrap font-mono font-semibold text-slate-700 dark:text-zinc-300">
+                              {payment.referenceNumber}
+                            </td>
+
+                            {/* Invoice / Period */}
+                            <td className="py-2.5 px-3 text-center whitespace-nowrap">
+                              {payment.linkedBill ? (
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    openViewModal(payment.linkedBill)
+                                  }
+                                  className="font-mono font-semibold text-blue-600 dark:text-blue-400 hover:underline cursor-pointer"
+                                >
+                                  {payment.invoiceNumber}
+                                </button>
+                              ) : (
+                                <span className="font-mono font-semibold text-slate-700 dark:text-zinc-300">
+                                  {payment.invoiceNumber}
+                                </span>
+                              )}
+                              <span className="text-slate-400 dark:text-zinc-500 ml-1.5">
+                                ({payment.billingMonth})
+                              </span>
+                            </td>
+
+                            {/* Method */}
+                            <td className="py-2.5 px-3 text-center whitespace-nowrap font-semibold text-slate-700 dark:text-zinc-300">
+                              {payment.payment_method || "Cash"}
+                            </td>
+
+                            {/* Amount Paid */}
+                            <td className="py-2.5 px-3 text-right whitespace-nowrap font-mono font-bold text-slate-900 dark:text-white">
+                              ₱{" "}
+                              {Number(
+                                payment.amount_paid || 0,
+                              ).toLocaleString("en-US", {
+                                minimumFractionDigits: 2,
+                                maximumFractionDigits: 2,
+                              })}
+                            </td>
+
+                            {/* Status (Colored text only - no background/outline) */}
+                            <td className="py-2.5 px-3 text-center whitespace-nowrap">
+                              {payment.normalizedStatus === "Paid" && (
+                                <span className="inline-flex items-center justify-center gap-1 text-xs font-semibold text-emerald-600 dark:text-emerald-400">
+                                  <Check className="w-3.5 h-3.5 stroke-[2.5]" />{" "}
+                                  Paid
+                                </span>
+                              )}
+                              {payment.normalizedStatus ===
+                                "Pending Verification" && (
+                                <span className="inline-flex items-center justify-center gap-1 text-xs font-semibold text-amber-600 dark:text-amber-400">
+                                  <Clock className="w-3.5 h-3.5 stroke-[2]" />{" "}
+                                  Pending Verification
+                                </span>
+                              )}
+                              {payment.normalizedStatus === "Rejected" && (
+                                <span className="inline-flex items-center justify-center gap-1 text-xs font-semibold text-rose-600 dark:text-rose-400">
+                                  <XCircle className="w-3.5 h-3.5 stroke-[2]" />{" "}
+                                  Rejected
+                                </span>
+                              )}
+                            </td>
+
+                            {/* Details / Proof */}
+                            <td className="py-2.5 pr-4 pl-3 text-right whitespace-nowrap">
+                              <div className="inline-flex items-center justify-end gap-2.5">
+                                {payment.receiptUrl && (
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      setPreviewReceiptUrl(payment.receiptUrl)
+                                    }
+                                    className="text-xs font-semibold text-[#0062cc] dark:text-blue-400 hover:underline cursor-pointer"
+                                  >
+                                    View Receipt
+                                  </button>
+                                )}
+                                {payment.linkedBill && (
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      openViewModal(payment.linkedBill)
+                                    }
+                                    className="text-xs font-semibold text-slate-600 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white hover:underline cursor-pointer"
+                                  >
+                                    Statement
+                                  </button>
+                                )}
+                                {!payment.receiptUrl && !payment.linkedBill && (
+                                  <span className="text-slate-400">—</span>
+                                )}
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                )}
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
+
+      {/* RECEIPT PREVIEW LIGHTBOX */}
+      <AnimatePresence>
+        {previewReceiptUrl && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={() => setPreviewReceiptUrl(null)}
+            className="fixed inset-0 bg-black/75 backdrop-blur-xs z-50 flex items-center justify-center p-4"
+          >
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              onClick={(e) => e.stopPropagation()}
+              className="relative bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-2xl p-3 max-w-lg w-full shadow-2xl"
+            >
+              <div className="flex items-center justify-between pb-2.5 mb-2.5 border-b border-slate-100 dark:border-zinc-800">
+                <span className="text-xs font-bold text-slate-900 dark:text-white">
+                  Payment Receipt Proof
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setPreviewReceiptUrl(null)}
+                  className="p-1 rounded-lg text-slate-400 hover:text-slate-700 dark:hover:text-zinc-200 hover:bg-slate-100 dark:hover:bg-zinc-800 cursor-pointer"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+              <div className="flex items-center justify-center bg-slate-50 dark:bg-zinc-950 rounded-xl overflow-hidden max-h-[75vh]">
+                <img
+                  src={previewReceiptUrl}
+                  alt="Payment Receipt"
+                  className="max-h-[70vh] w-auto object-contain"
+                />
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* MODALS & SLIDE-OVERS */}
       <AnimatePresence>
@@ -3713,6 +4427,134 @@ function BillingContent() {
                     );
                   })()
                 )}
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* GCASH QR CODE SCREENSHOT MODAL */}
+      <AnimatePresence>
+        {isGcashQrModalOpen && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 dark:bg-black/75 backdrop-blur-xs"
+            onClick={() => !isSavingGcashQr && setIsGcashQrModalOpen(false)}
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.96, y: 8 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.96, y: 8 }}
+              onClick={(e) => e.stopPropagation()}
+              className="w-full max-w-md bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 shadow-2xl overflow-hidden"
+            >
+              <div className="px-5 py-4 border-b border-slate-100 dark:border-zinc-800 flex items-center justify-between">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-lg bg-blue-50 dark:bg-blue-950/40 text-[#0066FF] flex items-center justify-center">
+                    <QrCode className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-bold text-slate-900 dark:text-white">
+                      GCash QR Code Screenshot
+                    </h3>
+                    <p className="text-[11px] text-slate-500 dark:text-zinc-400">
+                      Displayed to tenants when paying online with GCash
+                    </p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => !isSavingGcashQr && setIsGcashQrModalOpen(false)}
+                  className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 dark:hover:bg-zinc-800 transition-colors cursor-pointer"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              <div className="p-5 space-y-4">
+                <input
+                  type="file"
+                  accept="image/*"
+                  ref={gcashQrFileInputRef}
+                  onChange={handleGcashQrFileChange}
+                  className="hidden"
+                />
+
+                {gcashQrImage ? (
+                  <div className="space-y-3">
+                    <div className="rounded-xl border border-slate-200 dark:border-zinc-800 bg-slate-50 dark:bg-zinc-950 p-3 flex items-center justify-center max-h-80 overflow-hidden">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={resolveReceiptUrl(gcashQrImage) || gcashQrImage}
+                        alt="GCash QR Code Preview"
+                        className="max-h-72 w-auto object-contain rounded-lg"
+                      />
+                    </div>
+                    <div className="flex items-center justify-between gap-2">
+                      <button
+                        type="button"
+                        onClick={() => gcashQrFileInputRef.current?.click()}
+                        className="flex-1 py-2 px-3 rounded-lg border border-slate-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 hover:bg-slate-50 dark:hover:bg-zinc-700 text-xs font-semibold text-slate-700 dark:text-zinc-200 flex items-center justify-center gap-1.5 cursor-pointer"
+                      >
+                        <Upload className="w-3.5 h-3.5" />
+                        <span>Replace Screenshot</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setGcashQrImage("")}
+                        className="py-2 px-3 rounded-lg text-xs font-semibold text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/30 cursor-pointer"
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div
+                    onClick={() => gcashQrFileInputRef.current?.click()}
+                    className="p-8 rounded-xl border-2 border-dashed border-slate-200 dark:border-zinc-800 hover:border-blue-400 dark:hover:border-blue-600 bg-slate-50/60 dark:bg-zinc-950/40 flex flex-col items-center justify-center text-center cursor-pointer transition-colors"
+                  >
+                    <div className="w-11 h-11 rounded-full bg-blue-50 dark:bg-blue-950/40 text-[#0066FF] flex items-center justify-center mb-2.5">
+                      <Upload className="w-5 h-5" />
+                    </div>
+                    <p className="text-xs font-bold text-slate-800 dark:text-zinc-200">
+                      Click to upload GCash QR code screenshot
+                    </p>
+                    <p className="text-[11px] text-slate-500 dark:text-zinc-400 mt-1">
+                      PNG, JPG, or WEBP (Max 5MB)
+                    </p>
+                  </div>
+                )}
+
+                <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100 dark:border-zinc-800">
+                  <button
+                    type="button"
+                    disabled={isSavingGcashQr}
+                    onClick={() => setIsGcashQrModalOpen(false)}
+                    className="px-4 py-2 rounded-lg text-xs font-semibold text-slate-600 dark:text-zinc-400 hover:bg-slate-100 dark:hover:bg-zinc-800 cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    disabled={isSavingGcashQr}
+                    onClick={handleSaveGcashQr}
+                    className="px-4 py-2 rounded-lg text-xs font-bold bg-[#0066FF] hover:bg-blue-700 text-white shadow-xs flex items-center gap-1.5 disabled:opacity-50 cursor-pointer"
+                  >
+                    {isSavingGcashQr ? (
+                      <>
+                        <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                        <span>Saving...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Check className="w-3.5 h-3.5" />
+                        <span>Save QR Code</span>
+                      </>
+                    )}
+                  </button>
+                </div>
               </div>
             </motion.div>
           </motion.div>
