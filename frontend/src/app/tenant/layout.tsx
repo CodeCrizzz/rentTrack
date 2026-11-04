@@ -12,10 +12,11 @@ import {
 } from "@/components/ui/sidebar";
 import { AppSidebar } from '@/components/app-sidebar';
 import { FullscreenToggle } from '@/components/fullscreen-toggle';
-import TenantSettingsModal from '@/components/tenant-settings-modal';
+import { ThemeToggle } from '@/components/theme-toggle';
+import TenantChatPopup from '@/components/tenant-chat-popup';
 import { 
   LayoutDashboard, Building2, CreditCard, Wrench, User, MessageSquare, 
-  Bell, Settings, RefreshCw, AlertTriangle, Clock, CheckCheck, ChevronRight 
+  Bell, AlertTriangle, Clock, CheckCheck, ChevronRight 
 } from 'lucide-react';
 import {
   DropdownMenu,
@@ -36,7 +37,6 @@ export default function TenantLayout({ children }: { children: React.ReactNode }
     const [showAllNotifications, setShowAllNotifications] = useState(false);
     const [isAllRead, setIsAllRead] = useState(true);
     const [refreshKey, setRefreshKey] = useState(0);
-    const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
     const fetchNotificationsAndUnread = async () => {
         try {
@@ -130,8 +130,6 @@ export default function TenantLayout({ children }: { children: React.ReactNode }
         { name: 'Dashboard', path: '/tenant/dashboard', icon: LayoutDashboard },
         { name: 'Rooms', path: '/tenant/rooms', icon: Building2 },
         { name: 'My Payments', path: '/tenant/payments', icon: CreditCard },
-        { name: 'Chat', path: '/tenant/chat', icon: MessageSquare },
-        { name: 'Settings', path: '/tenant/settings', icon: Settings },
     ];
 
     const mappedNavItems = rawNavItems.map(item => {
@@ -192,25 +190,8 @@ export default function TenantLayout({ children }: { children: React.ReactNode }
                         </div>
 
                         <div className="flex items-center gap-2">
-                            <button 
-                                onClick={() => {
-                                    setRefreshKey(prev => prev + 1);
-                                    fetchNotificationsAndUnread();
-                                }} 
-                                className="group p-2 text-slate-500 hover:text-slate-900 dark:text-zinc-400 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/5 rounded-full transition-colors outline-none"
-                                title="Refresh Page"
-                            >
-                                <RefreshCw className="w-5 h-5 group-hover:rotate-180 group-active:scale-90 transition-all duration-500" strokeWidth={2} />
-                            </button>
+                            <ThemeToggle />
                             <FullscreenToggle />
-                            <button 
-                                onClick={() => setIsSettingsOpen(true)}
-                                className="group p-2 text-slate-500 hover:text-slate-900 dark:text-zinc-400 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/5 rounded-full transition-colors outline-none cursor-pointer"
-                                title="Resident Settings"
-                                aria-label="Resident Settings"
-                            >
-                                <Settings className="w-5 h-5 group-hover:rotate-45 group-active:scale-90 transition-all duration-300" strokeWidth={2} />
-                            </button>
                             <DropdownMenu>
                                 <DropdownMenuTrigger className="group relative p-2 text-slate-500 hover:text-slate-900 dark:text-zinc-400 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/5 rounded-full transition-colors outline-none">
                                     <Bell className="w-5 h-5 group-hover:rotate-12 group-active:-rotate-12 group-active:scale-90 transition-all duration-200 origin-top" strokeWidth={2} />
@@ -243,7 +224,7 @@ export default function TenantLayout({ children }: { children: React.ReactNode }
                                         {chatUnread > 0 && (
                                             <div 
                                                 className="p-3.5 hover:bg-slate-50 dark:hover:bg-zinc-900/50 transition-colors cursor-pointer flex items-start gap-3 bg-zinc-100/60 dark:bg-zinc-800/40" 
-                                                onClick={() => router.push('/tenant/chat')}
+                                                onClick={() => { if (typeof window !== 'undefined') window.dispatchEvent(new CustomEvent('open-tenant-chat')); }}
                                             >
                                                 <div className="w-8 h-8 rounded-lg bg-zinc-200 dark:bg-zinc-800 text-zinc-900 dark:text-white flex items-center justify-center shrink-0 mt-0.5">
                                                     <MessageSquare className="w-4 h-4" />
@@ -347,11 +328,8 @@ export default function TenantLayout({ children }: { children: React.ReactNode }
                     </div>
                 </SidebarInset>
 
-                {/* Resident Settings Modal */}
-                <TenantSettingsModal 
-                    isOpen={isSettingsOpen} 
-                    onClose={() => setIsSettingsOpen(false)} 
-                />
+                {/* Facebook Messenger Desktop Style Floating Chat */}
+                <TenantChatPopup />
             </div>
         </SidebarProvider>
     );
