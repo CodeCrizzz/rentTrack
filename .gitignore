@@ -27,11 +27,6 @@ frontend/.env.local
 frontend/.env.production
 frontend/.env.development
 
-# Always allow version-controlled sanitized example templates
-!.env.example
-!backend/.env.example
-!frontend/.env.example
-!*.env.example
 
 # Generic secrets, tokens & credential configuration files
 .secrets
