@@ -7,7 +7,8 @@ import {
     CreditCard, Calendar, Clock, CheckCircle2, 
     AlertCircle, Upload, FileText, Image as ImageIcon, 
     X, ArrowUpRight, TrendingUp, Wallet, ShieldCheck,
-    Download, Filter, Search, RefreshCw, QrCode, Hash, Building2
+    Download, Filter, Search, RefreshCw, QrCode, Hash, Building2,
+    Smartphone
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -151,8 +152,13 @@ export default function TenantPayments() {
         }
     };
 
-    const handleConfirmPayment = async () => {
-        if (!currentBill || !hasActiveBill) {
+    const handleConfirmPayment = async (customBillId?: number, customAmount?: number) => {
+        if (isCompletingPayment) return;
+
+        const targetBillId = customBillId || currentBill?.id;
+        const targetAmount = customAmount !== undefined ? customAmount : currentBill?.remainingBalance;
+
+        if (!targetBillId) {
             toast.error("No active statement found to pay");
             return;
         }
@@ -160,23 +166,103 @@ export default function TenantPayments() {
         try {
             setIsCompletingPayment(true);
             const { data } = await api.post('/tenant/pay/gcash', {
-                bill_id: currentBill.id,
-                amount: currentBill.remainingBalance
+                bill_id: targetBillId,
+                amount: targetAmount
             });
 
+            if (typeof window !== 'undefined') {
+                sessionStorage.removeItem('renttrack_pending_gcash_bill');
+            }
+
             setPaymentSuccessData(data);
+            setIsPaymentModalOpen(true);
             await fetchPaymentData();
             if (typeof window !== 'undefined') {
                 window.dispatchEvent(new Event('renttrack-refresh-counts'));
             }
-            toast.success("Payment Complete! Statement marked as Paid.");
+            toast.success("Payment Successful! Statement marked as Paid.");
         } catch (error: any) {
             console.error("Failed to complete GCash payment:", error);
-            toast.error(error.response?.data?.message || "Failed to process payment");
+            if (error.response?.data?.message?.includes('already been completely settled')) {
+                if (typeof window !== 'undefined') {
+                    sessionStorage.removeItem('renttrack_pending_gcash_bill');
+                }
+                await fetchPaymentData();
+            } else {
+                toast.error(error.response?.data?.message || "Failed to process payment");
+            }
         } finally {
             setIsCompletingPayment(false);
         }
     };
+
+    const handleOpenGcashApp = () => {
+        if (typeof window !== 'undefined' && currentBill?.id) {
+            sessionStorage.setItem('renttrack_pending_gcash_bill', JSON.stringify({
+                billId: currentBill.id,
+                amount: currentBill.remainingBalance,
+                startedAt: Date.now()
+            }));
+
+            try {
+                navigator.clipboard.writeText(String(currentBill.remainingBalance || 0));
+            } catch (e) {}
+        }
+
+        toast.info("Opening GCash App...", {
+            description: `Amount ₱${Number(currentBill?.remainingBalance || 0).toLocaleString()} copied. Complete payment in GCash.`
+        });
+
+        window.location.href = "gcash://";
+    };
+
+    // Automatically detect when tenant returns from GCash payment
+    useEffect(() => {
+        let isProcessing = false;
+
+        const checkPendingGcashPayment = async () => {
+            if (typeof window === 'undefined' || isProcessing || isCompletingPayment) return;
+            const pendingRaw = sessionStorage.getItem('renttrack_pending_gcash_bill');
+            if (!pendingRaw) return;
+
+            try {
+                const pending = JSON.parse(pendingRaw);
+                // Verify pending record was created within the last 30 minutes
+                if (pending && pending.billId && (Date.now() - pending.startedAt < 30 * 60 * 1000)) {
+                    isProcessing = true;
+                    sessionStorage.removeItem('renttrack_pending_gcash_bill');
+                    await handleConfirmPayment(pending.billId, pending.amount);
+                } else {
+                    sessionStorage.removeItem('renttrack_pending_gcash_bill');
+                }
+            } catch (err) {
+                console.error("Error auto-verifying GCash return payment:", err);
+            } finally {
+                isProcessing = false;
+            }
+        };
+
+        const handleVisibilityChange = () => {
+            if (document.visibilityState === 'visible') {
+                checkPendingGcashPayment();
+            }
+        };
+
+        const handleWindowFocus = () => {
+            checkPendingGcashPayment();
+        };
+
+        // Check on mount in case the tenant navigated back or refreshed
+        checkPendingGcashPayment();
+
+        document.addEventListener('visibilitychange', handleVisibilityChange);
+        window.addEventListener('focus', handleWindowFocus);
+
+        return () => {
+            document.removeEventListener('visibilitychange', handleVisibilityChange);
+            window.removeEventListener('focus', handleWindowFocus);
+        };
+    }, [currentBill?.id, currentBill?.remainingBalance, isCompletingPayment]);
 
     useEffect(() => {
         fetchPaymentData();
@@ -454,6 +540,13 @@ export default function TenantPayments() {
                                         }
                                     })
                                     .catch(() => {});
+                                if (typeof window !== 'undefined' && currentBill?.id) {
+                                    sessionStorage.setItem('renttrack_pending_gcash_bill', JSON.stringify({
+                                        billId: currentBill.id,
+                                        amount: currentBill.remainingBalance,
+                                        startedAt: Date.now()
+                                    }));
+                                }
                                 setIsPaymentModalOpen(true);
                             }}
                             disabled={!hasActiveBill || currentBill.remainingBalance <= 0}
@@ -464,7 +557,7 @@ export default function TenantPayments() {
                             }`}
                         >
                             <CreditCard className="w-4.5 h-4.5" />
-                            <span>{!hasActiveBill ? 'No bill yet' : currentBill.remainingBalance <= 0 ? 'Statement Settled' : 'Pay Online with GCash'}</span>
+                            <span>{!hasActiveBill ? 'No bill yet' : currentBill.remainingBalance <= 0 ? 'Statement Settled' : 'Pay through GCash'}</span>
                         </button>
                     </div>
                 </div>
@@ -593,6 +686,9 @@ export default function TenantPayments() {
                             onClick={() => {
                                 setIsPaymentModalOpen(false);
                                 setPaymentSuccessData(null);
+                                if (typeof window !== 'undefined') {
+                                    sessionStorage.removeItem('renttrack_pending_gcash_bill');
+                                }
                             }}
                         />
                         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 pointer-events-none">
@@ -604,7 +700,7 @@ export default function TenantPayments() {
                                 className="w-full max-w-2xl sm:max-w-3xl bg-white dark:bg-[#111625] rounded-2xl shadow-2xl border border-slate-200 dark:border-[#1E2638] overflow-hidden pointer-events-auto p-5 sm:p-6 space-y-4 text-slate-900 dark:text-white"
                             >
                                 {paymentSuccessData ? (
-                                    /* Pop-up Card Message: Payment Complete (Automatically Marked as Paid) */
+                                    /* Pop-up Card Message: Payment Successful (Automatically Marked as Paid) */
                                     <div className="py-4 px-2 sm:px-4 flex flex-col items-center text-center space-y-4">
                                         <div className="w-16 h-16 rounded-full bg-emerald-100 dark:bg-emerald-950/60 border-2 border-emerald-500/40 flex items-center justify-center text-emerald-600 dark:text-emerald-400 shadow-lg animate-in zoom-in-75 duration-300">
                                             <CheckCircle2 className="w-10 h-10" />
@@ -615,10 +711,10 @@ export default function TenantPayments() {
                                                 GCash Instant Settlement
                                             </span>
                                             <h3 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white mt-2 tracking-tight">
-                                                Payment Complete
+                                                Payment Successful
                                             </h3>
                                             <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 max-w-sm">
-                                                Your payment has been received and your billing statement balance has been automatically marked as <strong className="text-emerald-600 dark:text-emerald-400 font-bold">Paid</strong>.
+                                                Your payment of <strong className="text-slate-900 dark:text-white font-bold font-mono">₱{Number(paymentSuccessData.amount_paid || 0).toLocaleString()}</strong> has been received and your billing statement balance has been automatically marked as <strong className="text-emerald-600 dark:text-emerald-400 font-bold">Paid</strong>.
                                             </p>
                                         </div>
 
@@ -662,6 +758,9 @@ export default function TenantPayments() {
                                             onClick={() => {
                                                 setPaymentSuccessData(null);
                                                 setIsPaymentModalOpen(false);
+                                                if (typeof window !== 'undefined') {
+                                                    sessionStorage.removeItem('renttrack_pending_gcash_bill');
+                                                }
                                             }}
                                             className="w-full max-w-md py-3 rounded-xl text-xs sm:text-sm font-bold bg-[#0066FF] hover:bg-blue-600 text-white transition-all shadow-md flex items-center justify-center cursor-pointer"
                                         >
@@ -681,7 +780,7 @@ export default function TenantPayments() {
                                                         GCash Online Payment
                                                     </h3>
                                                     <p className="text-xs text-slate-500 dark:text-slate-400">
-                                                        Download or screenshot the QR code to scan from your GCash app
+                                                        Scan QR code or open GCash app to pay your balance
                                                     </p>
                                                 </div>
                                             </div>
@@ -689,6 +788,9 @@ export default function TenantPayments() {
                                                 onClick={() => {
                                                     setIsPaymentModalOpen(false);
                                                     setPaymentSuccessData(null);
+                                                    if (typeof window !== 'undefined') {
+                                                        sessionStorage.removeItem('renttrack_pending_gcash_bill');
+                                                    }
                                                 }}
                                                 className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-zinc-800 transition-colors cursor-pointer"
                                                 aria-label="Close modal"
@@ -757,25 +859,30 @@ export default function TenantPayments() {
                                             {/* Right: QR Code Display Card */}
                                             <div className="p-4 rounded-xl bg-slate-50 dark:bg-[#0f1422] border border-slate-200 dark:border-[#1E2638] flex flex-col items-center justify-between text-center space-y-3">
                                                 <div className="w-full space-y-2">
-                                                    <div className="flex items-center justify-center gap-1.5 pb-2 border-b border-slate-200/80 dark:border-zinc-800">
-                                                        <QrCode className="w-3.5 h-3.5 text-sky-600 dark:text-[#38bdf8]" />
-                                                        <span className="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-zinc-200">
-                                                            Scan this QR code
+                                                    <div className="flex items-center justify-between pb-2 border-b border-slate-200/80 dark:border-zinc-800">
+                                                        <div className="flex items-center gap-1.5">
+                                                            <QrCode className="w-3.5 h-3.5 text-sky-600 dark:text-[#38bdf8]" />
+                                                            <span className="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-zinc-200">
+                                                                Admin GCash QR
+                                                            </span>
+                                                        </div>
+                                                        <span className="text-[10px] font-bold text-sky-600 dark:text-[#38bdf8] bg-sky-50 dark:bg-sky-950/50 px-2 py-0.5 rounded-full border border-sky-200 dark:border-sky-800">
+                                                            Auto-Verified
                                                         </span>
                                                     </div>
 
-                                                    <div className="flex items-center justify-center pt-1">
+                                                    <div className="flex items-center justify-center pt-0.5">
                                                         {gcashQrCode ? (
-                                                            <div className="w-full max-w-[200px] flex items-center justify-center rounded-xl overflow-hidden bg-white p-2 border border-slate-200 dark:border-zinc-800 shadow-xs">
+                                                            <div className="w-full max-w-[190px] flex items-center justify-center rounded-xl overflow-hidden bg-white p-2 border border-slate-200 dark:border-zinc-800 shadow-xs">
                                                                 {/* eslint-disable-next-line @next/next/no-img-element */}
                                                                 <img
                                                                     src={resolveQrUrl(gcashQrCode)}
                                                                     alt="GCash QR Code"
-                                                                    className="w-full h-auto max-h-[175px] object-contain rounded-lg select-none"
+                                                                    className="w-full h-auto max-h-[160px] object-contain rounded-lg select-none"
                                                                 />
                                                             </div>
                                                         ) : (
-                                                            <div className="w-full py-8 px-4 rounded-xl border border-dashed border-slate-300 dark:border-zinc-800 flex flex-col items-center justify-center text-center">
+                                                            <div className="w-full py-7 px-4 rounded-xl border border-dashed border-slate-300 dark:border-zinc-800 flex flex-col items-center justify-center text-center">
                                                                 <QrCode className="w-10 h-10 text-slate-300 dark:text-zinc-700 mb-2" />
                                                                 <p className="text-xs font-semibold text-slate-600 dark:text-zinc-300">
                                                                     QR code not uploaded yet
@@ -787,25 +894,36 @@ export default function TenantPayments() {
                                                         )}
                                                     </div>
 
-                                                    {/* Download QR Code Button */}
-                                                    <button
-                                                        type="button"
-                                                        onClick={handleDownloadQr}
-                                                        disabled={!gcashQrCode}
-                                                        className="w-full py-2 px-3 rounded-xl text-xs font-bold bg-white dark:bg-zinc-800 hover:bg-slate-100 dark:hover:bg-zinc-700 text-slate-700 dark:text-zinc-200 border border-slate-200 dark:border-zinc-700 transition-all flex items-center justify-center gap-1.5 shadow-xs cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
-                                                    >
-                                                        <Download className="w-3.5 h-3.5 text-sky-600 dark:text-[#38bdf8]" />
-                                                        <span>Download QR Code</span>
-                                                    </button>
+                                                    {/* Quick Actions: Open GCash App & Download QR */}
+                                                    <div className="grid grid-cols-2 gap-2 w-full pt-1">
+                                                        <button
+                                                            type="button"
+                                                            onClick={handleOpenGcashApp}
+                                                            className="py-2 px-2 rounded-xl text-xs font-bold bg-sky-50 dark:bg-[#182032] hover:bg-sky-100 dark:hover:bg-[#1f2a40] text-sky-700 dark:text-[#38bdf8] border border-sky-200 dark:border-[#243048] transition-all flex items-center justify-center gap-1.5 shadow-xs cursor-pointer"
+                                                        >
+                                                            <Smartphone className="w-3.5 h-3.5 text-sky-600 dark:text-[#38bdf8]" />
+                                                            <span>Open GCash App</span>
+                                                        </button>
+
+                                                        <button
+                                                            type="button"
+                                                            onClick={handleDownloadQr}
+                                                            disabled={!gcashQrCode}
+                                                            className="py-2 px-2 rounded-xl text-xs font-bold bg-white dark:bg-zinc-800 hover:bg-slate-100 dark:hover:bg-zinc-700 text-slate-700 dark:text-zinc-200 border border-slate-200 dark:border-zinc-700 transition-all flex items-center justify-center gap-1.5 shadow-xs cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                                                        >
+                                                            <Download className="w-3.5 h-3.5 text-slate-600 dark:text-slate-300" />
+                                                            <span>Download QR</span>
+                                                        </button>
+                                                    </div>
                                                 </div>
 
                                                 <div className="w-full space-y-2 pt-1 border-t border-slate-200/80 dark:border-zinc-800">
                                                     <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-tight">
-                                                        You can download or screenshot this QR code to scan it in your GCash app.
+                                                        Scan with GCash app and enter exact amount: <strong className="text-slate-900 dark:text-white font-bold font-mono">₱{Number(currentBill.remainingBalance || 0).toLocaleString()}</strong>.
                                                     </p>
                                                     <button
                                                         type="button"
-                                                        onClick={handleConfirmPayment}
+                                                        onClick={() => handleConfirmPayment()}
                                                         disabled={isCompletingPayment}
                                                         className="w-full py-2.5 rounded-xl text-xs font-bold bg-emerald-600 hover:bg-emerald-500 text-white transition-all shadow-md flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
                                                     >
@@ -817,7 +935,7 @@ export default function TenantPayments() {
                                                         ) : (
                                                             <>
                                                                 <CheckCircle2 className="w-4 h-4" />
-                                                                <span>I Have Scanned & Paid</span>
+                                                                <span>I Have Sent Payment in GCash</span>
                                                             </>
                                                         )}
                                                     </button>
