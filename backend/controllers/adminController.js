@@ -168,7 +168,7 @@ const getDashboardStats = async (req, res) => {
                 JOIN bills b ON p.bill_id = b.id
                 JOIN users u ON b.tenant_id = u.id
                 LEFT JOIN rooms r ON u.room_id = r.id
-                WHERE p.status = 'Pending Verification' AND (p.payment_method IS NULL OR p.payment_method NOT ILIKE '%gcash%')
+                WHERE p.status = 'Pending Verification' AND (p.payment_method IS NULL OR (p.payment_method NOT ILIKE '%gcash%' AND p.payment_method NOT ILIKE '%qrph%'))
                 ORDER BY p.payment_date ASC
             `),
             
@@ -1617,36 +1617,50 @@ const getActivityLogs = async (req, res) => {
     }
 };
 
+const qrphQrFilePath = path.join(__dirname, '../uploads/qrph-qr.json');
 const gcashQrFilePath = path.join(__dirname, '../uploads/gcash-qr.json');
 
-// @desc    Get GCash QR Code Screenshot
-// @route   GET /api/admin/gcash-qr
+// Helper to get stored QR Ph / GCash code
+const getStoredQrCode = () => {
+    let qrCode = '';
+    let updatedAt = null;
+    const paths = [qrphQrFilePath, gcashQrFilePath];
+    for (const p of paths) {
+        if (fs.existsSync(p)) {
+            try {
+                const fileData = JSON.parse(fs.readFileSync(p, 'utf8'));
+                if (fileData.qrphQrCode || fileData.gcashQrCode) {
+                    qrCode = fileData.qrphQrCode || fileData.gcashQrCode || '';
+                    updatedAt = fileData.updated_at || null;
+                    break;
+                }
+            } catch (e) {}
+        }
+    }
+    return { qrCode, updatedAt };
+};
+
+// @desc    Get QR Ph / GCash QR Code Screenshot
+// @route   GET /api/admin/qrph-qr or /api/admin/gcash-qr
 const getGcashQrCode = async (req, res) => {
     try {
-        let gcashQrCode = '';
-        let updatedAt = null;
-        if (fs.existsSync(gcashQrFilePath)) {
-            try {
-                const fileData = JSON.parse(fs.readFileSync(gcashQrFilePath, 'utf8'));
-                gcashQrCode = fileData.gcashQrCode || '';
-                updatedAt = fileData.updated_at || null;
-            } catch (parseErr) {}
-        }
+        const { qrCode, updatedAt } = getStoredQrCode();
         res.status(200).json({
-            gcashQrCode,
+            qrphQrCode: qrCode,
+            gcashQrCode: qrCode,
             updated_at: updatedAt
         });
     } catch (error) {
-        console.error('Get GCash QR Code Error:', error);
-        res.status(500).json({ message: 'Server error retrieving GCash QR code' });
+        console.error('Get QR Ph Code Error:', error);
+        res.status(500).json({ message: 'Server error retrieving QR code' });
     }
 };
 
-// @desc    Update GCash QR Code Screenshot
-// @route   PUT /api/admin/gcash-qr
+// @desc    Update QR Ph / GCash QR Code Screenshot
+// @route   PUT /api/admin/qrph-qr or /api/admin/gcash-qr
 const updateGcashQrCode = async (req, res) => {
     try {
-        const rawQr = req.body?.gcashQrCode;
+        const rawQr = req.body?.qrphQrCode || req.body?.gcashQrCode;
         const cleanQr = typeof rawQr === 'string' ? rawQr.trim() : '';
 
         if (cleanQr && !/^data:image\/(png|jpe?g|webp|gif);base64,[A-Za-z0-9+/=\s]+$/i.test(cleanQr) && !cleanQr.startsWith('/uploads/') && !/^https?:\/\//i.test(cleanQr)) {
@@ -1655,24 +1669,29 @@ const updateGcashQrCode = async (req, res) => {
 
         const now = new Date().toISOString();
         const payload = {
+            qrphQrCode: cleanQr,
             gcashQrCode: cleanQr,
             updated_at: now
         };
 
-        const uploadsDir = path.dirname(gcashQrFilePath);
+        const uploadsDir = path.dirname(qrphQrFilePath);
         if (!fs.existsSync(uploadsDir)) {
             fs.mkdirSync(uploadsDir, { recursive: true });
         }
-        fs.writeFileSync(gcashQrFilePath, JSON.stringify(payload, null, 2), 'utf8');
+        fs.writeFileSync(qrphQrFilePath, JSON.stringify(payload, null, 2), 'utf8');
+        try {
+            fs.writeFileSync(gcashQrFilePath, JSON.stringify(payload, null, 2), 'utf8');
+        } catch (e) {}
 
         res.status(200).json({
-            message: cleanQr ? 'GCash QR code updated successfully.' : 'GCash QR code removed.',
+            message: cleanQr ? 'QR Ph code updated successfully.' : 'QR Ph code removed.',
+            qrphQrCode: cleanQr,
             gcashQrCode: cleanQr,
             updated_at: now
         });
     } catch (error) {
-        console.error('Update GCash QR Code Error:', error);
-        res.status(500).json({ message: 'Server error updating GCash QR code' });
+        console.error('Update QR Ph Code Error:', error);
+        res.status(500).json({ message: 'Server error updating QR code' });
     }
 };
 
