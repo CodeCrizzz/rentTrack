@@ -442,10 +442,12 @@ function BillingContent() {
 
   useEffect(() => {
     api
-      .get("/admin/gcash-qr")
+      .get("/admin/qrph-qr")
+      .catch(() => api.get("/admin/gcash-qr"))
       .then((res) => {
-        if (res?.data?.gcashQrCode !== undefined) {
-          setGcashQrImage(res.data.gcashQrCode || "");
+        const qr = res?.data?.qrphQrCode || res?.data?.gcashQrCode;
+        if (qr !== undefined) {
+          setGcashQrImage(qr || "");
         }
       })
       .catch(() => {
@@ -479,22 +481,24 @@ function BillingContent() {
   const handleSaveGcashQr = async () => {
     try {
       setIsSavingGcashQr(true);
-      await api.put("/admin/gcash-qr", { gcashQrCode: gcashQrImage });
+      await api
+      .put("/admin/qrph-qr", { qrphQrCode: gcashQrImage, gcashQrCode: gcashQrImage })
+      .catch(() => api.put("/admin/gcash-qr", { qrphQrCode: gcashQrImage, gcashQrCode: gcashQrImage }));
       toast.success(
         gcashQrImage
-          ? "GCash QR Code Saved"
-          : "GCash QR Code Removed",
+          ? "QR Ph Code Saved"
+          : "QR Ph Code Removed",
         {
           description: gcashQrImage
-            ? "Tenants will now see this QR code when paying online via GCash."
-            : "GCash QR code screenshot has been cleared.",
+            ? "Tenants can now scan this single interoperable QR Ph code using GCash, Maya, BPI, BDO, etc."
+            : "QR Ph code screenshot has been cleared.",
         },
       );
       setIsGcashQrModalOpen(false);
     } catch (error: any) {
-      toast.error("Failed to save GCash QR Code", {
+      toast.error("Failed to save QR Ph Code", {
         description:
-          error?.response?.data?.message || "Could not update GCash QR code.",
+          error?.response?.data?.message || "Could not update QR Ph code.",
       });
     } finally {
       setIsSavingGcashQr(false);
@@ -600,7 +604,9 @@ function BillingContent() {
           ? pendingRes.data.filter(
               (p: any) =>
                 !p.payment_method ||
-                !p.payment_method.toLowerCase().includes('gcash'),
+                (!p.payment_method.toLowerCase().includes('gcash') &&
+                 !p.payment_method.toLowerCase().includes('qrph') &&
+                 !p.payment_method.toLowerCase().includes('qr ph')),
             )
           : [],
       );
@@ -1826,7 +1832,7 @@ function BillingContent() {
           </p>
         </div>
 
-        {/* GCash QR Code & Period Selector */}
+        {/* QR Ph Code & Period Selector */}
         <div className="flex items-center gap-2">
           <button
             type="button"
@@ -1834,7 +1840,7 @@ function BillingContent() {
             className="px-3 py-1.5 rounded-lg border border-slate-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 hover:bg-slate-50 dark:hover:bg-zinc-800 text-xs font-semibold text-slate-700 dark:text-zinc-200 shadow-xs flex items-center gap-1.5 transition-colors cursor-pointer"
           >
             <QrCode className="w-3.5 h-3.5 text-[#0066FF]" />
-            <span>GCash QR Code</span>
+            <span>QR Ph Code</span>
           </button>
 
           <div className="w-36">
@@ -3051,7 +3057,7 @@ function BillingContent() {
                       {selectedHistoryTenant.name}
                     </p>
                     <p className="text-[11px] mt-0.5">
-                      Payments settled via Cash or verified via GCash will appear
+                      Payments settled via Cash or verified online (QR Ph, GCash) will appear
                       here automatically.
                     </p>
                   </div>
@@ -4359,7 +4365,7 @@ function BillingContent() {
                               {(payment.reference_number || payment.notes) && (
                                 <div className="pt-2 border-t border-slate-100 dark:border-zinc-800">
                                   <span className="text-[10px] uppercase font-bold text-slate-400">
-                                    GCash Reference Number
+                                    Reference Number (QR Ph / GCash)
                                   </span>
                                   <div className="font-mono font-bold text-slate-900 dark:text-white mt-0.5">
                                     {payment.reference_number ||
@@ -4457,10 +4463,10 @@ function BillingContent() {
                   </div>
                   <div>
                     <h3 className="text-sm font-bold text-slate-900 dark:text-white">
-                      GCash QR Code Screenshot
+                      QR Ph National QR Code
                     </h3>
                     <p className="text-[11px] text-slate-500 dark:text-zinc-400">
-                      Displayed to tenants when paying online with GCash
+                      Single interoperable QR code for GCash, Maya, BPI, BDO, GoTyme, etc.
                     </p>
                   </div>
                 </div>
@@ -4488,7 +4494,7 @@ function BillingContent() {
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img
                         src={resolveReceiptUrl(gcashQrImage) || gcashQrImage}
-                        alt="GCash QR Code Preview"
+                        alt="QR Ph Code Preview"
                         className="max-h-72 w-auto object-contain rounded-lg"
                       />
                     </div>
@@ -4519,10 +4525,10 @@ function BillingContent() {
                       <Upload className="w-5 h-5" />
                     </div>
                     <p className="text-xs font-bold text-slate-800 dark:text-zinc-200">
-                      Click to upload GCash QR code screenshot
+                      Click to upload QR Ph code screenshot
                     </p>
                     <p className="text-[11px] text-slate-500 dark:text-zinc-400 mt-1">
-                      PNG, JPG, or WEBP (Max 5MB)
+                      Supports GCash, Maya, BDO, BPI, UnionBank, GoTyme & all QR Ph banks
                     </p>
                   </div>
                 )}
