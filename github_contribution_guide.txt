@@ -113,89 +113,89 @@ PR review, and issue tracking).
 4. READY-TO-USE GITHUB ISSUE TEMPLATES (FOR YOUR PROFILE)
 ================================================================================
 Copy and paste each of the following 5 issues into:
-https://github.com/CodeCrizzz/rent_Flow/issues -> "New issue"
+https://github.com/CodeCrizzz/rentTrack/issues -> "New issue"
 
 --------------------------------------------------------------------------------
-ISSUE #1
+ISSUE #1 (FRESH / NON-DUPLICATE)
 --------------------------------------------------------------------------------
-Title: feat(rooms): visual bed capacity matrix with 5-column layout and scrollable container
-Labels: enhancement, frontend
+Title: feat(rooms): enforce gender-segregated boarding policies and database column backfilling
+Labels: enhancement, backend, security
 
 Description:
 ### Summary
-Refactor the room card bed slot visualization to arrange icons strictly in 5 columns per row, with a minimum display height of 2 rows. When a room has 3 or more rows (capacity > 10), provide an internal vertical scrollbar so room cards maintain a consistent vertical rhythm. Replace tenant names with descriptive room status badges and display floor status summaries with clean borderless text.
+Implement strict room gender policy governance across the property management platform. Ensure backend persistence with automated column migration, normalize room gender designations (Male Only / Female Only) based on existing occupant profiles, and enforce server-side validation preventing gender-mismatched room assignments during self-service move-in.
 
 ### Acceptance Criteria
-- [x] Bed double icons arranged in 5 columns (`grid grid-cols-5 gap-1`).
-- [x] Card container displays a minimum of 2 bed rows (`min-h-[38px] max-h-[38px]`).
-- [x] Rooms with >= 3 rows (capacity > 10) feature a custom styled vertical scrollbar (`overflow-y-auto`).
-- [x] Replaced tenant name display on room cards with formatted status badges (`Under Maintenance`, `Full`, `Occupied with X beds`, `Vacant - Ready for Move-in`).
-- [x] Floor status summaries on floor header bars rendered as borderless colored text (`Full: X`, `Vacant: X`, etc.) without background box outlines.
+- [x] Implemented `roomGenderUtils.js` with `normalizeRoomGender` algorithm and lazy `ensureRoomGenderColumn` migration.
+- [x] Updated `adminController.js` to return normalized room gender in dashboard occupancy statistics and room catalogs.
+- [x] Enforced gender validation in `tenantController.js` `chooseRoom` to block cross-gender room bookings.
+- [x] Inferred default resident gender from chosen room profile if unspecified during initial profile setup.
 
 --------------------------------------------------------------------------------
-ISSUE #2
+ISSUE #2 (FRESH / NON-DUPLICATE)
 --------------------------------------------------------------------------------
-Title: feat(auth): integrate inline modals for Privacy Policy and Terms & Conditions
-Labels: enhancement, security
+Title: feat(billing): digital payment audit logs and administrative GCash QR configuration
+Labels: billing, feature, admin
 
 Description:
 ### Summary
-Eliminate standalone route redirects for `/privacy` and `/terms` by embedding accessible, animated inline legal modals directly inside the login and registration authentication flows.
+Enhance the financial management engine by implementing a comprehensive payment history audit endpoint with invoice and tenant association, alongside persistent GCash QR code management for streamlined digital tenant remittances.
 
 ### Acceptance Criteria
-- [x] Embedded modal with spring transition in `login/page.tsx` and `signup/page.tsx`.
-- [x] Direct toggle buttons for Privacy Policy and Terms and Conditions in authentication footers.
-- [x] Scrollable policy contents covering data collection, account usage, billing, and maintenance rules.
-- [x] Removed obsolete standalone pages `/privacy/page.tsx` and `/terms/page.tsx`.
-- [x] Enforced public registration strictly for `tenant` role with `Pending` verification status.
+- [x] Exposed `GET /api/admin/bills/payments/history` with optional tenant-specific filtering.
+- [x] Enriched payment queries with bill invoice numbers, total amounts, and remaining balances.
+- [x] Added `GET` and `PUT` endpoints for `/api/admin/settings/gcash-qr` with JSONB settings merging.
+- [x] Exposed `GET /api/tenant/gcash-qr` allowing active residents to view official payment QR codes.
+- [x] Configured sanitization and SQL injection whitelists for base64 image payloads (`gcashqrcode`, `logourl`).
 
 --------------------------------------------------------------------------------
-ISSUE #3
+ISSUE #3 (FRESH / NON-DUPLICATE)
 --------------------------------------------------------------------------------
-Title: feat(ui): standardize Sonner toast notifications with titles and structured feedback
-Labels: ui, polish
+Title: feat(messaging): automated maintenance ticket dispatching into tenant-admin chat channels
+Labels: automation, messaging, maintenance
 
 Description:
 ### Summary
-Upgrade all system feedback popups across billing, room management, CCTV, activity logs, and resident settings to use structured Sonner toasts with concise titles and contextual descriptions.
+Bridge the gap between facilities maintenance and tenant communication by automatically generating structured ticket reference dispatches in the real-time conversation thread whenever a resident reports a repair issue.
 
 ### Acceptance Criteria
-- [x] Customized `components/ui/sonner.tsx` with high-contrast borders and brand accents.
-- [x] Updated all `toast.success`, `toast.error`, and `toast.info` calls in admin modules to provide title and description parameters.
-- [x] Removed redundant generic single-string snackbar toasts.
-- [x] Verified bottom-right positioning and close button accessibility.
+- [x] Updated `requestController.js` to automatically insert `[MAINTENANCE_REQUEST#id]` into the `messages` table on ticket submission.
+- [x] Aggregated maintenance work orders into admin chat conversation previews alongside standard chat messages.
+- [x] Maintained message ordering by latest activity timestamp across direct chats and maintenance alerts.
+- [x] Ensured graceful degradation if notification messaging encounters database locks or exceptions.
 
 --------------------------------------------------------------------------------
-ISSUE #4
+ISSUE #4 (FRESH / NON-DUPLICATE)
 --------------------------------------------------------------------------------
-Title: feat(dashboard): integrate floor room matrix with 5-column layout and inline announcements
-Labels: enhancement, dashboard
+Title: perf(api): optimize DDoS rate limiter thresholds and exclude high-frequency polling routes
+Labels: performance, security, infrastructure
 
 Description:
 ### Summary
-Enhance the executive administrative dashboard by bringing in the synchronized multi-column floor & room matrix and an inline announcement composer modal, removing obsolete redirect routes.
+Upgrade API rate limiting architecture to support active multi-tenant usage without false-positive rate limit locks, while selectively bypassing high-frequency polling heartbeats from strict request quotas.
 
 ### Acceptance Criteria
-- [x] Dashboard floor matrix displays units with 5-column bed grid and 2-row scrollable heights.
-- [x] Floor status counters styled borderless with colored text indicators.
-- [x] "Add Announcement" action button triggers an animated inline composer modal without routing away.
-- [x] Removed obsolete standalone redirect route `frontend/src/app/admin/announcements/page.tsx`.
+- [x] Expanded global window limit in `rateLimiter.js` from 300 to 2,500 requests per 15-minute window.
+- [x] Implemented conditional `skip` callback bypassing `/chat` and `/notifications` real-time polling loops.
+- [x] Consolidated role-based authorization hierarchies in `rbacMiddleware.js` strictly across `admin` and `tenant` boundaries.
+- [x] Streamlined JWT session expiration logic for administrative and resident tokens.
 
 --------------------------------------------------------------------------------
-ISSUE #5
+ISSUE #5 (FRESH / NON-DUPLICATE)
 --------------------------------------------------------------------------------
-Title: feat(ux): enlarge percentage metrics on Room Manager operational stats cards
-Labels: ux, rooms
+Title: style(ui): transition administrative status indicators and stage counters to borderless typography
+Labels: ui, design-system, frontend
 
 Description:
 ### Summary
-Increase the font size, contrast, and font weight of the percentage chips across all 4 operational stats overview cards (Full, Occupied w/ Beds, Vacant, Maintenance) in Room Manager for instant scannability.
+Refactor user interface status elements across operational views to eliminate visual clutter caused by heavy badge borders and outlines, adopting clean, high-contrast, borderless colored typography.
 
 ### Acceptance Criteria
-- [x] Upgraded percentage chip typography from `text-[11px] font-semibold` to `text-sm sm:text-base font-extrabold font-mono`.
-- [x] High-contrast color styling (`text-slate-800 dark:text-zinc-100 bg-slate-100 dark:bg-zinc-800 px-2 py-0.5 rounded-md`).
-- [x] Applied `shrink-0` to guarantee badges do not clip or wrap on mobile devices.
-- [x] Card titles truncated gracefully on smaller viewports.
+- [x] Updated CCTV monitor grid camera status indicators (`No Signal` / `REC`) to clean borderless typography.
+- [x] Modernized administrative activity logs event tags, category filters, and status badges.
+- [x] Refactored maintenance Kanban board column counters, live status badges, and ticket unit labels to borderless styling.
+- [x] Streamlined financial and occupancy metric chips in administrative reporting modals.
+- [x] Optimized tenant dashboard container heights to eliminate nested double-scrollbars on desktop viewports.
 
 ================================================================================
 5. PULL REQUEST DESCRIPTION TEMPLATE
@@ -203,24 +203,25 @@ Increase the font size, contrast, and font weight of the percentage chips across
 When creating your Pull Request on GitHub, use this description:
 
 Title:
-feat: Auth flow overhaul, room matrix refinements, and portal enhancements
+feat: Room gender governance, digital payments audit, and administrative UI refinement
 
 Description:
 ### Summary
-Comprehensive update across the RentTrack platform delivering an enhanced Room Manager bed matrix, embedded authentication legal modals, standardized toast notifications, and executive dashboard refinements.
+Comprehensive platform enhancement delivering automated room gender policy enforcement, financial payment history audit trails, GCash QR configuration, automated maintenance ticket dispatching into tenant-admin chat, API rate limiting resilience, and borderless design system modernization.
 
 ### Linked Issues
-- Closes #1 (Visual bed capacity matrix with 5-column layout)
-- Closes #2 (Inline modals for Privacy Policy & Terms)
-- Closes #3 (Standardized Sonner toast notifications)
-- Closes #4 (Dashboard floor matrix and inline announcements)
-- Closes #5 (Enlarged Room Manager stats percentage metrics)
+- Closes #1 (Room gender policy governance & database column backfill)
+- Closes #2 (Payment audit logs & administrative GCash QR configuration)
+- Closes #3 (Automated maintenance ticket dispatch to chat channels)
+- Closes #4 (API rate limiter optimization & polling route exclusion)
+- Closes #5 (Borderless status typography and viewport scrollbar polish)
 
 ### Key Changes
-- **Room Management**: Replaced tenant names with status badges, implemented 5-column bed slots with $\ge 3$ row vertical scroll, and enlarged stats percentages.
-- **Auth Flow**: Added inline legal modals for Privacy Policy & Terms in login and signup; removed standalone legal pages.
-- **Feedback & Notifications**: Standardized Sonner toasts with structured title and description across all admin pages.
-- **Dashboard**: Added synchronized floor room matrix and inline announcement modal.
+- **Room Management & Gender Governance**: Added `roomGenderUtils.js` with automated column backfill, strict gender segregation validations in self-service move-in, and normalized gender metadata across dashboard counters.
+- **Financial & Payment Operations**: Built `GET /api/admin/bills/payments/history` audit endpoint with invoice and tenant association; implemented persistent GCash QR code storage and retrieval for online settlements.
+- **Maintenance & Chat Automation**: Auto-dispatched structured work order references (`[MAINTENANCE_REQUEST#id]`) into direct messaging channels upon ticket submission.
+- **API Infrastructure & Security**: Increased rate limiting threshold to 2,500 requests per 15 minutes, excluded polling routes (`/chat`, `/notifications`), and streamlined RBAC roles to clean `admin` and `tenant` boundaries.
+- **UI Modernization & Responsive Polish**: Modernized status indicators across CCTV camera feeds, Kanban stages, activity logs, and financial report modals with borderless colored typography; resolved nested double-scrollbars on tenant dashboard.
 
 ### Next Steps after Merge:
 ```bash
