@@ -22,7 +22,6 @@ import {
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
 import { formatPhoneInput } from "@/lib/phone-utils";
-import GoogleSignInButton from "@/components/google-sign-in-button";
 
 const authFeatures = [
   {
@@ -429,21 +428,6 @@ export default function SignupPage() {
                 )}
               </button>
             </form>
-
-            {/* Divider */}
-            <div className="relative flex py-4 items-center">
-              <div className="flex-grow border-t border-slate-200" />
-              <span className="flex-shrink mx-4 text-xs font-medium text-slate-400">
-                or continue with
-              </span>
-              <div className="flex-grow border-t border-slate-200" />
-            </div>
-
-            {/* Google Authentication Button */}
-            <GoogleSignInButton
-              onPending={() => setShowSuccessModal(true)}
-              text="Sign up with Google"
-            />
           </div>
 
           {/* Bottom Switch Link */}
