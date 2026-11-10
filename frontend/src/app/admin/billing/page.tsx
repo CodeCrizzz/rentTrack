@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 import { useEffect, useState, useMemo, useRef, Suspense, useCallback } from "react";
 import { useSearchParams } from "next/navigation";
 import api from "@/lib/api";
