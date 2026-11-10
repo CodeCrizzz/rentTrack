@@ -206,18 +206,34 @@ const getTenantMessages = async (req, res) => {
 //Send Message to Admin
 const sendTenantMessage = async (req, res) => {
     const tenantId = req.user.id;
-    const { message } = req.body;
+    let message = req.body && typeof req.body.message === 'string' ? req.body.message.trim() : '';
+    const file = req.file;
     
-    if (!message) return res.status(400).json({ message: 'Message is required' });
+    if (!message && !file) {
+        return res.status(400).json({ message: 'Message or attachment is required' });
+    }
+
+    let attachmentUrl = null;
+    let fileName = null;
+    let fileType = null;
+
+    if (file) {
+        attachmentUrl = `/uploads/chat/${file.filename}`;
+        fileName = file.originalname;
+        fileType = file.mimetype;
+        if (!message) {
+            message = `Sent attachment: ${fileName}`;
+        }
+    }
 
     try {
         const adminId = 1; // Assuming admin user ID is 1
         const query = `
-            INSERT INTO messages (sender_id, receiver_id, message, sender_type, status) 
-            VALUES ($1, $2, $3, 'tenant', 'sent') 
+            INSERT INTO messages (sender_id, receiver_id, message, sender_type, status, attachment_url, file_name, file_type) 
+            VALUES ($1, $2, $3, 'tenant', 'sent', $4, $5, $6) 
             RETURNING *;
         `;
-        const result = await db.query(query, [tenantId, adminId, message]);
+        const result = await db.query(query, [tenantId, adminId, message, attachmentUrl, fileName, fileType]);
         const sentMsg = result.rows[0];
 
         // Notify admin if offline when tenant sends message
