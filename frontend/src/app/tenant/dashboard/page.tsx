@@ -10,7 +10,7 @@ import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/
 import { 
     CreditCard, Building2, Bell, CheckCircle2, 
     ArrowUpRight, Clock, Droplets, Zap, ShieldCheck,
-    Calendar, AlertCircle, Wrench, ChevronRight, RefreshCw,
+    Calendar, AlertCircle, Wrench, ChevronRight,
     Wallet, TrendingUp, BedDouble
 } from 'lucide-react';
 import { toast } from 'sonner';
@@ -146,6 +146,12 @@ export default function TenantDashboard() {
             }
         }
         fetchDashboardData();
+
+        const handleRefresh = () => {
+            fetchDashboardData(false);
+        };
+        window.addEventListener('renttrack-refresh-data', handleRefresh);
+        return () => window.removeEventListener('renttrack-refresh-data', handleRefresh);
     }, []);
 
     const today = new Date();
@@ -287,15 +293,6 @@ export default function TenantDashboard() {
                 </div>
 
                 <div className="flex items-center gap-2">
-                    <button
-                        onClick={() => fetchDashboardData(true)}
-                        disabled={isRefreshing}
-                        className="px-3 py-1.5 text-xs font-semibold rounded-lg border border-slate-200 dark:border-zinc-800 bg-card hover:bg-slate-50 dark:hover:bg-zinc-800 text-slate-700 dark:text-zinc-300 transition-colors flex items-center gap-1.5 shadow-xs"
-                    >
-                        <RefreshCw className={`w-3.5 h-3.5 ${isRefreshing ? 'animate-spin text-zinc-950 dark:text-white' : 'text-slate-500 dark:text-zinc-400'}`} />
-                        <span>Sync</span>
-                    </button>
-
                     <Link
                         href="/tenant/payments"
                         className="px-3.5 py-1.5 text-xs font-bold rounded-lg bg-zinc-900 hover:bg-zinc-850 dark:bg-zinc-100 dark:hover:bg-zinc-200 text-white dark:text-zinc-950 transition-all flex items-center gap-1.5 shadow-xs"
@@ -308,26 +305,26 @@ export default function TenantDashboard() {
 
             {/* Notification Alert Banner: Payment Overdue or Due Soon */}
             {isOverdue && (
-                <div className="bg-rose-50/90 dark:bg-rose-950/20 border border-rose-200 dark:border-rose-900/50 rounded-xl p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-xs">
+                <div className="bg-red-50/95 dark:bg-red-950/40 border border-red-200 dark:border-red-900/60 rounded-xl p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-xs">
                     <div className="flex items-start gap-3">
-                        <div className="w-8 h-8 rounded-lg bg-rose-500/15 text-rose-600 dark:text-rose-400 border border-rose-200/80 dark:border-rose-900/40 flex items-center justify-center shrink-0 mt-0.5">
+                        <div className="w-8 h-8 rounded-lg bg-red-100 dark:bg-red-900/50 text-red-800 dark:text-red-200 border border-red-200 dark:border-red-800/60 flex items-center justify-center shrink-0 mt-0.5">
                             <AlertCircle className="w-4 h-4" />
                         </div>
                         <div>
                             <div className="flex items-center gap-2">
-                                <span className="text-xs font-bold text-rose-700 dark:text-rose-300">Action Required &bull; Rental Payment Overdue</span>
-                                <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-rose-500/10 text-rose-700 dark:text-rose-300 border border-rose-200/60 dark:border-rose-900/40">
+                                <span className="text-xs font-bold text-red-900 dark:text-red-200">Action Required &bull; Rental Payment Overdue</span>
+                                <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-red-100 dark:bg-red-900/60 text-red-900 dark:text-red-100 border border-red-200 dark:border-red-800/60">
                                     {currentBill.month}
                                 </span>
                             </div>
-                            <p className="text-xs text-rose-600/90 dark:text-rose-400/90 mt-0.5">
+                            <p className="text-xs text-red-950/85 dark:text-red-200/90 mt-0.5">
                                 Your balance of <strong className="font-mono font-bold">₱{Number(currentBill.remainingBalance).toLocaleString()}</strong> was due on {currentBill.dueDate}. Please settle your invoice immediately to prevent late penalties.
                             </p>
                         </div>
                     </div>
                     <Link
                         href="/tenant/payments"
-                        className="px-3.5 py-1.5 text-xs font-bold rounded-lg bg-rose-600 hover:bg-rose-700 text-white transition-all shrink-0 self-start sm:self-center shadow-xs flex items-center gap-1.5"
+                        className="px-3.5 py-1.5 text-xs font-bold rounded-lg bg-red-800 hover:bg-red-900 dark:bg-red-800 dark:hover:bg-red-700 text-white transition-all shrink-0 self-start sm:self-center shadow-xs flex items-center gap-1.5"
                     >
                         <span>Settle Overdue Bill</span>
                         <ArrowUpRight className="w-3.5 h-3.5" />
@@ -374,7 +371,7 @@ export default function TenantDashboard() {
                     <div>
                         <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-500">Total Outstanding</span>
                         <div className={`text-xl font-black font-mono mt-0.5 leading-tight ${
-                            tenantData.balanceDue > 0 ? 'text-rose-600 dark:text-rose-400' : 'text-slate-900 dark:text-white'
+                            tenantData.balanceDue > 0 ? 'text-red-700 dark:text-red-400' : 'text-slate-900 dark:text-white'
                         }`}>
                             <AnimatedBalance value={tenantData.balanceDue} />
                         </div>
@@ -598,7 +595,7 @@ export default function TenantDashboard() {
                                         <div className="flex items-center gap-1.5">
                                             <span className={`w-1.5 h-1.5 rounded-full ${
                                                 tx.status === 'Paid' || tx.status === 'Approved' ? 'bg-zinc-900 dark:bg-white' :
-                                                tx.status === 'Pending' ? 'bg-amber-500' : 'bg-rose-500'
+                                                tx.status === 'Pending' ? 'bg-amber-500' : 'bg-red-800'
                                             }`}></span>
                                             <p className="text-xs font-bold text-slate-900 dark:text-white truncate max-w-[140px]">{tx.description}</p>
                                         </div>
@@ -629,7 +626,7 @@ export default function TenantDashboard() {
                     <div className="pt-2 border-t border-slate-100 dark:border-zinc-800 flex justify-between items-center text-[11px] text-slate-400 dark:text-zinc-500 font-mono">
                         <span>Total Records: {tenantData.recentTransactions.length}</span>
                         <Link href="/tenant/payments" className="text-zinc-900 dark:text-white font-bold hover:underline">
-                            Submit Proof &rarr;
+                            View Payments &rarr;
                         </Link>
                     </div>
                 </div>
