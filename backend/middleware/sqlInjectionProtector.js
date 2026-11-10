@@ -14,6 +14,7 @@ const EXCLUDED_FIELDS = new Set([
     'proofofpayment',
     'attachment',
     'gcashqrcode',
+    'qrphqrcode',
     'logourl'
 ]);
 
