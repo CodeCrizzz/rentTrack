@@ -8,7 +8,7 @@ node_modules/
 # Environment Variables & Secrets (CRITICAL)
 .env
 .env.*
-!.env.example
+.env.example
 
 # Cryptographic Keys & Certificates
 *.pem
