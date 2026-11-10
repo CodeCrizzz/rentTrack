@@ -69,7 +69,10 @@ export default function TenantChatPopup() {
   const [maintDesc, setMaintDesc] = useState("");
   const [maintCategory, setMaintCategory] = useState("Plumbing");
   const [maintPriority, setMaintPriority] = useState("Medium");
+  const [maintImage, setMaintImage] = useState<File | null>(null);
+  const [maintImagePreview, setMaintImagePreview] = useState<string | null>(null);
   const [isSubmittingMaint, setIsSubmittingMaint] = useState(false);
+  const maintFileInputRef = useRef<HTMLInputElement>(null);
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const isAtBottom = useRef(true);
@@ -269,6 +272,30 @@ export default function TenantChatPopup() {
     }
   };
 
+  const handleMaintImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      toast.warning("Please upload a valid image file as proof of damage.");
+      return;
+    }
+    if (file.size > 10 * 1024 * 1024) {
+      toast.warning("Image exceeds 10MB limit.");
+      return;
+    }
+    setMaintImage(file);
+    setMaintImagePreview(URL.createObjectURL(file));
+  };
+
+  const clearMaintImage = () => {
+    setMaintImage(null);
+    if (maintImagePreview && maintImagePreview.startsWith("blob:")) {
+      URL.revokeObjectURL(maintImagePreview);
+    }
+    setMaintImagePreview(null);
+    if (maintFileInputRef.current) maintFileInputRef.current.value = "";
+  };
+
   // Submit quick maintenance request
   const handleMaintenanceSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -284,18 +311,22 @@ export default function TenantChatPopup() {
       formData.append("description", maintDesc.trim());
       formData.append("category", maintCategory);
       formData.append("priority", maintPriority);
+      if (maintImage) {
+        formData.append("attachment", maintImage);
+      }
 
       await api.post("/requests", formData, {
         headers: { "Content-Type": "multipart/form-data" },
       });
 
       toast.success("Maintenance Request Created", {
-        description: "Ticket posted directly into chat.",
+        description: "Ticket with damage proof posted directly into chat.",
       });
 
       setShowMaintenanceModal(false);
       setMaintTitle("");
       setMaintDesc("");
+      clearMaintImage();
       fetchMessages(true);
     } catch (err: any) {
       console.error("Failed to file maintenance request:", err);
@@ -524,6 +555,20 @@ export default function TenantChatPopup() {
                               <p className="font-semibold text-xs leading-relaxed">
                                 {msg.message.replace(/^\[MAINTENANCE_REQUEST(#[0-9]+)?\]\s*/i, "")}
                               </p>
+                              {msg.attachment_url && (
+                                <a
+                                  href={resolveUploadUrl(msg.attachment_url)}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="block mt-1.5 overflow-hidden rounded-lg border border-white/20 hover:opacity-95 transition-opacity"
+                                >
+                                  <img
+                                    src={resolveUploadUrl(msg.attachment_url)}
+                                    alt="Damage proof"
+                                    className="w-full max-h-36 object-cover bg-black/30"
+                                  />
+                                </a>
+                              )}
                               <Link
                                 href="/tenant/rooms"
                                 className="inline-flex items-center gap-1 text-[11px] font-bold text-sky-200 hover:underline pt-0.5"
@@ -779,6 +824,71 @@ export default function TenantChatPopup() {
                         placeholder="Describe the problem..."
                         className="w-full px-3 py-2 text-xs rounded-xl bg-[#3a3b3c] border border-[#4e4f50] text-[#e4e6eb] placeholder-[#b0b3b8] outline-none focus:border-[#0084ff]"
                       />
+                    </div>
+
+                    {/* Damage Proof Photo Upload */}
+                    <div>
+                      <div className="flex items-center justify-between mb-1">
+                        <label className="text-[11px] font-bold text-[#b0b3b8] flex items-center gap-1.5">
+                          <ImageIcon className="w-3.5 h-3.5 text-[#0084ff]" />
+                          <span>Damage Proof Photo</span>
+                        </label>
+                        <span className="text-[10px] text-[#b0b3b8]/70">Required / Recommended</span>
+                      </div>
+
+                      <input
+                        ref={maintFileInputRef}
+                        type="file"
+                        accept="image/*"
+                        onChange={handleMaintImageChange}
+                        className="hidden"
+                      />
+
+                      {maintImagePreview ? (
+                        <div className="relative rounded-xl overflow-hidden border border-[#4e4f50] bg-black/40 group">
+                          <img
+                            src={maintImagePreview}
+                            alt="Damage preview"
+                            className="w-full h-28 object-cover"
+                          />
+                          <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+                            <button
+                              type="button"
+                              onClick={() => maintFileInputRef.current?.click()}
+                              className="px-2.5 py-1 text-xs font-semibold bg-[#242526] hover:bg-[#3a3b3c] text-white rounded-lg transition-colors cursor-pointer"
+                            >
+                              Change
+                            </button>
+                            <button
+                              type="button"
+                              onClick={clearMaintImage}
+                              className="px-2.5 py-1 text-xs font-semibold bg-rose-600 hover:bg-rose-700 text-white rounded-lg transition-colors cursor-pointer"
+                            >
+                              Remove
+                            </button>
+                          </div>
+                          <div className="absolute bottom-1 left-2 right-2 flex items-center justify-between text-[10px] text-white/90 bg-black/70 px-2 py-0.5 rounded backdrop-blur-xs">
+                            <span className="truncate max-w-[170px]">{maintImage?.name}</span>
+                            <span>{maintImage ? (maintImage.size / 1024).toFixed(0) + " KB" : ""}</span>
+                          </div>
+                        </div>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => maintFileInputRef.current?.click()}
+                          className="w-full py-2.5 px-3 rounded-xl border border-dashed border-[#4e4f50] hover:border-[#0084ff] bg-[#3a3b3c]/50 hover:bg-[#3a3b3c] text-center transition-all cursor-pointer flex flex-col items-center justify-center gap-1"
+                        >
+                          <div className="w-7 h-7 rounded-full bg-[#242526] text-[#0084ff] flex items-center justify-center">
+                            <ImageIcon className="w-3.5 h-3.5" />
+                          </div>
+                          <span className="text-xs font-semibold text-[#e4e6eb]">
+                            Upload photo of room damage
+                          </span>
+                          <span className="text-[10px] text-[#b0b3b8]">
+                            JPG, PNG, WEBP (Max 10MB proof)
+                          </span>
+                        </button>
+                      )}
                     </div>
                   </div>
 
