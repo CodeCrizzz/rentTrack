@@ -389,7 +389,7 @@ const getPendingPayments = async (req, res) => {
             JOIN bills b ON p.bill_id = b.id
             JOIN users u ON b.tenant_id = u.id
             LEFT JOIN rooms r ON b.room_id = r.id
-            WHERE p.status = 'Pending Verification' AND (p.payment_method IS NULL OR p.payment_method NOT ILIKE '%gcash%') AND (p.payment_method IS NULL OR p.payment_method NOT ILIKE '%gcash%')
+            WHERE p.status = 'Pending Verification' AND (p.payment_method IS NULL OR (p.payment_method NOT ILIKE '%gcash%' AND p.payment_method NOT ILIKE '%qrph%'))
             ORDER BY p.payment_date ASC
         `;
         const { rows } = await db.query(query);
