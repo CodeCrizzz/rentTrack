@@ -2006,7 +2006,7 @@ export default function AdminDashboard() {
               Recent Activity
             </h2>
             <Link
-              href="/admin/settings#activity-logs"
+              href="/admin/activity-logs"
               className="text-xs font-semibold text-blue-600 dark:text-blue-400 hover:underline"
             >
               View All →
