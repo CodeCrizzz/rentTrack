@@ -462,21 +462,28 @@ const getCurrentBill = async (req, res) => {
     }
 };
 
-// Get Admin-Uploaded GCash QR Code Screenshot for Online Payment
+// Get Admin-Uploaded QR Ph / GCash QR Code Screenshot for Online Payment
 const getTenantGcashQr = async (req, res) => {
     try {
-        let gcashQrCode = '';
+        let qrCode = '';
+        const qrphQrFilePath = path.join(__dirname, '../uploads/qrph-qr.json');
         const gcashQrFilePath = path.join(__dirname, '../uploads/gcash-qr.json');
-        if (fs.existsSync(gcashQrFilePath)) {
-            try {
-                const fileData = JSON.parse(fs.readFileSync(gcashQrFilePath, 'utf8'));
-                gcashQrCode = fileData.gcashQrCode || '';
-            } catch (parseErr) {}
+        const paths = [qrphQrFilePath, gcashQrFilePath];
+        for (const p of paths) {
+            if (fs.existsSync(p)) {
+                try {
+                    const fileData = JSON.parse(fs.readFileSync(p, 'utf8'));
+                    if (fileData.qrphQrCode || fileData.gcashQrCode) {
+                        qrCode = fileData.qrphQrCode || fileData.gcashQrCode || '';
+                        break;
+                    }
+                } catch (parseErr) {}
+            }
         }
-        res.status(200).json({ gcashQrCode });
+        res.status(200).json({ qrphQrCode: qrCode, gcashQrCode: qrCode });
     } catch (error) {
-        console.error('Get Tenant GCash QR Error:', error);
-        res.status(500).json({ message: 'Server error retrieving GCash QR code' });
+        console.error('Get Tenant QR Ph Code Error:', error);
+        res.status(500).json({ message: 'Server error retrieving QR code' });
     }
 };
 
@@ -896,20 +903,23 @@ const completeGcashPayment = async (req, res) => {
                     message: 'Payment complete',
                     payment: rp,
                     bill: bill,
-                    reference_number: rp.reference_number || `GCASH-${rp.id}`,
+                    reference_number: rp.reference_number || `QRPH-${rp.id}`,
                     amount_paid: rp.amount_paid,
                     billing_month: bill.billing_month,
-                    paid_at: rp.payment_date
+                    paid_at: rp.payment_date,
+                    payment_method: rp.payment_method || 'QR Ph'
                 });
             }
             return res.status(400).json({ message: 'Bill has already been completely settled.' });
         }
 
-        // Generate authentic GCash reference number format: e.g. "GCASH-YYYYMMDD-XXXX"
+        const paymentMethod = req.body.payment_method || 'QR Ph';
+        // Generate authentic QR Ph / GCash reference number format: e.g. "QRPH-YYYYMMDD-XXXX"
         const now = new Date();
         const dateStr = now.toISOString().slice(0, 10).replace(/-/g, '');
         const randomCode = Math.floor(1000 + Math.random() * 9000);
-        const refNumber = req.body.reference_number || `GCASH-${dateStr}-${randomCode}`;
+        const prefix = paymentMethod.toLowerCase().includes('gcash') ? 'GCASH' : 'QRPH';
+        const refNumber = req.body.reference_number || `${prefix}-${dateStr}-${randomCode}`;
 
         const newTotalPaid = Math.min(totalAmount, currentPaid + payAmount);
         const newBalance = Math.max(0, totalAmount - newTotalPaid);
@@ -919,7 +929,7 @@ const completeGcashPayment = async (req, res) => {
 
         // Check if duplicate payment was just inserted within 30 seconds
         const duplicateCheck = await db.query(
-            `SELECT * FROM payments WHERE bill_id = $1 AND payment_method = 'GCash' AND payment_date > NOW() - INTERVAL '30 seconds' ORDER BY id DESC LIMIT 1`,
+            `SELECT * FROM payments WHERE bill_id = $1 AND (payment_method ILIKE '%qrph%' OR payment_method ILIKE '%gcash%') AND payment_date > NOW() - INTERVAL '30 seconds' ORDER BY id DESC LIMIT 1`,
             [bill.id]
         );
         if (duplicateCheck.rows.length > 0) {
@@ -929,20 +939,21 @@ const completeGcashPayment = async (req, res) => {
                 message: 'Payment complete',
                 payment: rp,
                 bill: bill,
-                reference_number: rp.reference_number || `GCASH-${rp.id}`,
+                reference_number: rp.reference_number || `QRPH-${rp.id}`,
                 amount_paid: rp.amount_paid,
                 billing_month: bill.billing_month,
-                paid_at: rp.payment_date
+                paid_at: rp.payment_date,
+                payment_method: rp.payment_method || 'QR Ph'
             });
         }
 
         // Insert into payments as Paid
         const insertPaymentQuery = `
             INSERT INTO payments (bill_id, amount_paid, payment_date, payment_method, notes, receipt_url, status, reference_number)
-            VALUES ($1, $2, CURRENT_TIMESTAMP, 'GCash', 'Online GCash Payment', null, 'Verified', $3)
+            VALUES ($1, $2, CURRENT_TIMESTAMP, $3, 'Online QR Ph Payment (GCash/Maya/Banks)', null, 'Verified', $4)
             RETURNING *
         `;
-        const paymentRes = await db.query(insertPaymentQuery, [bill.id, payAmount, refNumber]);
+        const paymentRes = await db.query(insertPaymentQuery, [bill.id, payAmount, paymentMethod, refNumber]);
 
         // Update bill status to Paid and balance to 0
         const updateBillQuery = `
@@ -957,8 +968,8 @@ const completeGcashPayment = async (req, res) => {
         try {
             const adminNotificationService = require('../services/adminNotificationService');
             adminNotificationService.notifyAdminsIfOffline({
-                title: 'GCash Payment Received',
-                message: `Tenant paid ₱${payAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })} via GCash for ${bill.billing_month} (Ref: ${refNumber}). Automatically verified and marked as Paid. No admin action required.`,
+                title: 'QR Ph Payment Received',
+                message: `Tenant paid ₱${payAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })} via ${paymentMethod} for ${bill.billing_month} (Ref: ${refNumber}). Automatically verified and marked as Paid. No admin action required.`,
                 type: 'payment_verification',
                 link: '/admin/billing'
             });
