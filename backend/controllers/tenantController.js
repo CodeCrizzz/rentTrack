@@ -886,22 +886,6 @@ const completeGcashPayment = async (req, res) => {
         const payAmount = amount ? Math.min(parseFloat(amount), remainingBal > 0 ? remainingBal : totalAmount) : (remainingBal > 0 ? remainingBal : totalAmount);
 
         if (payAmount <= 0) {
-            const recentPayment = await db.query(
-                `SELECT * FROM payments WHERE bill_id = $1 ORDER BY id DESC LIMIT 1`,
-                [bill.id]
-            );
-            if (recentPayment.rows.length > 0) {
-                const rp = recentPayment.rows[0];
-                return res.status(200).json({
-                    message: 'Payment complete',
-                    payment: rp,
-                    bill: bill,
-                    reference_number: rp.reference_number || `GCASH-${rp.id}`,
-                    amount_paid: rp.amount_paid,
-                    billing_month: bill.billing_month,
-                    paid_at: rp.payment_date
-                });
-            }
             return res.status(400).json({ message: 'Bill has already been completely settled.' });
         }
 
@@ -916,25 +900,6 @@ const completeGcashPayment = async (req, res) => {
         const newStatus = newBalance <= 0 ? 'Paid' : 'Partial';
 
         await db.query('BEGIN');
-
-        // Check if duplicate payment was just inserted within 30 seconds
-        const duplicateCheck = await db.query(
-            `SELECT * FROM payments WHERE bill_id = $1 AND payment_method = 'GCash' AND payment_date > NOW() - INTERVAL '30 seconds' ORDER BY id DESC LIMIT 1`,
-            [bill.id]
-        );
-        if (duplicateCheck.rows.length > 0) {
-            await db.query('ROLLBACK');
-            const rp = duplicateCheck.rows[0];
-            return res.status(200).json({
-                message: 'Payment complete',
-                payment: rp,
-                bill: bill,
-                reference_number: rp.reference_number || `GCASH-${rp.id}`,
-                amount_paid: rp.amount_paid,
-                billing_month: bill.billing_month,
-                paid_at: rp.payment_date
-            });
-        }
 
         // Insert into payments as Paid
         const insertPaymentQuery = `
