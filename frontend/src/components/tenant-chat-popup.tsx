@@ -9,13 +9,12 @@ import {
   Minus,
   Maximize2,
   Send,
-  ThumbsUp,
-  Phone,
-  Video,
+  Plus,
+  FileText,
+  Download,
   Wrench,
   Smile,
   ImageIcon,
-  ChevronDown,
   Check,
   CheckCheck,
   ChevronRight,
@@ -32,7 +31,23 @@ interface ChatMessage {
   sender_type: "tenant" | "admin";
   created_at: string;
   status?: "Sent" | "Delivered" | "Seen";
+  attachment_url?: string;
+  file_name?: string;
+  file_type?: string;
 }
+
+const resolveUploadUrl = (url?: string | null): string => {
+  if (!url) return "";
+  if (url.startsWith("http://") || url.startsWith("https://") || url.startsWith("data:") || url.startsWith("blob:")) {
+    return url;
+  }
+  const base = process.env.NEXT_PUBLIC_API_URL
+    ? process.env.NEXT_PUBLIC_API_URL.replace(/\/api\/?$/, "")
+    : typeof window !== "undefined"
+      ? `http://${window.location.hostname}:5000`
+      : "http://localhost:5000";
+  return `${base}${url.startsWith("/") ? "" : "/"}${url}`;
+};
 
 export default function TenantChatPopup() {
   const [isOpen, setIsOpen] = useState(false);
@@ -42,6 +57,11 @@ export default function TenantChatPopup() {
   const [unreadCount, setUnreadCount] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
   const [isSending, setIsSending] = useState(false);
+
+  // File Attachment State
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [selectedFilePreview, setSelectedFilePreview] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Maintenance Request Quick Modal inside Chat
   const [showMaintenanceModal, setShowMaintenanceModal] = useState(false);
@@ -159,21 +179,66 @@ export default function TenantChatPopup() {
     }
   };
 
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setSelectedFile(file);
+    if (file.type.startsWith("image/")) {
+      const previewUrl = URL.createObjectURL(file);
+      setSelectedFilePreview(previewUrl);
+    } else {
+      setSelectedFilePreview(null);
+    }
+  };
+
+  const clearSelectedFile = () => {
+    setSelectedFile(null);
+    if (selectedFilePreview && selectedFilePreview.startsWith("blob:")) {
+      URL.revokeObjectURL(selectedFilePreview);
+    }
+    setSelectedFilePreview(null);
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  };
+
+  const handlePaste = (e: React.ClipboardEvent<HTMLInputElement>) => {
+    const items = e.clipboardData?.items;
+    if (!items) return;
+    for (let i = 0; i < items.length; i++) {
+      const item = items[i];
+      if (item.type.indexOf("image") !== -1) {
+        const file = item.getAsFile();
+        if (file) {
+          e.preventDefault();
+          setSelectedFile(file);
+          setSelectedFilePreview(URL.createObjectURL(file));
+          break;
+        }
+      }
+    }
+  };
+
   // Send message
   const handleSendMessage = async (textToSend?: string) => {
-    const text = (textToSend || newMessage).trim();
-    if (!text) return;
+    const text = (textToSend !== undefined ? textToSend : newMessage).trim();
+    if (!text && !selectedFile) return;
+
+    const currentFile = selectedFile;
+    const currentPreview = selectedFilePreview;
 
     const optimistic: ChatMessage = {
       id: `temp-${Date.now()}`,
-      message: text,
+      message: text || (currentFile ? `Sent attachment: ${currentFile.name}` : ""),
       sender_type: "tenant",
       created_at: new Date().toISOString(),
       status: "Sent",
+      attachment_url: currentPreview || undefined,
+      file_name: currentFile?.name,
+      file_type: currentFile?.type,
     };
 
     setMessages((prev) => [...prev, optimistic]);
     setNewMessage("");
+    clearSelectedFile();
     isAtBottom.current = true;
     setTimeout(() => {
       if (scrollRef.current) {
@@ -183,7 +248,18 @@ export default function TenantChatPopup() {
 
     setIsSending(true);
     try {
-      await api.post("/tenant/chat", { message: text });
+      if (currentFile) {
+        const formData = new FormData();
+        formData.append("file", currentFile);
+        if (text) {
+          formData.append("message", text);
+        }
+        await api.post("/tenant/chat", formData, {
+          headers: { "Content-Type": "multipart/form-data" },
+        });
+      } else {
+        await api.post("/tenant/chat", { message: text });
+      }
       fetchMessages(true);
     } catch (err) {
       console.error("Failed to send message:", err);
@@ -341,15 +417,8 @@ export default function TenantChatPopup() {
           >
             {/* Top Facebook-Style Chat Header */}
             <div className="h-14 px-3.5 bg-[#242526] border-b border-[#393a3b] flex items-center justify-between shrink-0 select-none">
-              {/* Left Profile: Avatar + Name + Dropdown */}
-              <div
-                className="flex items-center gap-2.5 cursor-pointer hover:bg-white/5 py-1 px-1.5 rounded-xl transition-colors"
-                onClick={() => {
-                  toast.info("Property Administration", {
-                    description: "Official boarding house management desk.",
-                  });
-                }}
-              >
+              {/* Left Profile: Avatar + Name (Static) */}
+              <div className="flex items-center gap-2.5 py-1 px-1.5 select-none">
                 <div className="relative">
                   <div className="w-9 h-9 rounded-full bg-slate-700 border border-white/10 flex items-center justify-center text-sm font-black text-white shadow-xs">
                     A
@@ -359,46 +428,17 @@ export default function TenantChatPopup() {
                 </div>
 
                 <div className="flex flex-col min-w-0">
-                  <div className="flex items-center gap-1">
-                    <span className="text-sm font-extrabold text-[#e4e6eb] truncate max-w-[130px]">
-                      Admin
-                    </span>
-                    <ChevronDown className="w-3.5 h-3.5 text-zinc-400" />
-                  </div>
+                  <span className="text-sm font-extrabold text-[#e4e6eb] truncate max-w-[150px]">
+                    Admin
+                  </span>
                   <span className="text-[11px] text-[#22c55e] font-semibold leading-none">
                     Active now
                   </span>
                 </div>
               </div>
 
-              {/* Right Header Action Controls: Call, Video, Minus, Close */}
+              {/* Right Header Action Controls: Minus, Close */}
               <div className="flex items-center gap-0.5 text-[#b0b3b8]">
-                <button
-                  type="button"
-                  onClick={() =>
-                    toast.info("Voice Call", {
-                      description: "Calling Property Admin office...",
-                    })
-                  }
-                  className="p-2 rounded-full hover:bg-white/10 hover:text-white transition-colors cursor-pointer"
-                  title="Audio Call"
-                >
-                  <Phone className="w-4 h-4" />
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() =>
-                    toast.info("Video Call", {
-                      description: "Video calling office desk...",
-                    })
-                  }
-                  className="p-2 rounded-full hover:bg-white/10 hover:text-white transition-colors cursor-pointer"
-                  title="Video Call"
-                >
-                  <Video className="w-4 h-4" />
-                </button>
-
                 <button
                   type="button"
                   onClick={() => setIsMinimized(true)}
@@ -493,7 +533,50 @@ export default function TenantChatPopup() {
                               </Link>
                             </div>
                           ) : (
-                            <span>{msg.message}</span>
+                            <div className="space-y-1.5">
+                              {msg.attachment_url && (
+                                <div className="rounded-xl overflow-hidden">
+                                  {msg.file_type?.startsWith("image/") ||
+                                  msg.attachment_url.match(/\.(png|jpe?g|gif|webp|svg)(\?.*)?$/i) ? (
+                                    <a
+                                      href={resolveUploadUrl(msg.attachment_url)}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="block group/img relative"
+                                    >
+                                      <img
+                                        src={resolveUploadUrl(msg.attachment_url)}
+                                        alt={msg.file_name || "Attachment"}
+                                        className="max-h-48 w-auto rounded-lg object-contain bg-black/20"
+                                      />
+                                    </a>
+                                  ) : (
+                                    <a
+                                      href={resolveUploadUrl(msg.attachment_url)}
+                                      download={msg.file_name || "download"}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className={`flex items-center gap-2 p-2 rounded-xl text-xs font-semibold transition-colors ${
+                                        isTenant
+                                          ? "bg-white/15 hover:bg-white/25 text-white"
+                                          : "bg-black/20 hover:bg-black/30 text-[#e4e6eb]"
+                                      }`}
+                                    >
+                                      <FileText className="w-4 h-4 shrink-0 text-sky-200" />
+                                      <span className="truncate max-w-[160px]">
+                                        {msg.file_name || "Attachment"}
+                                      </span>
+                                      <Download className="w-3.5 h-3.5 opacity-80 shrink-0 ml-auto" />
+                                    </a>
+                                  )}
+                                </div>
+                              )}
+                              {msg.message &&
+                              (!msg.attachment_url ||
+                                !msg.message.startsWith("Sent attachment: ")) && (
+                                <p className="whitespace-pre-wrap">{msg.message}</p>
+                              )}
+                            </div>
                           )}
                         </div>
                       </div>
@@ -508,21 +591,49 @@ export default function TenantChatPopup() {
               )}
             </div>
 
-            {/* Quick Action Chips (Above Composer) */}
-            <div className="px-3 py-1.5 bg-[#242526] border-t border-[#393a3b] flex items-center justify-between text-xs">
-              <button
-                type="button"
-                onClick={() => setShowMaintenanceModal(true)}
-                className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[#3a3b3c] hover:bg-[#4e4f50] text-[#e4e6eb] text-[11px] font-bold transition-colors cursor-pointer"
-              >
-                <Wrench className="w-3 h-3 text-[#0084ff]" />
-                <span>Request Maintenance</span>
-              </button>
+            {/* Hidden File Picker for Attachment */}
+            <input
+              ref={fileInputRef}
+              type="file"
+              onChange={handleFileChange}
+              className="hidden"
+              accept="image/*,.pdf,.doc,.docx,.txt,.xls,.xlsx,.zip"
+            />
 
-              <span className="text-[10px] text-[#b0b3b8] font-mono">
-                RentTrack Live Chat
-              </span>
-            </div>
+            {/* Selected File Attachment Preview Bar */}
+            {selectedFile && (
+              <div className="px-3 py-2 bg-[#1f2021] border-t border-[#393a3b] flex items-center justify-between gap-2 text-xs">
+                <div className="flex items-center gap-2 min-w-0">
+                  {selectedFilePreview ? (
+                    <img
+                      src={selectedFilePreview}
+                      alt="Preview"
+                      className="w-10 h-10 rounded-lg object-cover border border-[#4e4f50] shrink-0"
+                    />
+                  ) : (
+                    <div className="w-10 h-10 rounded-lg bg-[#3a3b3c] flex items-center justify-center shrink-0 text-[#0084ff]">
+                      <FileText className="w-5 h-5" />
+                    </div>
+                  )}
+                  <div className="min-w-0">
+                    <p className="font-semibold text-[#e4e6eb] truncate max-w-[190px]">
+                      {selectedFile.name}
+                    </p>
+                    <span className="text-[10px] text-[#b0b3b8]">
+                      {(selectedFile.size / 1024).toFixed(1)} KB
+                    </span>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={clearSelectedFile}
+                  className="p-1 rounded-full hover:bg-white/10 text-[#b0b3b8] hover:text-white transition-colors cursor-pointer"
+                  title="Remove attachment"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            )}
 
             {/* Bottom Composer / Input Bar (Facebook Messenger Style) */}
             <form
@@ -532,7 +643,7 @@ export default function TenantChatPopup() {
               }}
               className="p-2.5 bg-[#242526] border-t border-[#393a3b] flex items-center gap-1.5 shrink-0"
             >
-              {/* Media / Utility Icons */}
+              {/* Media / Utility Icons: Wrench for Maintenance Report */}
               <button
                 type="button"
                 onClick={() => setShowMaintenanceModal(true)}
@@ -548,6 +659,7 @@ export default function TenantChatPopup() {
                   type="text"
                   value={newMessage}
                   onChange={(e) => setNewMessage(e.target.value)}
+                  onPaste={handlePaste}
                   placeholder="Aa"
                   className="w-full bg-transparent text-[13px] text-[#e4e6eb] placeholder-[#b0b3b8] outline-none font-normal"
                 />
@@ -561,8 +673,8 @@ export default function TenantChatPopup() {
                 </button>
               </div>
 
-              {/* Action Button: Thumbs-up if empty, Send icon if text entered */}
-              {newMessage.trim() ? (
+              {/* Action Button: Plus if empty (file/media selector), Send icon if text entered or file attached */}
+              {newMessage.trim() || selectedFile ? (
                 <button
                   type="submit"
                   disabled={isSending}
@@ -574,11 +686,11 @@ export default function TenantChatPopup() {
               ) : (
                 <button
                   type="button"
-                  onClick={() => handleSendMessage("👍")}
-                  className="p-2 text-[#0084ff] hover:scale-110 transition-transform rounded-full cursor-pointer"
-                  title="Send Thumbs Up"
+                  onClick={() => fileInputRef.current?.click()}
+                  className="p-2 text-[#0084ff] hover:scale-110 hover:bg-white/10 transition-all rounded-full cursor-pointer"
+                  title="Attach image or file"
                 >
-                  <ThumbsUp className="w-4 h-4 fill-current" />
+                  <Plus className="w-5 h-5 stroke-[2.5]" />
                 </button>
               )}
             </form>
