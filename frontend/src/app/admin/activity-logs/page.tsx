@@ -50,10 +50,6 @@ interface ActivityLog {
 export default function AdminActivityLogsPage() {
   const router = useRouter();
 
-  useEffect(() => {
-    router.replace("/admin/settings#activity-logs");
-  }, [router]);
-
   const [logs, setLogs] = useState<ActivityLog[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
