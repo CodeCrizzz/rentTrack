@@ -43,7 +43,9 @@ router.get('/payments', getTenantPayments);
 router.post('/payments', paymentLimiter, upload.single('proofOfPayment'), sanitizeInput, sqlInjectionProtector, submitTenantPayment);
 router.get('/bill/current', getCurrentBill);
 router.get('/gcash-qr', getTenantGcashQr);
+router.get('/qrph-qr', getTenantGcashQr);
 router.post('/pay/gcash', completeGcashPayment);
+router.post('/pay/qrph', completeGcashPayment);
 
 router.get('/profile', getTenantProfile);
 router.put('/profile', updateTenantProfile);
