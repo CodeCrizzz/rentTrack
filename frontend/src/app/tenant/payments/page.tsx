@@ -7,11 +7,9 @@ import {
     CreditCard, Calendar, Clock, CheckCircle2, 
     AlertCircle, Upload, FileText, Image as ImageIcon, 
     X, ArrowUpRight, TrendingUp, Wallet, ShieldCheck,
-    Download, Filter, Search, RefreshCw, QrCode, Hash, Building2,
-    Smartphone
+    Download, Filter, Search, RefreshCw, QrCode, Hash, Building2
 } from 'lucide-react';
 import { toast } from 'sonner';
-import QRCode from 'qrcode';
 
 const formatDate = (dateString: string | null | undefined, options?: Intl.DateTimeFormatOptions) => {
     if (!dateString) return "N/A";
@@ -58,8 +56,7 @@ export default function TenantPayments() {
 
     const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
 
-    const [gcashQrCode, setGcashQrCode] = useState<string>("");
-    const [generatedQr, setGeneratedQr] = useState<string>("");
+    const [ownerQrCode, setOwnerQrCode] = useState<string>("");
     const [viewingPayment, setViewingPayment] = useState<any | null>(null);
     const [isCompletingPayment, setIsCompletingPayment] = useState(false);
     const [paymentSuccessData, setPaymentSuccessData] = useState<any | null>(null);
@@ -76,19 +73,10 @@ export default function TenantPayments() {
     const statementPeriodMonth = hasActiveBill ? (currentBill.month || "No bill yet") : "No bill yet";
     const statementPeriodStatus = hasActiveBill ? currentBill.status : "No bill yet";
 
-    // Generate dynamic QR Ph standard QR code if admin has not uploaded a static image yet
-    useEffect(() => {
-        if (!gcashQrCode && currentBill && currentBill.remainingBalance > 0) {
-            const qrPayload = `https://qrph.gov.ph/pay?amount=${currentBill.remainingBalance}&ref=${currentBill.invoiceNumber || currentBill.id || 'RENT'}&biller=RentTrack`;
-            QRCode.toDataURL(qrPayload, { width: 280, margin: 1, errorCorrectionLevel: 'M' })
-                .then((url) => setGeneratedQr(url))
-                .catch(() => {});
-        }
-    }, [gcashQrCode, currentBill]);
+    // Strictly display the owner's uploaded QR code
+    const activeQrUrl = ownerQrCode ? resolveQrUrl(ownerQrCode) : "";
 
-    const activeQrUrl = gcashQrCode ? resolveQrUrl(gcashQrCode) : generatedQr;
-
-    const startGcashPaymentSession = (method = 'QR Ph') => {
+    const startPaymentSession = (method = 'QR Ph') => {
         if (typeof window !== 'undefined' && currentBill?.id) {
             const sessionData = {
                 billId: currentBill.id,
@@ -105,32 +93,6 @@ export default function TenantPayments() {
         }
     };
 
-    const handleOpenGcashApp = () => {
-        startGcashPaymentSession('GCash');
-        if (typeof window !== 'undefined' && currentBill?.remainingBalance) {
-            try {
-                navigator.clipboard.writeText(String(currentBill.remainingBalance));
-            } catch (e) {}
-        }
-        toast.info("Opening GCash App...", {
-            description: `Amount ₱${Number(currentBill?.remainingBalance || 0).toLocaleString()} copied. Scan QR Ph or pay in GCash.`
-        });
-        window.location.href = "gcash://";
-    };
-
-    const handleOpenMayaApp = () => {
-        startGcashPaymentSession('Maya');
-        if (typeof window !== 'undefined' && currentBill?.remainingBalance) {
-            try {
-                navigator.clipboard.writeText(String(currentBill.remainingBalance));
-            } catch (e) {}
-        }
-        toast.info("Opening Maya App...", {
-            description: `Amount ₱${Number(currentBill?.remainingBalance || 0).toLocaleString()} copied. Scan QR Ph or pay in Maya.`
-        });
-        window.location.href = "maya://";
-    };
-
     const fetchPaymentData = async (showToast = false) => {
         if (showToast) setIsRefreshing(true);
         try {
@@ -143,7 +105,7 @@ export default function TenantPayments() {
             if (billResponse.data) setCurrentBill(billResponse.data);
             const qrVal = qrResponse?.data?.qrphQrCode || qrResponse?.data?.gcashQrCode;
             if (qrVal !== undefined) {
-                setGcashQrCode(qrVal || "");
+                setOwnerQrCode(qrVal || "");
             }
 
             const fetchedPayments = paymentsResponse.data || [];
@@ -180,16 +142,16 @@ export default function TenantPayments() {
     const handleDownloadQr = async () => {
         const qrUrl = activeQrUrl;
         if (!qrUrl) {
-            toast.error("No QR Ph code available to download");
+            toast.error("No owner QR Ph code available to download");
             return;
         }
 
-        startGcashPaymentSession('QR Ph');
+        startPaymentSession('QR Ph');
         try {
             if (qrUrl.startsWith("data:")) {
                 const link = document.createElement("a");
                 link.href = qrUrl;
-                link.download = "qrph-national-payment-code.png";
+                link.download = "owner-qrph-payment-code.png";
                 document.body.appendChild(link);
                 link.click();
                 document.body.removeChild(link);
@@ -199,30 +161,23 @@ export default function TenantPayments() {
                 const blobUrl = window.URL.createObjectURL(blob);
                 const link = document.createElement("a");
                 link.href = blobUrl;
-                link.download = "qrph-national-payment-code.png";
+                link.download = "owner-qrph-payment-code.png";
                 document.body.appendChild(link);
                 link.click();
                 document.body.removeChild(link);
                 window.URL.revokeObjectURL(blobUrl);
             }
-            toast.success("QR Ph Code downloaded successfully", {
-                description: "Open GCash, Maya, BDO, BPI, or any banking app > Scan QR > Upload from Gallery."
+            toast.success("Owner's QR Ph Code downloaded successfully", {
+                description: "Open your mobile banking app > Scan QR > Upload from Gallery."
             });
         } catch (err) {
             window.open(qrUrl, "_blank");
         }
     };
 
-    const handleConfirmPayment = async (customBillId?: number, customAmount?: number, customMethod = 'QR Ph') => {
+    const autoSettlePayment = async (targetBillId: number, targetAmount: number, targetMethod = 'QR Ph') => {
         if (isCompletingPayment || isProcessingRef.current) return;
-
-        const targetBillId = customBillId || currentBill?.id;
-        const targetAmount = customAmount !== undefined ? customAmount : currentBill?.remainingBalance;
-
-        if (!targetBillId) {
-            toast.error("No active statement found to pay");
-            return;
-        }
+        if (!targetBillId) return;
 
         try {
             setIsCompletingPayment(true);
@@ -230,7 +185,7 @@ export default function TenantPayments() {
             const { data } = await api.post('/tenant/pay/qrph', {
                 bill_id: targetBillId,
                 amount: targetAmount,
-                payment_method: customMethod || 'QR Ph'
+                payment_method: targetMethod || 'QR Ph'
             });
 
             if (typeof window !== 'undefined') {
@@ -247,9 +202,9 @@ export default function TenantPayments() {
                 window.dispatchEvent(new Event('renttrack-refresh-counts'));
                 window.dispatchEvent(new Event('renttrack-refresh-data'));
             }
-            toast.success("Payment Successful! Statement marked as Paid via QR Ph.");
+            toast.success("Payment Successful! Statement marked as Paid.");
         } catch (error: any) {
-            console.error("Failed to complete QR Ph payment:", error);
+            console.error("Auto-settle payment error:", error);
             if (error.response?.data?.message?.includes('already been completely settled')) {
                 if (typeof window !== 'undefined') {
                     sessionStorage.removeItem('renttrack_pending_qrph_bill');
@@ -258,8 +213,6 @@ export default function TenantPayments() {
                     localStorage.removeItem('renttrack_pending_gcash_bill');
                 }
                 await fetchPaymentData();
-            } else {
-                toast.error(error.response?.data?.message || "Failed to process payment");
             }
         } finally {
             setIsCompletingPayment(false);
@@ -267,7 +220,7 @@ export default function TenantPayments() {
         }
     };
 
-    // Automatically detect when tenant returns from QR Ph / GCash / Maya payment
+    // Automatically detect when tenant returns from QR Ph / mobile banking payment
     useEffect(() => {
         const checkPendingGcashPayment = async () => {
             if (typeof window === 'undefined' || isProcessingRef.current || isCompletingPayment) return;
@@ -285,7 +238,7 @@ export default function TenantPayments() {
                     sessionStorage.removeItem('renttrack_pending_gcash_bill');
                     localStorage.removeItem('renttrack_pending_qrph_bill');
                     localStorage.removeItem('renttrack_pending_gcash_bill');
-                    await handleConfirmPayment(pending.billId, pending.amount, pending.method || 'QR Ph');
+                    await autoSettlePayment(pending.billId, pending.amount, pending.method || 'QR Ph');
                 } else {
                     sessionStorage.removeItem('renttrack_pending_qrph_bill');
                     sessionStorage.removeItem('renttrack_pending_gcash_bill');
@@ -588,11 +541,11 @@ export default function TenantPayments() {
                                     .then((res) => {
                                         const qrVal = res?.data?.qrphQrCode || res?.data?.gcashQrCode;
                                         if (qrVal !== undefined) {
-                                            setGcashQrCode(qrVal || "");
+                                            setOwnerQrCode(qrVal || "");
                                         }
                                     })
                                     .catch(() => {});
-                                startGcashPaymentSession('QR Ph');
+                                startPaymentSession('QR Ph');
                                 setIsPaymentModalOpen(true);
                             }}
                             disabled={!hasActiveBill || currentBill.remainingBalance <= 0}
@@ -914,95 +867,63 @@ export default function TenantPayments() {
                                                 </div>
                                             </div>
 
-                                            {/* Right: QR Code Display Card */}
+                                            {/* Right: Owner's Uploaded QR Code Display Card */}
                                             <div className="p-4 rounded-xl bg-slate-50 dark:bg-[#0f1422] border border-slate-200 dark:border-[#1E2638] flex flex-col items-center justify-between text-center space-y-3">
                                                 <div className="w-full space-y-2">
                                                     <div className="flex items-center justify-center gap-1.5 pb-2 border-b border-slate-200/80 dark:border-zinc-800">
                                                         <QrCode className="w-3.5 h-3.5 text-sky-600 dark:text-[#38bdf8]" />
                                                         <span className="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-zinc-200">
-                                                            QR Ph National Standard Code
+                                                            Owner's QR Ph Code
                                                         </span>
                                                     </div>
 
                                                     <div className="flex items-center justify-center pt-1">
                                                         {activeQrUrl ? (
                                                             <div 
-                                                                className="w-full max-w-[200px] flex flex-col items-center justify-center rounded-xl overflow-hidden bg-white p-2 border border-slate-200 dark:border-zinc-800 shadow-xs"
+                                                                className="w-full max-w-[210px] flex flex-col items-center justify-center rounded-xl overflow-hidden bg-white p-2.5 border border-slate-200 dark:border-zinc-800 shadow-xs"
                                                             >
                                                                 {/* eslint-disable-next-line @next/next/no-img-element */}
                                                                 <img
                                                                     src={activeQrUrl}
-                                                                    alt="QR Ph Payment Code"
-                                                                    className="w-full h-auto max-h-[175px] object-contain rounded-lg select-none"
+                                                                    alt="Owner's QR Ph Payment Code"
+                                                                    className="w-full h-auto max-h-[190px] object-contain rounded-lg select-none"
                                                                 />
-                                                                <span className="text-[10px] text-slate-500 font-semibold mt-1">
-                                                                    Scan with any QR Ph App
+                                                                <span className="text-[10px] text-slate-500 font-semibold mt-1.5">
+                                                                    Owner's Official QR Ph Code
                                                                 </span>
                                                             </div>
                                                         ) : (
-                                                            <div className="w-full py-8 px-4 rounded-xl border border-dashed border-slate-300 dark:border-zinc-800 flex flex-col items-center justify-center text-center">
+                                                            <div className="w-full py-10 px-4 rounded-xl border border-dashed border-slate-300 dark:border-zinc-800 flex flex-col items-center justify-center text-center">
                                                                 <QrCode className="w-10 h-10 text-slate-300 dark:text-zinc-700 mb-2" />
-                                                                <p className="text-xs font-semibold text-slate-600 dark:text-zinc-300">
-                                                                    Generating QR Ph code...
+                                                                <p className="text-xs font-bold text-slate-700 dark:text-zinc-200">
+                                                                    Owner QR Code Not Available
+                                                                </p>
+                                                                <p className="text-[11px] text-slate-400 dark:text-zinc-500 mt-1 max-w-[220px]">
+                                                                    The property owner has not uploaded an official QR Ph payment code yet. Please contact management or pay in cash at the Admin Office.
                                                                 </p>
                                                             </div>
                                                         )}
                                                     </div>
 
-                                                    {/* Quick Actions: Open Apps & Download QR */}
-                                                    <div className="grid grid-cols-2 gap-2 w-full pt-1">
+                                                    {activeQrUrl && (
                                                         <button
                                                             type="button"
-                                                            onClick={handleOpenGcashApp}
-                                                            className="py-2 px-2 rounded-xl text-xs font-bold bg-sky-50 dark:bg-[#182032] hover:bg-sky-100 dark:hover:bg-[#1f2a40] text-sky-700 dark:text-[#38bdf8] border border-sky-200 dark:border-[#243048] transition-all flex items-center justify-center gap-1.5 shadow-xs cursor-pointer"
+                                                            onClick={handleDownloadQr}
+                                                            className="w-full py-2.5 px-3 rounded-xl text-xs font-bold bg-white dark:bg-zinc-800 hover:bg-slate-100 dark:hover:bg-zinc-700 text-slate-700 dark:text-zinc-200 border border-slate-200 dark:border-zinc-700 transition-all flex items-center justify-center gap-1.5 shadow-xs cursor-pointer"
                                                         >
-                                                            <Smartphone className="w-3.5 h-3.5 text-sky-600 dark:text-[#38bdf8]" />
-                                                            <span>Open GCash</span>
+                                                            <Download className="w-3.5 h-3.5 text-slate-600 dark:text-slate-300" />
+                                                            <span>Download QR Code</span>
                                                         </button>
-
-                                                        <button
-                                                            type="button"
-                                                            onClick={handleOpenMayaApp}
-                                                            className="py-2 px-2 rounded-xl text-xs font-bold bg-emerald-50 dark:bg-emerald-950/40 hover:bg-emerald-100 dark:hover:bg-emerald-900/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800/40 transition-all flex items-center justify-center gap-1.5 shadow-xs cursor-pointer"
-                                                        >
-                                                            <Smartphone className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
-                                                            <span>Open Maya</span>
-                                                        </button>
-                                                    </div>
-
-                                                    <button
-                                                        type="button"
-                                                        onClick={handleDownloadQr}
-                                                        disabled={!activeQrUrl}
-                                                        className="w-full py-2 px-2 rounded-xl text-xs font-bold bg-white dark:bg-zinc-800 hover:bg-slate-100 dark:hover:bg-zinc-700 text-slate-700 dark:text-zinc-200 border border-slate-200 dark:border-zinc-700 transition-all flex items-center justify-center gap-1.5 shadow-xs cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
-                                                    >
-                                                        <Download className="w-3.5 h-3.5 text-slate-600 dark:text-slate-300" />
-                                                        <span>Download QR Ph Code</span>
-                                                    </button>
+                                                    )}
                                                 </div>
 
-                                                <div className="w-full space-y-2 pt-1 border-t border-slate-200/80 dark:border-zinc-800">
-                                                    <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-tight">
-                                                        Scan with GCash, Maya, BDO, BPI, or any banking app and enter: <strong className="text-slate-900 dark:text-white font-bold font-mono">₱{Number(currentBill.remainingBalance || 0).toLocaleString()}</strong>
+                                                <div className="w-full space-y-1.5 pt-2 border-t border-slate-200/80 dark:border-zinc-800 text-center">
+                                                    <p className="text-xs font-bold text-slate-800 dark:text-slate-200">
+                                                        Amount to Pay: <span className="font-mono text-emerald-600 dark:text-emerald-400">₱{Number(currentBill.remainingBalance || 0).toLocaleString()}</span>
                                                     </p>
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => handleConfirmPayment()}
-                                                        disabled={isCompletingPayment}
-                                                        className="w-full py-2.5 rounded-xl text-xs font-bold bg-emerald-600 hover:bg-emerald-500 text-white transition-all shadow-md flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
-                                                    >
-                                                        {isCompletingPayment ? (
-                                                            <>
-                                                                <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-                                                                <span>Verifying QR Ph Payment...</span>
-                                                            </>
-                                                        ) : (
-                                                            <>
-                                                                <CheckCircle2 className="w-4 h-4" />
-                                                                <span>I Have Scanned & Paid via QR Ph</span>
-                                                            </>
-                                                        )}
-                                                    </button>
+                                                    <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed">
+                                                        Scan this official QR code using GCash, Maya, or any Philippine banking app. When you return to RentTrack, your payment will automatically be updated.
+                                                    </p>
                                                 </div>
                                             </div>
                                         </div>
