@@ -364,6 +364,12 @@ export default function AdminChat() {
                         date: formatDateLabel(msg.created_at),
                         timestamp: createdTs,
                         is_read: msg.status === 'read',
+                        attachment: msg.attachment_url ? {
+                            title: msg.file_name || 'Attachment',
+                            type: msg.file_type || 'File',
+                            size: '',
+                            url: resolveUploadUrl(msg.attachment_url),
+                        } : undefined,
                         maintenanceTicket: ticketInfo,
                     };
                 });
@@ -1013,6 +1019,21 @@ export default function AdminChat() {
                                                             <div className="flex flex-col items-start max-w-[480px]">
                                                                 <div className="bg-[#f0f2f5] dark:bg-zinc-900 text-slate-800 dark:text-zinc-200 rounded-2xl rounded-tl-xs px-4 py-3 shadow-2xs text-[13px] leading-relaxed border border-slate-100 dark:border-zinc-800/80">
                                                                     <p className="whitespace-pre-wrap">{msg.text}</p>
+                                                                    {msg.attachment && (
+                                                                        <div className="mt-2.5 pt-2 border-t border-slate-200/60 dark:border-zinc-800">
+                                                                            {msg.attachment.type.startsWith('image/') || msg.attachment.url?.match(/\.(png|jpe?g|gif|webp|svg)$/i) ? (
+                                                                                <a href={msg.attachment.url} target="_blank" rel="noopener noreferrer" className="block overflow-hidden rounded-lg border border-slate-200 dark:border-zinc-700">
+                                                                                    <img src={msg.attachment.url} alt={msg.attachment.title} className="max-h-60 max-w-full rounded-lg object-contain bg-black/5 dark:bg-black/20" />
+                                                                                </a>
+                                                                            ) : (
+                                                                                <a href={msg.attachment.url} download={msg.attachment.title} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 text-xs font-semibold hover:bg-slate-100 dark:hover:bg-zinc-700 transition-colors">
+                                                                                    <FileText className="w-4 h-4 text-[#0062cc]" />
+                                                                                    <span className="truncate max-w-[200px]">{msg.attachment.title}</span>
+                                                                                    <Download className="w-3.5 h-3.5 opacity-70 ml-1" />
+                                                                                </a>
+                                                                            )}
+                                                                        </div>
+                                                                    )}
                                                                 </div>
 
                                                                 <span className="text-[11px] text-slate-400 dark:text-zinc-500 mt-1 pl-1 font-sans">
