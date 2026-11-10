@@ -29,9 +29,15 @@ const createRequest = async (req, res) => {
         try {
             const ticketMsg = `[MAINTENANCE_REQUEST#${createdReq.id}] ${title}`;
             await db.query(
-                `INSERT INTO messages (sender_id, receiver_id, message, sender_type, status)
-                 VALUES ($1, 1, $2, 'tenant', 'sent')`,
-                [tenant_id, ticketMsg]
+                `INSERT INTO messages (sender_id, receiver_id, message, sender_type, status, attachment_url, file_name, file_type)
+                 VALUES ($1, 1, $2, 'tenant', 'sent', $3, $4, $5)`,
+                [
+                    tenant_id,
+                    ticketMsg,
+                    attachment_url,
+                    req.file ? req.file.originalname : null,
+                    req.file ? req.file.mimetype : (attachment_url ? 'image/jpeg' : null)
+                ]
             );
         } catch (chatErr) {
             console.error('Error posting maintenance ticket to chat:', chatErr.message);
