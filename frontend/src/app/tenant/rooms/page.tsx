@@ -31,6 +31,13 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 
+const getAttachmentUrl = (path: string | null | undefined) => {
+  if (!path) return null;
+  if (path.startsWith("http://") || path.startsWith("https://") || path.startsWith("blob:") || path.startsWith("data:")) return path;
+  const host = typeof window !== "undefined" ? window.location.hostname : "localhost";
+  return `http://${host}:5000${path.startsWith("/") ? path : `/${path}`}`;
+};
+
 // Helper to assign intuitive icons to real inclusions/amenities entered by admin
 const getAmenityIcon = (label: string) => {
   const lower = label.toLowerCase();
@@ -653,6 +660,26 @@ export default function TenantRooms() {
                       {selectedMaintenance.description ||
                         "No description provided."}
                     </div>
+
+                    {(selectedMaintenance.attachment_url || selectedMaintenance.image_url) && (
+                      <div className="mt-3">
+                        <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-500 block mb-1.5">
+                          Damage Proof Photo
+                        </span>
+                        <a
+                          href={getAttachmentUrl(selectedMaintenance.attachment_url || selectedMaintenance.image_url) || "#"}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="block rounded-xl overflow-hidden border border-slate-200 dark:border-zinc-800 bg-black/5 dark:bg-black/20 hover:opacity-95 transition-opacity"
+                        >
+                          <img
+                            src={getAttachmentUrl(selectedMaintenance.attachment_url || selectedMaintenance.image_url) || ""}
+                            alt="Damage proof"
+                            className="w-full max-h-52 object-contain bg-slate-100 dark:bg-zinc-900"
+                          />
+                        </a>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
