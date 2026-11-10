@@ -161,26 +161,6 @@ export default function AdminReportModal({ isOpen, onClose }: AdminReportModalPr
     taxId: "TIN: 432-891-002-000",
   });
 
-  // Load custom settings from localStorage if configured by admin
-  useEffect(() => {
-    try {
-      const stored = localStorage.getItem("renttrack_admin_settings");
-      if (stored) {
-        const parsed = JSON.parse(stored);
-        setPropertyProfile((prev) => ({
-          ...prev,
-          propertyName: parsed.propertyName || prev.propertyName,
-          propertyAddress: parsed.propertyAddress || prev.propertyAddress,
-          contactPhone: parsed.contactPhone || prev.contactPhone,
-          landlordName: parsed.landlordName || prev.landlordName,
-          taxId: parsed.taxId || prev.taxId,
-        }));
-      }
-    } catch (e) {
-      console.error("Error reading admin profile settings", e);
-    }
-  }, [isOpen]);
-
   const fetchReport = async (range = dateRange) => {
     setIsLoading(true);
     try {
