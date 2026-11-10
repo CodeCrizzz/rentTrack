@@ -379,25 +379,38 @@ export default function TenantMaintenance() {
                         </div>
 
                         <div>
+                            <label className="block text-xs font-bold text-slate-700 dark:text-zinc-300 mb-1.5">
+                                Damage Proof Photo (Optional)
+                            </label>
                             <div 
-                                className="w-full border-2 border-dashed border-slate-200 dark:border-zinc-700 rounded-lg p-4 flex flex-col items-center cursor-pointer bg-secondary/30 hover:bg-secondary/50 transition-colors" 
+                                className="w-full border-2 border-dashed border-slate-200 dark:border-zinc-700 rounded-xl p-3.5 flex flex-col items-center cursor-pointer bg-secondary/30 hover:bg-secondary/50 transition-colors" 
                                 onClick={() => fileInputRef.current?.click()}
                             >
                                 {imageFile ? (
-                                    <div className="flex items-center justify-between w-full text-xs">
-                                        <span className="font-semibold text-slate-900 dark:text-white truncate max-w-[200px]">{imageFile.name}</span>
-                                        <button 
-                                            type="button" 
-                                            onClick={(e) => { e.stopPropagation(); setImageFile(null); if (fileInputRef.current) fileInputRef.current.value = ''; }}
-                                            className="text-rose-500 hover:underline font-bold"
-                                        >
-                                            Remove
-                                        </button>
+                                    <div className="w-full flex flex-col items-center gap-2">
+                                        <div className="relative w-full h-32 rounded-lg overflow-hidden border border-slate-200 dark:border-zinc-700 bg-black/5 dark:bg-black/20">
+                                            <img
+                                                src={URL.createObjectURL(imageFile)}
+                                                alt="Damage proof preview"
+                                                className="w-full h-full object-cover"
+                                            />
+                                        </div>
+                                        <div className="flex items-center justify-between w-full text-xs">
+                                            <span className="font-semibold text-slate-900 dark:text-white truncate max-w-[200px]">{imageFile.name}</span>
+                                            <button 
+                                                type="button" 
+                                                onClick={(e) => { e.stopPropagation(); setImageFile(null); if (fileInputRef.current) fileInputRef.current.value = ''; }}
+                                                className="text-rose-500 hover:underline font-bold cursor-pointer"
+                                            >
+                                                Remove
+                                            </button>
+                                        </div>
                                     </div>
                                 ) : (
-                                    <span className="text-xs font-medium text-slate-500 flex flex-col items-center gap-1.5">
-                                        <svg className="w-5 h-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg> 
-                                        Attach Photo (Max 5MB)
+                                    <span className="text-xs font-medium text-slate-500 flex flex-col items-center gap-1.5 py-1">
+                                        <svg className="w-6 h-6 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg> 
+                                        <span>Upload photo proof of room damage</span>
+                                        <span className="text-[11px] text-slate-400">(Max 5MB • JPG, PNG, WEBP)</span>
                                     </span>
                                 )}
                                 <input ref={fileInputRef} type="file" className="hidden" accept="image/*" onChange={handleFileChange} />
