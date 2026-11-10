@@ -34,6 +34,25 @@ const storage = multer.diskStorage({
 });
 const upload = multer({ storage: storage });
 
+const chatStorage = multer.diskStorage({
+    destination: function (req, file, cb) {
+        const dir = path.join(__dirname, '../uploads/chat');
+        if (!fs.existsSync(dir)) {
+            fs.mkdirSync(dir, { recursive: true });
+        }
+        cb(null, dir);
+    },
+    filename: function (req, file, cb) {
+        const fileExt = path.extname(file.originalname).toLowerCase() || '.png';
+        const tenantId = req.user ? req.user.id : 'unknown';
+        cb(null, `chat-${Date.now()}-${tenantId}${fileExt}`);
+    }
+});
+const uploadChat = multer({
+    storage: chatStorage,
+    limits: { fileSize: 25 * 1024 * 1024 }
+});
+
 // All tenant portal endpoints require active authentication and the tenant role
 router.use(protect);
 router.use(requireRole([ROLES.TENANT]));
@@ -56,7 +75,7 @@ router.post('/rooms/choose', chooseRoom);
 
 router.get('/chat/unread', getUnreadCount);
 router.get('/chat', getTenantMessages);
-router.post('/chat', sendTenantMessage);
+router.post('/chat', uploadChat.single('file'), sendTenantMessage);
 
 router.get('/notifications', getTenantNotifications);
 router.post('/notifications/read-all', markAllNotificationsRead);
