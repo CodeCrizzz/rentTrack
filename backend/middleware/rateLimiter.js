@@ -30,7 +30,7 @@ const apiLimiter = rateLimit({
  */
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  limit: process.env.NODE_ENV === "production" ? 15 : 100, // Limit authentication requests per window
+  limit: 10, // Limit each IP to 10 authentication requests per window
   standardHeaders: "draft-8",
   legacyHeaders: false,
   message: {
