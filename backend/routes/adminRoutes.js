@@ -79,8 +79,10 @@ router.delete('/announcements/:id', hasPermission(PERMISSIONS.ANNOUNCEMENTS_DELE
 router.get('/reports', hasPermission(PERMISSIONS.REPORTS_READ), getReportData);
 router.get('/activity-logs', hasPermission(PERMISSIONS.ACTIVITY_LOGS_READ), getActivityLogs);
 
-// GCash QR Code Configuration for Billing Operations
+// QR Ph / GCash QR Code Configuration for Billing Operations
 router.get('/gcash-qr', hasPermission(PERMISSIONS.BILLS_READ), getGcashQrCode);
 router.put('/gcash-qr', hasPermission(PERMISSIONS.BILLS_UPDATE), updateGcashQrCode);
+router.get('/qrph-qr', hasPermission(PERMISSIONS.BILLS_READ), getGcashQrCode);
+router.put('/qrph-qr', hasPermission(PERMISSIONS.BILLS_UPDATE), updateGcashQrCode);
 
 module.exports = router;
