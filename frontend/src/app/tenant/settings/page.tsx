@@ -489,8 +489,9 @@ export default function TenantSettingsPage() {
                                 <h1 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white tracking-tight">
                                     Tenant Settings & Resident Preferences
                                 </h1>
-                                <span className="text-[11px] font-mono font-bold text-emerald-600 dark:text-emerald-400">
-                                    ACCOUNT ACTIVE
+                                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-200/60 dark:border-emerald-500/20">
+                                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                                    <span>ACCOUNT ACTIVE</span>
                                 </span>
                             </div>
                             <p className="text-xs text-slate-500 dark:text-zinc-400 mt-0.5">
@@ -1310,10 +1311,10 @@ export default function TenantSettingsPage() {
                                         <div className="min-w-0 flex-1">
                                             <div className="flex items-center gap-2">
                                                 <span className="text-[10px] font-mono font-bold text-slate-500">{t.id}</span>
-                                                <span className={`text-[10px] font-bold ${
+                                                <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
                                                     t.status === 'Resolved' || t.status === 'Closed'
-                                                        ? 'text-emerald-600 dark:text-emerald-400'
-                                                        : 'text-amber-600 dark:text-amber-400'
+                                                        ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400'
+                                                        : 'bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400'
                                                 }`}>
                                                     {t.status}
                                                 </span>
