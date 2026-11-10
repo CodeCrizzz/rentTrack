@@ -9,6 +9,7 @@ const SENSITIVE_FIELDS = new Set([
     'token',
     'authorization',
     'gcashqrcode',
+    'qrphqrcode',
     'logourl'
 ]);
 
