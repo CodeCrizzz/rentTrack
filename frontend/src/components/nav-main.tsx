@@ -34,9 +34,11 @@ export interface NavMainItem {
 export function NavMain({
   label = "",
   items,
+  isTenant = false,
 }: {
   label?: string;
   items: NavMainItem[];
+  isTenant?: boolean;
 }) {
   return (
     <SidebarGroup className="p-0">
@@ -66,7 +68,11 @@ export function NavMain({
                       isActive={item.isActive}
                       className={
                         item.isActive
-                          ? "!bg-[#0062cc] !text-white font-bold shadow-xs hover:!bg-[#0052ad] rounded-xl h-11 px-3.5"
+                          ? isTenant
+                            ? "!bg-indigo-500 !text-white font-bold shadow-xs hover:!bg-indigo-600 rounded-xl h-11 px-3.5"
+                            : "!bg-[#0062cc] !text-white font-bold shadow-xs hover:!bg-[#0052ad] rounded-xl h-11 px-3.5"
+                          : isTenant
+                          ? "text-slate-300 hover:bg-slate-800/80 hover:text-white font-medium rounded-xl h-11 px-3.5 transition-colors"
                           : "text-slate-200 hover:bg-white/10 hover:text-white font-medium rounded-xl h-11 px-3.5 transition-colors"
                       }
                     />
@@ -114,7 +120,11 @@ export function NavMain({
                 isActive={item.isActive}
                 className={
                   item.isActive
-                    ? "!bg-[#0062cc] !text-white font-bold shadow-xs hover:!bg-[#0052ad] rounded-xl h-11 px-3.5"
+                    ? isTenant
+                      ? "!bg-indigo-500 !text-white font-bold shadow-xs hover:!bg-indigo-600 rounded-xl h-11 px-3.5"
+                      : "!bg-[#0062cc] !text-white font-bold shadow-xs hover:!bg-[#0052ad] rounded-xl h-11 px-3.5"
+                    : isTenant
+                    ? "text-slate-300 hover:bg-slate-800/80 hover:text-white font-medium rounded-xl h-11 px-3.5 transition-colors"
                     : "text-slate-200 hover:bg-white/10 hover:text-white font-medium rounded-xl h-11 px-3.5 transition-colors"
                 }
               >
