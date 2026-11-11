@@ -118,7 +118,7 @@ interface PendingPayment {
   notes: string;
   reference_number?: string;
   referenceNumber?: string;
-  receipt_url: string;
+  receipt_url?: string;
   status: string;
   billing_month: string;
   bill_total: string;
