@@ -145,7 +145,7 @@ const sendPaymentDueEmail = async ({
       </div>
 
       <p class="message">
-        You can settle your bill and upload your payment proof directly via the Tenant Portal.
+        You can settle your bill directly via the Tenant Portal.
       </p>
 
       <div style="text-align: center; margin: 28px 0 16px;">
@@ -259,7 +259,7 @@ const sendPaymentOverdueEmail = async ({
       </div>
 
       <p class="message">
-        Please access your portal today to submit your payment proof or contact administration if you need assistance.
+        Please access your portal today to settle your balance or contact administration if you need assistance.
       </p>
 
       <div style="text-align: center; margin: 28px 0 16px;">
@@ -268,7 +268,7 @@ const sendPaymentOverdueEmail = async ({
     </div>
     <div class="footer">
       <p>RentTrack Property Management System &bull; Billing Compliance Department</p>
-      <p>If you have already submitted your payment proof, our team is currently verifying it. Thank you for your cooperation.</p>
+      <p>If you have already settled your payment, thank you for your cooperation.</p>
     </div>
   </div>
 </body>
