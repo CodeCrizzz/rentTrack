@@ -144,9 +144,6 @@ const getTenantPayments = async (req, res) => {
                     COALESCE(p.status, 'Paid') AS status, 
                     p.payment_method,
                     p.payment_method AS method, 
-                    p.receipt_url AS proof_url,
-                    p.receipt_url AS proof_image,
-                    p.receipt_url AS "proofOfPayment",
                     p.notes,
                     COALESCE(p.reference_number, p.id::text) AS "referenceNumber",
                     COALESCE(p.reference_number, p.id::text) AS reference_number,
@@ -503,118 +500,6 @@ const getTenantGcashQr = async (req, res) => {
     }
 };
 
-// Submit Proof of Payment
-const submitTenantPayment = async (req, res) => {
-    const tenantId = req.user.id;
-    const { bill_id, amount_paid } = req.body;
-    let notes = req.body.notes || '';
-    let refNumber = req.body.reference_number || req.body.referenceNumber;
-    if (!refNumber && notes) {
-        const match = notes.match(/Ref[:#]?\s*(\S+)/i);
-        refNumber = match ? match[1] : notes;
-    }
-    const payment_method = 'GCash';
-    let receipt_url = null;
-
-    if (!bill_id || !amount_paid) {
-        return res.status(400).json({ message: 'Missing required payment details' });
-    }
-
-    try {
-        if (req.file && req.file.filename) {
-            receipt_url = `/uploads/payments/${req.file.filename}`;
-        }
-
-        await db.query('BEGIN');
-
-        const isGcash = payment_method && payment_method.toLowerCase().includes('gcash');
-        const paymentStatus = isGcash ? 'Verified' : 'Pending Verification';
-        const billStatus = isGcash ? 'Paid' : 'Pending Verification';
-
-        const insertPaymentQuery = `
-            INSERT INTO payments (bill_id, amount_paid, payment_date, payment_method, notes, receipt_url, status, reference_number) 
-            VALUES ($1, $2, CURRENT_TIMESTAMP, $3, $4, $5, $7, $6) 
-            RETURNING *
-        `;
-        const paymentResult = await db.query(insertPaymentQuery, [bill_id, amount_paid, payment_method, notes, receipt_url, refNumber, paymentStatus]);
-        
-        const updateBillQuery = `
-            UPDATE bills
-            SET status = $3,
-                amount_paid = CASE WHEN $3 = 'Paid' THEN total_amount ELSE amount_paid END,
-                balance = CASE WHEN $3 = 'Paid' THEN 0 ELSE balance END
-            WHERE id = $1 AND tenant_id = $2
-            RETURNING id, billing_month, total_amount, amount_paid, balance, due_date, status
-        `;
-        const billResult = await db.query(updateBillQuery, [bill_id, tenantId, billStatus]);
-
-        await db.query('COMMIT');
-
-        const newPaymentRaw = paymentResult.rows[0];
-        const updatedBillRaw = billResult.rows[0];
-
-        const newPayment = {
-            id: newPaymentRaw.id,
-            date: newPaymentRaw.payment_date,
-            description: `Payment for ${updatedBillRaw ? updatedBillRaw.billing_month : 'Bill'}`,
-            amount: newPaymentRaw.amount_paid,
-            status: newPaymentRaw.status,
-            payment_method: newPaymentRaw.payment_method,
-            method: newPaymentRaw.payment_method,
-            proof_image: newPaymentRaw.receipt_url,
-            proof_url: newPaymentRaw.receipt_url,
-            proofOfPayment: newPaymentRaw.receipt_url,
-            notes: newPaymentRaw.notes,
-            referenceNumber: newPaymentRaw.reference_number || newPaymentRaw.id.toString(),
-            reference_number: newPaymentRaw.reference_number || newPaymentRaw.id.toString(),
-            created_at: newPaymentRaw.created_at,
-            billing_month: updatedBillRaw ? updatedBillRaw.billing_month : null,
-            rent_amount: updatedBillRaw ? updatedBillRaw.rent_amount : null,
-            water_charges: updatedBillRaw ? updatedBillRaw.water_charges : null,
-            electricity_charges: updatedBillRaw ? updatedBillRaw.electricity_charges : null,
-            other_fees: updatedBillRaw ? updatedBillRaw.other_fees : null,
-            bill_total: updatedBillRaw ? updatedBillRaw.total_amount : null,
-            bill_balance: updatedBillRaw ? updatedBillRaw.balance : null,
-            bill_status: updatedBillRaw ? updatedBillRaw.status : null,
-            bill_due_date: updatedBillRaw ? updatedBillRaw.due_date : null
-        };
-
-        const updatedBill = updatedBillRaw ? {
-            id: updatedBillRaw.id,
-            month: updatedBillRaw.billing_month,
-            totalAmount: parseFloat(updatedBillRaw.total_amount),
-            amountPaid: parseFloat(updatedBillRaw.amount_paid),
-            remainingBalance: parseFloat(updatedBillRaw.balance),
-            dueDate: updatedBillRaw.due_date,
-            status: updatedBillRaw.status
-        } : null;
-
-        // Notify admin if offline when payment is submitted
-        try {
-            const adminNotificationService = require('../services/adminNotificationService');
-            const tenantName = req.user.name || 'A resident';
-            adminNotificationService.notifyAdminsIfOffline({
-                title: 'Payment Verification',
-                message: `${tenantName} submitted a ₱${Number(amount_paid).toLocaleString()} payment proof for verification.`,
-                type: 'general',
-                link: '/admin/billing'
-            });
-        } catch (notifErr) {
-            console.error('Error queuing offline payment notification:', notifErr.message);
-        }
-
-        res.status(201).json({ 
-            message: 'Payment proof submitted for verification', 
-            newPayment,
-            updatedBill
-        });
-    } catch (error) {
-        await db.query('ROLLBACK');
-        console.error('Submit Payment Error:', error);
-        res.status(500).json({ message: 'Server error submitting payment proof' });
-    }
-};
-
 // Get Available Rooms for Tenant View
 const getTenantRooms = async (req, res) => {
     try {
@@ -965,8 +850,8 @@ const completeGcashPayment = async (req, res) => {
 
         // Insert into payments as Paid
         const insertPaymentQuery = `
-            INSERT INTO payments (bill_id, amount_paid, payment_date, payment_method, notes, receipt_url, status, reference_number)
-            VALUES ($1, $2, CURRENT_TIMESTAMP, $3, 'Online QR Ph Payment (GCash/Maya/Banks)', null, 'Verified', $4)
+            INSERT INTO payments (bill_id, amount_paid, payment_date, payment_method, notes, status, reference_number)
+            VALUES ($1, $2, CURRENT_TIMESTAMP, $3, 'Online QR Ph Payment (GCash/Maya/Banks)', 'Verified', $4)
             RETURNING *
         `;
         const paymentRes = await db.query(insertPaymentQuery, [bill.id, payAmount, paymentMethod, refNumber]);
@@ -1011,7 +896,7 @@ const completeGcashPayment = async (req, res) => {
 
 module.exports = { 
     getTenantDashboard, getTenantProfile, updateTenantProfile, updateTenantPassword, 
-    getTenantPayments, getCurrentBill, getTenantGcashQr, submitTenantPayment, completeGcashPayment,
+    getTenantPayments, getCurrentBill, getTenantGcashQr, completeGcashPayment,
     getTenantMessages, sendTenantMessage, getUnreadCount,
     getTenantRooms, chooseRoom, getAnnouncements,
     getTenantNotifications, markNotificationRead, markAllNotificationsRead
