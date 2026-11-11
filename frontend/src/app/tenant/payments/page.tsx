@@ -5,8 +5,8 @@ import api from '@/lib/api';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
     CreditCard, Calendar, Clock, CheckCircle2, 
-    AlertCircle, Upload, FileText, Image as ImageIcon, 
-    X, ArrowUpRight, TrendingUp, Wallet, ShieldCheck,
+    AlertCircle, FileText, 
+    X, TrendingUp, Wallet,
     Download, Filter, Search, RefreshCw, QrCode, Hash, Building2
 } from 'lucide-react';
 import { toast } from 'sonner';
@@ -57,7 +57,6 @@ export default function TenantPayments() {
     const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
 
     const [ownerQrCode, setOwnerQrCode] = useState<string>("");
-    const [viewingPayment, setViewingPayment] = useState<any | null>(null);
     const [isCompletingPayment, setIsCompletingPayment] = useState(false);
     const [paymentSuccessData, setPaymentSuccessData] = useState<any | null>(null);
     const isProcessingRef = useRef(false);
@@ -605,12 +604,10 @@ export default function TenantPayments() {
                                             <th className="py-2 px-3.5 bg-white dark:bg-[#111625]">Method</th>
                                             <th className="py-2 px-3.5 text-right bg-white dark:bg-[#111625]">Amount</th>
                                             <th className="py-2 px-3.5 text-center bg-white dark:bg-[#111625]">Status</th>
-                                            <th className="py-2 px-3.5 text-right bg-white dark:bg-[#111625]">Proof</th>
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-slate-100 dark:divide-[#1E2638]/60 font-sans">
                                         {filteredPayments.map((p: any, i: number) => {
-                                            const proofImg = p.proof_image || p.proof_url || p.proofOfPayment;
                                             const rawMethod = p.payment_method || p.method || 'QR Ph';
                                             const isCash = String(rawMethod).toLowerCase() === 'cash';
                                             const isQrPh = String(rawMethod).toLowerCase().includes('qrph') || String(rawMethod).toLowerCase().includes('qr ph');
@@ -651,15 +648,6 @@ export default function TenantPayments() {
                                                             <span className="w-1.5 h-1.5 rounded-full bg-[#10b981]"></span>
                                                             Paid
                                                         </span>
-                                                    </td>
-                                                    <td className="py-1.5 px-3.5 text-right whitespace-nowrap">
-                                                        <button
-                                                            onClick={() => setViewingPayment(p)}
-                                                            className="text-xs sm:text-sm font-bold text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:underline flex items-center gap-1.5 ml-auto cursor-pointer"
-                                                        >
-                                                            {isCash ? <FileText className="w-4 h-4" /> : <ImageIcon className="w-4 h-4" />}
-                                                            <span>View</span>
-                                                        </button>
                                                     </td>
                                                 </tr>
                                             );
@@ -933,176 +921,6 @@ export default function TenantPayments() {
                         </div>
                     </>
                 )}
-            </AnimatePresence>
-
-            {/* View Payment Statement & Receipt Modal */}
-            <AnimatePresence>
-                {viewingPayment && (() => {
-                    const proofImg = viewingPayment.proof_image || viewingPayment.proof_url || viewingPayment.proofOfPayment;
-                    const rawMethod = viewingPayment.payment_method || viewingPayment.method || 'QR Ph';
-                    const isCash = String(rawMethod).toLowerCase() === 'cash';
-                    const isQrPh = String(rawMethod).toLowerCase().includes('qrph') || String(rawMethod).toLowerCase().includes('qr ph');
-                    const isApproved = viewingPayment.status === 'Paid' || viewingPayment.status === 'Approved' || viewingPayment.status === 'Verified';
-                    const isPending = viewingPayment.status === 'Pending' || viewingPayment.status === 'Pending Verification';
-                    
-                    const statementMonth = viewingPayment.billing_month || viewingPayment.description?.replace(/^Payment for /i, '') || "Statement Overview";
-                    const rentVal = Number(viewingPayment.rent_amount ?? currentBill.breakdown?.rent ?? 0);
-                    const waterVal = Number(viewingPayment.water_charges ?? currentBill.breakdown?.water ?? 0);
-                    const electricityVal = Number(viewingPayment.electricity_charges ?? currentBill.breakdown?.electricity ?? 0);
-                    const otherVal = Number(viewingPayment.other_fees ?? 0);
-                    const statementTotal = Number(viewingPayment.bill_total ?? currentBill.totalAmount ?? viewingPayment.amount);
-
-                    return (
-                        <>
-                            <div 
-                                className="fixed inset-0 bg-slate-900/60 dark:bg-black/80 backdrop-blur-xs z-50"
-                                onClick={() => setViewingPayment(null)}
-                            />
-                            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 pointer-events-none">
-                                <div className="w-full max-w-lg bg-white dark:bg-[#111625] rounded-2xl shadow-2xl border border-slate-200 dark:border-[#1E2638] overflow-hidden pointer-events-auto flex flex-col max-h-[90vh] text-slate-900 dark:text-white">
-                                    {/* Modal Header */}
-                                    <div className="p-4 border-b border-slate-200 dark:border-[#1E2638] flex justify-between items-center bg-slate-50/50 dark:bg-zinc-900/40 shrink-0">
-                                        <div className="flex items-center gap-2.5">
-                                            <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-white shrink-0 ${
-                                                isCash ? 'bg-emerald-600' : 'bg-blue-600'
-                                            }`}>
-                                                {isCash ? <Building2 className="w-4.5 h-4.5" /> : <QrCode className="w-4.5 h-4.5" />}
-                                            </div>
-                                            <div>
-                                                <h2 className="text-sm font-black text-slate-900 dark:text-white">
-                                                    {isCash ? 'Cash Payment Statement' : isQrPh ? 'QR Ph Payment & Receipt' : `${rawMethod} Payment & Receipt`}
-                                                </h2>
-                                                <p className="text-[11px] text-slate-400 dark:text-zinc-500 font-mono">
-                                                    Ref #{viewingPayment.reference_number || viewingPayment.referenceNumber || viewingPayment.id || 'N/A'} • {formatDate(viewingPayment.date || viewingPayment.created_at)}
-                                                </p>
-                                            </div>
-                                        </div>
-                                        <button 
-                                            onClick={() => setViewingPayment(null)} 
-                                            className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-[#1E2638] text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors cursor-pointer"
-                                        >
-                                            <X className="w-4 h-4" />
-                                        </button>
-                                    </div>
-
-                                    {/* Modal Content */}
-                                    <div className="p-5 space-y-4 overflow-y-auto">
-                                        {/* Tenants Statement Overview */}
-                                        <div className="p-4 rounded-xl bg-slate-50 dark:bg-[#0f1422] border border-slate-200 dark:border-[#1E2638] space-y-3">
-                                            <div className="flex justify-between items-start pb-2.5 border-b border-slate-200/80 dark:border-zinc-800">
-                                                <div>
-                                                    <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-500">Statement Overview</span>
-                                                    <h3 className="text-sm font-extrabold text-slate-900 dark:text-white mt-0.5">{statementMonth}</h3>
-                                                </div>
-                                                <span className={`text-[11px] font-bold uppercase ${
-                                                    isApproved ? 'text-emerald-600 dark:text-emerald-400' :
-                                                    isPending ? 'text-amber-600 dark:text-amber-400' :
-                                                    'text-rose-600 dark:text-rose-400'
-                                                }`}>
-                                                    {viewingPayment.status}
-                                                </span>
-                                            </div>
-
-                                            {/* Breakdown items */}
-                                            <div className="space-y-1.5 text-xs">
-                                                <div className="flex justify-between items-center text-slate-600 dark:text-zinc-400">
-                                                    <span>Room rent</span>
-                                                    <span className="font-mono font-bold text-slate-900 dark:text-zinc-100">₱{rentVal.toLocaleString()}</span>
-                                                </div>
-                                                <div className="flex justify-between items-center text-slate-600 dark:text-zinc-400">
-                                                    <span>Water bill</span>
-                                                    <span className="font-mono font-bold text-slate-900 dark:text-zinc-100">₱{waterVal.toLocaleString()}</span>
-                                                </div>
-                                                <div className="flex justify-between items-center text-slate-600 dark:text-zinc-400">
-                                                    <span>Electricity bill</span>
-                                                    <span className="font-mono font-bold text-slate-900 dark:text-zinc-100">₱{electricityVal.toLocaleString()}</span>
-                                                </div>
-                                                {otherVal > 0 && (
-                                                    <div className="flex justify-between items-center text-rose-600 dark:text-rose-400 font-semibold">
-                                                        <span>Other / Surcharges</span>
-                                                        <span className="font-mono font-bold">+₱{otherVal.toLocaleString()}</span>
-                                                    </div>
-                                                )}
-                                            </div>
-
-                                            {/* Statement Total & Amount Paid in this Record */}
-                                            <div className="pt-2.5 border-t border-slate-200/80 dark:border-zinc-800 space-y-1.5">
-                                                {statementTotal > 0 && (
-                                                    <div className="flex justify-between items-center text-xs text-slate-500 dark:text-zinc-400">
-                                                        <span>Total Statement Amount</span>
-                                                        <span className="font-mono font-bold text-slate-700 dark:text-zinc-300">₱{statementTotal.toLocaleString()}</span>
-                                                    </div>
-                                                )}
-                                                <div className="flex justify-between items-baseline pt-1">
-                                                    <span className="text-xs font-bold text-slate-800 dark:text-zinc-200">Amount Paid</span>
-                                                    <span className="text-xl font-black font-mono text-slate-900 dark:text-white">
-                                                        ₱{Number(viewingPayment.amount || 0).toLocaleString()}
-                                                    </span>
-                                                </div>
-                                            </div>
-                                        </div>
-
-                                        {/* Method & Verification / Receipt */}
-                                        {isCash ? (
-                                            /* Cash Payment Info - NO UPLOADED IMAGE */
-                                            <div className="p-3.5 rounded-xl border border-slate-200 dark:border-[#1E2638] bg-slate-50 dark:bg-[#0f1422] flex items-start gap-3">
-                                                <div className="w-8 h-8 rounded-lg bg-slate-100 dark:bg-[#182032] border border-slate-200 dark:border-[#243048] text-sky-600 dark:text-[#38bdf8] flex items-center justify-center shrink-0 mt-0.5">
-                                                    <ShieldCheck className="w-4.5 h-4.5" />
-                                                </div>
-                                                <div className="space-y-0.5 text-xs">
-                                                    <span className="font-bold text-slate-900 dark:text-white">Official In-Person Cash Payment</span>
-                                                    <p className="text-[11px] text-slate-600 dark:text-zinc-400 leading-relaxed">
-                                                        Handed in directly at the <strong>Admin Office</strong>. Official physical receipt was verified and recorded into your account ledger.
-                                                    </p>
-                                                    {(viewingPayment.reference_number || viewingPayment.referenceNumber) && (
-                                                        <p className="text-[10px] text-slate-500 dark:text-zinc-400 font-mono mt-1">
-                                                            Ref #: <span className="font-bold text-slate-900 dark:text-white">{viewingPayment.reference_number || viewingPayment.referenceNumber}</span>
-                                                        </p>
-                                                    )}
-                                                </div>
-                                            </div>
-                                        ) : (
-                                            /* Online / QR Ph Payment Info & Uploaded Receipt Image */
-                                            <div className="space-y-2">
-                                                <div className="flex items-center justify-between">
-                                                    <span className="text-xs font-bold text-slate-700 dark:text-zinc-300 flex items-center gap-1.5">
-                                                        <ImageIcon className="w-3.5 h-3.5 text-slate-500 dark:text-zinc-400" />
-                                                        <span>{isQrPh ? 'QR Ph Payment Receipt' : 'Uploaded Payment Receipt'}</span>
-                                                    </span>
-                                                    {proofImg && (
-                                                        <a
-                                                            href={proofImg.startsWith('http') ? proofImg : `http://localhost:5000${proofImg.startsWith('/') ? proofImg : `/${proofImg}`}`}
-                                                            target="_blank"
-                                                            rel="noopener noreferrer"
-                                                            className="text-[11px] font-bold text-zinc-900 dark:text-white hover:underline flex items-center gap-1"
-                                                        >
-                                                            <ArrowUpRight className="w-3 h-3" />
-                                                            <span>Open Full Size</span>
-                                                        </a>
-                                                    )}
-                                                </div>
-
-                                                {proofImg ? (
-                                                    <div className="rounded-xl overflow-hidden border border-slate-200 dark:border-[#1E2638] bg-slate-50 dark:bg-[#0c101c] flex items-center justify-center max-h-64 p-2">
-                                                        <img 
-                                                            src={proofImg.startsWith('http') ? proofImg : `http://localhost:5000${proofImg.startsWith('/') ? proofImg : `/${proofImg}`}`} 
-                                                            alt="Payment Receipt" 
-                                                            className="max-w-full max-h-60 object-contain rounded-lg" 
-                                                        />
-                                                    </div>
-                                                ) : (
-                                                    <div className="p-4 rounded-xl border border-dashed border-slate-200 dark:border-zinc-800 text-center text-xs text-slate-400 dark:text-zinc-500">
-                                                        No uploaded receipt screenshot was attached with this {isQrPh ? 'QR Ph' : rawMethod} payment.
-                                                    </div>
-                                                )}
-                                            </div>
-                                        )}
-                                    </div>
-                                </div>
-                            </div>
-                        </>
-                    );
-                })()}
             </AnimatePresence>
 
         </div>
