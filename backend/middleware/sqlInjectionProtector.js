@@ -11,7 +11,6 @@ const EXCLUDED_FIELDS = new Set([
     'newpassword',
     'confirmpassword',
     'token',
-    'proofofpayment',
     'attachment',
     'gcashqrcode',
     'qrphqrcode',
