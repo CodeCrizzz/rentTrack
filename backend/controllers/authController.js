@@ -10,13 +10,103 @@ const { getPermissionsForRole } = require('../middleware/rbacMiddleware');
 // @desc    Register a new user (Tenant only for public signups)
 // @route   POST /api/auth/register
 const registerUser = async (req, res) => {
-    const { name, email, password, role, phone, gender, address } = req.body;
+    const { name, email, password, role, phone, gender, address, firstName, lastName } = req.body;
+    const resolvedName = (name && name.trim()) || [firstName, lastName].filter(Boolean).map(s => String(s).trim()).join(' ');
+
+    if (!email || !resolvedName || !password) {
+        return res.status(400).json({ 
+            field: !resolvedName ? 'name' : (!email ? 'email' : 'password'),
+            message: 'First name, last name, email, and password are required.' 
+        });
+    }
+
+    const cleanEmail = String(email).trim().toLowerCase();
+    const formattedPhone = phone ? formatPhoneNumber(phone) : null;
+    const cleanPhoneDigits = phone ? String(phone).replace(/\D/g, '') : '';
 
     try {
-        // Check if user already exists
-        const userExists = await db.query('SELECT id FROM users WHERE email = $1', [email]);
-        if (userExists.rows.length > 0) {
-            return res.status(400).json({ message: 'User with this email already exists' });
+        // 1. Check duplicate email (case-insensitive & trimmed)
+        const emailCheck = await db.query(
+            'SELECT id, name, status, role FROM users WHERE LOWER(TRIM(email)) = $1',
+            [cleanEmail]
+        );
+
+        if (emailCheck.rows.length > 0) {
+            const existing = emailCheck.rows[0];
+            if (existing.status === 'Pending') {
+                return res.status(409).json({
+                    field: 'email',
+                    status: existing.status,
+                    message: 'An account registration with this email is already submitted and awaiting administrator approval.'
+                });
+            } else if (existing.status === 'Declined') {
+                return res.status(409).json({
+                    field: 'email',
+                    status: existing.status,
+                    message: 'An account application with this email was previously declined. Please contact the administrator for assistance.'
+                });
+            } else {
+                return res.status(409).json({
+                    field: 'email',
+                    status: existing.status,
+                    message: 'An account with this email address already exists. Please log in instead.'
+                });
+            }
+        }
+
+        // 2. Check duplicate phone number if provided
+        if (formattedPhone && cleanPhoneDigits && cleanPhoneDigits.length >= 7) {
+            const phoneCheck = await db.query(
+                `SELECT id, name, status FROM users 
+                 WHERE phone IS NOT NULL AND (
+                     phone = $1 OR 
+                     regexp_replace(phone, '\\D', '', 'g') = $2
+                 )`,
+                [formattedPhone, cleanPhoneDigits]
+            );
+
+            if (phoneCheck.rows.length > 0) {
+                const existing = phoneCheck.rows[0];
+                if (existing.status === 'Pending') {
+                    return res.status(409).json({
+                        field: 'phone',
+                        status: existing.status,
+                        message: 'An account registration using this mobile phone number is already pending administrator approval.'
+                    });
+                } else {
+                    return res.status(409).json({
+                        field: 'phone',
+                        status: existing.status,
+                        message: 'An account with this phone number is already registered. Please check your credentials or log in.'
+                    });
+                }
+            }
+        }
+
+        // 3. Check duplicate resident full name (case-insensitive) for tenants
+        if (resolvedName) {
+            const nameCheck = await db.query(
+                `SELECT id, status FROM users 
+                 WHERE LOWER(TRIM(name)) = LOWER(TRIM($1)) AND role = 'tenant'`,
+                [resolvedName]
+            );
+
+            if (nameCheck.rows.length > 0) {
+                const existing = nameCheck.rows[0];
+                if (existing.status === 'Pending') {
+                    return res.status(409).json({
+                        field: 'name',
+                        status: existing.status,
+                        message: `An account registration under the name "${resolvedName}" is already submitted and pending review.`
+                    });
+                } else if (existing.status === 'Active') {
+                    return res.status(409).json({
+                        field: 'name',
+                        status: existing.status,
+                        message: `A resident account under the name "${resolvedName}" is already registered. If this is your account, please log in or contact the office.`
+                    });
+                }
+            }
         }
 
         // Hash password with bcrypt before storing (Principle of Defense in Depth)
@@ -25,11 +115,10 @@ const registerUser = async (req, res) => {
         // Enforce Least Privilege: public registration is strictly for tenants with 'Pending' approval status
         const roleToSet = 'tenant';
         const statusToSet = 'Pending';
-        const formattedPhone = phone ? formatPhoneNumber(phone) : null;
 
         const newUser = await db.query(
             'INSERT INTO users (name, email, password, role, phone, gender, address, status) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id, name, email, role, status',
-            [name, email, hashedPassword, roleToSet, formattedPhone, gender || 'Not Specified', address || null, statusToSet]
+            [resolvedName, cleanEmail, hashedPassword, roleToSet, formattedPhone, gender || 'Not Specified', address || null, statusToSet]
         );
 
         const registeredUser = newUser.rows[0];
@@ -40,7 +129,7 @@ const registerUser = async (req, res) => {
                 const adminNotificationService = require('../services/adminNotificationService');
                 adminNotificationService.notifyAdminsIfOffline({
                     title: 'Account Approval Request',
-                    message: `Tenant ${name} submitted an account registration and is waiting for your approval.`,
+                    message: `Tenant ${resolvedName} submitted an account registration and is waiting for your approval.`,
                     type: 'account_approval',
                     link: '/admin/tenants'
                 });
@@ -55,6 +144,21 @@ const registerUser = async (req, res) => {
         });
     } catch (error) {
         console.error('Registration Error:', error);
+
+        // Catch Postgres Unique Constraint Violation (Code 23505) gracefully
+        if (error.code === '23505') {
+            if (error.constraint === 'users_email_key' || (error.detail && error.detail.includes('email'))) {
+                return res.status(409).json({
+                    field: 'email',
+                    message: 'An account with this email address already exists. Please log in instead.'
+                });
+            }
+            return res.status(409).json({
+                field: 'general',
+                message: 'An account with these credentials already exists. Please verify your details or log in.'
+            });
+        }
+
         res.status(500).json({ message: 'Server error during registration' });
     }
 };
