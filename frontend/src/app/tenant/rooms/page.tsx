@@ -23,7 +23,6 @@ import {
   Wind,
   Check,
   User,
-  RefreshCw,
   Droplets,
   Zap,
   Sun,
@@ -90,7 +89,6 @@ export default function TenantRooms() {
   const [assignedRoomData, setAssignedRoomData] = useState<any>(null);
   const [isAssigned, setIsAssigned] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
-  const [isRefreshing, setIsRefreshing] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [typeFilter, setTypeFilter] = useState("All");
 
@@ -100,8 +98,7 @@ export default function TenantRooms() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
 
-  const fetchRooms = async (showToast = false) => {
-    if (showToast) setIsRefreshing(true);
+  const fetchRooms = async () => {
     try {
       const { data } = await api.get("/tenant/rooms");
       if (data.isAssigned) {
@@ -111,18 +108,24 @@ export default function TenantRooms() {
         setIsAssigned(false);
         setRooms(data.rooms || []);
       }
-      if (showToast) toast.success("Room status synchronized");
     } catch (error) {
       console.error("Error fetching rooms:", error);
-      if (showToast) toast.error("Failed to sync room information");
     } finally {
       setIsLoading(false);
-      setIsRefreshing(false);
     }
   };
 
   useEffect(() => {
     fetchRooms();
+    const handleRefresh = () => {
+      fetchRooms();
+    };
+    window.addEventListener("renttrack-refresh-data", handleRefresh);
+    window.addEventListener("renttrack_refresh_all", handleRefresh);
+    return () => {
+      window.removeEventListener("renttrack-refresh-data", handleRefresh);
+      window.removeEventListener("renttrack_refresh_all", handleRefresh);
+    };
   }, []);
 
   const handleChooseRoom = async () => {
