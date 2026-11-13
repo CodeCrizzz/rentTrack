@@ -14,9 +14,10 @@ import { AppSidebar } from '@/components/app-sidebar';
 import { FullscreenToggle } from '@/components/fullscreen-toggle';
 import { ThemeToggle } from '@/components/theme-toggle';
 import TenantChatPopup from '@/components/tenant-chat-popup';
+import { toast } from 'sonner';
 import { 
   LayoutDashboard, Building2, CreditCard, Wrench, User, MessageSquare, 
-  Bell, AlertTriangle, Clock, CheckCheck, ChevronRight 
+  Bell, AlertTriangle, Clock, CheckCheck, ChevronRight, RefreshCw 
 } from 'lucide-react';
 import {
   DropdownMenu,
@@ -37,6 +38,27 @@ export default function TenantLayout({ children }: { children: React.ReactNode }
     const [showAllNotifications, setShowAllNotifications] = useState(false);
     const [isAllRead, setIsAllRead] = useState(true);
     const [refreshKey, setRefreshKey] = useState(0);
+    const [isRefreshing, setIsRefreshing] = useState(false);
+
+    const handleGlobalRefresh = async () => {
+        setIsRefreshing(true);
+        try {
+            setRefreshKey(prev => prev + 1);
+            await fetchNotificationsAndUnread();
+            if (typeof window !== 'undefined') {
+                window.dispatchEvent(new CustomEvent('renttrack-refresh-data'));
+                window.dispatchEvent(new CustomEvent('renttrack_refresh_all'));
+            }
+            router.refresh();
+            toast.success("Page refreshed");
+        } catch {
+            toast.error("Failed to refresh");
+        } finally {
+            setTimeout(() => {
+                setIsRefreshing(false);
+            }, 500);
+        }
+    };
 
     const fetchNotificationsAndUnread = async () => {
         try {
@@ -190,6 +212,23 @@ export default function TenantLayout({ children }: { children: React.ReactNode }
                         </div>
 
                         <div className="flex items-center gap-2">
+                            <button
+                                type="button"
+                                onClick={handleGlobalRefresh}
+                                disabled={isRefreshing}
+                                className="group p-2 text-slate-400 hover:text-white hover:bg-slate-900 rounded-full transition-colors outline-none cursor-pointer disabled:opacity-60"
+                                title="Refresh Page & Data"
+                                aria-label="Refresh Page & Data"
+                            >
+                                <RefreshCw
+                                    className={`w-5 h-5 transition-all duration-500 ${
+                                        isRefreshing
+                                            ? "animate-spin text-indigo-400"
+                                            : "group-hover:rotate-180 group-active:scale-90"
+                                    }`}
+                                    strokeWidth={2}
+                                />
+                            </button>
                             <ThemeToggle />
                             <FullscreenToggle />
                             <DropdownMenu>
