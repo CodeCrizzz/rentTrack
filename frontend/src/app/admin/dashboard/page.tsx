@@ -1290,8 +1290,9 @@ export default function AdminDashboard() {
           variants={cardVariants}
           initial="hidden"
           animate="show"
-          className="bg-card border border-slate-200 dark:border-zinc-800 rounded-2xl p-5 shadow-2xs flex flex-col justify-between"
+          className="bg-card border border-slate-200 dark:border-zinc-800 rounded-2xl p-5 shadow-2xs flex flex-col justify-between relative overflow-hidden"
         >
+          <div className="pointer-events-none absolute inset-0 opacity-[0.04] dark:opacity-[0.06]" style={{ backgroundImage: 'repeating-linear-gradient(45deg, #10b981 0, #10b981 1px, transparent 0, transparent 8px)' }} />
           <div className="flex justify-between items-start mb-2">
             <div>
               <span className="text-xs font-bold uppercase tracking-wider text-slate-600 dark:text-zinc-300">
@@ -1356,8 +1357,9 @@ export default function AdminDashboard() {
           variants={cardVariants}
           initial="hidden"
           animate="show"
-          className="bg-card border border-slate-200 dark:border-zinc-800 rounded-2xl p-5 shadow-2xs flex flex-col justify-between"
+          className="bg-card border border-slate-200 dark:border-zinc-800 rounded-2xl p-5 shadow-2xs flex flex-col justify-between relative overflow-hidden"
         >
+          <div className="pointer-events-none absolute inset-0 opacity-[0.04] dark:opacity-[0.06]" style={{ backgroundImage: 'repeating-linear-gradient(45deg, #3b82f6 0, #3b82f6 1px, transparent 0, transparent 8px)' }} />
           <div className="flex justify-between items-start mb-2">
             <div>
               <span className="text-xs font-bold uppercase tracking-wider text-slate-600 dark:text-zinc-300">
@@ -1433,8 +1435,9 @@ export default function AdminDashboard() {
           variants={cardVariants}
           initial="hidden"
           animate="show"
-          className="bg-card border border-slate-200 dark:border-zinc-800 rounded-2xl p-5 shadow-2xs flex flex-col justify-between"
+          className="bg-card border border-slate-200 dark:border-zinc-800 rounded-2xl p-5 shadow-2xs flex flex-col justify-between relative overflow-hidden"
         >
+          <div className="pointer-events-none absolute inset-0 opacity-[0.04] dark:opacity-[0.06]" style={{ backgroundImage: 'repeating-linear-gradient(45deg, #f43f5e 0, #f43f5e 1px, transparent 0, transparent 8px)' }} />
           <div className="flex justify-between items-start mb-2">
             <div>
               <span className="text-xs font-bold uppercase tracking-wider text-slate-600 dark:text-zinc-300">
@@ -1484,8 +1487,9 @@ export default function AdminDashboard() {
           variants={cardVariants}
           initial="hidden"
           animate="show"
-          className="bg-card border border-slate-200 dark:border-zinc-800 rounded-2xl p-5 shadow-2xs flex flex-col justify-between"
+          className="bg-card border border-slate-200 dark:border-zinc-800 rounded-2xl p-5 shadow-2xs flex flex-col justify-between relative overflow-hidden"
         >
+          <div className="pointer-events-none absolute inset-0 opacity-[0.04] dark:opacity-[0.06]" style={{ backgroundImage: 'repeating-linear-gradient(45deg, #f59e0b 0, #f59e0b 1px, transparent 0, transparent 8px)' }} />
           <div className="flex justify-between items-start mb-2">
             <div>
               <span className="text-xs font-bold uppercase tracking-wider text-slate-600 dark:text-zinc-300">
