@@ -657,12 +657,14 @@ function RoomsContent() {
           onClick={() =>
             setStatusFilter(statusFilter === "Full" ? "All Statuses" : "Full")
           }
-          className={`group text-left bg-white dark:bg-zinc-900 border rounded-xl p-3.5 transition-all duration-150 cursor-pointer select-none flex flex-col justify-between ${
+          className={`group relative overflow-hidden text-left bg-white dark:bg-zinc-900 border rounded-xl p-3.5 transition-all duration-150 cursor-pointer select-none flex flex-col justify-between ${
             statusFilter === "Full"
               ? "border-emerald-500/80 bg-emerald-50/25 dark:bg-emerald-950/20 ring-1 ring-emerald-500/25 shadow-2xs"
               : "border-slate-200/90 dark:border-zinc-800 hover:border-slate-300 dark:hover:border-zinc-700 hover:bg-slate-50/50 dark:hover:bg-zinc-800/40 shadow-2xs"
           }`}
         >
+          {/* Dot grid background decoration */}
+          <div className="pointer-events-none absolute inset-0 opacity-[0.035] dark:opacity-[0.05]" style={{ backgroundImage: 'radial-gradient(circle, #10b981 1px, transparent 1px)', backgroundSize: '12px 12px' }} />
           {/* Top Header: Icon + Title + Percentage Chip */}
           <div className="flex items-center justify-between gap-2">
             <div className="flex items-center gap-2 min-w-0">
@@ -724,7 +726,7 @@ function RoomsContent() {
                 : "Occupied (With Available Beds)",
             )
           }
-          className={`group text-left bg-white dark:bg-zinc-900 border rounded-xl p-3.5 transition-all duration-150 cursor-pointer select-none flex flex-col justify-between ${
+          className={`group relative overflow-hidden text-left bg-white dark:bg-zinc-900 border rounded-xl p-3.5 transition-all duration-150 cursor-pointer select-none flex flex-col justify-between ${
             statusFilter === "Occupied (With Available Beds)" ||
             statusFilter === "Occupied w/ Beds" ||
             statusFilter === "Partially Occupied"
@@ -732,6 +734,8 @@ function RoomsContent() {
               : "border-slate-200/90 dark:border-zinc-800 hover:border-slate-300 dark:hover:border-zinc-700 hover:bg-slate-50/50 dark:hover:bg-zinc-800/40 shadow-2xs"
           }`}
         >
+          {/* Dot grid background decoration */}
+          <div className="pointer-events-none absolute inset-0 opacity-[0.035] dark:opacity-[0.05]" style={{ backgroundImage: 'radial-gradient(circle, #f59e0b 1px, transparent 1px)', backgroundSize: '12px 12px' }} />
           {/* Top Header: Icon + Title + Percentage Chip */}
           <div className="flex items-center justify-between gap-2">
             <div className="flex items-center gap-2 min-w-0">
@@ -792,12 +796,14 @@ function RoomsContent() {
               statusFilter === "Vacant" ? "All Statuses" : "Vacant",
             )
           }
-          className={`group text-left bg-white dark:bg-zinc-900 border rounded-xl p-3.5 transition-all duration-150 cursor-pointer select-none flex flex-col justify-between ${
+          className={`group relative overflow-hidden text-left bg-white dark:bg-zinc-900 border rounded-xl p-3.5 transition-all duration-150 cursor-pointer select-none flex flex-col justify-between ${
             statusFilter === "Vacant"
               ? "border-blue-500/80 bg-blue-50/25 dark:bg-blue-950/20 ring-1 ring-blue-500/25 shadow-2xs"
               : "border-slate-200/90 dark:border-zinc-800 hover:border-slate-300 dark:hover:border-zinc-700 hover:bg-slate-50/50 dark:hover:bg-zinc-800/40 shadow-2xs"
           }`}
         >
+          {/* Dot grid background decoration */}
+          <div className="pointer-events-none absolute inset-0 opacity-[0.035] dark:opacity-[0.05]" style={{ backgroundImage: 'radial-gradient(circle, #3b82f6 1px, transparent 1px)', backgroundSize: '12px 12px' }} />
           {/* Top Header: Icon + Title + Percentage Chip */}
           <div className="flex items-center justify-between gap-2">
             <div className="flex items-center gap-2 min-w-0">
