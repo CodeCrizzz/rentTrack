@@ -623,7 +623,8 @@ function MaintenanceRequestsContent() {
       {/* TOP SECTION: 4 KPI CARDS */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 shrink-0">
         {/* Card 1: Open Maintenance Requests */}
-        <div className="bg-white dark:bg-zinc-900 rounded-xl border border-slate-200/90 dark:border-zinc-800 p-2.5 sm:p-3 shadow-2xs flex flex-col justify-between">
+        <div className="bg-white dark:bg-zinc-900 rounded-xl border border-slate-200/90 dark:border-zinc-800 p-2.5 sm:p-3 shadow-2xs flex flex-col justify-between relative overflow-hidden">
+          <div className="pointer-events-none absolute inset-0 opacity-[0.035] dark:opacity-[0.055]" style={{ backgroundImage: 'repeating-linear-gradient(0deg, #f97316 0, #f97316 1px, transparent 0, transparent 10px), repeating-linear-gradient(90deg, #f97316 0, #f97316 1px, transparent 0, transparent 10px)', backgroundSize: '10px 10px' }} />
           <div>
             <div className="flex items-center gap-2">
               <div className="w-7 h-7 sm:w-7.5 sm:h-7.5 rounded-lg bg-[#fff2ea] dark:bg-amber-950/40 border border-[#ffedd5] dark:border-amber-800/40 text-[#f97316] flex items-center justify-center shrink-0">
@@ -691,7 +692,8 @@ function MaintenanceRequestsContent() {
         </div>
 
         {/* Card 2: Avg. Resolution Time */}
-        <div className="bg-white dark:bg-zinc-900 rounded-xl border border-slate-200/90 dark:border-zinc-800 p-2.5 sm:p-3 shadow-2xs flex flex-col justify-between">
+        <div className="bg-white dark:bg-zinc-900 rounded-xl border border-slate-200/90 dark:border-zinc-800 p-2.5 sm:p-3 shadow-2xs flex flex-col justify-between relative overflow-hidden">
+          <div className="pointer-events-none absolute inset-0 opacity-[0.035] dark:opacity-[0.055]" style={{ backgroundImage: 'repeating-linear-gradient(0deg, #2563eb 0, #2563eb 1px, transparent 0, transparent 10px), repeating-linear-gradient(90deg, #2563eb 0, #2563eb 1px, transparent 0, transparent 10px)', backgroundSize: '10px 10px' }} />
           <div>
             <div className="flex items-center gap-2">
               <div className="w-7 h-7 sm:w-7.5 sm:h-7.5 rounded-lg bg-[#eff6ff] dark:bg-blue-950/40 border border-[#dbeafe] dark:border-blue-800/40 text-[#2563eb] flex items-center justify-center shrink-0">
@@ -729,7 +731,8 @@ function MaintenanceRequestsContent() {
         </div>
 
         {/* Card 3: Completed This Month */}
-        <div className="bg-white dark:bg-zinc-900 rounded-xl border border-slate-200/90 dark:border-zinc-800 p-2.5 sm:p-3 shadow-2xs flex flex-col justify-between">
+        <div className="bg-white dark:bg-zinc-900 rounded-xl border border-slate-200/90 dark:border-zinc-800 p-2.5 sm:p-3 shadow-2xs flex flex-col justify-between relative overflow-hidden">
+          <div className="pointer-events-none absolute inset-0 opacity-[0.035] dark:opacity-[0.055]" style={{ backgroundImage: 'repeating-linear-gradient(0deg, #16a34a 0, #16a34a 1px, transparent 0, transparent 10px), repeating-linear-gradient(90deg, #16a34a 0, #16a34a 1px, transparent 0, transparent 10px)', backgroundSize: '10px 10px' }} />
           <div>
             <div className="flex items-center gap-2">
               <div className="w-7 h-7 sm:w-7.5 sm:h-7.5 rounded-lg bg-[#f0fdf4] dark:bg-emerald-950/40 border border-[#dcfce7] dark:border-emerald-800/40 text-[#16a34a] flex items-center justify-center shrink-0">
@@ -767,7 +770,8 @@ function MaintenanceRequestsContent() {
         </div>
 
         {/* Card 4: High Priority Issues */}
-        <div className="bg-white dark:bg-zinc-900 rounded-xl border border-slate-200/90 dark:border-zinc-800 p-2.5 sm:p-3 shadow-2xs flex flex-col justify-between">
+        <div className="bg-white dark:bg-zinc-900 rounded-xl border border-slate-200/90 dark:border-zinc-800 p-2.5 sm:p-3 shadow-2xs flex flex-col justify-between relative overflow-hidden">
+          <div className="pointer-events-none absolute inset-0 opacity-[0.035] dark:opacity-[0.055]" style={{ backgroundImage: 'repeating-linear-gradient(0deg, #ef4444 0, #ef4444 1px, transparent 0, transparent 10px), repeating-linear-gradient(90deg, #ef4444 0, #ef4444 1px, transparent 0, transparent 10px)', backgroundSize: '10px 10px' }} />
           <div>
             <div className="flex items-center gap-2">
               <div className="w-7 h-7 sm:w-7.5 sm:h-7.5 rounded-lg bg-[#fef2f2] dark:bg-rose-950/40 border border-[#fee2e2] dark:border-rose-800/40 text-[#ef4444] flex items-center justify-center shrink-0">
