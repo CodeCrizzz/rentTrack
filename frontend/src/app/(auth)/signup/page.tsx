@@ -14,6 +14,7 @@ import {
   ArrowRight,
   Loader2,
   X,
+  AlertCircle,
   Home,
   CreditCard,
   Wrench,
@@ -47,7 +48,8 @@ const authFeatures = [
 ];
 
 export default function SignupPage() {
-  const [name, setName] = useState("");
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
@@ -57,11 +59,16 @@ export default function SignupPage() {
   const [legalModal, setLegalModal] = useState<"privacy" | "terms" | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [duplicateError, setDuplicateError] = useState<{
+    message: string;
+    field?: "email" | "phone" | "name" | "general";
+  } | null>(null);
 
   const router = useRouter();
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
+    setDuplicateError(null);
 
     if (!agreedToTerms) {
       toast.warning("Terms Agreement Required", {
@@ -86,20 +93,43 @@ export default function SignupPage() {
 
     setIsLoading(true);
     try {
+      const fullName = `${firstName.trim()} ${lastName.trim()}`.trim();
       await api.post("/auth/register", {
-        name,
-        email,
+        name: fullName,
+        firstName: firstName.trim(),
+        lastName: lastName.trim(),
+        email: email.trim().toLowerCase(),
         phone,
         password,
         role: "tenant",
       });
       setShowSuccessModal(true);
     } catch (err: any) {
+      const resData = err.response?.data;
+      const status = err.response?.status;
+      const backendMsg =
+        resData?.message ||
+        err.message ||
+        "Could not create account. Please verify details and try again.";
+      const field =
+        resData?.field ||
+        (backendMsg.toLowerCase().includes("email")
+          ? "email"
+          : backendMsg.toLowerCase().includes("phone")
+          ? "phone"
+          : backendMsg.toLowerCase().includes("name")
+          ? "name"
+          : "general");
+
+      if (status === 409 || status === 400) {
+        setDuplicateError({
+          message: backendMsg,
+          field: field as "email" | "phone" | "name" | "general",
+        });
+      }
+
       toast.error("Registration Failed", {
-        description:
-          err.response?.data?.message ||
-          err.message ||
-          "Could not create account. Please verify details and try again.",
+        description: backendMsg,
       });
     } finally {
       setIsLoading(false);
@@ -217,7 +247,7 @@ export default function SignupPage() {
         >
           <div>
             {/* Form Header */}
-            <div className="mb-5">
+            <div className="mb-4">
               <h2 className="text-2xl sm:text-[28px] font-black text-slate-900 tracking-tight leading-tight">
                 Create Your Account
               </h2>
@@ -226,31 +256,124 @@ export default function SignupPage() {
               </p>
             </div>
 
+            {/* Duplicate Credential / Validation Notice */}
+            {duplicateError && (
+              <div className="mb-3.5 p-3 sm:p-3.5 bg-rose-50 border border-rose-200/90 rounded-xl text-xs text-rose-800 flex items-start gap-2.5 shadow-xs animate-in fade-in duration-200">
+                <AlertCircle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
+                <div className="flex-1 min-w-0 space-y-1">
+                  <p className="font-bold text-rose-950 leading-tight">
+                    {duplicateError.field === "email"
+                      ? "Email Already In Use"
+                      : duplicateError.field === "phone"
+                      ? "Phone Already Registered"
+                      : duplicateError.field === "name"
+                      ? "Resident Name Match Found"
+                      : "Account Notice"}
+                  </p>
+                  <p className="text-rose-700 leading-relaxed font-medium">
+                    {duplicateError.message}
+                  </p>
+                  {duplicateError.field === "email" && (
+                    <Link
+                      href="/login"
+                      className="inline-flex items-center gap-1 font-bold text-blue-600 hover:text-blue-800 hover:underline pt-0.5"
+                    >
+                      <span>Already have an account? Sign in here</span>
+                      <ArrowRight className="w-3 h-3" />
+                    </Link>
+                  )}
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setDuplicateError(null)}
+                  className="text-rose-400 hover:text-rose-600 p-0.5 rounded transition-colors"
+                  aria-label="Dismiss notice"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            )}
+
             {/* Registration Form */}
             <form onSubmit={handleSignup} className="space-y-3.5">
-              {/* Full Name */}
-              <div>
-                <label
-                  htmlFor="name"
-                  className="block text-xs font-bold text-slate-800 mb-1.5 ml-0.5"
-                >
-                  Full Name
-                </label>
-                <div className="relative flex items-center bg-white border border-slate-200 rounded-xl px-3.5 h-11 sm:h-12 focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-100 transition-all">
-                  <User
-                    className="w-5 h-5 text-slate-400 mr-2.5 shrink-0"
-                    strokeWidth={1.8}
-                  />
-                  <input
-                    id="name"
-                    type="text"
-                    placeholder="Enter your full name"
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    required
-                    disabled={isLoading}
-                    className="w-full bg-transparent text-sm text-slate-900 placeholder:text-slate-400 outline-none font-medium"
-                  />
+              {/* First Name and Last Name (Side by Side) */}
+              <div className="grid grid-cols-2 gap-2.5 sm:gap-3">
+                {/* First Name */}
+                <div>
+                  <label
+                    htmlFor="firstName"
+                    className="block text-xs font-bold text-slate-800 mb-1.5 ml-0.5"
+                  >
+                    First Name
+                  </label>
+                  <div
+                    className={`relative flex items-center bg-white border rounded-xl px-3 h-11 sm:h-12 transition-all ${
+                      duplicateError?.field === "name"
+                        ? "border-rose-400 ring-2 ring-rose-100 bg-rose-50/20"
+                        : "border-slate-200 focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-100"
+                    }`}
+                  >
+                    <User
+                      className={`w-4.5 h-4.5 mr-2 shrink-0 ${
+                        duplicateError?.field === "name"
+                          ? "text-rose-400"
+                          : "text-slate-400"
+                      }`}
+                      strokeWidth={1.8}
+                    />
+                    <input
+                      id="firstName"
+                      type="text"
+                      placeholder="First name"
+                      value={firstName}
+                      onChange={(e) => {
+                        setFirstName(e.target.value);
+                        if (duplicateError?.field === "name") setDuplicateError(null);
+                      }}
+                      required
+                      disabled={isLoading}
+                      className="w-full bg-transparent text-sm text-slate-900 placeholder:text-slate-400 outline-none font-medium min-w-0"
+                    />
+                  </div>
+                </div>
+
+                {/* Last Name */}
+                <div>
+                  <label
+                    htmlFor="lastName"
+                    className="block text-xs font-bold text-slate-800 mb-1.5 ml-0.5"
+                  >
+                    Last Name
+                  </label>
+                  <div
+                    className={`relative flex items-center bg-white border rounded-xl px-3 h-11 sm:h-12 transition-all ${
+                      duplicateError?.field === "name"
+                        ? "border-rose-400 ring-2 ring-rose-100 bg-rose-50/20"
+                        : "border-slate-200 focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-100"
+                    }`}
+                  >
+                    <User
+                      className={`w-4.5 h-4.5 mr-2 shrink-0 ${
+                        duplicateError?.field === "name"
+                          ? "text-rose-400"
+                          : "text-slate-400"
+                      }`}
+                      strokeWidth={1.8}
+                    />
+                    <input
+                      id="lastName"
+                      type="text"
+                      placeholder="Last name"
+                      value={lastName}
+                      onChange={(e) => {
+                        setLastName(e.target.value);
+                        if (duplicateError?.field === "name") setDuplicateError(null);
+                      }}
+                      required
+                      disabled={isLoading}
+                      className="w-full bg-transparent text-sm text-slate-900 placeholder:text-slate-400 outline-none font-medium min-w-0"
+                    />
+                  </div>
                 </div>
               </div>
 
@@ -262,9 +385,19 @@ export default function SignupPage() {
                 >
                   Email Address
                 </label>
-                <div className="relative flex items-center bg-white border border-slate-200 rounded-xl px-3.5 h-11 sm:h-12 focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-100 transition-all">
+                <div
+                  className={`relative flex items-center bg-white border rounded-xl px-3.5 h-11 sm:h-12 transition-all ${
+                    duplicateError?.field === "email"
+                      ? "border-rose-400 ring-2 ring-rose-100 bg-rose-50/20"
+                      : "border-slate-200 focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-100"
+                  }`}
+                >
                   <Mail
-                    className="w-5 h-5 text-slate-400 mr-2.5 shrink-0"
+                    className={`w-5 h-5 mr-2.5 shrink-0 ${
+                      duplicateError?.field === "email"
+                        ? "text-rose-400"
+                        : "text-slate-400"
+                    }`}
                     strokeWidth={1.8}
                   />
                   <input
@@ -272,7 +405,10 @@ export default function SignupPage() {
                     type="email"
                     placeholder="Enter your email address"
                     value={email}
-                    onChange={(e) => setEmail(e.target.value)}
+                    onChange={(e) => {
+                      setEmail(e.target.value);
+                      if (duplicateError?.field === "email") setDuplicateError(null);
+                    }}
                     required
                     disabled={isLoading}
                     className="w-full bg-transparent text-sm text-slate-900 placeholder:text-slate-400 outline-none font-medium"
@@ -288,9 +424,19 @@ export default function SignupPage() {
                 >
                   Phone Number
                 </label>
-                <div className="relative flex items-center bg-white border border-slate-200 rounded-xl px-3.5 h-11 sm:h-12 focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-100 transition-all">
+                <div
+                  className={`relative flex items-center bg-white border rounded-xl px-3.5 h-11 sm:h-12 transition-all ${
+                    duplicateError?.field === "phone"
+                      ? "border-rose-400 ring-2 ring-rose-100 bg-rose-50/20"
+                      : "border-slate-200 focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-100"
+                  }`}
+                >
                   <Phone
-                    className="w-5 h-5 text-slate-400 mr-2.5 shrink-0"
+                    className={`w-5 h-5 mr-2.5 shrink-0 ${
+                      duplicateError?.field === "phone"
+                        ? "text-rose-400"
+                        : "text-slate-400"
+                    }`}
                     strokeWidth={1.8}
                   />
                   <input
@@ -298,7 +444,10 @@ export default function SignupPage() {
                     type="tel"
                     placeholder="Enter your phone number"
                     value={phone}
-                    onChange={(e) => setPhone(formatPhoneInput(e.target.value))}
+                    onChange={(e) => {
+                      setPhone(formatPhoneInput(e.target.value));
+                      if (duplicateError?.field === "phone") setDuplicateError(null);
+                    }}
                     required
                     disabled={isLoading}
                     className="w-full bg-transparent text-sm text-slate-900 placeholder:text-slate-400 outline-none font-medium"
