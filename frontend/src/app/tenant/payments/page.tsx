@@ -7,7 +7,7 @@ import {
     CreditCard, Calendar, Clock, CheckCircle2, 
     AlertCircle, FileText, 
     X, TrendingUp, Wallet,
-    Download, Filter, Search, RefreshCw, QrCode, Hash, Building2
+    Download, Filter, Search, QrCode, Hash, Building2
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -48,7 +48,6 @@ export default function TenantPayments() {
     const [currentBill, setCurrentBill] = useState<any>(defaultBill);
     const [summary, setSummary] = useState({ monthTotal: 0, yearTotal: 0, txCount: 0 });
     const [isLoading, setIsLoading] = useState(true);
-    const [isRefreshing, setIsRefreshing] = useState(false);
 
     const [searchQuery, setSearchQuery] = useState("");
     const [filterStatus, setFilterStatus] = useState("All");
@@ -92,8 +91,7 @@ export default function TenantPayments() {
         }
     };
 
-    const fetchPaymentData = async (showToast = false) => {
-        if (showToast) setIsRefreshing(true);
+    const fetchPaymentData = async () => {
         try {
             const [billResponse, paymentsResponse, qrResponse] = await Promise.all([
                 api.get('/tenant/bill/current').catch(() => ({ data: null })),
@@ -128,13 +126,10 @@ export default function TenantPayments() {
             });
 
             setSummary({ monthTotal: mTotal, yearTotal: yTotal, txCount: fetchedPayments.length });
-            if (showToast) toast.success("Billing statements synchronized");
         } catch (error) {
             console.error("Critical error fetching payment data:", error);
-            if (showToast) toast.error("Failed to sync payments");
         } finally {
             setIsLoading(false);
-            setIsRefreshing(false);
         }
     };
 
@@ -268,6 +263,15 @@ export default function TenantPayments() {
 
     useEffect(() => {
         fetchPaymentData();
+        const handleRefresh = () => {
+            fetchPaymentData();
+        };
+        window.addEventListener('renttrack-refresh-data', handleRefresh);
+        window.addEventListener('renttrack_refresh_all', handleRefresh);
+        return () => {
+            window.removeEventListener('renttrack-refresh-data', handleRefresh);
+            window.removeEventListener('renttrack_refresh_all', handleRefresh);
+        };
     }, []);
 
     useEffect(() => {
