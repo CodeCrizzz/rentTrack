@@ -599,7 +599,8 @@ function TenantsContent() {
       {/* 2. FOUR KPI CARDS RIBBON (Exact match to Mockup UI) */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5 shrink-0">
         {/* Card 1: Total Active Tenants */}
-        <div className="bg-white dark:bg-zinc-900 border border-slate-200/90 dark:border-zinc-800 rounded-xl p-3 shadow-2xs flex items-start justify-between">
+        <div className="bg-white dark:bg-zinc-900 border border-slate-200/90 dark:border-zinc-800 rounded-xl p-3 shadow-2xs flex items-start justify-between relative overflow-hidden">
+          <div className="pointer-events-none absolute -bottom-6 -right-6 w-24 h-24 opacity-[0.06] dark:opacity-[0.08]" style={{ backgroundImage: 'repeating-radial-gradient(circle at center, transparent 0, transparent 4px, #3b82f6 4px, #3b82f6 5px, transparent 5px, transparent 10px)' }} />
           <div>
             <span className="text-[11px] font-bold text-slate-500 dark:text-zinc-400 block">
               Total Active Tenants
@@ -629,7 +630,8 @@ function TenantsContent() {
         </div>
 
         {/* Card 2: Pending Applications */}
-        <div className="bg-white dark:bg-zinc-900 border border-slate-200/90 dark:border-zinc-800 rounded-xl p-3 shadow-2xs flex items-start justify-between">
+        <div className="bg-white dark:bg-zinc-900 border border-slate-200/90 dark:border-zinc-800 rounded-xl p-3 shadow-2xs flex items-start justify-between relative overflow-hidden">
+          <div className="pointer-events-none absolute -bottom-6 -right-6 w-24 h-24 opacity-[0.06] dark:opacity-[0.08]" style={{ backgroundImage: 'repeating-radial-gradient(circle at center, transparent 0, transparent 4px, #f59e0b 4px, #f59e0b 5px, transparent 5px, transparent 10px)' }} />
           <div>
             <span className="text-[11px] font-bold text-slate-500 dark:text-zinc-400 block">
               Pending Applications
@@ -648,7 +650,8 @@ function TenantsContent() {
         </div>
 
         {/* Card 3: Payment Receipts (Pending Verification) */}
-        <div className="bg-white dark:bg-zinc-900 border border-slate-200/90 dark:border-zinc-800 rounded-xl p-3 shadow-2xs flex items-start justify-between">
+        <div className="bg-white dark:bg-zinc-900 border border-slate-200/90 dark:border-zinc-800 rounded-xl p-3 shadow-2xs flex items-start justify-between relative overflow-hidden">
+          <div className="pointer-events-none absolute -bottom-6 -right-6 w-24 h-24 opacity-[0.06] dark:opacity-[0.08]" style={{ backgroundImage: 'repeating-radial-gradient(circle at center, transparent 0, transparent 4px, #3b82f6 4px, #3b82f6 5px, transparent 5px, transparent 10px)' }} />
           <div>
             <span className="text-[11px] font-bold text-slate-500 dark:text-zinc-400 block">
               Payment Receipts (Pending Verification)
@@ -667,7 +670,8 @@ function TenantsContent() {
         </div>
 
         {/* Card 4: Moved Out (This Month) */}
-        <div className="bg-white dark:bg-zinc-900 border border-slate-200/90 dark:border-zinc-800 rounded-xl p-3 shadow-2xs flex items-start justify-between">
+        <div className="bg-white dark:bg-zinc-900 border border-slate-200/90 dark:border-zinc-800 rounded-xl p-3 shadow-2xs flex items-start justify-between relative overflow-hidden">
+          <div className="pointer-events-none absolute -bottom-6 -right-6 w-24 h-24 opacity-[0.06] dark:opacity-[0.08]" style={{ backgroundImage: 'repeating-radial-gradient(circle at center, transparent 0, transparent 4px, #a855f7 4px, #a855f7 5px, transparent 5px, transparent 10px)' }} />
           <div>
             <span className="text-[11px] font-bold text-slate-500 dark:text-zinc-400 block">
               Moved Out (This Month)
@@ -775,7 +779,7 @@ function TenantsContent() {
           <div className="flex items-center gap-6 border-b border-slate-200/80 dark:border-zinc-800 pt-1">
             <button
               onClick={() => handleTabChange("all")}
-              className={`flex items-center gap-2 pb-2.5 text-xs font-bold transition-all relative cursor-pointer ${
+              className={`flex items-center gap-2 pb-2.5 text-xs sm:text-sm font-bold transition-all relative cursor-pointer ${
                 activeTab === "all"
                   ? "text-blue-600 dark:text-blue-400"
                   : "text-slate-500 hover:text-slate-800 dark:text-zinc-400 dark:hover:text-zinc-200"
@@ -783,7 +787,7 @@ function TenantsContent() {
             >
               <span>All Tenants</span>
               <span
-                className={`px-2 py-0.5 rounded-full text-[11px] font-bold ${
+                className={`px-2 py-0.5 rounded-full text-xs font-bold ${
                   activeTab === "all"
                     ? "bg-blue-50 text-blue-600 dark:bg-blue-900/40 dark:text-blue-400 border border-blue-200/60 dark:border-blue-800/60"
                     : "bg-slate-100 text-slate-600 dark:bg-zinc-800 dark:text-zinc-400"
@@ -798,7 +802,7 @@ function TenantsContent() {
 
             <button
               onClick={() => handleTabChange("active")}
-              className={`flex items-center gap-2 pb-2.5 text-xs font-bold transition-all relative cursor-pointer ${
+              className={`flex items-center gap-2 pb-2.5 text-xs sm:text-sm font-bold transition-all relative cursor-pointer ${
                 activeTab === "active"
                   ? "text-blue-600 dark:text-blue-400"
                   : "text-slate-500 hover:text-slate-800 dark:text-zinc-400 dark:hover:text-zinc-200"
@@ -806,7 +810,7 @@ function TenantsContent() {
             >
               <span>Active</span>
               <span
-                className={`px-2 py-0.5 rounded-full text-[11px] font-bold ${
+                className={`px-2 py-0.5 rounded-full text-xs font-bold ${
                   activeTab === "active"
                     ? "bg-blue-50 text-blue-600 dark:bg-blue-900/40 dark:text-blue-400 border border-blue-200/60 dark:border-blue-800/60"
                     : "bg-slate-100 text-slate-600 dark:bg-zinc-800 dark:text-zinc-400"
@@ -821,7 +825,7 @@ function TenantsContent() {
 
             <button
               onClick={() => handleTabChange("pending")}
-              className={`flex items-center gap-2 pb-2.5 text-xs font-bold transition-all relative cursor-pointer ${
+              className={`flex items-center gap-2 pb-2.5 text-xs sm:text-sm font-bold transition-all relative cursor-pointer ${
                 activeTab === "pending"
                   ? "text-blue-600 dark:text-blue-400"
                   : "text-slate-500 hover:text-slate-800 dark:text-zinc-400 dark:hover:text-zinc-200"
@@ -829,7 +833,7 @@ function TenantsContent() {
             >
               <span>Pending</span>
               <span
-                className={`px-2 py-0.5 rounded-full text-[11px] font-bold ${
+                className={`px-2 py-0.5 rounded-full text-xs font-bold ${
                   activeTab === "pending"
                     ? "bg-blue-50 text-blue-600 dark:bg-blue-900/40 dark:text-blue-400 border border-blue-200/60 dark:border-blue-800/60"
                     : "bg-slate-100 text-slate-600 dark:bg-zinc-800 dark:text-zinc-400"
@@ -844,7 +848,7 @@ function TenantsContent() {
 
             <button
               onClick={() => handleTabChange("moved_out")}
-              className={`flex items-center gap-2 pb-2.5 text-xs font-bold transition-all relative cursor-pointer ${
+              className={`flex items-center gap-2 pb-2.5 text-xs sm:text-sm font-bold transition-all relative cursor-pointer ${
                 activeTab === "moved_out"
                   ? "text-blue-600 dark:text-blue-400"
                   : "text-slate-500 hover:text-slate-800 dark:text-zinc-400 dark:hover:text-zinc-200"
@@ -852,7 +856,7 @@ function TenantsContent() {
             >
               <span>Moved Out</span>
               <span
-                className={`px-2 py-0.5 rounded-full text-[11px] font-bold ${
+                className={`px-2 py-0.5 rounded-full text-xs font-bold ${
                   activeTab === "moved_out"
                     ? "bg-blue-50 text-blue-600 dark:bg-blue-900/40 dark:text-blue-400 border border-blue-200/60 dark:border-blue-800/60"
                     : "bg-slate-100 text-slate-600 dark:bg-zinc-800 dark:text-zinc-400"
@@ -868,31 +872,31 @@ function TenantsContent() {
 
           {/* Table Container: minimum 8 tenants visible in view, remaining scrollable with scrollbar */}
           <div className="flex-1 min-h-[384px] overflow-x-auto overflow-y-auto custom-scrollbar border border-slate-100 dark:border-zinc-800/80 rounded-xl mt-2">
-            <table className="w-full text-left text-xs border-collapse">
+            <table className="w-full text-left text-sm border-collapse">
               <thead className="sticky top-0 bg-white dark:bg-zinc-900 z-10 border-b border-slate-200/80 dark:border-zinc-800 shadow-2xs">
-                <tr className="text-[11px] font-bold text-slate-600 dark:text-zinc-400">
-                  <th className="py-2.5 px-3 pl-3.5">Tenant</th>
-                  <th className="py-2.5 px-3">Room</th>
-                  <th className="py-2.5 px-3">Room Type</th>
-                  <th className="py-2.5 px-3">Rental Model</th>
-                  <th className="py-2.5 px-3">Status</th>
-                  <th className="py-2.5 px-3">Monthly Rent</th>
-                  <th className="py-2.5 px-3">Contact</th>
-                  <th className="py-2.5 px-3 text-right pr-3.5">Actions</th>
+                <tr className="text-xs sm:text-[13px] font-bold text-slate-700 dark:text-zinc-300">
+                  <th className="py-3 px-3.5 pl-4">Tenant</th>
+                  <th className="py-3 px-3.5">Room</th>
+                  <th className="py-3 px-3.5">Room Type</th>
+                  <th className="py-3 px-3.5">Rental Model</th>
+                  <th className="py-3 px-3.5">Status</th>
+                  <th className="py-3 px-3.5">Monthly Rent</th>
+                  <th className="py-3 px-3.5">Contact</th>
+                  <th className="py-3 px-3.5 text-right pr-4">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 dark:divide-zinc-800/60">
                 {isLoading ? (
                   [...Array(8)].map((_, i) => (
                     <tr key={i} className="animate-pulse">
-                      <td colSpan={8} className="py-3 px-3">
-                        <div className="h-4 bg-slate-100 dark:bg-zinc-800 rounded w-full" />
+                      <td colSpan={8} className="py-3.5 px-4">
+                        <div className="h-5 bg-slate-100 dark:bg-zinc-800 rounded w-full" />
                       </td>
                     </tr>
                   ))
                 ) : filteredTenants.length === 0 ? (
                   <tr>
-                    <td colSpan={8} className="py-12 text-center text-slate-400">
+                    <td colSpan={8} className="py-12 text-center text-sm font-medium text-slate-400">
                       No tenants found matching your filter criteria.
                     </td>
                   </tr>
@@ -911,8 +915,8 @@ function TenantsContent() {
                         }`}
                       >
                         {/* Tenant Identity */}
-                        <td className="py-2 px-3 pl-3.5">
-                          <div className="flex items-center gap-2">
+                        <td className="py-3 px-3.5 pl-4">
+                          <div className="flex items-center gap-2.5">
                             {(() => {
                               const photo = getTenantPhoto(tenant);
                               if (photo) {
@@ -920,13 +924,13 @@ function TenantsContent() {
                                   <img
                                     src={photo}
                                     alt={tenant.name}
-                                    className="w-7 h-7 rounded-full object-cover shrink-0 border border-slate-200 dark:border-zinc-700 shadow-2xs"
+                                    className="w-9 h-9 rounded-full object-cover shrink-0 border border-slate-200 dark:border-zinc-700 shadow-2xs"
                                   />
                                 );
                               }
                               return (
                                 <div
-                                  className={`w-7 h-7 rounded-full font-bold text-[11px] flex items-center justify-center shrink-0 shadow-2xs ${getAvatarBgClass(
+                                  className={`w-9 h-9 rounded-full font-bold text-xs sm:text-sm flex items-center justify-center shrink-0 shadow-2xs ${getAvatarBgClass(
                                     tenant.name
                                   )}`}
                                 >
@@ -935,10 +939,10 @@ function TenantsContent() {
                               );
                             })()}
                             <div className="min-w-0">
-                              <span className="font-bold text-slate-900 dark:text-white block truncate leading-tight">
+                              <span className="font-bold text-sm sm:text-[15px] text-slate-900 dark:text-white block truncate leading-tight">
                                 {tenant.name}
                               </span>
-                              <span className="text-[10px] text-slate-500 dark:text-zinc-400 block truncate leading-tight mt-0.5">
+                              <span className="text-xs text-slate-500 dark:text-zinc-400 block truncate leading-tight mt-0.5">
                                 {tenant.email}
                               </span>
                             </div>
@@ -946,59 +950,59 @@ function TenantsContent() {
                         </td>
 
                         {/* Room */}
-                        <td className="py-2 px-3 font-semibold text-slate-800 dark:text-zinc-200">
+                        <td className="py-3 px-3.5 text-sm font-bold text-slate-900 dark:text-zinc-100">
                           {tenant.room_number ? tenant.room_number : "—"}
                         </td>
 
                         {/* Room Type */}
-                        <td className="py-2 px-3 text-slate-600 dark:text-zinc-300">
+                        <td className="py-3 px-3.5 text-sm font-medium text-slate-700 dark:text-zinc-300">
                           {getTenantRoomType(tenant)}
                         </td>
 
                         {/* Rental Model */}
-                        <td className="py-2 px-3 text-slate-600 dark:text-zinc-300">
+                        <td className="py-3 px-3.5 text-sm font-medium text-slate-700 dark:text-zinc-300">
                           {getTenantRentalModel(tenant)}
                         </td>
 
                         {/* Status Badge */}
-                        <td className="py-2 px-3">
+                        <td className="py-3 px-3.5">
                           {tenant.status === "Active" && (
-                            <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-600 dark:bg-emerald-950/50 dark:text-emerald-400 border border-emerald-200/60 dark:border-emerald-800/60 inline-flex items-center gap-1">
-                              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                            <span className="px-3 py-1 rounded-full text-xs font-bold bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300 border border-emerald-200/70 dark:border-emerald-800/70 inline-flex items-center gap-1.5">
+                              <span className="w-2 h-2 rounded-full bg-emerald-500" />
                               Active
                             </span>
                           )}
                           {tenant.status === "Pending" && (
-                            <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 text-amber-600 dark:bg-amber-950/50 dark:text-amber-400 border border-amber-200/60 dark:border-amber-800/60 inline-flex items-center gap-1">
-                              <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
+                            <span className="px-3 py-1 rounded-full text-xs font-bold bg-amber-50 text-amber-700 dark:bg-amber-950/60 dark:text-amber-300 border border-amber-200/70 dark:border-amber-800/70 inline-flex items-center gap-1.5">
+                              <span className="w-2 h-2 rounded-full bg-amber-500" />
                               Pending
                             </span>
                           )}
                           {(tenant.status === "Moved Out" || tenant.status === "Inactive") && (
-                            <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-600 dark:bg-zinc-800 dark:text-zinc-400 border border-slate-200 dark:border-zinc-700 inline-flex items-center gap-1">
-                              <DoorOpen className="w-2.5 h-2.5" />
+                            <span className="px-3 py-1 rounded-full text-xs font-bold bg-slate-100 text-slate-700 dark:bg-zinc-800 dark:text-zinc-300 border border-slate-200 dark:border-zinc-700 inline-flex items-center gap-1.5">
+                              <DoorOpen className="w-3.5 h-3.5" />
                               Moved Out
                             </span>
                           )}
                           {tenant.status === "Declined" && (
-                            <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-rose-50 text-rose-600 dark:bg-rose-950/50 dark:text-rose-400 border border-rose-200/60 inline-flex items-center gap-1">
+                            <span className="px-3 py-1 rounded-full text-xs font-bold bg-rose-50 text-rose-700 dark:bg-rose-950/60 dark:text-rose-300 border border-rose-200/70 inline-flex items-center gap-1.5">
                               Declined
                             </span>
                           )}
                         </td>
 
                         {/* Monthly Rent */}
-                        <td className="py-2 px-3 font-mono font-bold text-slate-900 dark:text-white">
+                        <td className="py-3 px-3.5 font-mono text-sm sm:text-[15px] font-bold text-slate-900 dark:text-white">
                           ₱ {Number(tenant.monthly_rent || 0).toLocaleString()}
                         </td>
 
                         {/* Contact */}
-                        <td className="py-2 px-3 font-mono text-slate-600 dark:text-zinc-300">
+                        <td className="py-3 px-3.5 font-mono text-sm font-medium text-slate-700 dark:text-zinc-300">
                           {formatPhoneNumber(tenant.phone)}
                         </td>
 
                         {/* Actions */}
-                        <td className="py-2 px-3 text-right relative pr-3.5">
+                        <td className="py-3 px-3.5 text-right relative pr-4">
                           <button
                             type="button"
                             onClick={(e) => {
@@ -1007,16 +1011,16 @@ function TenantsContent() {
                                 activeMenuTenantId === tenant.id ? null : tenant.id
                               );
                             }}
-                            className="p-1 rounded-lg text-slate-400 hover:text-slate-700 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-zinc-800 transition-colors cursor-pointer"
+                            className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-zinc-800 transition-colors cursor-pointer"
                           >
-                            <MoreHorizontal className="w-4 h-4" />
+                            <MoreHorizontal className="w-4.5 h-4.5" />
                           </button>
 
                           {/* Popover Action Menu */}
                           {activeMenuTenantId === tenant.id && (
                             <div
                               onClick={(e) => e.stopPropagation()}
-                              className="absolute right-2 bottom-6 w-44 bg-white dark:bg-zinc-900 rounded-xl shadow-xl border border-slate-200 dark:border-zinc-800 py-1.5 z-30 text-xs text-left"
+                              className="absolute right-2 bottom-6 w-48 bg-white dark:bg-zinc-900 rounded-xl shadow-xl border border-slate-200 dark:border-zinc-800 py-1.5 z-30 text-xs sm:text-sm text-left"
                             >
                               <button
                                 onClick={() => {
@@ -1024,9 +1028,9 @@ function TenantsContent() {
                                   setSelectedTenant(tenant);
                                   setIsViewModalOpen(true);
                                 }}
-                                className="w-full px-3 py-1.5 text-left hover:bg-slate-50 dark:hover:bg-zinc-800 flex items-center gap-2 font-medium"
+                                className="w-full px-3.5 py-2 text-left hover:bg-slate-50 dark:hover:bg-zinc-800 flex items-center gap-2 font-medium"
                               >
-                                <Eye className="w-3.5 h-3.5 text-blue-500" />
+                                <Eye className="w-4 h-4 text-blue-500" />
                                 View Profile
                               </button>
                               <button
@@ -1034,9 +1038,9 @@ function TenantsContent() {
                                   setActiveMenuTenantId(null);
                                   handleOpenEditModal(tenant);
                                 }}
-                                className="w-full px-3 py-1.5 text-left hover:bg-slate-50 dark:hover:bg-zinc-800 flex items-center gap-2 font-medium"
+                                className="w-full px-3.5 py-2 text-left hover:bg-slate-50 dark:hover:bg-zinc-800 flex items-center gap-2 font-medium"
                               >
-                                <Edit className="w-3.5 h-3.5 text-slate-500" />
+                                <Edit className="w-4 h-4 text-slate-500" />
                                 Edit Details
                               </button>
                               {tenant.status === "Pending" && (
@@ -1050,9 +1054,9 @@ function TenantsContent() {
                                         action: "Approve",
                                       });
                                     }}
-                                    className="w-full px-3 py-1.5 text-left hover:bg-slate-50 dark:hover:bg-zinc-800 flex items-center gap-2 text-emerald-600 font-medium"
+                                    className="w-full px-3.5 py-2 text-left hover:bg-slate-50 dark:hover:bg-zinc-800 flex items-center gap-2 text-emerald-600 font-medium"
                                   >
-                                    <Check className="w-3.5 h-3.5" />
+                                    <Check className="w-4 h-4" />
                                     Approve Resident
                                   </button>
                                   <button
@@ -1064,9 +1068,9 @@ function TenantsContent() {
                                         action: "Reject",
                                       });
                                     }}
-                                    className="w-full px-3 py-1.5 text-left hover:bg-slate-50 dark:hover:bg-zinc-800 flex items-center gap-2 text-rose-600 font-medium"
+                                    className="w-full px-3.5 py-2 text-left hover:bg-slate-50 dark:hover:bg-zinc-800 flex items-center gap-2 text-rose-600 font-medium"
                                   >
-                                    <X className="w-3.5 h-3.5" />
+                                    <X className="w-4 h-4" />
                                     Decline Application
                                   </button>
                                 </>
@@ -1076,9 +1080,9 @@ function TenantsContent() {
                                   setActiveMenuTenantId(null);
                                   router.push(`/admin/chat?tenant_id=${tenant.id}`);
                                 }}
-                                className="w-full px-3 py-1.5 text-left hover:bg-slate-50 dark:hover:bg-zinc-800 flex items-center gap-2 font-medium"
+                                className="w-full px-3.5 py-2 text-left hover:bg-slate-50 dark:hover:bg-zinc-800 flex items-center gap-2 font-medium"
                               >
-                                <MessageSquare className="w-3.5 h-3.5 text-teal-500" />
+                                <MessageSquare className="w-4 h-4 text-teal-500" />
                                 Send Message
                               </button>
                               <button
@@ -1086,9 +1090,9 @@ function TenantsContent() {
                                   setActiveMenuTenantId(null);
                                   router.push(`/admin/billing?action=create&tenant_id=${tenant.id}`);
                                 }}
-                                className="w-full px-3 py-1.5 text-left hover:bg-slate-50 dark:hover:bg-zinc-800 flex items-center gap-2 font-medium"
+                                className="w-full px-3.5 py-2 text-left hover:bg-slate-50 dark:hover:bg-zinc-800 flex items-center gap-2 font-medium"
                               >
-                                <Receipt className="w-3.5 h-3.5 text-indigo-500" />
+                                <Receipt className="w-4 h-4 text-indigo-500" />
                                 Issue Bill
                               </button>
                               <div className="border-t border-slate-100 dark:border-zinc-800 my-1" />
@@ -1097,9 +1101,9 @@ function TenantsContent() {
                                   setActiveMenuTenantId(null);
                                   handleDeleteTenant(tenant);
                                 }}
-                                className="w-full px-3 py-1.5 text-left hover:bg-slate-50 dark:hover:bg-zinc-800 flex items-center gap-2 text-rose-600 font-medium"
+                                className="w-full px-3.5 py-2 text-left hover:bg-slate-50 dark:hover:bg-zinc-800 flex items-center gap-2 text-rose-600 font-medium"
                               >
-                                <Trash2 className="w-3.5 h-3.5" />
+                                <Trash2 className="w-4 h-4" />
                                 Delete
                               </button>
                             </div>
