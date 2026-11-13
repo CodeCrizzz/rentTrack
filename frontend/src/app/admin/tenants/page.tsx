@@ -577,20 +577,19 @@ function TenantsContent() {
           <h1 className="text-xl sm:text-2xl font-black text-slate-950 dark:text-white tracking-tight leading-none">
             Manage Tenants
           </h1>
-          <p className="text-xs text-slate-500 dark:text-zinc-400 font-medium mt-0.5">
+          <p className="text-xs sm:text-[13px] text-slate-500 dark:text-zinc-400 font-medium mt-0.5">
             Real-time directory overview of active residents, pending applications, and lease statuses.
           </p>
         </div>
 
         {/* Top Right Actions: Generate Report */}
         <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
-
           {/* Generate Report Button */}
           <button
             onClick={() => setShowReportModal(true)}
-            className="px-3.5 py-1.5 rounded-xl bg-[#0055a5] hover:bg-[#00478f] text-white text-xs font-bold shadow-xs flex items-center gap-1.5 transition-colors cursor-pointer"
+            className="px-3.5 py-1.5 rounded-lg bg-[#0055a5] hover:bg-[#00478f] text-white text-xs sm:text-[13px] font-bold shadow-xs flex items-center gap-1.5 transition-colors cursor-pointer"
           >
-            <BarChart3 className="w-3.5 h-3.5 text-white stroke-[2.2]" />
+            <BarChart3 className="w-4 h-4 text-white stroke-[2.2]" />
             <span>Generate Report</span>
           </button>
         </div>
@@ -599,19 +598,30 @@ function TenantsContent() {
       {/* 2. FOUR KPI CARDS RIBBON (Exact match to Mockup UI) */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5 shrink-0">
         {/* Card 1: Total Active Tenants */}
-        <div className="bg-white dark:bg-zinc-900 border border-slate-200/90 dark:border-zinc-800 rounded-xl p-3 shadow-2xs flex items-start justify-between relative overflow-hidden">
-          <div className="pointer-events-none absolute -bottom-6 -right-6 w-24 h-24 opacity-[0.06] dark:opacity-[0.08]" style={{ backgroundImage: 'repeating-radial-gradient(circle at center, transparent 0, transparent 4px, #3b82f6 4px, #3b82f6 5px, transparent 5px, transparent 10px)' }} />
-          <div>
-            <span className="text-[11px] font-bold text-slate-500 dark:text-zinc-400 block">
+        <div className="bg-white dark:bg-zinc-900 border border-slate-200/90 dark:border-zinc-800 rounded-xl pl-4 pr-3 py-3 shadow-2xs flex items-start justify-between relative overflow-hidden">
+          {/* Editorial Dossier Spine & Swiss Registry Tab */}
+          <div className="pointer-events-none select-none absolute inset-0 overflow-hidden" aria-hidden="true">
+            <div className="absolute inset-y-0 left-0 w-24 bg-gradient-to-r from-blue-50/75 via-blue-50/20 to-transparent dark:from-blue-500/[0.08] dark:via-blue-500/[0.02] dark:to-transparent" />
+            <div className="absolute left-0 inset-y-2 w-[3.5px] rounded-r-full bg-blue-500 dark:bg-blue-400" />
+            <div className="absolute top-3 right-12 left-28 h-px bg-gradient-to-r from-transparent via-blue-500/15 to-blue-500/25 dark:via-blue-400/15 dark:to-blue-400/25" />
+            <div className="absolute bottom-2.5 right-3 grid grid-cols-2 gap-1 opacity-30 dark:opacity-35">
+              <span className="w-1.5 h-1.5 rounded-[1px] bg-blue-500 dark:bg-blue-400" />
+              <span className="w-1.5 h-1.5 rounded-[1px] bg-blue-500/40 dark:bg-blue-400/40" />
+              <span className="w-1.5 h-1.5 rounded-[1px] bg-blue-500 dark:bg-blue-400" />
+              <span className="w-1.5 h-1.5 rounded-[1px] bg-blue-500 dark:bg-blue-400" />
+            </div>
+          </div>
+          <div className="relative z-10">
+            <span className="text-xs font-bold text-slate-500 dark:text-zinc-400 block">
               Total Active Tenants
             </span>
             <div className="text-xl sm:text-2xl font-black text-slate-950 dark:text-white mt-0.5">
               {metrics.activeCount}{" "}
-              <span className="text-sm font-semibold text-slate-400">
+              <span className="text-xs font-semibold text-slate-400">
                 / {metrics.totalBeds}
               </span>
             </div>
-            <div className="flex items-center gap-1.5 mt-1 text-[11px] font-bold">
+            <div className="flex items-center gap-1.5 mt-1 text-xs font-bold">
               <span className="flex items-center gap-1 text-emerald-600 dark:text-emerald-400">
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
                 {metrics.activeCount}
@@ -624,67 +634,100 @@ function TenantsContent() {
               </span>
             </div>
           </div>
-          <div className="w-9 h-9 rounded-lg bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0 border border-blue-100 dark:border-blue-800/40">
+          <div className="relative z-10 w-8.5 h-8.5 rounded-lg bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0 border border-blue-100 dark:border-blue-800/40">
             <Users className="w-4 h-4 stroke-[2.2]" />
           </div>
         </div>
 
         {/* Card 2: Pending Applications */}
-        <div className="bg-white dark:bg-zinc-900 border border-slate-200/90 dark:border-zinc-800 rounded-xl p-3 shadow-2xs flex items-start justify-between relative overflow-hidden">
-          <div className="pointer-events-none absolute -bottom-6 -right-6 w-24 h-24 opacity-[0.06] dark:opacity-[0.08]" style={{ backgroundImage: 'repeating-radial-gradient(circle at center, transparent 0, transparent 4px, #f59e0b 4px, #f59e0b 5px, transparent 5px, transparent 10px)' }} />
-          <div>
-            <span className="text-[11px] font-bold text-slate-500 dark:text-zinc-400 block">
+        <div className="bg-white dark:bg-zinc-900 border border-slate-200/90 dark:border-zinc-800 rounded-xl pl-4 pr-3 py-3 shadow-2xs flex items-start justify-between relative overflow-hidden">
+          {/* Editorial Dossier Spine & Swiss Registry Tab */}
+          <div className="pointer-events-none select-none absolute inset-0 overflow-hidden" aria-hidden="true">
+            <div className="absolute inset-y-0 left-0 w-24 bg-gradient-to-r from-amber-50/75 via-amber-50/20 to-transparent dark:from-amber-500/[0.08] dark:via-amber-500/[0.02] dark:to-transparent" />
+            <div className="absolute left-0 inset-y-2 w-[3.5px] rounded-r-full bg-amber-500 dark:bg-amber-400" />
+            <div className="absolute top-3 right-12 left-28 h-px bg-gradient-to-r from-transparent via-amber-500/15 to-amber-500/25 dark:via-amber-400/15 dark:to-amber-400/25" />
+            <div className="absolute bottom-2.5 right-3 grid grid-cols-2 gap-1 opacity-30 dark:opacity-35">
+              <span className="w-1.5 h-1.5 rounded-[1px] bg-amber-500/40 dark:bg-amber-400/40" />
+              <span className="w-1.5 h-1.5 rounded-[1px] bg-amber-500 dark:bg-amber-400" />
+              <span className="w-1.5 h-1.5 rounded-[1px] bg-amber-500 dark:bg-amber-400" />
+              <span className="w-1.5 h-1.5 rounded-[1px] bg-amber-500 dark:bg-amber-400" />
+            </div>
+          </div>
+          <div className="relative z-10">
+            <span className="text-xs font-bold text-slate-500 dark:text-zinc-400 block">
               Pending Applications
             </span>
             <div className="text-xl sm:text-2xl font-black text-slate-950 dark:text-white mt-0.5">
               {metrics.pendingCount}
             </div>
-            <div className="flex items-center gap-1.5 mt-1 text-[11px] font-bold text-amber-600 dark:text-amber-400">
+            <div className="flex items-center gap-1.5 mt-1 text-xs font-bold text-amber-600 dark:text-amber-400">
               <span>🔶</span>
               <span>{metrics.pendingCount} new this week</span>
             </div>
           </div>
-          <div className="w-9 h-9 rounded-lg bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0 border border-blue-100 dark:border-blue-800/40">
+          <div className="relative z-10 w-8.5 h-8.5 rounded-lg bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0 border border-blue-100 dark:border-blue-800/40">
             <FileText className="w-4 h-4 stroke-[2.2]" />
           </div>
         </div>
 
         {/* Card 3: Payment Receipts (Pending Verification) */}
-        <div className="bg-white dark:bg-zinc-900 border border-slate-200/90 dark:border-zinc-800 rounded-xl p-3 shadow-2xs flex items-start justify-between relative overflow-hidden">
-          <div className="pointer-events-none absolute -bottom-6 -right-6 w-24 h-24 opacity-[0.06] dark:opacity-[0.08]" style={{ backgroundImage: 'repeating-radial-gradient(circle at center, transparent 0, transparent 4px, #3b82f6 4px, #3b82f6 5px, transparent 5px, transparent 10px)' }} />
-          <div>
-            <span className="text-[11px] font-bold text-slate-500 dark:text-zinc-400 block">
-              Payment Receipts (Pending Verification)
+        <div className="bg-white dark:bg-zinc-900 border border-slate-200/90 dark:border-zinc-800 rounded-xl pl-4 pr-3 py-3 shadow-2xs flex items-start justify-between relative overflow-hidden">
+          {/* Editorial Dossier Spine & Swiss Registry Tab */}
+          <div className="pointer-events-none select-none absolute inset-0 overflow-hidden" aria-hidden="true">
+            <div className="absolute inset-y-0 left-0 w-24 bg-gradient-to-r from-blue-50/75 via-blue-50/20 to-transparent dark:from-blue-500/[0.08] dark:via-blue-500/[0.02] dark:to-transparent" />
+            <div className="absolute left-0 inset-y-2 w-[3.5px] rounded-r-full bg-blue-500 dark:bg-blue-400" />
+            <div className="absolute top-3 right-12 left-28 h-px bg-gradient-to-r from-transparent via-blue-500/15 to-blue-500/25 dark:via-blue-400/15 dark:to-blue-400/25" />
+            <div className="absolute bottom-2.5 right-3 grid grid-cols-2 gap-1 opacity-30 dark:opacity-35">
+              <span className="w-1.5 h-1.5 rounded-[1px] bg-blue-500 dark:bg-blue-400" />
+              <span className="w-1.5 h-1.5 rounded-[1px] bg-blue-500 dark:bg-blue-400" />
+              <span className="w-1.5 h-1.5 rounded-[1px] bg-blue-500/40 dark:bg-blue-400/40" />
+              <span className="w-1.5 h-1.5 rounded-[1px] bg-blue-500 dark:bg-blue-400" />
+            </div>
+          </div>
+          <div className="relative z-10">
+            <span className="text-xs font-bold text-slate-500 dark:text-zinc-400 block">
+              Payment Receipts
             </span>
             <div className="text-xl sm:text-2xl font-black text-slate-950 dark:text-white mt-0.5">
               {pendingPaymentsCount}
             </div>
-            <div className="flex items-center gap-1.5 mt-1 text-[11px] font-bold text-blue-600 dark:text-blue-400">
+            <div className="flex items-center gap-1.5 mt-1 text-xs font-bold text-blue-600 dark:text-blue-400">
               <span>🔷</span>
               <span>{pendingPaymentsCount} awaiting review</span>
             </div>
           </div>
-          <div className="w-9 h-9 rounded-lg bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0 border border-blue-100 dark:border-blue-800/40">
+          <div className="relative z-10 w-8.5 h-8.5 rounded-lg bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0 border border-blue-100 dark:border-blue-800/40">
             <Receipt className="w-4 h-4 stroke-[2.2]" />
           </div>
         </div>
 
         {/* Card 4: Moved Out (This Month) */}
-        <div className="bg-white dark:bg-zinc-900 border border-slate-200/90 dark:border-zinc-800 rounded-xl p-3 shadow-2xs flex items-start justify-between relative overflow-hidden">
-          <div className="pointer-events-none absolute -bottom-6 -right-6 w-24 h-24 opacity-[0.06] dark:opacity-[0.08]" style={{ backgroundImage: 'repeating-radial-gradient(circle at center, transparent 0, transparent 4px, #a855f7 4px, #a855f7 5px, transparent 5px, transparent 10px)' }} />
-          <div>
-            <span className="text-[11px] font-bold text-slate-500 dark:text-zinc-400 block">
+        <div className="bg-white dark:bg-zinc-900 border border-slate-200/90 dark:border-zinc-800 rounded-xl pl-4 pr-3 py-3 shadow-2xs flex items-start justify-between relative overflow-hidden">
+          {/* Editorial Dossier Spine & Swiss Registry Tab */}
+          <div className="pointer-events-none select-none absolute inset-0 overflow-hidden" aria-hidden="true">
+            <div className="absolute inset-y-0 left-0 w-24 bg-gradient-to-r from-purple-50/75 via-purple-50/20 to-transparent dark:from-purple-500/[0.08] dark:via-purple-500/[0.02] dark:to-transparent" />
+            <div className="absolute left-0 inset-y-2 w-[3.5px] rounded-r-full bg-purple-500 dark:bg-purple-400" />
+            <div className="absolute top-3 right-12 left-28 h-px bg-gradient-to-r from-transparent via-purple-500/15 to-purple-500/25 dark:via-purple-400/15 dark:to-purple-400/25" />
+            <div className="absolute bottom-2.5 right-3 grid grid-cols-2 gap-1 opacity-30 dark:opacity-35">
+              <span className="w-1.5 h-1.5 rounded-[1px] bg-purple-500 dark:bg-purple-400" />
+              <span className="w-1.5 h-1.5 rounded-[1px] bg-purple-500 dark:bg-purple-400" />
+              <span className="w-1.5 h-1.5 rounded-[1px] bg-purple-500 dark:bg-purple-400" />
+              <span className="w-1.5 h-1.5 rounded-[1px] bg-purple-500/40 dark:bg-purple-400/40" />
+            </div>
+          </div>
+          <div className="relative z-10">
+            <span className="text-xs font-bold text-slate-500 dark:text-zinc-400 block">
               Moved Out (This Month)
             </span>
             <div className="text-xl sm:text-2xl font-black text-slate-950 dark:text-white mt-0.5">
               {metrics.movedOutCount}
             </div>
-            <div className="flex items-center gap-1.5 mt-1 text-[11px] font-bold text-purple-600 dark:text-purple-400">
+            <div className="flex items-center gap-1.5 mt-1 text-xs sm:text-[13px] font-bold text-purple-600 dark:text-purple-400">
               <span>🟣</span>
               <span>0 vs. last month</span>
             </div>
           </div>
-          <div className="w-9 h-9 rounded-lg bg-purple-50 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400 flex items-center justify-center shrink-0 border border-purple-100 dark:border-purple-800/40">
+          <div className="relative z-10 w-9 h-9 rounded-lg bg-purple-50 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400 flex items-center justify-center shrink-0 border border-purple-100 dark:border-purple-800/40">
             <UserMinus className="w-4 h-4 stroke-[2.2]" />
           </div>
         </div>
@@ -696,7 +739,7 @@ function TenantsContent() {
         <div className="flex-1 min-w-0 w-full h-full bg-white dark:bg-zinc-900 border border-slate-200/90 dark:border-zinc-800 rounded-2xl p-3.5 sm:p-4 shadow-2xs flex flex-col min-h-0 overflow-hidden">
           {/* Header */}
           <div>
-            <h2 className="text-base sm:text-lg font-black text-slate-950 dark:text-white tracking-tight">
+            <h2 className="text-sm sm:text-base font-extrabold text-slate-950 dark:text-white tracking-tight">
               Tenant Management
             </h2>
             <p className="text-xs text-slate-500 dark:text-zinc-400 mt-0.5">
@@ -707,13 +750,13 @@ function TenantsContent() {
           {/* Filters Row */}
           <div className="flex flex-wrap items-center gap-2.5">
             {/* Search Input */}
-            <div className="relative w-52 sm:w-60">
+            <div className="relative w-56 sm:w-64">
               <input
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Search tenants..."
-                className="w-full pl-3.5 pr-8 py-2 text-xs font-medium rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-slate-900 dark:text-white placeholder:text-slate-400 outline-none focus:ring-1 focus:ring-blue-500"
+                className="w-full pl-3.5 pr-8 py-1.5 text-xs sm:text-[13px] font-medium rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-slate-900 dark:text-white placeholder:text-slate-400 outline-none focus:ring-1 focus:ring-blue-500"
               />
               {searchQuery ? (
                 <button
@@ -729,7 +772,7 @@ function TenantsContent() {
             </div>
 
             {/* Statuses Dropdown */}
-            <div className="w-32 sm:w-36">
+            <div className="w-36 sm:w-40">
               <CustomSelect
                 value={statusFilter}
                 onChange={(val) => {
@@ -740,37 +783,37 @@ function TenantsContent() {
                   else setActiveTab("all");
                 }}
                 options={["All Statuses", "Active", "Pending", "Moved Out"]}
-                className="w-full px-3 py-2 text-xs font-semibold rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-slate-800 dark:text-zinc-200 outline-none"
+                className="w-full px-2.5 py-1.5 text-xs sm:text-[13px] font-semibold rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-slate-800 dark:text-zinc-200 outline-none"
               />
             </div>
 
             {/* Room Types Dropdown */}
-            <div className="w-36 sm:w-40">
+            <div className="w-40 sm:w-44">
               <CustomSelect
                 value={roomTypeFilter}
                 onChange={(val) => setRoomTypeFilter(val)}
                 options={["All Room Types", ...uniqueRoomTypes]}
-                className="w-full px-3 py-2 text-xs font-semibold rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-slate-800 dark:text-zinc-200 outline-none"
+                className="w-full px-2.5 py-1.5 text-xs sm:text-[13px] font-semibold rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-slate-800 dark:text-zinc-200 outline-none"
               />
             </div>
 
             {/* All Floors Dropdown */}
-            <div className="w-32 sm:w-36">
+            <div className="w-36 sm:w-40">
               <CustomSelect
                 value={floorFilter}
                 onChange={(val) => setFloorFilter(val)}
                 options={["All Floors", ...uniqueFloors]}
                 maxListHeight="175px"
-                className="w-full px-3 py-2 text-xs font-semibold rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-slate-800 dark:text-zinc-200 outline-none"
+                className="w-full px-2.5 py-1.5 text-xs sm:text-[13px] font-semibold rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-slate-800 dark:text-zinc-200 outline-none"
               />
             </div>
 
             {/* + Add Tenant Button */}
             <button
               onClick={handleOpenAddModal}
-              className="px-4 py-2 rounded-xl bg-[#0055a5] hover:bg-[#00478f] text-white text-xs font-bold flex items-center gap-1.5 shadow-xs transition-colors shrink-0 cursor-pointer"
+              className="px-3.5 py-1.5 rounded-lg bg-[#0055a5] hover:bg-[#00478f] text-white text-xs sm:text-[13px] font-bold flex items-center gap-1.5 shadow-xs transition-colors shrink-0 cursor-pointer"
             >
-              <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
+              <Plus className="w-4 h-4 stroke-[2.5]" />
               <span>Add Tenant</span>
             </button>
           </div>
@@ -779,7 +822,7 @@ function TenantsContent() {
           <div className="flex items-center gap-6 border-b border-slate-200/80 dark:border-zinc-800 pt-1">
             <button
               onClick={() => handleTabChange("all")}
-              className={`flex items-center gap-2 pb-2.5 text-xs sm:text-sm font-bold transition-all relative cursor-pointer ${
+              className={`flex items-center gap-2 pb-2 text-xs font-bold transition-all relative cursor-pointer ${
                 activeTab === "all"
                   ? "text-blue-600 dark:text-blue-400"
                   : "text-slate-500 hover:text-slate-800 dark:text-zinc-400 dark:hover:text-zinc-200"
@@ -787,7 +830,7 @@ function TenantsContent() {
             >
               <span>All Tenants</span>
               <span
-                className={`px-2 py-0.5 rounded-full text-xs font-bold ${
+                className={`px-1.5 py-0.2 rounded-full text-xs font-bold ${
                   activeTab === "all"
                     ? "bg-blue-50 text-blue-600 dark:bg-blue-900/40 dark:text-blue-400 border border-blue-200/60 dark:border-blue-800/60"
                     : "bg-slate-100 text-slate-600 dark:bg-zinc-800 dark:text-zinc-400"
@@ -802,7 +845,7 @@ function TenantsContent() {
 
             <button
               onClick={() => handleTabChange("active")}
-              className={`flex items-center gap-2 pb-2.5 text-xs sm:text-sm font-bold transition-all relative cursor-pointer ${
+              className={`flex items-center gap-2 pb-2 text-xs font-bold transition-all relative cursor-pointer ${
                 activeTab === "active"
                   ? "text-blue-600 dark:text-blue-400"
                   : "text-slate-500 hover:text-slate-800 dark:text-zinc-400 dark:hover:text-zinc-200"
@@ -810,7 +853,7 @@ function TenantsContent() {
             >
               <span>Active</span>
               <span
-                className={`px-2 py-0.5 rounded-full text-xs font-bold ${
+                className={`px-1.5 py-0.2 rounded-full text-xs font-bold ${
                   activeTab === "active"
                     ? "bg-blue-50 text-blue-600 dark:bg-blue-900/40 dark:text-blue-400 border border-blue-200/60 dark:border-blue-800/60"
                     : "bg-slate-100 text-slate-600 dark:bg-zinc-800 dark:text-zinc-400"
@@ -825,7 +868,7 @@ function TenantsContent() {
 
             <button
               onClick={() => handleTabChange("pending")}
-              className={`flex items-center gap-2 pb-2.5 text-xs sm:text-sm font-bold transition-all relative cursor-pointer ${
+              className={`flex items-center gap-2 pb-2 text-xs font-bold transition-all relative cursor-pointer ${
                 activeTab === "pending"
                   ? "text-blue-600 dark:text-blue-400"
                   : "text-slate-500 hover:text-slate-800 dark:text-zinc-400 dark:hover:text-zinc-200"
@@ -833,7 +876,7 @@ function TenantsContent() {
             >
               <span>Pending</span>
               <span
-                className={`px-2 py-0.5 rounded-full text-xs font-bold ${
+                className={`px-1.5 py-0.2 rounded-full text-xs font-bold ${
                   activeTab === "pending"
                     ? "bg-blue-50 text-blue-600 dark:bg-blue-900/40 dark:text-blue-400 border border-blue-200/60 dark:border-blue-800/60"
                     : "bg-slate-100 text-slate-600 dark:bg-zinc-800 dark:text-zinc-400"
@@ -848,7 +891,7 @@ function TenantsContent() {
 
             <button
               onClick={() => handleTabChange("moved_out")}
-              className={`flex items-center gap-2 pb-2.5 text-xs sm:text-sm font-bold transition-all relative cursor-pointer ${
+              className={`flex items-center gap-2 pb-2 text-xs font-bold transition-all relative cursor-pointer ${
                 activeTab === "moved_out"
                   ? "text-blue-600 dark:text-blue-400"
                   : "text-slate-500 hover:text-slate-800 dark:text-zinc-400 dark:hover:text-zinc-200"
@@ -856,7 +899,7 @@ function TenantsContent() {
             >
               <span>Moved Out</span>
               <span
-                className={`px-2 py-0.5 rounded-full text-xs font-bold ${
+                className={`px-1.5 py-0.2 rounded-full text-xs font-bold ${
                   activeTab === "moved_out"
                     ? "bg-blue-50 text-blue-600 dark:bg-blue-900/40 dark:text-blue-400 border border-blue-200/60 dark:border-blue-800/60"
                     : "bg-slate-100 text-slate-600 dark:bg-zinc-800 dark:text-zinc-400"
@@ -872,31 +915,31 @@ function TenantsContent() {
 
           {/* Table Container: minimum 8 tenants visible in view, remaining scrollable with scrollbar */}
           <div className="flex-1 min-h-[384px] overflow-x-auto overflow-y-auto custom-scrollbar border border-slate-100 dark:border-zinc-800/80 rounded-xl mt-2">
-            <table className="w-full text-left text-sm border-collapse">
+            <table className="w-full text-left text-xs sm:text-[13px] border-collapse">
               <thead className="sticky top-0 bg-white dark:bg-zinc-900 z-10 border-b border-slate-200/80 dark:border-zinc-800 shadow-2xs">
-                <tr className="text-xs sm:text-[13px] font-bold text-slate-700 dark:text-zinc-300">
-                  <th className="py-3 px-3.5 pl-4">Tenant</th>
-                  <th className="py-3 px-3.5">Room</th>
-                  <th className="py-3 px-3.5">Room Type</th>
-                  <th className="py-3 px-3.5">Rental Model</th>
-                  <th className="py-3 px-3.5">Status</th>
-                  <th className="py-3 px-3.5">Monthly Rent</th>
-                  <th className="py-3 px-3.5">Contact</th>
-                  <th className="py-3 px-3.5 text-right pr-4">Actions</th>
+                <tr className="text-xs font-bold text-slate-700 dark:text-zinc-300">
+                  <th className="py-2.5 px-3.5 pl-4">Tenant</th>
+                  <th className="py-2.5 px-3.5">Room</th>
+                  <th className="py-2.5 px-3.5">Room Type</th>
+                  <th className="py-2.5 px-3.5">Rental Model</th>
+                  <th className="py-2.5 px-3.5">Status</th>
+                  <th className="py-2.5 px-3.5">Monthly Rent</th>
+                  <th className="py-2.5 px-3.5">Contact</th>
+                  <th className="py-2.5 px-3.5 text-right pr-4">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 dark:divide-zinc-800/60">
                 {isLoading ? (
                   [...Array(8)].map((_, i) => (
                     <tr key={i} className="animate-pulse">
-                      <td colSpan={8} className="py-3.5 px-4">
-                        <div className="h-5 bg-slate-100 dark:bg-zinc-800 rounded w-full" />
+                      <td colSpan={8} className="py-3 px-4">
+                        <div className="h-4.5 bg-slate-100 dark:bg-zinc-800 rounded w-full" />
                       </td>
                     </tr>
                   ))
                 ) : filteredTenants.length === 0 ? (
                   <tr>
-                    <td colSpan={8} className="py-12 text-center text-sm font-medium text-slate-400">
+                    <td colSpan={8} className="py-12 text-center text-xs sm:text-[13px] font-medium text-slate-400">
                       No tenants found matching your filter criteria.
                     </td>
                   </tr>
@@ -915,7 +958,7 @@ function TenantsContent() {
                         }`}
                       >
                         {/* Tenant Identity */}
-                        <td className="py-3 px-3.5 pl-4">
+                        <td className="py-2.5 px-3.5 pl-4">
                           <div className="flex items-center gap-2.5">
                             {(() => {
                               const photo = getTenantPhoto(tenant);
@@ -924,13 +967,13 @@ function TenantsContent() {
                                   <img
                                     src={photo}
                                     alt={tenant.name}
-                                    className="w-9 h-9 rounded-full object-cover shrink-0 border border-slate-200 dark:border-zinc-700 shadow-2xs"
+                                    className="w-8.5 h-8.5 rounded-full object-cover shrink-0 border border-slate-200 dark:border-zinc-700 shadow-2xs"
                                   />
                                 );
                               }
                               return (
                                 <div
-                                  className={`w-9 h-9 rounded-full font-bold text-xs sm:text-sm flex items-center justify-center shrink-0 shadow-2xs ${getAvatarBgClass(
+                                  className={`w-8.5 h-8.5 rounded-full font-bold text-xs flex items-center justify-center shrink-0 shadow-2xs ${getAvatarBgClass(
                                     tenant.name
                                   )}`}
                                 >
@@ -939,10 +982,10 @@ function TenantsContent() {
                               );
                             })()}
                             <div className="min-w-0">
-                              <span className="font-bold text-sm sm:text-[15px] text-slate-900 dark:text-white block truncate leading-tight">
+                              <span className="font-bold text-xs sm:text-[13px] text-slate-900 dark:text-white block truncate leading-tight">
                                 {tenant.name}
                               </span>
-                              <span className="text-xs text-slate-500 dark:text-zinc-400 block truncate leading-tight mt-0.5">
+                              <span className="text-[11px] text-slate-500 dark:text-zinc-400 block truncate leading-tight mt-0.5">
                                 {tenant.email}
                               </span>
                             </div>
@@ -950,59 +993,59 @@ function TenantsContent() {
                         </td>
 
                         {/* Room */}
-                        <td className="py-3 px-3.5 text-sm font-bold text-slate-900 dark:text-zinc-100">
+                        <td className="py-2.5 px-3.5 text-xs sm:text-[13px] font-bold text-slate-900 dark:text-zinc-100">
                           {tenant.room_number ? tenant.room_number : "—"}
                         </td>
 
                         {/* Room Type */}
-                        <td className="py-3 px-3.5 text-sm font-medium text-slate-700 dark:text-zinc-300">
+                        <td className="py-2.5 px-3.5 text-xs sm:text-[13px] font-medium text-slate-700 dark:text-zinc-300">
                           {getTenantRoomType(tenant)}
                         </td>
 
                         {/* Rental Model */}
-                        <td className="py-3 px-3.5 text-sm font-medium text-slate-700 dark:text-zinc-300">
+                        <td className="py-2.5 px-3.5 text-xs sm:text-[13px] font-medium text-slate-700 dark:text-zinc-300">
                           {getTenantRentalModel(tenant)}
                         </td>
 
                         {/* Status Badge */}
-                        <td className="py-3 px-3.5">
+                        <td className="py-2.5 px-3.5">
                           {tenant.status === "Active" && (
-                            <span className="px-3 py-1 rounded-full text-xs font-bold bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300 border border-emerald-200/70 dark:border-emerald-800/70 inline-flex items-center gap-1.5">
-                              <span className="w-2 h-2 rounded-full bg-emerald-500" />
+                            <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300 border border-emerald-200/70 dark:border-emerald-800/70 inline-flex items-center gap-1.5">
+                              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
                               Active
                             </span>
                           )}
                           {tenant.status === "Pending" && (
-                            <span className="px-3 py-1 rounded-full text-xs font-bold bg-amber-50 text-amber-700 dark:bg-amber-950/60 dark:text-amber-300 border border-amber-200/70 dark:border-amber-800/70 inline-flex items-center gap-1.5">
-                              <span className="w-2 h-2 rounded-full bg-amber-500" />
+                            <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-50 text-amber-700 dark:bg-amber-950/60 dark:text-amber-300 border border-amber-200/70 dark:border-amber-800/70 inline-flex items-center gap-1.5">
+                              <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
                               Pending
                             </span>
                           )}
                           {(tenant.status === "Moved Out" || tenant.status === "Inactive") && (
-                            <span className="px-3 py-1 rounded-full text-xs font-bold bg-slate-100 text-slate-700 dark:bg-zinc-800 dark:text-zinc-300 border border-slate-200 dark:border-zinc-700 inline-flex items-center gap-1.5">
+                            <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-slate-100 text-slate-700 dark:bg-zinc-800 dark:text-zinc-300 border border-slate-200 dark:border-zinc-700 inline-flex items-center gap-1.5">
                               <DoorOpen className="w-3.5 h-3.5" />
                               Moved Out
                             </span>
                           )}
                           {tenant.status === "Declined" && (
-                            <span className="px-3 py-1 rounded-full text-xs font-bold bg-rose-50 text-rose-700 dark:bg-rose-950/60 dark:text-rose-300 border border-rose-200/70 inline-flex items-center gap-1.5">
+                            <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-rose-50 text-rose-700 dark:bg-rose-950/60 dark:text-rose-300 border border-rose-200/70 inline-flex items-center gap-1.5">
                               Declined
                             </span>
                           )}
                         </td>
 
                         {/* Monthly Rent */}
-                        <td className="py-3 px-3.5 font-mono text-sm sm:text-[15px] font-bold text-slate-900 dark:text-white">
+                        <td className="py-2.5 px-3.5 font-mono text-xs sm:text-sm font-bold text-slate-900 dark:text-white">
                           ₱ {Number(tenant.monthly_rent || 0).toLocaleString()}
                         </td>
 
                         {/* Contact */}
-                        <td className="py-3 px-3.5 font-mono text-sm font-medium text-slate-700 dark:text-zinc-300">
+                        <td className="py-2.5 px-3.5 font-mono text-xs sm:text-[13px] font-medium text-slate-700 dark:text-zinc-300">
                           {formatPhoneNumber(tenant.phone)}
                         </td>
 
                         {/* Actions */}
-                        <td className="py-3 px-3.5 text-right relative pr-4">
+                        <td className="py-2.5 px-3.5 text-right relative pr-4">
                           <button
                             type="button"
                             onClick={(e) => {
@@ -1013,7 +1056,7 @@ function TenantsContent() {
                             }}
                             className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-zinc-800 transition-colors cursor-pointer"
                           >
-                            <MoreHorizontal className="w-4.5 h-4.5" />
+                            <MoreHorizontal className="w-4 h-4" />
                           </button>
 
                           {/* Popover Action Menu */}
@@ -1161,32 +1204,32 @@ function TenantsContent() {
                 );
               })()}
               <div className="min-w-0 flex-1">
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1.5">
                   <h4 className="font-extrabold text-sm sm:text-base text-slate-950 dark:text-white truncate">
                     {selectedTenant.name}
                   </h4>
                   {selectedTenant.status === "Active" && (
-                    <span className="px-2 py-0.5 rounded-full text-[9px] font-bold bg-emerald-50 text-emerald-600 dark:bg-emerald-950/50 dark:text-emerald-400 border border-emerald-200/60 inline-flex items-center gap-1">
-                      <span className="w-1 h-1 rounded-full bg-emerald-500" />
+                    <span className="px-2 py-0.2 rounded-full text-xs font-bold bg-emerald-50 text-emerald-600 dark:bg-emerald-950/50 dark:text-emerald-400 border border-emerald-200/60 inline-flex items-center gap-1">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
                       Active
                     </span>
                   )}
                   {selectedTenant.status === "Pending" && (
-                    <span className="px-2 py-0.5 rounded-full text-[9px] font-bold bg-amber-50 text-amber-600 dark:bg-amber-950/50 dark:text-amber-400 border border-amber-200/60 inline-flex items-center gap-1">
-                      <span className="w-1 h-1 rounded-full bg-amber-500" />
+                    <span className="px-2 py-0.2 rounded-full text-xs font-bold bg-amber-50 text-amber-600 dark:bg-amber-950/50 dark:text-amber-400 border border-amber-200/60 inline-flex items-center gap-1">
+                      <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
                       Pending
                     </span>
                   )}
                   {(selectedTenant.status === "Moved Out" || selectedTenant.status === "Inactive") && (
-                    <span className="px-2 py-0.5 rounded-full text-[9px] font-bold bg-slate-100 text-slate-600 dark:bg-zinc-800 dark:text-zinc-400 border border-slate-200 inline-flex items-center gap-1">
+                    <span className="px-2 py-0.2 rounded-full text-xs font-bold bg-slate-100 text-slate-600 dark:bg-zinc-800 dark:text-zinc-400 border border-slate-200 inline-flex items-center gap-1">
                       Moved Out
                     </span>
                   )}
                 </div>
-                <p className="text-[11px] text-slate-500 dark:text-zinc-400 truncate mt-0.5">
+                <p className="text-xs text-slate-500 dark:text-zinc-400 truncate mt-0.5">
                   {selectedTenant.email}
                 </p>
-                <p className="text-[11px] font-mono font-medium text-slate-600 dark:text-zinc-300 truncate mt-0.5">
+                <p className="text-xs font-mono font-medium text-slate-600 dark:text-zinc-300 truncate mt-0.5">
                   📞 {formatPhoneNumber(selectedTenant.phone, "+63 999 123 7654")}
                 </p>
               </div>
@@ -1197,10 +1240,10 @@ function TenantsContent() {
               <div className="p-2 rounded-xl border border-slate-200/90 dark:border-zinc-800 bg-slate-50/50 dark:bg-zinc-900/40 flex items-start gap-1.5">
                 <DoorOpen className="w-4 h-4 text-blue-600 dark:text-blue-400 shrink-0 mt-0.5" />
                 <div className="min-w-0">
-                  <span className="text-[11px] font-bold text-slate-900 dark:text-white block truncate leading-tight">
+                  <span className="text-xs font-bold text-slate-900 dark:text-white block truncate leading-tight">
                     Room {selectedTenant.room_number || "101"}
                   </span>
-                  <span className="text-[10px] text-slate-500 dark:text-zinc-400 block truncate mt-0.5">
+                  <span className="text-[11px] text-slate-500 dark:text-zinc-400 block truncate mt-0.5">
                     {getTenantRoomType(selectedTenant)}
                   </span>
                 </div>
@@ -1209,10 +1252,10 @@ function TenantsContent() {
               <div className="p-2 rounded-xl border border-slate-200/90 dark:border-zinc-800 bg-slate-50/50 dark:bg-zinc-900/40 flex items-start gap-1.5">
                 <Calendar className="w-4 h-4 text-blue-600 dark:text-blue-400 shrink-0 mt-0.5" />
                 <div className="min-w-0">
-                  <span className="text-[11px] font-bold text-slate-900 dark:text-white block truncate leading-tight">
+                  <span className="text-xs font-bold text-slate-900 dark:text-white block truncate leading-tight">
                     Since
                   </span>
-                  <span className="text-[10px] text-slate-500 dark:text-zinc-400 block truncate mt-0.5 font-mono">
+                  <span className="text-[11px] text-slate-500 dark:text-zinc-400 block truncate mt-0.5 font-mono">
                     {selectedTenant.date_moved_in
                       ? new Date(selectedTenant.date_moved_in).toLocaleDateString("en-US", {
                           month: "short",
@@ -1227,10 +1270,10 @@ function TenantsContent() {
               <div className="p-2 rounded-xl border border-slate-200/90 dark:border-zinc-800 bg-slate-50/50 dark:bg-zinc-900/40 flex items-start gap-1.5">
                 <CreditCard className="w-4 h-4 text-blue-600 dark:text-blue-400 shrink-0 mt-0.5" />
                 <div className="min-w-0">
-                  <span className="text-[11px] font-bold text-slate-900 dark:text-white block truncate leading-tight">
+                  <span className="text-xs font-bold text-slate-900 dark:text-white block truncate leading-tight">
                     Tenant ID
                   </span>
-                  <span className="text-[10px] text-slate-500 dark:text-zinc-400 block truncate mt-0.5 font-mono font-bold">
+                  <span className="text-[11px] text-slate-500 dark:text-zinc-400 block truncate mt-0.5 font-mono font-bold">
                     TR-{String(selectedTenant.id).padStart(4, "0")}
                   </span>
                 </div>
@@ -1238,11 +1281,11 @@ function TenantsContent() {
             </div>
 
             {/* Room & Billing Information Section */}
-            <div className="space-y-2 pt-1 border-t border-slate-100 dark:border-zinc-800/80">
-              <h5 className="text-[11px] font-bold text-slate-900 dark:text-white uppercase tracking-wider">
+            <div className="space-y-2 pt-1.5 border-t border-slate-100 dark:border-zinc-800/80">
+              <h5 className="text-xs font-bold text-slate-900 dark:text-white uppercase tracking-wider">
                 Room & Billing Information
               </h5>
-              <div className="space-y-1.5 text-xs">
+              <div className="space-y-1.5 text-xs sm:text-[13px]">
                 <div className="flex items-center justify-between text-slate-600 dark:text-zinc-400">
                   <span>Rental Model</span>
                   <span className="font-bold text-slate-900 dark:text-white">
@@ -1251,7 +1294,7 @@ function TenantsContent() {
                 </div>
                 <div className="flex items-center justify-between text-slate-600 dark:text-zinc-400">
                   <span>Monthly Rent</span>
-                  <span className="font-mono font-black text-slate-900 dark:text-white">
+                  <span className="font-mono font-black text-slate-900 dark:text-white text-xs sm:text-sm">
                     ₱ {Number(selectedTenant.monthly_rent || 0).toLocaleString()}
                   </span>
                 </div>
@@ -1271,7 +1314,7 @@ function TenantsContent() {
                   <span>Current Balance</span>
                   <div className="flex items-center gap-1.5">
                     <span
-                      className={`font-mono font-black ${
+                      className={`font-mono font-black text-xs sm:text-sm ${
                         (Number(selectedTenant.balance) || 0) > 0
                           ? "text-rose-600 dark:text-rose-400"
                           : "text-slate-900 dark:text-white"
@@ -1280,11 +1323,11 @@ function TenantsContent() {
                       ₱ {Number(selectedTenant.balance || 0).toLocaleString()}
                     </span>
                     {(Number(selectedTenant.balance) || 0) <= 0 ? (
-                      <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400">
+                      <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400">
                         Paid
                       </span>
                     ) : (
-                      <span className="text-[10px] font-bold text-rose-600 dark:text-rose-400">
+                      <span className="text-xs font-bold text-rose-600 dark:text-rose-400">
                         Overdue
                       </span>
                     )}
@@ -1294,14 +1337,14 @@ function TenantsContent() {
             </div>
 
             {/* Emergency Contact Section */}
-            <div className="space-y-2 pt-1 border-t border-slate-100 dark:border-zinc-800/80">
-              <h5 className="text-[11px] font-bold text-slate-900 dark:text-white uppercase tracking-wider">
+            <div className="space-y-2 pt-1.5 border-t border-slate-100 dark:border-zinc-800/80">
+              <h5 className="text-xs font-bold text-slate-900 dark:text-white uppercase tracking-wider">
                 Emergency Contact
               </h5>
               {(() => {
                 const ec = parseEmergencyContact(selectedTenant);
                 return (
-                  <div className="flex items-start justify-between text-xs">
+                  <div className="flex items-start justify-between text-xs sm:text-[13px]">
                     <span className="text-slate-500 dark:text-zinc-400 font-medium">
                       {ec.relation}
                     </span>
@@ -1309,7 +1352,7 @@ function TenantsContent() {
                       <span className="font-bold text-slate-900 dark:text-white block">
                         {ec.name}
                       </span>
-                      <span className="text-[11px] text-slate-500 dark:text-zinc-400 font-mono block mt-0.5">
+                      <span className="text-xs text-slate-500 dark:text-zinc-400 font-mono block mt-0.5">
                         📞 {ec.phone}
                       </span>
                     </div>
@@ -1320,35 +1363,35 @@ function TenantsContent() {
 
 
             {/* Quick Actions Section */}
-            <div className="space-y-2 pt-1 border-t border-slate-100 dark:border-zinc-800/80">
-              <h5 className="text-[11px] font-bold text-slate-900 dark:text-white uppercase tracking-wider">
+            <div className="space-y-2 pt-1.5 border-t border-slate-100 dark:border-zinc-800/80">
+              <h5 className="text-xs font-bold text-slate-900 dark:text-white uppercase tracking-wider">
                 Quick Actions
               </h5>
-              <div className="space-y-2">
+              <div className="space-y-1.5">
                 {/* 1. Solid Blue Button: View Tenant Profile */}
                 <button
                   onClick={() => setIsViewModalOpen(true)}
-                  className="w-full py-2.5 rounded-xl bg-[#0055a5] hover:bg-[#00478f] text-white text-xs font-bold shadow-xs flex items-center justify-center gap-2 transition-colors cursor-pointer"
+                  className="w-full py-2 rounded-xl bg-[#0055a5] hover:bg-[#00478f] text-white text-xs sm:text-[13px] font-bold shadow-xs flex items-center justify-center gap-2 transition-colors cursor-pointer"
                 >
-                  <User className="w-3.5 h-3.5 stroke-[2.2]" />
+                  <User className="w-4 h-4 stroke-[2.2]" />
                   <span>View Tenant Profile</span>
                 </button>
 
                 {/* 2. Outlined Button: Send Message */}
                 <button
                   onClick={() => router.push(`/admin/chat?tenant_id=${selectedTenant.id}`)}
-                  className="w-full py-2 rounded-xl bg-white dark:bg-zinc-900 border border-slate-200/90 dark:border-zinc-800 hover:bg-slate-50 dark:hover:bg-zinc-800 text-slate-700 dark:text-zinc-200 text-xs font-bold shadow-2xs flex items-center justify-center gap-2 transition-colors cursor-pointer"
+                  className="w-full py-2 rounded-xl bg-white dark:bg-zinc-900 border border-slate-200/90 dark:border-zinc-800 hover:bg-slate-50 dark:hover:bg-zinc-800 text-slate-700 dark:text-zinc-200 text-xs sm:text-[13px] font-bold shadow-2xs flex items-center justify-center gap-2 transition-colors cursor-pointer"
                 >
-                  <MessageSquare className="w-3.5 h-3.5 text-blue-600 stroke-[2.2]" />
+                  <MessageSquare className="w-4 h-4 text-blue-600 stroke-[2.2]" />
                   <span>Send Message</span>
                 </button>
 
                 {/* 3. Outlined Button: Issue Bill */}
                 <button
                   onClick={() => router.push(`/admin/billing?action=create&tenant_id=${selectedTenant.id}`)}
-                  className="w-full py-2 rounded-xl bg-white dark:bg-zinc-900 border border-slate-200/90 dark:border-zinc-800 hover:bg-slate-50 dark:hover:bg-zinc-800 text-slate-700 dark:text-zinc-200 text-xs font-bold shadow-2xs flex items-center justify-center gap-2 transition-colors cursor-pointer"
+                  className="w-full py-2 rounded-xl bg-white dark:bg-zinc-900 border border-slate-200/90 dark:border-zinc-800 hover:bg-slate-50 dark:hover:bg-zinc-800 text-slate-700 dark:text-zinc-200 text-xs sm:text-[13px] font-bold shadow-2xs flex items-center justify-center gap-2 transition-colors cursor-pointer"
                 >
-                  <Receipt className="w-3.5 h-3.5 text-blue-600 stroke-[2.2]" />
+                  <Receipt className="w-4 h-4 text-blue-600 stroke-[2.2]" />
                   <span>Issue Bill</span>
                 </button>
               </div>
@@ -1368,9 +1411,9 @@ function TenantsContent() {
               exit={{ scale: 0.96, opacity: 0 }}
               className="bg-white dark:bg-zinc-900 rounded-2xl w-full max-w-xl overflow-hidden shadow-2xl border border-slate-200 dark:border-zinc-800 max-h-[90vh] flex flex-col"
             >
-              <div className="px-6 py-4 border-b border-slate-200 dark:border-zinc-800 flex justify-between items-center shrink-0">
+              <div className="px-5 py-3.5 border-b border-slate-200 dark:border-zinc-800 flex justify-between items-center shrink-0">
                 <div>
-                  <h3 className="text-base font-bold text-slate-900 dark:text-white">
+                  <h3 className="text-sm sm:text-base font-bold text-slate-900 dark:text-white">
                     {editingTenant ? `Edit Resident: ${editingTenant.name}` : "Register New Resident"}
                   </h3>
                   <p className="text-xs text-slate-500 dark:text-zinc-400 mt-0.5">
@@ -1379,15 +1422,15 @@ function TenantsContent() {
                 </div>
                 <button
                   onClick={() => setIsModalOpen(false)}
-                  className="p-1 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-white cursor-pointer"
+                  className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-white cursor-pointer"
                 >
-                  <X className="w-4 h-4" />
+                  <X className="w-5 h-5" />
                 </button>
               </div>
 
-              <form onSubmit={handleSubmitTenant} className="p-6 overflow-y-auto custom-scrollbar space-y-4">
+              <form onSubmit={handleSubmitTenant} className="p-5 overflow-y-auto custom-scrollbar space-y-3.5">
                 {error && (
-                  <div className="p-3 rounded-lg bg-rose-50 text-rose-600 text-xs font-semibold flex items-center gap-2 border border-rose-200">
+                  <div className="p-2.5 rounded-xl bg-rose-50 text-rose-600 text-xs sm:text-[13px] font-semibold flex items-center gap-2 border border-rose-200">
                     <AlertTriangle className="w-4 h-4 shrink-0" />
                     <span>{error}</span>
                   </div>
@@ -1395,7 +1438,7 @@ function TenantsContent() {
 
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-1">
-                    <label className="text-[11px] font-bold text-slate-700 dark:text-zinc-300 uppercase">
+                    <label className="text-xs font-bold text-slate-700 dark:text-zinc-300 uppercase tracking-wide">
                       Full Name *
                     </label>
                     <input
@@ -1404,12 +1447,12 @@ function TenantsContent() {
                       value={formData.name}
                       onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                       placeholder="e.g. Juan Dela Cruz"
-                      className="w-full px-3 py-2 text-xs rounded-lg border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-slate-900 dark:text-white outline-none focus:ring-1 focus:ring-blue-500"
+                      className="w-full px-3 py-2 text-xs sm:text-[13px] rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-slate-900 dark:text-white outline-none focus:ring-1 focus:ring-blue-500"
                     />
                   </div>
 
                   <div className="space-y-1">
-                    <label className="text-[11px] font-bold text-slate-700 dark:text-zinc-300 uppercase">
+                    <label className="text-xs font-bold text-slate-700 dark:text-zinc-300 uppercase tracking-wide">
                       Email Address *
                     </label>
                     <input
@@ -1418,14 +1461,14 @@ function TenantsContent() {
                       value={formData.email}
                       onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                       placeholder="e.g. juan@email.com"
-                      className="w-full px-3 py-2 text-xs rounded-lg border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-slate-900 dark:text-white outline-none focus:ring-1 focus:ring-blue-500"
+                      className="w-full px-3 py-2 text-xs sm:text-[13px] rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-slate-900 dark:text-white outline-none focus:ring-1 focus:ring-blue-500"
                     />
                   </div>
                 </div>
 
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-1">
-                    <label className="text-[11px] font-bold text-slate-700 dark:text-zinc-300 uppercase">
+                    <label className="text-xs font-bold text-slate-700 dark:text-zinc-300 uppercase tracking-wide">
                       Phone Number *
                     </label>
                     <input
@@ -1436,13 +1479,13 @@ function TenantsContent() {
                         setFormData({ ...formData, phone: formatPhoneInput(e.target.value) })
                       }
                       placeholder="+63 999 123 7654"
-                      className="w-full px-3 py-2 text-xs rounded-lg border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-slate-900 dark:text-white outline-none focus:ring-1 focus:ring-blue-500 font-mono"
+                      className="w-full px-3 py-2 text-xs sm:text-[13px] rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-slate-900 dark:text-white outline-none focus:ring-1 focus:ring-blue-500 font-mono"
                     />
                   </div>
 
                   {!editingTenant && (
                     <div className="space-y-1">
-                      <label className="text-[11px] font-bold text-slate-700 dark:text-zinc-300 uppercase">
+                      <label className="text-xs font-bold text-slate-700 dark:text-zinc-300 uppercase tracking-wide">
                         Account Password *
                       </label>
                       <input
@@ -1451,14 +1494,14 @@ function TenantsContent() {
                         value={formData.password}
                         onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                         placeholder="••••••••"
-                        className="w-full px-3 py-2 text-xs rounded-lg border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-slate-900 dark:text-white outline-none focus:ring-1 focus:ring-blue-500"
+                        className="w-full px-3 py-2 text-xs sm:text-[13px] rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-slate-900 dark:text-white outline-none focus:ring-1 focus:ring-blue-500"
                       />
                     </div>
                   )}
 
                   {editingTenant && (
                     <div className="space-y-1">
-                      <label className="text-[11px] font-bold text-slate-700 dark:text-zinc-300 uppercase">
+                      <label className="text-xs font-bold text-slate-700 dark:text-zinc-300 uppercase tracking-wide">
                         Account Status
                       </label>
                       <CustomSelect
@@ -1470,7 +1513,7 @@ function TenantsContent() {
                           { value: "Moved Out", label: "Moved Out", dotColor: "bg-slate-400" },
                           { value: "Declined", label: "Declined", dotColor: "bg-rose-500" },
                         ]}
-                        className="w-full px-3 py-2 text-xs rounded-lg border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-slate-900 dark:text-white outline-none"
+                        className="w-full px-3 py-2 text-xs sm:text-[13px] rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-slate-900 dark:text-white outline-none"
                       />
                     </div>
                   )}
@@ -1478,7 +1521,7 @@ function TenantsContent() {
 
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-1">
-                    <label className="text-[11px] font-bold text-slate-700 dark:text-zinc-300 uppercase">
+                    <label className="text-xs font-bold text-slate-700 dark:text-zinc-300 uppercase tracking-wide">
                       Assigned Room
                     </label>
                     <CustomSelect
@@ -1491,12 +1534,12 @@ function TenantsContent() {
                           label: `Room ${r.room_number} (${r.type}) — ₱${Number(r.price).toLocaleString()}`,
                         })),
                       ]}
-                      className="w-full px-3 py-2 text-xs rounded-lg border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-slate-900 dark:text-white outline-none"
+                      className="w-full px-3 py-2 text-xs sm:text-[13px] rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-slate-900 dark:text-white outline-none"
                     />
                   </div>
 
                   <div className="space-y-1">
-                    <label className="text-[11px] font-bold text-slate-700 dark:text-zinc-300 uppercase">
+                    <label className="text-xs font-bold text-slate-700 dark:text-zinc-300 uppercase tracking-wide">
                       Monthly Rent (₱)
                     </label>
                     <input
@@ -1504,54 +1547,54 @@ function TenantsContent() {
                       value={formData.monthly_rent}
                       onChange={(e) => setFormData({ ...formData, monthly_rent: e.target.value })}
                       placeholder="e.g. 4500"
-                      className="w-full px-3 py-2 text-xs rounded-lg border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-slate-900 dark:text-white outline-none font-mono"
+                      className="w-full px-3 py-2 text-xs sm:text-[13px] rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-slate-900 dark:text-white outline-none font-mono"
                     />
                   </div>
                 </div>
 
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-1">
-                    <label className="text-[11px] font-bold text-slate-700 dark:text-zinc-300 uppercase">
+                    <label className="text-xs font-bold text-slate-700 dark:text-zinc-300 uppercase tracking-wide">
                       Move-In Date
                     </label>
                     <input
                       type="date"
                       value={formData.date_moved_in}
                       onChange={(e) => setFormData({ ...formData, date_moved_in: e.target.value })}
-                      className="w-full px-3 py-2 text-xs rounded-lg border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-slate-900 dark:text-white outline-none"
+                      className="w-full px-3 py-2 text-xs sm:text-[13px] rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-slate-900 dark:text-white outline-none"
                     />
                   </div>
 
                   <div className="space-y-1">
-                    <label className="text-[11px] font-bold text-slate-700 dark:text-zinc-300 uppercase">
+                    <label className="text-xs font-bold text-slate-700 dark:text-zinc-300 uppercase tracking-wide">
                       Gender
                     </label>
                     <CustomSelect
                       value={formData.gender}
                       onChange={(val) => setFormData({ ...formData, gender: val })}
                       options={["Male", "Female", "Other"]}
-                      className="w-full px-3 py-2 text-xs rounded-lg border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-slate-900 dark:text-white outline-none"
+                      className="w-full px-3 py-2 text-xs sm:text-[13px] rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-slate-900 dark:text-white outline-none"
                     />
                   </div>
                 </div>
 
-                <div className="pt-4 border-t border-slate-200 dark:border-zinc-800 flex justify-end gap-2.5">
+                <div className="pt-3 border-t border-slate-200 dark:border-zinc-800 flex justify-end gap-2">
                   <button
                     type="button"
                     onClick={() => setIsModalOpen(false)}
-                    className="px-4 py-2 text-xs font-bold rounded-lg border border-slate-200 dark:border-zinc-800 hover:bg-slate-50 dark:hover:bg-zinc-800 text-slate-700 dark:text-zinc-300 cursor-pointer"
+                    className="px-3.5 py-2 text-xs sm:text-[13px] font-bold rounded-xl border border-slate-200 dark:border-zinc-800 hover:bg-slate-50 dark:hover:bg-zinc-800 text-slate-700 dark:text-zinc-300 cursor-pointer"
                   >
                     Cancel
                   </button>
                   <button
                     type="submit"
                     disabled={isSubmitting}
-                    className="px-5 py-2 text-xs font-bold rounded-lg bg-[#0055a5] hover:bg-[#00478f] text-white flex items-center gap-1.5 shadow-xs cursor-pointer disabled:opacity-50"
+                    className="px-4.5 py-2 text-xs sm:text-[13px] font-bold rounded-xl bg-[#0055a5] hover:bg-[#00478f] text-white flex items-center gap-1.5 shadow-xs cursor-pointer disabled:opacity-50"
                   >
                     {isSubmitting ? (
-                      <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                      <RefreshCw className="w-4 h-4 animate-spin" />
                     ) : (
-                      <Check className="w-3.5 h-3.5 stroke-[2.5]" />
+                      <Check className="w-4 h-4 stroke-[2.5]" />
                     )}
                     <span>Save Resident</span>
                   </button>
@@ -1572,13 +1615,13 @@ function TenantsContent() {
               exit={{ scale: 0.96, opacity: 0 }}
               className="bg-white dark:bg-zinc-900 rounded-2xl w-full max-w-2xl overflow-hidden shadow-2xl border border-slate-200 dark:border-zinc-800 max-h-[90vh] flex flex-col"
             >
-              <div className="px-6 py-4 border-b border-slate-200 dark:border-zinc-800 flex justify-between items-center shrink-0">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-blue-50 dark:bg-blue-900/40 text-blue-600 font-extrabold flex items-center justify-center">
+              <div className="px-5 py-3.5 border-b border-slate-200 dark:border-zinc-800 flex justify-between items-center shrink-0">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-9 h-9 rounded-full bg-blue-50 dark:bg-blue-900/40 text-blue-600 font-extrabold flex items-center justify-center text-xs sm:text-sm">
                     {getInitials(selectedTenant.name)}
                   </div>
                   <div>
-                    <h3 className="text-base font-bold text-slate-900 dark:text-white">
+                    <h3 className="text-sm sm:text-base font-bold text-slate-900 dark:text-white">
                       {selectedTenant.name}
                     </h3>
                     <p className="text-xs text-slate-500 font-mono">
@@ -1594,19 +1637,19 @@ function TenantsContent() {
                 </button>
               </div>
 
-              <div className="p-6 overflow-y-auto custom-scrollbar space-y-4 text-xs">
+              <div className="p-5 overflow-y-auto custom-scrollbar space-y-4 text-xs sm:text-[13px]">
                 {/* 3 Top Financial Stats */}
-                <div className="grid grid-cols-3 gap-3">
+                <div className="grid grid-cols-3 gap-2.5">
                   <div className="p-3 rounded-xl border border-slate-200 dark:border-zinc-800 bg-slate-50 dark:bg-zinc-900/40">
-                    <span className="text-[10px] font-bold text-slate-500 uppercase block">Monthly Rent</span>
-                    <span className="text-base font-black font-mono text-slate-900 dark:text-white mt-0.5 block">
+                    <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block">Monthly Rent</span>
+                    <span className="text-base sm:text-lg font-black font-mono text-slate-900 dark:text-white mt-0.5 block">
                       ₱ {Number(selectedTenant.monthly_rent || 0).toLocaleString()}
                     </span>
                   </div>
                   <div className="p-3 rounded-xl border border-slate-200 dark:border-zinc-800 bg-slate-50 dark:bg-zinc-900/40">
-                    <span className="text-[10px] font-bold text-slate-500 uppercase block">Current Balance</span>
+                    <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block">Current Balance</span>
                     <span
-                      className={`text-base font-black font-mono mt-0.5 block ${
+                      className={`text-base sm:text-lg font-black font-mono mt-0.5 block ${
                         (Number(selectedTenant.balance) || 0) > 0 ? "text-rose-600" : "text-emerald-600"
                       }`}
                     >
@@ -1614,69 +1657,69 @@ function TenantsContent() {
                     </span>
                   </div>
                   <div className="p-3 rounded-xl border border-slate-200 dark:border-zinc-800 bg-slate-50 dark:bg-zinc-900/40">
-                    <span className="text-[10px] font-bold text-slate-500 uppercase block">Last Payment</span>
-                    <span className="text-xs font-bold text-slate-800 dark:text-zinc-200 mt-1 block font-mono">
+                    <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block">Last Payment</span>
+                    <span className="text-xs sm:text-[13px] font-bold text-slate-800 dark:text-zinc-200 mt-0.5 block font-mono">
                       {selectedTenant.last_payment_date || "No payment record"}
                     </span>
                   </div>
                 </div>
 
                 {/* Personal & Lease Details */}
-                <div className="grid grid-cols-2 gap-4 pt-2">
-                  <div className="space-y-2 p-3.5 rounded-xl border border-slate-200/90 dark:border-zinc-800">
-                    <h5 className="font-bold text-slate-900 dark:text-white uppercase text-[11px]">
+                <div className="grid grid-cols-2 gap-3.5 pt-1">
+                  <div className="space-y-2.5 p-3.5 rounded-xl border border-slate-200/90 dark:border-zinc-800">
+                    <h5 className="font-bold text-slate-900 dark:text-white uppercase text-xs tracking-wider">
                       Contact Details
                     </h5>
                     <div>
-                      <span className="text-slate-400 block text-[10px]">Email</span>
-                      <span className="font-bold text-slate-800 dark:text-zinc-200">{selectedTenant.email}</span>
+                      <span className="text-slate-400 block text-[11px] font-medium">Email</span>
+                      <span className="font-bold text-slate-800 dark:text-zinc-200 text-xs sm:text-[13px]">{selectedTenant.email}</span>
                     </div>
                     <div>
-                      <span className="text-slate-400 block text-[10px]">Phone</span>
-                      <span className="font-mono font-bold text-slate-800 dark:text-zinc-200">
+                      <span className="text-slate-400 block text-[11px] font-medium">Phone</span>
+                      <span className="font-mono font-bold text-slate-800 dark:text-zinc-200 text-xs sm:text-[13px]">
                         {formatPhoneNumber(selectedTenant.phone)}
                       </span>
                     </div>
                     <div>
-                      <span className="text-slate-400 block text-[10px]">Address</span>
-                      <span className="font-medium text-slate-700 dark:text-zinc-300">
+                      <span className="text-slate-400 block text-[11px] font-medium">Address</span>
+                      <span className="font-medium text-slate-700 dark:text-zinc-300 text-xs sm:text-[13px]">
                         {selectedTenant.address || "Riverside Boarding House"}
                       </span>
                     </div>
                   </div>
 
-                  <div className="space-y-2 p-3.5 rounded-xl border border-slate-200/90 dark:border-zinc-800">
-                    <h5 className="font-bold text-slate-900 dark:text-white uppercase text-[11px]">
+                  <div className="space-y-2.5 p-3.5 rounded-xl border border-slate-200/90 dark:border-zinc-800">
+                    <h5 className="font-bold text-slate-900 dark:text-white uppercase text-xs tracking-wider">
                       Lease Information
                     </h5>
                     <div>
-                      <span className="text-slate-400 block text-[10px]">Room Number</span>
-                      <span className="font-bold text-slate-800 dark:text-zinc-200">
+                      <span className="text-slate-400 block text-[11px] font-medium">Room Number</span>
+                      <span className="font-bold text-slate-800 dark:text-zinc-200 text-xs sm:text-[13px]">
                         {selectedTenant.room_number ? `Room ${selectedTenant.room_number}` : "Unassigned"}
                       </span>
                     </div>
                     <div>
-                      <span className="text-slate-400 block text-[10px]">Rental Model</span>
-                      <span className="font-bold text-slate-800 dark:text-zinc-200">
+                      <span className="text-slate-400 block text-[11px] font-medium">Rental Model</span>
+                      <span className="font-bold text-slate-800 dark:text-zinc-200 text-xs sm:text-[13px]">
                         {getTenantRentalModel(selectedTenant)}
                       </span>
                     </div>
                     <div>
-                      <span className="text-slate-400 block text-[10px]">Move-In Date</span>
-                      <span className="font-mono font-medium text-slate-700 dark:text-zinc-300">
+                      <span className="text-slate-400 block text-[11px] font-medium">Move-In Date</span>
+                      <span className="font-mono font-medium text-slate-700 dark:text-zinc-300 text-xs sm:text-[13px]">
                         {selectedTenant.date_moved_in || "Aug 15, 2026"}
                       </span>
                     </div>
                   </div>
                 </div>
 
-                <div className="pt-3 border-t border-slate-100 dark:border-zinc-800 flex justify-end gap-2">
+                <div className="pt-2.5 border-t border-slate-100 dark:border-zinc-800 flex justify-end gap-2">
                   <button
                     onClick={() => {
                       setIsViewModalOpen(false);
                       handleOpenEditModal(selectedTenant);
                     }}
-                    className="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs flex items-center gap-1.5 cursor-pointer"
+                    className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs sm:text-[13px] flex items-center gap-1.5 cursor-pointer"
                   >
                     <Edit className="w-3.5 h-3.5" />
                     <span>Edit Profile</span>
@@ -1698,26 +1741,26 @@ function TenantsContent() {
               exit={{ scale: 0.95, opacity: 0 }}
               className="bg-white dark:bg-zinc-900 rounded-2xl w-full max-w-sm overflow-hidden shadow-2xl border border-slate-200 dark:border-zinc-800 p-5"
             >
-              <h3 className="text-sm font-extrabold text-slate-950 dark:text-white">
+              <h3 className="text-sm sm:text-base font-extrabold text-slate-950 dark:text-white">
                 {confirmStatus.action === "Approve" ? "Approve Resident" : "Decline Application"}
               </h3>
-              <p className="text-xs text-slate-600 dark:text-zinc-300 mt-1 leading-relaxed">
+              <p className="text-xs sm:text-[13px] text-slate-600 dark:text-zinc-300 mt-1 leading-relaxed">
                 {confirmStatus.action === "Approve"
                   ? `Confirm onboarding approval for ${confirmStatus.name}? Their status will become Active.`
                   : `Decline application for ${confirmStatus.name}? Their record will be flagged as Declined.`}
               </p>
 
-              <div className="mt-5 flex items-center justify-end gap-2">
+              <div className="mt-4 flex items-center justify-end gap-2">
                 <button
                   onClick={() => setConfirmStatus(null)}
-                  className="px-3.5 py-1.5 text-xs font-bold rounded-lg border border-slate-200 dark:border-zinc-800 text-slate-700 hover:bg-slate-50 dark:hover:bg-zinc-800 cursor-pointer"
+                  className="px-3.5 py-1.5 text-xs sm:text-[13px] font-bold rounded-xl border border-slate-200 dark:border-zinc-800 text-slate-700 hover:bg-slate-50 dark:hover:bg-zinc-800 cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button
                   onClick={executeStatusUpdate}
                   disabled={isStatusUpdating !== null}
-                  className={`px-4 py-1.5 text-xs font-bold rounded-lg text-white transition-colors cursor-pointer ${
+                  className={`px-4 py-1.5 text-xs sm:text-[13px] font-bold rounded-xl text-white transition-colors cursor-pointer ${
                     confirmStatus.action === "Approve" ? "bg-emerald-600 hover:bg-emerald-700" : "bg-rose-600 hover:bg-rose-700"
                   }`}
                 >
@@ -1732,8 +1775,6 @@ function TenantsContent() {
           </div>
         )}
       </AnimatePresence>
-
-
 
       {/* MODAL 5: OPERATIONAL & FINANCIAL REPORT MODAL */}
       <AdminReportModal isOpen={showReportModal} onClose={() => setShowReportModal(false)} />
