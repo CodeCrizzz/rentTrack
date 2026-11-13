@@ -14,7 +14,7 @@ import {
 import { AppSidebar } from '@/components/app-sidebar';
 import { FullscreenToggle } from '@/components/fullscreen-toggle';
 import { ThemeToggle } from '@/components/theme-toggle';
-import { Home, Building2, Users, Calculator, Wrench, MessageSquareMore, Bell, User, Calendar, Cctv, UserPlus, CheckCheck, Clock, Bed, Receipt, Activity } from 'lucide-react';
+import { Home, Building2, Users, Calculator, Wrench, MessageSquareMore, Bell, User, Calendar, Cctv, UserPlus, CheckCheck, Clock, Bed, Receipt, Activity, RefreshCw, Database } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -68,7 +68,35 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     const [notifUnreadCount, setNotifUnreadCount] = useState(0);
     const [showAllNotifications, setShowAllNotifications] = useState(false);
     const [refreshKey, setRefreshKey] = useState(0);
+    const [isRefreshing, setIsRefreshing] = useState(false);
     const [currentDate, setCurrentDate] = useState("");
+
+    const handleGlobalRefresh = async () => {
+        setIsRefreshing(true);
+        try {
+            setRefreshKey(prev => prev + 1);
+            await Promise.allSettled([
+                fetchUnreadCount(),
+                fetchPendingTenantCount(),
+                fetchPendingPaymentsCount(),
+                fetchPendingRequestsCount(),
+                fetchAdminNotifications(),
+            ]);
+            if (typeof window !== 'undefined') {
+                window.dispatchEvent(new CustomEvent('renttrack_refresh_all'));
+                window.dispatchEvent(new CustomEvent('renttrack-refresh-data'));
+                window.dispatchEvent(new CustomEvent('renttrack-refresh-counts'));
+            }
+            router.refresh();
+            toast.success("Page refreshed");
+        } catch {
+            toast.error("Failed to refresh");
+        } finally {
+            setTimeout(() => {
+                setIsRefreshing(false);
+            }, 500);
+        }
+    };
 
     const fetchUnreadCount = async () => {
         try {
@@ -363,6 +391,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         { name: 'Maintenance Requests', path: '/admin/requests', icon: Wrench },
         { name: 'Messages', path: '/admin/chat', icon: MessageSquareMore },
         { name: 'CCTV Monitoring', path: '/admin/cctv', icon: Cctv },
+        { name: 'Activity Logs', path: '/admin/activity-logs', icon: Activity },
+        { name: 'System Backup', path: '/admin/backup', icon: Database },
     ];
 
     const mappedNavItems = rawNavItems.map(item => {
@@ -404,6 +434,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         if (path === 'requests') return 'Maintenance Requests';
         if (path === 'cctv') return 'CCTV Monitoring';
         if (path === 'activity-logs') return 'Activity Logs';
+        if (path === 'backup') return 'System Backup & Recovery';
         return path.split('-').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
     };
 
@@ -429,10 +460,10 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                             <SidebarTrigger className="-ml-2 text-slate-500 hover:text-slate-900 dark:text-zinc-400 dark:hover:text-white" />
                             <div className="h-5 w-px bg-slate-200 dark:bg-zinc-800 hidden sm:block" />
                             <div className="flex flex-col">
-                                <h1 className="text-sm sm:text-lg font-black text-slate-900 dark:text-white leading-tight tracking-tight">
+                                <h1 className="text-sm sm:text-base lg:text-lg font-black text-slate-900 dark:text-white leading-tight tracking-tight">
                                     {getPageTitle()}
                                 </h1>
-                                <p className="text-[10px] sm:text-xs font-bold text-slate-400 dark:text-zinc-500 uppercase tracking-widest hidden sm:block">
+                                <p className="text-[11px] font-bold text-slate-400 dark:text-zinc-500 uppercase tracking-widest hidden sm:block">
                                     Admin Portal
                                 </p>
                             </div>
@@ -440,11 +471,28 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
                         <div className="flex items-center gap-2">
                             {currentDate && (
-                                <div className="hidden md:flex items-center gap-2 px-3 py-1.5 mr-2 bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-zinc-800 rounded-lg text-xs font-medium text-slate-600 dark:text-zinc-300">
-                                    <Calendar className="w-3.5 h-3.5 text-slate-400 dark:text-zinc-500" />
+                                <div className="hidden md:flex items-center gap-2 px-3 py-1.5 mr-2 bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-zinc-800 rounded-lg text-xs font-semibold text-slate-700 dark:text-zinc-200">
+                                    <Calendar className="w-3.5 h-3.5 text-slate-500 dark:text-zinc-400" />
                                     {currentDate}
                                 </div>
                             )}
+                            <button
+                                type="button"
+                                onClick={handleGlobalRefresh}
+                                disabled={isRefreshing}
+                                className="group p-2 text-slate-500 hover:text-slate-900 dark:text-zinc-400 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/5 rounded-full transition-colors outline-none cursor-pointer disabled:opacity-60"
+                                title="Refresh Page & Data"
+                                aria-label="Refresh Page & Data"
+                            >
+                                <RefreshCw
+                                    className={`w-5 h-5 transition-all duration-500 ${
+                                        isRefreshing
+                                            ? "animate-spin text-[#0055a5] dark:text-blue-400"
+                                            : "group-hover:rotate-180 group-active:scale-90"
+                                    }`}
+                                    strokeWidth={2}
+                                />
+                            </button>
                             <ThemeToggle />
                             <FullscreenToggle />
                             <DropdownMenu>
@@ -558,7 +606,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                         const isActivityLogs = pathname?.startsWith('/admin/activity-logs');
                         const isNoPageScroll = isManageRooms || isManageTenants || isRequests || isActivityLogs;
                         return (
-                            <div className={`flex-1 flex flex-col ${isNoPageScroll ? 'overflow-hidden' : 'overflow-y-auto'} overflow-x-hidden ${isNoPageScroll ? '' : 'custom-scrollbar'} bg-[#f4f7fb] dark:bg-zinc-950`}>
+                            <div className={`flex-1 flex flex-col ${isNoPageScroll ? 'overflow-hidden' : 'overflow-y-auto'} overflow-x-hidden ${isNoPageScroll ? '' : 'custom-scrollbar'} bg-[#f4f7fb] dark:bg-background`}>
                                 <div className={`px-4 pt-3 pb-2 sm:px-5 sm:pt-3.5 sm:pb-2.5 lg:px-6 lg:pt-3.5 lg:pb-2.5 relative ${isNoPageScroll ? 'h-full flex-1 flex flex-col min-h-0 overflow-hidden' : ''}`}>
                                     <AnimatePresence mode="wait">
                                         <div key={`${pathname}-${refreshKey}`} className={`w-full flex-1 flex flex-col ${isNoPageScroll ? 'h-full min-h-0 overflow-hidden' : ''}`}>
