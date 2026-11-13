@@ -28,6 +28,24 @@ const {
     updateGcashQrCode,
 } = require('../controllers/adminController');
 const { updateRequest, deleteRequest } = require('../controllers/requestController');
+const {
+    getBackupStatus,
+    updateBackupSettings,
+    browseFolderDialog,
+    openInFileExplorer,
+    createManualBackup,
+    exportBackup,
+    downloadBackupFile,
+    deleteBackupFile,
+    restoreBackupFromFile,
+    restoreFromLocalFile
+} = require('../controllers/backupController');
+
+const multer = require('multer');
+const uploadBackup = multer({
+    storage: multer.memoryStorage(),
+    limits: { fileSize: 50 * 1024 * 1024 }
+});
 
 // All admin routes require valid authentication and administrative roles (RBAC)
 router.use(protect);
@@ -84,5 +102,17 @@ router.get('/gcash-qr', hasPermission(PERMISSIONS.BILLS_READ), getGcashQrCode);
 router.put('/gcash-qr', hasPermission(PERMISSIONS.BILLS_UPDATE), updateGcashQrCode);
 router.get('/qrph-qr', hasPermission(PERMISSIONS.BILLS_READ), getGcashQrCode);
 router.put('/qrph-qr', hasPermission(PERMISSIONS.BILLS_UPDATE), updateGcashQrCode);
+
+// Database Backup, Scheduled Automation & Disaster Recovery
+router.get('/backup/status', getBackupStatus);
+router.post('/backup/settings', updateBackupSettings);
+router.post('/backup/browse-folder', browseFolderDialog);
+router.post('/backup/open-folder', openInFileExplorer);
+router.post('/backup/create', createManualBackup);
+router.get('/backup/export', exportBackup);
+router.get('/backup/download/:filename', downloadBackupFile);
+router.delete('/backup/:filename', deleteBackupFile);
+router.post('/backup/restore', uploadBackup.single('backupFile'), restoreBackupFromFile);
+router.post('/backup/restore-local/:filename', restoreFromLocalFile);
 
 module.exports = router;

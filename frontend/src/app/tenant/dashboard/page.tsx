@@ -47,7 +47,6 @@ export default function TenantDashboard() {
     const router = useRouter();
     const [isLoading, setIsLoading] = useState(true);
     const [isMounted, setIsMounted] = useState(false);
-    const [isRefreshing, setIsRefreshing] = useState(false);
     const [userName, setUserName] = useState('Resident');
     const [selectedYear, setSelectedYear] = useState<'This Year' | 'Last Year'>('This Year');
     const [currentBill, setCurrentBill] = useState<any>(null);
@@ -96,8 +95,7 @@ export default function TenantDashboard() {
         { month: 'Dec', water: 440, electricity: 1400 },
     ];
 
-    const fetchDashboardData = async (showToast = false) => {
-        if (showToast) setIsRefreshing(true);
+    const fetchDashboardData = async () => {
         try {
             const [dashboardRes, unreadRes, announcementsRes, currentBillRes] = await Promise.all([
                 api.get('/tenant/dashboard'),
@@ -124,13 +122,10 @@ export default function TenantDashboard() {
                 unreadCount: unreadRes.data?.unreadCount || 0,
                 announcements: announcementsRes.data || []
             });
-            if (showToast) toast.success("Resident overview synchronized");
         } catch (error) {
             console.error("Failed to fetch dashboard data:", error);
-            if (showToast) toast.error("Could not sync overview");
         } finally {
             setIsLoading(false);
-            setIsRefreshing(false);
         }
     };
 
@@ -148,10 +143,14 @@ export default function TenantDashboard() {
         fetchDashboardData();
 
         const handleRefresh = () => {
-            fetchDashboardData(false);
+            fetchDashboardData();
         };
         window.addEventListener('renttrack-refresh-data', handleRefresh);
-        return () => window.removeEventListener('renttrack-refresh-data', handleRefresh);
+        window.addEventListener('renttrack_refresh_all', handleRefresh);
+        return () => {
+            window.removeEventListener('renttrack-refresh-data', handleRefresh);
+            window.removeEventListener('renttrack_refresh_all', handleRefresh);
+        };
     }, []);
 
     const today = new Date();

@@ -506,10 +506,8 @@ function BillingContent() {
   };
 
   // Quick Action & Filter Controls (Matching Mockup UI)
-  const [quickActionPeriod, setQuickActionPeriod] = useState("This Year");
-  const [chartPeriod, setChartPeriod] = useState<
-    "This Month" | "Last Month" | "This Year" | "Last Year"
-  >("This Year");
+  const [quickActionPeriod, setQuickActionPeriod] = useState<"This Year" | "Last Year">("This Year");
+  const [chartPeriod, setChartPeriod] = useState<"This Year" | "Last Year">("This Year");
   const [cashflowMap, setCashflowMap] = useState<Record<string, any[]>>({});
   const [activeTableTab, setActiveTableTab] = useState<
     "all" | "unpaid" | "overdue" | "pending" | "paid"
@@ -558,8 +556,6 @@ function BillingContent() {
   const fetchCashFlowForPeriod = useCallback(async (period: string) => {
     try {
       const rangeMap: Record<string, string> = {
-        "This Month": "this_month",
-        "Last Month": "last_month",
         "This Year": "this_year",
         "Last Year": "last_year",
       };
@@ -580,8 +576,6 @@ function BillingContent() {
         pendingRes,
         paymentsRes,
         historyRes,
-        thisMonthCf,
-        lastMonthCf,
         thisYearCf,
         lastYearCf,
       ] = await Promise.all([
@@ -591,8 +585,6 @@ function BillingContent() {
         api.get("/admin/bills/payments/pending"),
         api.get("/admin/bills/payments"),
         api.get("/admin/bills/payments/history").catch(() => ({ data: null })),
-        api.get("/admin/cashflow?range=this_month"),
-        api.get("/admin/cashflow?range=last_month"),
         api.get("/admin/cashflow?range=this_year"),
         api.get("/admin/cashflow?range=last_year"),
       ]);
@@ -615,8 +607,6 @@ function BillingContent() {
         setPaymentHistoryList(historyRes.data);
       }
       setCashflowMap({
-        "This Month": thisMonthCf.data || [],
-        "Last Month": lastMonthCf.data || [],
         "This Year": thisYearCf.data || [],
         "Last Year": lastYearCf.data || [],
       });
@@ -778,11 +768,11 @@ function BillingContent() {
         ? Math.max(0, 100 - collectionRate)
         : 0;
 
-    // Previous month comparison from cashflowMap
-    const prevMonthData = cashflowMap["Last Month"] || [];
+    // Previous year comparison from cashflowMap
+    const prevYearData = cashflowMap["Last Year"] || [];
     let prevInvoiced = 0;
     let prevCollected = 0;
-    prevMonthData.forEach((d: any) => {
+    prevYearData.forEach((d: any) => {
       prevInvoiced += Number(d.billed) || 0;
       prevCollected += Number(d.collected) || 0;
     });
@@ -830,16 +820,6 @@ function BillingContent() {
     const rawData = cashflowMap[chartPeriod] || [];
 
     if (!rawData || rawData.length === 0) {
-      if (chartPeriod === "This Month") {
-        const cur = new Date().toLocaleString("default", { month: "short" });
-        return [{ month: cur, billed: 0, invoiced: 0, collected: 0, outstanding: 0 }];
-      }
-      if (chartPeriod === "Last Month") {
-        const d = new Date();
-        d.setMonth(d.getMonth() - 1);
-        const last = d.toLocaleString("default", { month: "short" });
-        return [{ month: last, billed: 0, invoiced: 0, collected: 0, outstanding: 0 }];
-      }
       return [
         { month: "Jan", billed: 0, invoiced: 0, collected: 0, outstanding: 0 },
         { month: "Feb", billed: 0, invoiced: 0, collected: 0, outstanding: 0 },
@@ -853,51 +833,6 @@ function BillingContent() {
         { month: "Oct", billed: 0, invoiced: 0, collected: 0, outstanding: 0 },
         { month: "Nov", billed: 0, invoiced: 0, collected: 0, outstanding: 0 },
         { month: "Dec", billed: 0, invoiced: 0, collected: 0, outstanding: 0 },
-      ];
-    }
-
-    if (chartPeriod === "This Month") {
-      const curMonth = new Date().toLocaleString("default", { month: "short" });
-      const currentYear = new Date().getFullYear();
-      const match = rawData.filter(
-        (d) => d.month === curMonth && (!d.year || d.year === currentYear),
-      );
-      const target = match.length > 0 ? match[0] : rawData[rawData.length - 1];
-      return [
-        {
-          ...target,
-          month: target.month,
-          billed: Number(target.billed) || 0,
-          invoiced: Number(target.billed) || 0,
-          collected: Number(target.collected) || 0,
-          outstanding: Number(target.outstanding) || 0,
-        },
-      ];
-    }
-
-    if (chartPeriod === "Last Month") {
-      const d = new Date();
-      d.setMonth(d.getMonth() - 1);
-      const lastMonth = d.toLocaleString("default", { month: "short" });
-      const lastYear = d.getFullYear();
-      const match = rawData.filter(
-        (d) => d.month === lastMonth && (!d.year || d.year === lastYear),
-      );
-      const target =
-        match.length > 0
-          ? match[0]
-          : rawData.length > 1
-          ? rawData[rawData.length - 2]
-          : rawData[0];
-      return [
-        {
-          ...target,
-          month: target.month,
-          billed: Number(target.billed) || 0,
-          invoiced: Number(target.billed) || 0,
-          collected: Number(target.collected) || 0,
-          outstanding: Number(target.outstanding) || 0,
-        },
       ];
     }
 
@@ -1042,21 +977,21 @@ function BillingContent() {
 
     const currentMonthBillIds = new Set(currentMonthBills.map((b) => b.id));
 
-    const periodData = cashflowMap["This Month"] || [];
+    const thisYearData = cashflowMap["This Year"] || [];
+    const curMonthName = now.toLocaleString("default", { month: "short" });
+    const curMonthCf = thisYearData.find((d: any) => d.month === curMonthName);
     let totalInvoices = 0;
     let totalCollected = 0;
     let outstandingBalance = 0;
 
     if (
-      periodData.length > 0 &&
-      (Number(periodData[0]?.billed) > 0 ||
-        Number(periodData[0]?.collected) > 0 ||
-        Number(periodData[0]?.outstanding) > 0)
+      curMonthCf &&
+      (Number(curMonthCf.billed) > 0 ||
+        Number(curMonthCf.collected) > 0 ||
+        Number(curMonthCf.outstanding) > 0)
     ) {
-      periodData.forEach((d: any) => {
-        totalInvoices += Number(d.billed) || 0;
-        totalCollected += Number(d.collected) || 0;
-      });
+      totalInvoices = Number(curMonthCf.billed) || 0;
+      totalCollected = Number(curMonthCf.collected) || 0;
     } else {
       currentMonthBills.forEach((b) => {
         totalInvoices += Number(b.total_amount) || 0;
@@ -1827,7 +1762,7 @@ function BillingContent() {
           <h1 className="text-xl sm:text-2xl font-black text-slate-950 dark:text-white tracking-tight leading-none">
             Bills and Payments
           </h1>
-          <p className="text-xs text-slate-500 dark:text-zinc-400 font-medium mt-1">
+          <p className="text-xs sm:text-[13px] text-slate-500 dark:text-zinc-400 font-medium mt-1">
             Real-time billing overview, invoice management, and collection tracking.
           </p>
         </div>
@@ -1837,18 +1772,18 @@ function BillingContent() {
           <button
             type="button"
             onClick={() => setIsGcashQrModalOpen(true)}
-            className="px-3 py-1.5 rounded-lg border border-slate-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 hover:bg-slate-50 dark:hover:bg-zinc-800 text-xs font-semibold text-slate-700 dark:text-zinc-200 shadow-xs flex items-center gap-1.5 transition-colors cursor-pointer"
+            className="px-3 py-1.5 rounded-xl border border-slate-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 hover:bg-slate-50 dark:hover:bg-zinc-800 text-xs sm:text-[13px] font-bold text-slate-700 dark:text-zinc-200 shadow-xs flex items-center gap-1.5 transition-colors cursor-pointer"
           >
-            <QrCode className="w-3.5 h-3.5 text-[#0066FF]" />
+            <QrCode className="w-4 h-4 text-[#0066FF]" />
             <span>QR Ph Code</span>
           </button>
 
-          <div className="w-36">
+          <div className="w-36 sm:w-40">
             <CustomSelect
               value={quickActionPeriod}
-              onChange={(val) => setQuickActionPeriod(val)}
-              options={["This Year", "This Month", "Last Month", "Last Year"]}
-              className="w-full bg-white dark:bg-zinc-900 pl-3 pr-7 py-1.5 border border-slate-200 dark:border-zinc-700 rounded-lg text-xs font-semibold text-slate-700 dark:text-zinc-300 shadow-xs"
+              onChange={(val) => setQuickActionPeriod(val as "This Year" | "Last Year")}
+              options={["This Year", "Last Year"]}
+              className="w-full bg-white dark:bg-zinc-900 pl-3 pr-8 py-1.5 border border-slate-200 dark:border-zinc-700 rounded-xl text-xs sm:text-[13px] font-semibold text-slate-700 dark:text-zinc-300 shadow-xs"
             />
           </div>
         </div>
@@ -1860,43 +1795,51 @@ function BillingContent() {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
         {/* Card 1: Total Collected */}
         <div className="relative overflow-hidden bg-white dark:bg-zinc-900 border border-slate-200/90 dark:border-zinc-800 rounded-xl p-3.5 sm:p-4 shadow-xs flex flex-col justify-between hover:border-slate-300 dark:hover:border-zinc-700 transition-colors">
-          <div className="pointer-events-none absolute inset-0 opacity-[0.03] dark:opacity-[0.05]" style={{ backgroundImage: 'repeating-linear-gradient(0deg, #10b981 0, #10b981 1px, transparent 0, transparent 6px)' }} />
-          <div className="flex items-start gap-2.5">
-            <div className="w-9 h-9 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0 border border-emerald-100 dark:border-emerald-800/40">
-              <Wallet className="w-5 h-5 stroke-[2]" />
+          {/* Treasury Voucher Diagonal Facet & Perforated Ledger Rule */}
+          <div className="pointer-events-none select-none absolute inset-0 overflow-hidden" aria-hidden="true">
+            <div className="absolute inset-0 bg-emerald-50/75 dark:bg-emerald-500/[0.065] [clip-path:polygon(64%_0,100%_0,100%_100%,42%_100%)]" />
+            <svg className="absolute inset-0 w-full h-full text-emerald-500/20 dark:text-emerald-400/20" viewBox="0 0 100 100" preserveAspectRatio="none" fill="none">
+              <line x1="64%" y1="0%" x2="42%" y2="100%" stroke="currentColor" strokeWidth="1" vectorEffect="non-scaling-stroke" />
+            </svg>
+            <div className="absolute inset-x-3 bottom-1.5 h-px opacity-45 dark:opacity-35 bg-[repeating-linear-gradient(to_right,currentColor_0_4px,transparent_4px_9px)] text-emerald-400/40 dark:text-emerald-400/30" />
+            <div className="absolute inset-0 rounded-xl ring-1 ring-inset ring-emerald-500/[0.06] dark:ring-emerald-400/[0.07]" />
+          </div>
+          <div className="relative z-10 flex items-start gap-3">
+            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0 border border-emerald-100 dark:border-emerald-800/40">
+              <Wallet className="w-4.5 h-4.5 sm:w-5 sm:h-5 stroke-[2]" />
             </div>
             <div>
-              <span className="text-[11px] font-semibold text-slate-500 dark:text-zinc-400">
+              <span className="text-xs font-bold text-slate-500 dark:text-zinc-400 uppercase tracking-wide">
                 Total Collected ({quickActionPeriod})
               </span>
-              <div className="text-xl sm:text-[22px] font-bold text-slate-900 dark:text-white mt-0.5 tracking-tight font-sans">
+              <div className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white mt-0.5 tracking-tight font-sans">
                 ₱ {displayMetrics.totalCollected.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </div>
             </div>
           </div>
 
-          <div className="mt-3 pt-1">
-            <div className="flex items-center justify-between text-[11px] mb-1">
-              <span className="font-medium text-slate-500 dark:text-zinc-400">
-                Collection Rate <span className="font-semibold text-slate-700 dark:text-zinc-300">{displayMetrics.collectionRate}%</span>
+          <div className="relative z-10 mt-3.5 pt-1">
+            <div className="flex items-center justify-between text-xs mb-1.5">
+              <span className="font-semibold text-slate-500 dark:text-zinc-400">
+                Collection Rate <span className="font-bold text-slate-800 dark:text-zinc-200">{displayMetrics.collectionRate}%</span>
               </span>
-              <span className={`font-semibold flex items-center gap-0.5 ${
+              <span className={`font-bold flex items-center gap-1 ${
                 displayMetrics.rateDiff >= 0
                   ? "text-emerald-600 dark:text-emerald-400"
                   : "text-rose-500 dark:text-rose-400"
               }`}>
-                {displayMetrics.rateDiff >= 0 ? <TrendingUp className="w-3 h-3" /> : <AlertTriangle className="w-3 h-3" />}
+                {displayMetrics.rateDiff >= 0 ? <TrendingUp className="w-3.5 h-3.5" /> : <AlertTriangle className="w-3.5 h-3.5" />}
                 {displayMetrics.rateDiff >= 0 ? `+${displayMetrics.rateDiff}%` : `${displayMetrics.rateDiff}%`}
               </span>
             </div>
             <div className="flex items-center gap-2">
-              <div className="flex-1 bg-slate-100 dark:bg-zinc-800 h-2 rounded-full overflow-hidden">
+              <div className="flex-1 bg-slate-100 dark:bg-zinc-800 h-2.5 rounded-full overflow-hidden">
                 <div
                   className="bg-emerald-500 h-full rounded-full transition-all duration-500"
                   style={{ width: `${Math.min(100, displayMetrics.collectionRate)}%` }}
                 />
               </div>
-              <span className="text-[10px] text-slate-400 dark:text-zinc-500 shrink-0">
+              <span className="text-[11px] sm:text-xs text-slate-400 dark:text-zinc-500 shrink-0 font-medium">
                 vs. last month
               </span>
             </div>
@@ -1907,7 +1850,7 @@ function BillingContent() {
               setActiveTableTab("all");
               document.getElementById("bills-table-section")?.scrollIntoView({ behavior: "smooth" });
             }}
-            className="text-xs font-semibold text-blue-600 hover:text-blue-700 dark:text-blue-400 flex items-center gap-1 cursor-pointer mt-3 pt-1 group"
+            className="relative z-10 text-xs font-bold text-blue-600 hover:text-blue-700 dark:text-blue-400 flex items-center gap-1 cursor-pointer mt-3.5 pt-1 group"
           >
             <span>View Billing Ledger</span>
             <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
@@ -1916,31 +1859,39 @@ function BillingContent() {
 
         {/* Card 2: Total Invoiced */}
         <div className="relative overflow-hidden bg-white dark:bg-zinc-900 border border-slate-200/90 dark:border-zinc-800 rounded-xl p-3.5 sm:p-4 shadow-xs flex flex-col justify-between hover:border-slate-300 dark:hover:border-zinc-700 transition-colors">
-          <div className="pointer-events-none absolute inset-0 opacity-[0.03] dark:opacity-[0.05]" style={{ backgroundImage: 'repeating-linear-gradient(0deg, #3b82f6 0, #3b82f6 1px, transparent 0, transparent 6px)' }} />
-          <div className="flex items-start gap-2.5">
-            <div className="w-9 h-9 rounded-lg bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0 border border-blue-100 dark:border-blue-800/40">
-              <FileText className="w-5 h-5 stroke-[2]" />
+          {/* Treasury Voucher Diagonal Facet & Perforated Ledger Rule */}
+          <div className="pointer-events-none select-none absolute inset-0 overflow-hidden" aria-hidden="true">
+            <div className="absolute inset-0 bg-blue-50/75 dark:bg-blue-500/[0.065] [clip-path:polygon(64%_0,100%_0,100%_100%,42%_100%)]" />
+            <svg className="absolute inset-0 w-full h-full text-blue-500/20 dark:text-blue-400/20" viewBox="0 0 100 100" preserveAspectRatio="none" fill="none">
+              <line x1="64%" y1="0%" x2="42%" y2="100%" stroke="currentColor" strokeWidth="1" vectorEffect="non-scaling-stroke" />
+            </svg>
+            <div className="absolute inset-x-3 bottom-1.5 h-px opacity-45 dark:opacity-35 bg-[repeating-linear-gradient(to_right,currentColor_0_4px,transparent_4px_9px)] text-blue-400/40 dark:text-blue-400/30" />
+            <div className="absolute inset-0 rounded-xl ring-1 ring-inset ring-blue-500/[0.06] dark:ring-blue-400/[0.07]" />
+          </div>
+          <div className="relative z-10 flex items-start gap-3">
+            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0 border border-blue-100 dark:border-blue-800/40">
+              <FileText className="w-4.5 h-4.5 sm:w-5 sm:h-5 stroke-[2]" />
             </div>
             <div>
-              <span className="text-[11px] font-semibold text-slate-500 dark:text-zinc-400">
+              <span className="text-xs font-bold text-slate-500 dark:text-zinc-400 uppercase tracking-wide">
                 Total Invoiced ({quickActionPeriod})
               </span>
-              <div className="text-xl sm:text-[22px] font-bold text-slate-900 dark:text-white mt-0.5 tracking-tight font-sans">
+              <div className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white mt-0.5 tracking-tight font-sans">
                 ₱ {displayMetrics.totalInvoiced.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </div>
             </div>
           </div>
 
-          <div className="mt-3 pt-1 flex items-baseline justify-between">
+          <div className="relative z-10 mt-3.5 pt-1 flex items-baseline justify-between">
             <div>
-              <div className="text-[10px] uppercase font-semibold text-slate-400 dark:text-zinc-500 tracking-wider">
+              <div className="text-[11px] sm:text-xs uppercase font-bold text-slate-400 dark:text-zinc-500 tracking-wider">
                 Outstanding
               </div>
-              <div className="text-sm font-bold text-slate-800 dark:text-zinc-200 font-sans mt-0.5">
+              <div className="text-sm sm:text-base font-black text-slate-800 dark:text-zinc-200 font-sans mt-0.5">
                 ₱ {displayMetrics.outstanding.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </div>
             </div>
-            <span className="text-xs font-bold text-slate-500 dark:text-zinc-400">
+            <span className="text-xs font-bold text-slate-600 dark:text-zinc-300">
               {displayMetrics.outstandingRate}%
             </span>
           </div>
@@ -1950,7 +1901,7 @@ function BillingContent() {
               setActiveTableTab("unpaid");
               document.getElementById("bills-table-section")?.scrollIntoView({ behavior: "smooth" });
             }}
-            className="text-xs font-semibold text-blue-600 hover:text-blue-700 dark:text-blue-400 flex items-center gap-1 cursor-pointer mt-3 pt-1 group"
+            className="relative z-10 text-xs font-bold text-blue-600 hover:text-blue-700 dark:text-blue-400 flex items-center gap-1 cursor-pointer mt-3.5 pt-1 group"
           >
             <span>View Bills & Invoices</span>
             <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
@@ -1958,26 +1909,35 @@ function BillingContent() {
         </div>
 
         {/* Card 3: Pending Verification */}
-        <div className="bg-white dark:bg-zinc-900 border border-slate-200/90 dark:border-zinc-800 rounded-xl p-3.5 sm:p-4 shadow-xs flex flex-col justify-between hover:border-slate-300 dark:hover:border-zinc-700 transition-colors">
-          <div className="flex items-start gap-2.5">
-            <div className="w-9 h-9 rounded-lg bg-rose-50 dark:bg-rose-950/40 text-rose-500 dark:text-rose-400 flex items-center justify-center shrink-0 border border-rose-100 dark:border-rose-800/40">
-              <Clock className="w-5 h-5 stroke-[2]" />
+        <div className="relative overflow-hidden bg-white dark:bg-zinc-900 border border-slate-200/90 dark:border-zinc-800 rounded-xl p-3.5 sm:p-4 shadow-xs flex flex-col justify-between hover:border-slate-300 dark:hover:border-zinc-700 transition-colors">
+          {/* Treasury Voucher Diagonal Facet & Perforated Ledger Rule */}
+          <div className="pointer-events-none select-none absolute inset-0 overflow-hidden" aria-hidden="true">
+            <div className="absolute inset-0 bg-rose-50/75 dark:bg-rose-500/[0.065] [clip-path:polygon(64%_0,100%_0,100%_100%,42%_100%)]" />
+            <svg className="absolute inset-0 w-full h-full text-rose-500/20 dark:text-rose-400/20" viewBox="0 0 100 100" preserveAspectRatio="none" fill="none">
+              <line x1="64%" y1="0%" x2="42%" y2="100%" stroke="currentColor" strokeWidth="1" vectorEffect="non-scaling-stroke" />
+            </svg>
+            <div className="absolute inset-x-3 bottom-1.5 h-px opacity-45 dark:opacity-35 bg-[repeating-linear-gradient(to_right,currentColor_0_4px,transparent_4px_9px)] text-rose-400/40 dark:text-rose-400/30" />
+            <div className="absolute inset-0 rounded-xl ring-1 ring-inset ring-rose-500/[0.06] dark:ring-rose-400/[0.07]" />
+          </div>
+          <div className="relative z-10 flex items-start gap-3">
+            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-rose-50 dark:bg-rose-950/40 text-rose-500 dark:text-rose-400 flex items-center justify-center shrink-0 border border-rose-100 dark:border-rose-800/40">
+              <Clock className="w-4.5 h-4.5 sm:w-5 sm:h-5 stroke-[2]" />
             </div>
             <div>
-              <span className="text-[11px] font-semibold text-slate-500 dark:text-zinc-400">
+              <span className="text-xs font-bold text-slate-500 dark:text-zinc-400 uppercase tracking-wide">
                 Pending Verification
               </span>
-              <div className="text-xl sm:text-[22px] font-bold text-slate-900 dark:text-white mt-0.5 tracking-tight font-sans">
+              <div className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white mt-0.5 tracking-tight font-sans">
                 ₱ {displayMetrics.pendingVerificationAmount.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </div>
             </div>
           </div>
 
-          <div className="mt-3 pt-1">
-            <div className="text-[10px] uppercase font-semibold text-slate-400 dark:text-zinc-500 tracking-wider">
+          <div className="relative z-10 mt-3.5 pt-1">
+            <div className="text-[11px] sm:text-xs uppercase font-bold text-slate-400 dark:text-zinc-500 tracking-wider">
               Receipts
             </div>
-            <div className="text-sm font-bold text-slate-800 dark:text-zinc-200 mt-0.5">
+            <div className="text-sm sm:text-base font-black text-slate-800 dark:text-zinc-200 mt-0.5">
               {displayMetrics.pendingVerificationCount}
             </div>
           </div>
@@ -1987,7 +1947,7 @@ function BillingContent() {
               setActiveTableTab("pending");
               document.getElementById("bills-table-section")?.scrollIntoView({ behavior: "smooth" });
             }}
-            className="text-xs font-semibold text-blue-600 hover:text-blue-700 dark:text-blue-400 flex items-center gap-1 cursor-pointer mt-3 pt-1 group"
+            className="relative z-10 text-xs font-bold text-blue-600 hover:text-blue-700 dark:text-blue-400 flex items-center gap-1 cursor-pointer mt-3.5 pt-1 group"
           >
             <span>View Payment Verifications</span>
             <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
@@ -1995,26 +1955,35 @@ function BillingContent() {
         </div>
 
         {/* Card 4: Overdue Accounts */}
-        <div className="bg-white dark:bg-zinc-900 border border-slate-200/90 dark:border-zinc-800 rounded-xl p-3.5 sm:p-4 shadow-xs flex flex-col justify-between hover:border-slate-300 dark:hover:border-zinc-700 transition-colors">
-          <div className="flex items-start gap-2.5">
-            <div className="w-9 h-9 rounded-lg bg-amber-50 dark:bg-amber-950/40 text-amber-500 dark:text-amber-400 flex items-center justify-center shrink-0 border border-amber-100 dark:border-amber-800/40">
-              <AlertTriangle className="w-5 h-5 stroke-[2]" />
+        <div className="relative overflow-hidden bg-white dark:bg-zinc-900 border border-slate-200/90 dark:border-zinc-800 rounded-xl p-3.5 sm:p-4 shadow-xs flex flex-col justify-between hover:border-slate-300 dark:hover:border-zinc-700 transition-colors">
+          {/* Treasury Voucher Diagonal Facet & Perforated Ledger Rule */}
+          <div className="pointer-events-none select-none absolute inset-0 overflow-hidden" aria-hidden="true">
+            <div className="absolute inset-0 bg-amber-50/75 dark:bg-amber-500/[0.065] [clip-path:polygon(64%_0,100%_0,100%_100%,42%_100%)]" />
+            <svg className="absolute inset-0 w-full h-full text-amber-500/20 dark:text-amber-400/20" viewBox="0 0 100 100" preserveAspectRatio="none" fill="none">
+              <line x1="64%" y1="0%" x2="42%" y2="100%" stroke="currentColor" strokeWidth="1" vectorEffect="non-scaling-stroke" />
+            </svg>
+            <div className="absolute inset-x-3 bottom-1.5 h-px opacity-45 dark:opacity-35 bg-[repeating-linear-gradient(to_right,currentColor_0_4px,transparent_4px_9px)] text-amber-400/40 dark:text-amber-400/30" />
+            <div className="absolute inset-0 rounded-xl ring-1 ring-inset ring-amber-500/[0.06] dark:ring-amber-400/[0.07]" />
+          </div>
+          <div className="relative z-10 flex items-start gap-3">
+            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-amber-50 dark:bg-amber-950/40 text-amber-500 dark:text-amber-400 flex items-center justify-center shrink-0 border border-amber-100 dark:border-amber-800/40">
+              <AlertTriangle className="w-4.5 h-4.5 sm:w-5 sm:h-5 stroke-[2]" />
             </div>
             <div>
-              <span className="text-[11px] font-semibold text-slate-500 dark:text-zinc-400">
+              <span className="text-xs font-bold text-slate-500 dark:text-zinc-400 uppercase tracking-wide">
                 Overdue Accounts
               </span>
-              <div className="text-xl sm:text-[22px] font-bold text-slate-900 dark:text-white mt-0.5 tracking-tight font-sans">
+              <div className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white mt-0.5 tracking-tight font-sans">
                 ₱ {displayMetrics.overdueAmount.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </div>
             </div>
           </div>
 
-          <div className="mt-3 pt-1">
-            <div className="text-[10px] uppercase font-semibold text-slate-400 dark:text-zinc-500 tracking-wider">
+          <div className="relative z-10 mt-3.5 pt-1">
+            <div className="text-[11px] sm:text-xs uppercase font-bold text-slate-400 dark:text-zinc-500 tracking-wider">
               Overdue Invoices
             </div>
-            <div className="text-sm font-bold text-slate-800 dark:text-zinc-200 mt-0.5">
+            <div className="text-sm sm:text-base font-black text-slate-800 dark:text-zinc-200 mt-0.5">
               {displayMetrics.overdueCount}
             </div>
           </div>
@@ -2024,7 +1993,7 @@ function BillingContent() {
               setActiveTableTab("overdue");
               document.getElementById("bills-table-section")?.scrollIntoView({ behavior: "smooth" });
             }}
-            className="text-xs font-semibold text-blue-600 hover:text-blue-700 dark:text-blue-400 flex items-center gap-1 cursor-pointer mt-3 pt-1 group"
+            className="relative z-10 text-xs font-bold text-blue-600 hover:text-blue-700 dark:text-blue-400 flex items-center gap-1 cursor-pointer mt-3.5 pt-1 group"
           >
             <span>View Payments</span>
             <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
@@ -2042,25 +2011,23 @@ function BillingContent() {
             {/* Title & 4 Pill Filters */}
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-3">
               <div>
-                <h2 className="text-base font-bold text-slate-900 dark:text-white tracking-tight">
+                <h2 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white tracking-tight">
                   Billing & Payment Overview
                 </h2>
-                <p className="text-xs text-slate-600 dark:text-zinc-300 mt-0.5 font-medium">
+                <p className="text-xs text-slate-500 dark:text-zinc-400 mt-0.5 font-medium">
                   Invoiced vs. collected vs. outstanding
                 </p>
               </div>
 
               {/* Period Dropdown */}
-              <div className="w-36">
+              <div className="w-36 sm:w-40">
                 <CustomSelect
                   value={chartPeriod}
                   onChange={(val) =>
-                    setChartPeriod(
-                      val as "This Month" | "Last Month" | "This Year" | "Last Year"
-                    )
+                    setChartPeriod(val as "This Year" | "Last Year")
                   }
-                  options={["This Year", "This Month", "Last Month", "Last Year"]}
-                  className="w-full bg-white dark:bg-zinc-900 pl-3 pr-7 py-1.5 border border-slate-200 dark:border-zinc-700 rounded-lg text-xs font-semibold text-slate-700 dark:text-zinc-300 shadow-xs"
+                  options={["This Year", "Last Year"]}
+                  className="w-full bg-white dark:bg-zinc-900 pl-3 pr-8 py-1.5 border border-slate-200 dark:border-zinc-700 rounded-xl text-xs sm:text-[13px] font-semibold text-slate-700 dark:text-zinc-300 shadow-xs"
                 />
               </div>
             </div>
@@ -2076,22 +2043,8 @@ function BillingContent() {
                     left: 0,
                     bottom: 0,
                   }}
-                  barGap={
-                    monthlyChartData.length <= 1 ||
-                    chartPeriod === "This Month" ||
-                    chartPeriod === "Last Month"
-                      ? 18
-                      : 2
-                  }
-                  barSize={
-                    monthlyChartData.length <= 1 ||
-                    chartPeriod === "This Month" ||
-                    chartPeriod === "Last Month"
-                      ? 70
-                      : monthlyChartData.length <= 3
-                      ? 28
-                      : 7
-                  }
+                  barGap={2}
+                  barSize={monthlyChartData.length <= 3 ? 28 : 7}
                 >
                   {/* Clear breaking line (horizontal dashed line) across each amount on graph */}
                   <CartesianGrid
@@ -2105,7 +2058,7 @@ function BillingContent() {
                     dataKey="month"
                     axisLine={false}
                     tickLine={false}
-                    tick={{ fill: "#94a3b8", fontSize: 11, fontWeight: 700 }}
+                    tick={{ fill: "#94a3b8", fontSize: 12, fontWeight: 700 }}
                     dy={5}
                   />
                   <YAxis
@@ -2124,7 +2077,7 @@ function BillingContent() {
                           y={y}
                           dy={3.5}
                           fill="#94a3b8"
-                          fontSize={10.5}
+                          fontSize={11.5}
                           fontWeight={700}
                           textAnchor="start"
                         >
@@ -2139,107 +2092,49 @@ function BillingContent() {
                   />
                   <Legend
                     verticalAlign="bottom"
-                    content={() => {
-                      const isSingleMonth =
-                        monthlyChartData.length <= 1 ||
-                        chartPeriod === "This Month" ||
-                        chartPeriod === "Last Month";
-                      return (
-                        <div
-                          style={{ paddingLeft: 68, paddingRight: 12 }}
-                          className="w-full flex items-center justify-center pt-3 text-[11px] font-semibold text-slate-700 dark:text-zinc-200"
-                        >
-                          <div
-                            className={`flex items-center justify-center ${
-                              isSingleMonth ? "gap-[18px]" : "gap-5"
-                            }`}
-                          >
-                            <span
-                              className={`flex items-center justify-center gap-1.5 ${
-                                isSingleMonth ? "w-[70px] text-center" : ""
-                              }`}
-                            >
-                              <span className="w-2.5 h-2.5 rounded-xs bg-[#10b981] shrink-0" />
-                              <span>Collected</span>
-                            </span>
-                            <span
-                              className={`flex items-center justify-center gap-1.5 ${
-                                isSingleMonth ? "w-[70px] text-center" : ""
-                              }`}
-                            >
-                              <span className="w-2.5 h-2.5 rounded-xs bg-[#0284c7] shrink-0" />
-                              <span>Invoiced</span>
-                            </span>
-                            <span
-                              className={`flex items-center justify-center gap-1.5 ${
-                                isSingleMonth ? "w-[70px] text-center" : ""
-                              }`}
-                            >
-                              <span className="w-2.5 h-2.5 rounded-xs bg-[#f43f5e] shrink-0" />
-                              <span>Outstanding</span>
-                            </span>
-                          </div>
+                    content={() => (
+                      <div
+                        style={{ paddingLeft: 68, paddingRight: 12 }}
+                        className="w-full flex items-center justify-center pt-3 text-xs sm:text-sm font-semibold text-slate-700 dark:text-zinc-200"
+                      >
+                        <div className="flex items-center justify-center gap-6">
+                          <span className="flex items-center justify-center gap-2">
+                            <span className="w-2.5 h-2.5 rounded-xs bg-[#10b981] shrink-0" />
+                            <span>Collected</span>
+                          </span>
+                          <span className="flex items-center justify-center gap-2">
+                            <span className="w-2.5 h-2.5 rounded-xs bg-[#0284c7] shrink-0" />
+                            <span>Invoiced</span>
+                          </span>
+                          <span className="flex items-center justify-center gap-2">
+                            <span className="w-2.5 h-2.5 rounded-xs bg-[#f43f5e] shrink-0" />
+                            <span>Outstanding</span>
+                          </span>
                         </div>
-                      );
-                    }}
+                      </div>
+                    )}
                   />
                   {/* Graph bars matching Dashboard colors and radii */}
                   <Bar
                     dataKey="collected"
                     name="Collected"
                     fill="#10b981"
-                    radius={
-                      monthlyChartData.length <= 1 ||
-                      chartPeriod === "This Month" ||
-                      chartPeriod === "Last Month"
-                        ? [8, 8, 0, 0]
-                        : [2.5, 2.5, 0, 0]
-                    }
-                    minPointSize={
-                      monthlyChartData.length <= 1 ||
-                      chartPeriod === "This Month" ||
-                      chartPeriod === "Last Month"
-                        ? 10
-                        : 3
-                    }
+                    radius={[2.5, 2.5, 0, 0]}
+                    minPointSize={3}
                   />
                   <Bar
                     dataKey="invoiced"
                     name="Invoiced"
                     fill="#0284c7"
-                    radius={
-                      monthlyChartData.length <= 1 ||
-                      chartPeriod === "This Month" ||
-                      chartPeriod === "Last Month"
-                        ? [8, 8, 0, 0]
-                        : [2.5, 2.5, 0, 0]
-                    }
-                    minPointSize={
-                      monthlyChartData.length <= 1 ||
-                      chartPeriod === "This Month" ||
-                      chartPeriod === "Last Month"
-                        ? 10
-                        : 3
-                    }
+                    radius={[2.5, 2.5, 0, 0]}
+                    minPointSize={3}
                   />
                   <Bar
                     dataKey="outstanding"
                     name="Outstanding"
                     fill="#f43f5e"
-                    radius={
-                      monthlyChartData.length <= 1 ||
-                      chartPeriod === "This Month" ||
-                      chartPeriod === "Last Month"
-                        ? [8, 8, 0, 0]
-                        : [2.5, 2.5, 0, 0]
-                    }
-                    minPointSize={
-                      monthlyChartData.length <= 1 ||
-                      chartPeriod === "This Month" ||
-                      chartPeriod === "Last Month"
-                        ? 10
-                        : 3
-                    }
+                    radius={[2.5, 2.5, 0, 0]}
+                    minPointSize={3}
                   />
                 </ComposedChart>
               </ResponsiveContainer>
@@ -2247,17 +2142,17 @@ function BillingContent() {
           </div>
 
           {/* Bottom Stats Ribbon */}
-          <div className="bg-slate-50 dark:bg-zinc-800/40 border border-slate-200/60 dark:border-zinc-800 rounded-xl p-2.5 mt-3 flex flex-wrap items-center justify-between gap-3 text-xs">
+          <div className="bg-slate-50 dark:bg-zinc-800/40 border border-slate-200/60 dark:border-zinc-800 rounded-xl p-2.5 sm:p-3 mt-3 flex flex-wrap items-center justify-between gap-2.5 sm:gap-3 text-xs sm:text-[13px]">
             {/* Stat 1 */}
             <div className="flex items-center gap-2">
-              <div className="w-7 h-7 rounded-lg bg-blue-100 dark:bg-blue-900/40 text-blue-600 flex items-center justify-center shrink-0">
+              <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-blue-100 dark:bg-blue-900/40 text-blue-600 flex items-center justify-center shrink-0">
                 <FileText className="w-4 h-4" />
               </div>
               <div>
-                <div className="text-[10px] text-slate-400 dark:text-zinc-500 font-medium">
+                <div className="text-[11px] sm:text-xs text-slate-500 dark:text-zinc-400 font-medium">
                   Total Invoiced
                 </div>
-                <div className="text-xs font-bold text-slate-900 dark:text-white">
+                <div className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white">
                   ₱ {chartSummary.totalInvoiced.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </div>
               </div>
@@ -2265,14 +2160,14 @@ function BillingContent() {
 
             {/* Stat 2 */}
             <div className="flex items-center gap-2">
-              <div className="w-7 h-7 rounded-lg bg-emerald-100 dark:bg-emerald-900/40 text-emerald-600 flex items-center justify-center shrink-0">
+              <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-emerald-100 dark:bg-emerald-900/40 text-emerald-600 flex items-center justify-center shrink-0">
                 <Wallet className="w-4 h-4" />
               </div>
               <div>
-                <div className="text-[10px] text-slate-400 dark:text-zinc-500 font-medium">
+                <div className="text-[11px] sm:text-xs text-slate-500 dark:text-zinc-400 font-medium">
                   Total Collected
                 </div>
-                <div className="text-xs font-bold text-slate-900 dark:text-white">
+                <div className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white">
                   ₱ {chartSummary.totalCollected.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </div>
               </div>
@@ -2280,14 +2175,14 @@ function BillingContent() {
 
             {/* Stat 3 */}
             <div className="flex items-center gap-2">
-              <div className="w-7 h-7 rounded-lg bg-rose-100 dark:bg-rose-900/40 text-rose-500 flex items-center justify-center shrink-0">
+              <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-rose-100 dark:bg-rose-900/40 text-rose-500 flex items-center justify-center shrink-0">
                 <AlertTriangle className="w-4 h-4" />
               </div>
               <div>
-                <div className="text-[10px] text-slate-400 dark:text-zinc-500 font-medium">
+                <div className="text-[11px] sm:text-xs text-slate-500 dark:text-zinc-400 font-medium">
                   Outstanding Balance
                 </div>
-                <div className="text-xs font-bold text-slate-900 dark:text-white">
+                <div className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white">
                   ₱ {chartSummary.totalOutstanding.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </div>
               </div>
@@ -2295,14 +2190,14 @@ function BillingContent() {
 
             {/* Stat 4 */}
             <div className="flex items-center gap-2">
-              <div className="w-7 h-7 rounded-lg bg-teal-100 dark:bg-teal-900/40 text-teal-600 flex items-center justify-center shrink-0">
+              <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-teal-100 dark:bg-teal-900/40 text-teal-600 flex items-center justify-center shrink-0">
                 <TrendingUp className="w-4 h-4" />
               </div>
               <div>
-                <div className="text-[10px] text-slate-400 dark:text-zinc-500 font-medium">
+                <div className="text-[11px] sm:text-xs text-slate-500 dark:text-zinc-400 font-medium">
                   Collection Rate
                 </div>
-                <div className="text-xs font-bold text-slate-900 dark:text-white">
+                <div className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white">
                   {chartSummary.collectionRate}%
                 </div>
               </div>
@@ -2311,10 +2206,10 @@ function BillingContent() {
         </div>
 
         {/* Card 2: Recent Payment Activity (lg:col-span-3) */}
-        <div className="lg:col-span-3 bg-white dark:bg-zinc-900 border border-slate-200/90 dark:border-zinc-800 rounded-xl p-4 sm:p-5 shadow-xs flex flex-col justify-between">
+        <div className="lg:col-span-3 bg-white dark:bg-zinc-900 border border-slate-200/90 dark:border-zinc-800 rounded-xl p-3.5 sm:p-4 shadow-xs flex flex-col justify-between">
           <div>
-            <div className="flex items-center justify-between mb-3.5">
-              <h2 className="text-base font-bold text-slate-900 dark:text-white tracking-tight">
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white tracking-tight">
                 Recent Payment Activity
               </h2>
               <button
@@ -2322,17 +2217,17 @@ function BillingContent() {
                   setActiveTableTab("paid");
                   document.getElementById("bills-table-section")?.scrollIntoView({ behavior: "smooth" });
                 }}
-                className="text-xs font-semibold text-blue-600 hover:text-blue-700 dark:text-blue-400 flex items-center gap-1 cursor-pointer"
+                className="text-xs font-bold text-blue-600 hover:text-blue-700 dark:text-blue-400 flex items-center gap-1 cursor-pointer"
               >
                 <span>View All</span>
-                <ArrowRight className="w-3 h-3" />
+                <ArrowRight className="w-3.5 h-3.5" />
               </button>
             </div>
 
             <div className="divide-y divide-slate-100 dark:divide-zinc-800">
               {recentActivities.length === 0 ? (
-                <div className="py-8 text-center text-xs text-slate-400 dark:text-zinc-500">
-                  <Clock className="w-6 h-6 mx-auto mb-2 text-slate-300 dark:text-zinc-600" />
+                <div className="py-8 text-center text-xs sm:text-[13px] text-slate-400 dark:text-zinc-500">
+                  <Clock className="w-5 h-5 mx-auto mb-2 text-slate-300 dark:text-zinc-600" />
                   No recent payment transactions recorded yet
                 </div>
               ) : (
@@ -2353,13 +2248,13 @@ function BillingContent() {
 
                     {/* Info */}
                     <div className="flex-1 min-w-0">
-                      <div className="text-xs font-bold text-slate-800 dark:text-zinc-200 truncate">
+                      <div className="text-xs sm:text-[13px] font-bold text-slate-800 dark:text-zinc-200 truncate">
                         {act.title}
                       </div>
-                      <div className="text-[11px] text-slate-500 dark:text-zinc-400 truncate">
+                      <div className="text-[11px] sm:text-xs text-slate-500 dark:text-zinc-400 truncate">
                         {act.tenant} · {act.room}
                       </div>
-                      <div className="text-[11px] font-semibold text-slate-600 dark:text-zinc-300 mt-0.5">
+                      <div className="text-xs font-semibold text-slate-600 dark:text-zinc-300 mt-0.5">
                         {act.amount} <span className="font-normal text-slate-400">· {act.method}</span>
                       </div>
                     </div>
@@ -2367,15 +2262,15 @@ function BillingContent() {
                     {/* Badge & timestamp */}
                     <div className="shrink-0 text-right">
                       {act.badge === "Verified" || act.badge === "Approved" || act.badge === "Paid" ? (
-                        <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-600 dark:text-emerald-400">
+                        <span className="inline-flex items-center gap-1 text-xs font-bold text-emerald-600 dark:text-emerald-400">
                           <Check className="w-3 h-3 stroke-[2.5]" /> Verified
                         </span>
                       ) : (
-                        <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-amber-600 dark:text-amber-400">
+                        <span className="inline-flex items-center gap-1 text-xs font-bold text-amber-600 dark:text-amber-400">
                           <Clock className="w-3 h-3 stroke-[2]" /> Pending
                         </span>
                       )}
-                      <div className="text-[10px] text-slate-400 dark:text-zinc-500 mt-1">
+                      <div className="text-[11px] text-slate-400 dark:text-zinc-500 mt-1">
                         {act.time}
                       </div>
                     </div>
@@ -2387,46 +2282,46 @@ function BillingContent() {
         </div>
 
         {/* Card 3: Billing Summary (lg:col-span-3) */}
-        <div className="lg:col-span-3 bg-white dark:bg-zinc-900 border border-slate-200/90 dark:border-zinc-800 rounded-xl p-4 sm:p-5 shadow-xs flex flex-col justify-between">
+        <div className="lg:col-span-3 bg-white dark:bg-zinc-900 border border-slate-200/90 dark:border-zinc-800 rounded-xl p-3.5 sm:p-4 shadow-xs flex flex-col justify-between">
           <div>
-            <div className="flex items-center justify-between mb-3.5">
-              <h2 className="text-base font-bold text-slate-900 dark:text-white tracking-tight">
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white tracking-tight">
                 Billing Summary
               </h2>
-              <span className="text-[11px] font-semibold text-slate-500 dark:text-zinc-400">
+              <span className="text-xs font-bold text-slate-500 dark:text-zinc-400">
                 This Month
               </span>
             </div>
 
             {/* Key-Value Breakdown */}
-            <div className="space-y-2 text-xs">
+            <div className="space-y-2 text-xs sm:text-[13px]">
               <div className="flex items-center justify-between">
-                <span className="text-slate-500 dark:text-zinc-400">Total Invoices</span>
-                <span className="font-bold text-slate-900 dark:text-white font-sans">
+                <span className="text-slate-500 dark:text-zinc-400 font-medium">Total Invoices</span>
+                <span className="font-bold text-slate-900 dark:text-white font-sans text-xs sm:text-sm">
                   ₱ {billingSummary.totalInvoices.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </span>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-slate-500 dark:text-zinc-400">Total Collected (Verified)</span>
-                <span className="font-bold text-slate-900 dark:text-white font-sans">
+                <span className="text-slate-500 dark:text-zinc-400 font-medium">Total Collected (Verified)</span>
+                <span className="font-bold text-slate-900 dark:text-white font-sans text-xs sm:text-sm">
                   ₱ {billingSummary.totalCollected.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </span>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-slate-500 dark:text-zinc-400">Pending Verification</span>
-                <span className="font-bold text-slate-900 dark:text-white font-sans">
+                <span className="text-slate-500 dark:text-zinc-400 font-medium">Pending Verification</span>
+                <span className="font-bold text-slate-900 dark:text-white font-sans text-xs sm:text-sm">
                   ₱ {billingSummary.pendingVerification.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </span>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-slate-500 dark:text-zinc-400">Outstanding Balance</span>
-                <span className="font-bold text-slate-900 dark:text-white font-sans">
+                <span className="text-slate-500 dark:text-zinc-400 font-medium">Outstanding Balance</span>
+                <span className="font-bold text-slate-900 dark:text-white font-sans text-xs sm:text-sm">
                   ₱ {billingSummary.outstandingBalance.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </span>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-slate-500 dark:text-zinc-400">Overdue Balance</span>
-                <span className="font-bold text-slate-900 dark:text-white font-sans">
+                <span className="text-slate-500 dark:text-zinc-400 font-medium">Overdue Balance</span>
+                <span className="font-bold text-slate-900 dark:text-white font-sans text-xs sm:text-sm">
                   ₱ {billingSummary.overdueBalance.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </span>
               </div>
@@ -2434,12 +2329,12 @@ function BillingContent() {
           </div>
 
           {/* Donut Chart Widget */}
-          <div className="mt-4 pt-3.5 border-t border-slate-100 dark:border-zinc-800 flex items-center justify-between gap-3">
+          <div className="mt-3.5 pt-3 border-t border-slate-100 dark:border-zinc-800 flex items-center justify-between gap-3">
             {/* Donut circle with hover tooltip */}
-            <div className="group/donut relative w-22 h-22 shrink-0 flex items-center justify-center cursor-pointer">
+            <div className="group/donut relative w-22 h-22 sm:w-24 sm:h-24 shrink-0 flex items-center justify-center cursor-pointer">
               {/* Floating window at the top on hover */}
               <div className="absolute bottom-[calc(100%+8px)] left-1/2 -translate-x-1/2 opacity-0 invisible group-hover/donut:opacity-100 group-hover/donut:visible group-hover/donut:-translate-y-0.5 transition-all duration-150 pointer-events-none z-30">
-                <div className="relative px-2.5 py-1 rounded-lg bg-white dark:bg-zinc-800 border border-slate-200/90 dark:border-zinc-700 shadow-lg text-[11px] font-semibold text-slate-800 dark:text-zinc-200 whitespace-nowrap flex items-center gap-1.5">
+                <div className="relative px-2.5 py-1 rounded-lg bg-white dark:bg-zinc-800 border border-slate-200/90 dark:border-zinc-700 shadow-lg text-xs font-semibold text-slate-800 dark:text-zinc-200 whitespace-nowrap flex items-center gap-1.5">
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
                   <span>Collection Rate</span>
                 </div>
@@ -2489,7 +2384,7 @@ function BillingContent() {
                 )}
               </svg>
               <div className="absolute inset-0 flex items-center justify-center text-center">
-                <span className="text-base font-extrabold text-slate-900 dark:text-white leading-none">
+                <span className="text-base sm:text-lg font-black text-slate-900 dark:text-white leading-none">
                   {billingSummary.collectionRate}%
                 </span>
               </div>
@@ -2498,26 +2393,26 @@ function BillingContent() {
             {/* Legend values */}
             <div className="space-y-1.5 text-xs flex-1">
               <div className="flex items-center justify-between">
-                <span className="flex items-center gap-1 text-slate-600 dark:text-zinc-400 text-[10px]">
+                <span className="flex items-center gap-1.5 text-slate-600 dark:text-zinc-400 text-xs">
                   <span className="w-2 h-2 rounded-full bg-emerald-500" /> Collected
                 </span>
-                <span className="font-bold text-slate-900 dark:text-white text-[10px]">
+                <span className="font-bold text-slate-900 dark:text-white text-xs">
                   ₱ {billingSummary.totalCollected.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </span>
               </div>
               <div className="flex items-center justify-between">
-                <span className="flex items-center gap-1 text-slate-600 dark:text-zinc-400 text-[10px]">
+                <span className="flex items-center gap-1.5 text-slate-600 dark:text-zinc-400 text-xs">
                   <span className="w-2 h-2 rounded-full bg-amber-500" /> Pending
                 </span>
-                <span className="font-bold text-slate-900 dark:text-white text-[10px]">
+                <span className="font-bold text-slate-900 dark:text-white text-xs">
                   ₱ {billingSummary.pendingVerification.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </span>
               </div>
               <div className="flex items-center justify-between">
-                <span className="flex items-center gap-1 text-slate-600 dark:text-zinc-400 text-[10px]">
+                <span className="flex items-center gap-1.5 text-slate-600 dark:text-zinc-400 text-xs">
                   <span className="w-2 h-2 rounded-full bg-rose-400" /> Outstanding
                 </span>
-                <span className="font-bold text-slate-900 dark:text-white text-[10px]">
+                <span className="font-bold text-slate-900 dark:text-white text-xs">
                   ₱ {billingSummary.outstandingBalance.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </span>
               </div>
@@ -2531,10 +2426,10 @@ function BillingContent() {
       {/* ========================================================= */}
       <div id="bills-table-section" className="bg-white dark:bg-zinc-900 border border-slate-200/90 dark:border-zinc-800 rounded-xl shadow-xs overflow-hidden">
         {/* Header & Controls */}
-        <div className="p-4 border-b border-slate-200/80 dark:border-zinc-800 flex flex-col gap-3 relative z-20">
+        <div className="p-3.5 sm:p-4 border-b border-slate-200/80 dark:border-zinc-800 flex flex-col gap-3 relative z-20">
           {/* Top: Title */}
           <div>
-            <h3 className="text-base font-bold text-slate-900 dark:text-white whitespace-nowrap">
+            <h3 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white whitespace-nowrap">
               Bills and Payments
             </h3>
           </div>
@@ -2543,7 +2438,7 @@ function BillingContent() {
           <div className="flex flex-col sm:flex-row sm:items-center gap-2.5">
             {/* Search Input */}
             <div className="relative w-full sm:w-80">
-              <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
+              <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
               <input
                 type="text"
                 placeholder="Search by invoice ID or tenant name..."
@@ -2552,12 +2447,12 @@ function BillingContent() {
                   setTableSearchQuery(e.target.value);
                   setCurrentPage(1);
                 }}
-                className="w-full pl-8 pr-7 py-1.5 text-xs rounded-lg border border-slate-200 dark:border-zinc-700 bg-slate-50/50 dark:bg-zinc-800/50 text-slate-900 dark:text-zinc-100 placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                className="w-full pl-9 pr-8 py-1.5 text-xs sm:text-[13px] rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50/50 dark:bg-zinc-800/50 text-slate-900 dark:text-zinc-100 placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-blue-500"
               />
               {tableSearchQuery && (
                 <button
                   onClick={() => setTableSearchQuery("")}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 cursor-pointer"
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 cursor-pointer"
                 >
                   <X className="w-3.5 h-3.5" />
                 </button>
@@ -2565,7 +2460,7 @@ function BillingContent() {
             </div>
 
             {/* Dropdown Menu */}
-            <div className="w-full sm:w-52">
+            <div className="w-full sm:w-56">
               <CustomSelect
                 value={activeTableTab}
                 onChange={(val) => {
@@ -2579,7 +2474,7 @@ function BillingContent() {
                   { value: "pending", label: "Pending Verification", dotColor: "bg-amber-500" },
                   { value: "paid", label: "Paid", dotColor: "bg-emerald-500" },
                 ]}
-                className="w-full bg-slate-50/50 dark:bg-zinc-800/50 pl-3 pr-7 py-1.5 border border-slate-200 dark:border-zinc-700 rounded-lg text-xs font-semibold text-slate-700 dark:text-zinc-300 shadow-2xs"
+                className="w-full bg-slate-50/50 dark:bg-zinc-800/50 pl-3.5 pr-8 py-1.5 border border-slate-200 dark:border-zinc-700 rounded-xl text-xs sm:text-[13px] font-semibold text-slate-700 dark:text-zinc-300 shadow-2xs"
               />
             </div>
           </div>
@@ -2587,9 +2482,9 @@ function BillingContent() {
 
         {/* Table */}
         <div className="overflow-x-auto min-h-[285px]">
-          <table className="w-full text-xs border-collapse">
+          <table className="w-full text-xs sm:text-[13px] border-collapse">
             <thead>
-              <tr className="border-b border-slate-200 dark:border-zinc-800 bg-slate-50/70 dark:bg-zinc-900/80 text-slate-600 dark:text-zinc-400 font-semibold select-none">
+              <tr className="border-b border-slate-200 dark:border-zinc-800 bg-slate-50/70 dark:bg-zinc-900/80 text-slate-600 dark:text-zinc-400 text-xs font-bold uppercase tracking-wider select-none">
                 <th className="py-3 pl-4 pr-3 text-left whitespace-nowrap">Invoice #</th>
                 <th className="py-3 px-3 text-center whitespace-nowrap">Tenant</th>
                 <th className="py-3 px-3 text-center whitespace-nowrap">Room</th>
@@ -2641,7 +2536,7 @@ function BillingContent() {
                     colSpan={10}
                     className="h-[245px] text-center align-middle p-0"
                   >
-                    <div className="flex items-center justify-center h-[245px] text-slate-300 dark:text-zinc-600 font-light text-xs">
+                    <div className="flex items-center justify-center h-[245px] text-slate-400 dark:text-zinc-500 font-medium text-xs sm:text-[13px]">
                       No invoices found matching criteria.
                     </div>
                   </td>
@@ -2673,14 +2568,14 @@ function BillingContent() {
                         id={`bill-row-${bill.id}`}
                         key={bill.id}
                         onClick={() => handleSelectTenantRow(bill, true)}
-                        className={`h-[49px] transition-colors cursor-pointer ${
+                        className={`h-[48px] sm:h-[50px] transition-colors cursor-pointer ${
                           isRowSelected
                             ? "bg-blue-50/80 dark:bg-blue-950/30 shadow-[inset_3px_0_0_0_#0062cc]"
                             : "hover:bg-slate-50/80 dark:hover:bg-zinc-800/40"
                         }`}
                       >
                       {/* Invoice # */}
-                      <td className="py-3 pl-4 pr-3 text-left whitespace-nowrap font-mono font-medium text-blue-600 dark:text-blue-400">
+                      <td className="py-2.5 sm:py-3 pl-4 pr-3 text-left whitespace-nowrap font-mono font-bold text-xs sm:text-[13px] text-blue-600 dark:text-blue-400">
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
@@ -2694,48 +2589,48 @@ function BillingContent() {
                       </td>
 
                       {/* Tenant */}
-                      <td className={`py-3 px-3 text-center whitespace-nowrap ${
+                      <td className={`py-2.5 sm:py-3 px-3 text-center whitespace-nowrap text-xs sm:text-[13px] ${
                         isRowSelected
-                          ? "font-bold text-[#0062cc] dark:text-blue-400"
-                          : "font-medium text-slate-900 dark:text-white"
+                          ? "font-extrabold text-[#0062cc] dark:text-blue-400"
+                          : "font-bold text-slate-900 dark:text-white"
                       }`}>
                         {bill.tenant_name}
                       </td>
 
                       {/* Room */}
-                      <td className="py-3 px-3 text-center whitespace-nowrap text-slate-600 dark:text-zinc-300">
+                      <td className="py-2.5 sm:py-3 px-3 text-center whitespace-nowrap text-xs sm:text-[13px] font-medium text-slate-600 dark:text-zinc-300">
                         {roomDisplay}
                       </td>
 
                       {/* Bill Period */}
-                      <td className="py-3 px-3 text-center whitespace-nowrap text-slate-600 dark:text-zinc-400">
+                      <td className="py-2.5 sm:py-3 px-3 text-center whitespace-nowrap text-xs sm:text-[13px] font-medium text-slate-600 dark:text-zinc-400">
                         {bill.billing_month}
                       </td>
 
                       {/* Amount */}
-                      <td className="py-3 px-3 text-center whitespace-nowrap font-medium font-sans text-slate-900 dark:text-white">
+                      <td className="py-2.5 sm:py-3 px-3 text-center whitespace-nowrap font-bold text-xs sm:text-sm font-sans text-slate-900 dark:text-white">
                         ₱ {Number(bill.total_amount).toLocaleString("en-US", { minimumFractionDigits: 2 })}
                       </td>
 
                       {/* Status Badge */}
-                      <td className="py-3 px-3 text-center whitespace-nowrap">
+                      <td className="py-2.5 sm:py-3 px-3 text-center whitespace-nowrap">
                         {bill.status === "Paid" && (
-                          <span className="inline-flex items-center justify-center gap-1.5 text-xs font-semibold text-emerald-600 dark:text-emerald-400">
+                          <span className="inline-flex items-center justify-center gap-1.5 text-xs font-bold text-emerald-600 dark:text-emerald-400">
                             <Check className="w-3.5 h-3.5 stroke-[2.5]" /> Paid
                           </span>
                         )}
                         {bill.status === "Partially Paid" && (
-                          <span className="inline-flex items-center justify-center gap-1.5 text-xs font-semibold text-amber-600 dark:text-amber-400">
+                          <span className="inline-flex items-center justify-center gap-1.5 text-xs font-bold text-amber-600 dark:text-amber-400">
                             <Clock className="w-3.5 h-3.5 stroke-[2]" /> Partially Paid
                           </span>
                         )}
                         {bill.status === "Overdue" && (
-                          <span className="inline-flex items-center justify-center gap-1.5 text-xs font-semibold text-rose-600 dark:text-rose-400">
+                          <span className="inline-flex items-center justify-center gap-1.5 text-xs font-bold text-rose-600 dark:text-rose-400">
                             <AlertTriangle className="w-3.5 h-3.5 stroke-[2]" /> Overdue
                           </span>
                         )}
                         {bill.status === "Pending Verification" && (
-                          <span className="inline-flex items-center justify-center gap-1.5 text-xs font-semibold text-amber-600 dark:text-amber-400">
+                          <span className="inline-flex items-center justify-center gap-1.5 text-xs font-bold text-amber-600 dark:text-amber-400">
                             <Clock className="w-3.5 h-3.5 stroke-[2]" /> Pending Verification
                           </span>
                         )}
@@ -2743,14 +2638,14 @@ function BillingContent() {
                           bill.status !== "Partially Paid" &&
                           bill.status !== "Overdue" &&
                           bill.status !== "Pending Verification" && (
-                            <span className="inline-flex items-center justify-center gap-1.5 text-xs font-semibold text-slate-600 dark:text-zinc-400">
+                            <span className="inline-flex items-center justify-center gap-1.5 text-xs font-bold text-slate-600 dark:text-zinc-400">
                               {bill.status}
                             </span>
                           )}
                       </td>
 
                       {/* Due Date */}
-                      <td className="py-3 px-3 text-center whitespace-nowrap text-slate-600 dark:text-zinc-400">
+                      <td className="py-2.5 sm:py-3 px-3 text-center whitespace-nowrap text-xs sm:text-[13px] font-medium text-slate-600 dark:text-zinc-400">
                         {bill.due_date
                           ? new Date(bill.due_date).toLocaleDateString("en-US", {
                               month: "short",
@@ -2761,18 +2656,18 @@ function BillingContent() {
                       </td>
 
                       {/* Paid Amount */}
-                      <td className="py-3 px-3 text-center whitespace-nowrap font-sans text-slate-600 dark:text-zinc-300">
+                      <td className="py-2.5 sm:py-3 px-3 text-center whitespace-nowrap text-xs sm:text-sm font-medium font-sans text-slate-600 dark:text-zinc-300">
                         ₱ {Number(bill.amount_paid || 0).toLocaleString("en-US", { minimumFractionDigits: 2 })}
                       </td>
 
                       {/* Balance */}
-                      <td className={`py-3 px-3 text-center whitespace-nowrap font-sans ${Number(bill.balance) > 0 ? "font-bold text-rose-600 dark:text-rose-400" : "text-slate-600 dark:text-zinc-300"}`}>
+                      <td className={`py-2.5 sm:py-3 px-3 text-center whitespace-nowrap font-sans text-xs sm:text-sm ${Number(bill.balance) > 0 ? "font-bold text-rose-600 dark:text-rose-400" : "font-medium text-slate-600 dark:text-zinc-300"}`}>
                         ₱ {Number(bill.balance).toLocaleString("en-US", { minimumFractionDigits: 2 })}
                       </td>
 
                       {/* Actions */}
                       <td
-                        className="py-3 px-4 text-center whitespace-nowrap relative"
+                        className="py-2.5 sm:py-3 px-4 text-center whitespace-nowrap relative"
                         onClick={(e) => e.stopPropagation()}
                       >
                         <div className="inline-flex items-center justify-center gap-2">
@@ -2781,7 +2676,7 @@ function BillingContent() {
                               handleSelectTenantRow(bill);
                               openViewModal(bill);
                             }}
-                            className="text-xs font-semibold text-blue-600 hover:text-blue-700 dark:text-blue-400 hover:underline cursor-pointer"
+                            className="text-xs font-bold text-blue-600 hover:text-blue-700 dark:text-blue-400 hover:underline cursor-pointer"
                           >
                             View
                           </button>
@@ -2794,14 +2689,14 @@ function BillingContent() {
                                   activeMenuBillId === bill.id ? null : bill.id,
                                 );
                               }}
-                              className="p-1 text-slate-400 hover:text-slate-700 dark:hover:text-white rounded hover:bg-slate-100 dark:hover:bg-zinc-800 cursor-pointer"
+                              className="p-1 text-slate-400 hover:text-slate-700 dark:hover:text-white rounded-lg hover:bg-slate-100 dark:hover:bg-zinc-800 cursor-pointer"
                             >
                               <MoreVertical className="w-3.5 h-3.5" />
                             </button>
 
                             {activeMenuBillId === bill.id && (
                               <div
-                                className="absolute right-0 mt-1 w-48 bg-white dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 rounded-lg shadow-lg z-30 py-1 text-left"
+                                className="absolute right-0 mt-1 w-48 bg-white dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 rounded-xl shadow-lg z-30 py-1.5 text-left text-xs sm:text-[13px]"
                                 onClick={(e) => e.stopPropagation()}
                               >
                                 <button
@@ -2814,7 +2709,7 @@ function BillingContent() {
                                         ?.scrollIntoView({ behavior: "smooth", block: "nearest" });
                                     }, 50);
                                   }}
-                                  className="w-full px-3 py-1.5 text-xs text-slate-700 dark:text-zinc-200 hover:bg-slate-50 dark:hover:bg-zinc-700 flex items-center gap-2 cursor-pointer"
+                                  className="w-full px-3 py-1.5 text-xs sm:text-[13px] text-slate-700 dark:text-zinc-200 hover:bg-slate-50 dark:hover:bg-zinc-700 flex items-center gap-2 font-medium cursor-pointer"
                                 >
                                   <Receipt className="w-3.5 h-3.5 text-[#0062cc]" />
                                   View Payment History
@@ -2824,7 +2719,7 @@ function BillingContent() {
                                     setActiveMenuBillId(null);
                                     openViewModal(bill);
                                   }}
-                                  className="w-full px-3 py-1.5 text-xs text-slate-700 dark:text-zinc-200 hover:bg-slate-50 dark:hover:bg-zinc-700 flex items-center gap-2 cursor-pointer"
+                                  className="w-full px-3 py-1.5 text-xs sm:text-[13px] text-slate-700 dark:text-zinc-200 hover:bg-slate-50 dark:hover:bg-zinc-700 flex items-center gap-2 font-medium cursor-pointer"
                                 >
                                   <Eye className="w-3.5 h-3.5 text-blue-600" />
                                   View Statement
@@ -2834,7 +2729,7 @@ function BillingContent() {
                                     setActiveMenuBillId(null);
                                     openPayModal(bill);
                                   }}
-                                  className="w-full px-3 py-1.5 text-xs text-slate-700 dark:text-zinc-200 hover:bg-slate-50 dark:hover:bg-zinc-700 flex items-center gap-2 cursor-pointer"
+                                  className="w-full px-3 py-1.5 text-xs sm:text-[13px] text-slate-700 dark:text-zinc-200 hover:bg-slate-50 dark:hover:bg-zinc-700 flex items-center gap-2 font-medium cursor-pointer"
                                 >
                                   <CreditCard className="w-3.5 h-3.5 text-emerald-600" />
                                   Record Payment
@@ -2844,7 +2739,7 @@ function BillingContent() {
                                     setActiveMenuBillId(null);
                                     openEditModal(bill);
                                   }}
-                                  className="w-full px-3 py-1.5 text-xs text-slate-700 dark:text-zinc-200 hover:bg-slate-50 dark:hover:bg-zinc-700 flex items-center gap-2 cursor-pointer"
+                                  className="w-full px-3 py-1.5 text-xs sm:text-[13px] text-slate-700 dark:text-zinc-200 hover:bg-slate-50 dark:hover:bg-zinc-700 flex items-center gap-2 font-medium cursor-pointer"
                                 >
                                   <Edit className="w-3.5 h-3.5 text-slate-600" />
                                   Edit Invoice
@@ -2861,7 +2756,7 @@ function BillingContent() {
                                       );
                                       setIsVerifyModalOpen(true);
                                     }}
-                                    className="w-full px-3 py-1.5 text-xs text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-950/40 flex items-center gap-2 cursor-pointer"
+                                    className="w-full px-3 py-1.5 text-xs sm:text-[13px] text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-950/40 flex items-center gap-2 font-medium cursor-pointer"
                                   >
                                     <Clock className="w-3.5 h-3.5 text-amber-600" />
                                     Verify Payment
@@ -2880,12 +2775,12 @@ function BillingContent() {
                     (_, idx) => (
                       <tr
                         key={`filler-${idx}`}
-                        className="h-[49px] pointer-events-none select-none"
+                        className="h-[48px] pointer-events-none select-none"
                         aria-hidden="true"
                       >
                         <td
                           colSpan={10}
-                          className="py-3 px-3 text-transparent text-xs"
+                          className="py-2.5 px-3 text-transparent text-xs"
                         >
                           &nbsp;
                         </td>
@@ -2900,27 +2795,27 @@ function BillingContent() {
 
         {/* Pagination Footer */}
         <div className="px-4 py-2 border-t border-slate-200/80 dark:border-zinc-800 flex flex-col sm:flex-row items-center justify-between gap-2.5">
-          <div className="text-xs text-slate-500 dark:text-zinc-400">
+          <div className="text-xs sm:text-[13px] text-slate-500 dark:text-zinc-400">
             Showing{" "}
-            <span className="font-semibold text-slate-700 dark:text-zinc-300">
+            <span className="font-bold text-slate-700 dark:text-zinc-300">
               {filteredTableBills.length === 0
                 ? 0
                 : (currentPage - 1) * itemsPerPage + 1}
               –{Math.min(currentPage * itemsPerPage, filteredTableBills.length)}
             </span>{" "}
             of{" "}
-            <span className="font-semibold text-slate-700 dark:text-zinc-300">
+            <span className="font-bold text-slate-700 dark:text-zinc-300">
               {filteredTableBills.length}
             </span>{" "}
             invoices
           </div>
 
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-1.5">
             {/* Prev */}
             <button
               disabled={currentPage <= 1}
               onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-              className="w-7 h-7 rounded-md border border-slate-200 dark:border-zinc-700 flex items-center justify-center text-slate-500 hover:bg-slate-50 dark:hover:bg-zinc-800 disabled:opacity-40 disabled:pointer-events-none cursor-pointer"
+              className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg border border-slate-200 dark:border-zinc-700 flex items-center justify-center text-slate-500 hover:bg-slate-50 dark:hover:bg-zinc-800 disabled:opacity-40 disabled:pointer-events-none cursor-pointer"
             >
               <ChevronLeft className="w-3.5 h-3.5" />
             </button>
@@ -2930,7 +2825,7 @@ function BillingContent() {
               <button
                 key={pg}
                 onClick={() => setCurrentPage(pg)}
-                className={`w-7 h-7 rounded-md text-xs font-semibold transition-all cursor-pointer ${
+                className={`w-7 h-7 sm:w-8 sm:h-8 rounded-lg text-xs font-bold transition-all cursor-pointer ${
                   currentPage === pg
                     ? "bg-blue-600 text-white shadow-2xs"
                     : "text-slate-600 dark:text-zinc-400 hover:bg-slate-100 dark:hover:bg-zinc-800"
@@ -2944,7 +2839,7 @@ function BillingContent() {
             <button
               disabled={currentPage >= totalPages}
               onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-              className="w-7 h-7 rounded-md border border-slate-200 dark:border-zinc-700 flex items-center justify-center text-slate-500 hover:bg-slate-50 dark:hover:bg-zinc-800 disabled:opacity-40 disabled:pointer-events-none cursor-pointer"
+              className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg border border-slate-200 dark:border-zinc-700 flex items-center justify-center text-slate-500 hover:bg-slate-50 dark:hover:bg-zinc-800 disabled:opacity-40 disabled:pointer-events-none cursor-pointer"
             >
               <ChevronRight className="w-3.5 h-3.5" />
             </button>
@@ -2963,8 +2858,8 @@ function BillingContent() {
               className="border-t-2 border-blue-100 dark:border-blue-900/50 bg-slate-50/40 dark:bg-zinc-950/40"
             >
               {/* Tenant Payment History Header */}
-              <div className="px-4 py-3.5 border-b border-slate-200/80 dark:border-zinc-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-blue-50/30 dark:bg-blue-950/15">
-                <div className="flex items-center gap-3 min-w-0">
+              <div className="px-4 py-3 border-b border-slate-200/80 dark:border-zinc-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-blue-50/30 dark:bg-blue-950/15">
+                <div className="flex items-center gap-2.5 min-w-0">
                   <div
                     className={`w-9 h-9 rounded-full flex items-center justify-center font-bold text-sm shrink-0 shadow-xs select-none ${getTenantAvatarColor(
                       selectedHistoryTenant.name || "T",
@@ -2977,14 +2872,14 @@ function BillingContent() {
                   </div>
                   <div className="min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <h4 className="text-sm font-extrabold text-slate-900 dark:text-white truncate">
+                      <h4 className="text-sm sm:text-base font-bold text-slate-900 dark:text-white truncate">
                         Payment History — {selectedHistoryTenant.name}
                       </h4>
                       <span className="text-xs font-semibold text-[#0062cc] dark:text-blue-400">
                         {selectedTenantSummary.roomDisplay}
                       </span>
                     </div>
-                    <p className="text-[11px] text-slate-500 dark:text-zinc-400 mt-0.5">
+                    <p className="text-[11px] sm:text-xs text-slate-500 dark:text-zinc-400 mt-0.5">
                       {selectedTenantPayments.length}{" "}
                       {selectedTenantPayments.length === 1
                         ? "recorded payment transaction"
@@ -2994,13 +2889,13 @@ function BillingContent() {
                 </div>
 
                 {/* Summary Totals & Close Button */}
-                <div className="flex items-center justify-between sm:justify-end gap-4 shrink-0">
-                  <div className="flex items-center gap-4 text-xs">
+                <div className="flex items-center justify-between sm:justify-end gap-3.5 shrink-0">
+                  <div className="flex items-center gap-3.5 text-xs sm:text-[13px]">
                     <div>
-                      <span className="text-[10px] uppercase tracking-wider font-semibold text-slate-400 dark:text-zinc-500 block">
+                      <span className="text-[10px] sm:text-[11px] uppercase tracking-wider font-bold text-slate-400 dark:text-zinc-500 block">
                         Total Paid
                       </span>
-                      <span className="font-mono font-bold text-emerald-600 dark:text-emerald-400">
+                      <span className="font-mono font-bold text-emerald-600 dark:text-emerald-400 text-xs sm:text-sm">
                         ₱{" "}
                         {selectedTenantSummary.totalPaid.toLocaleString(
                           "en-US",
@@ -3011,13 +2906,13 @@ function BillingContent() {
                         )}
                       </span>
                     </div>
-                    <div className="h-6 w-px bg-slate-200 dark:bg-zinc-800" />
+                    <div className="h-5 w-px bg-slate-200 dark:bg-zinc-800" />
                     <div>
-                      <span className="text-[10px] uppercase tracking-wider font-semibold text-slate-400 dark:text-zinc-500 block">
+                      <span className="text-[10px] sm:text-[11px] uppercase tracking-wider font-bold text-slate-400 dark:text-zinc-500 block">
                         Balance
                       </span>
                       <span
-                        className={`font-mono font-bold ${
+                        className={`font-mono font-bold text-xs sm:text-sm ${
                           selectedTenantSummary.totalBalance > 0
                             ? "text-rose-600 dark:text-rose-400"
                             : "text-slate-700 dark:text-zinc-300"
@@ -3042,7 +2937,7 @@ function BillingContent() {
                       setSelectedBillRowId(null);
                     }}
                     title="Close payment history"
-                    className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 dark:hover:text-zinc-200 hover:bg-slate-200/60 dark:hover:bg-zinc-800 transition-colors cursor-pointer"
+                    className="p-1 rounded-lg text-slate-400 hover:text-slate-700 dark:hover:text-zinc-200 hover:bg-slate-200/60 dark:hover:bg-zinc-800 transition-colors cursor-pointer"
                   >
                     <X className="w-4 h-4" />
                   </button>
@@ -3052,9 +2947,9 @@ function BillingContent() {
               {/* Tenant Payment History Table */}
               <div className="overflow-x-auto max-h-[320px] overflow-y-auto custom-scrollbar">
                 {selectedTenantPayments.length === 0 ? (
-                  <div className="py-10 px-4 text-center text-slate-400 dark:text-zinc-500">
-                    <Receipt className="w-7 h-7 mx-auto mb-2 opacity-40" />
-                    <p className="text-xs font-semibold text-slate-600 dark:text-zinc-300">
+                  <div className="py-8 px-4 text-center text-slate-400 dark:text-zinc-500">
+                    <Receipt className="w-7 h-7 mx-auto mb-1.5 opacity-40" />
+                    <p className="text-xs sm:text-[13px] font-semibold text-slate-600 dark:text-zinc-300">
                       No payment history recorded yet for{" "}
                       {selectedHistoryTenant.name}
                     </p>
@@ -3064,8 +2959,8 @@ function BillingContent() {
                     </p>
                   </div>
                 ) : (
-                  <table className="w-full text-xs border-collapse">
-                    <thead className="sticky top-0 bg-slate-50 dark:bg-zinc-900 z-10 border-b border-slate-200/80 dark:border-zinc-800 text-slate-500 dark:text-zinc-400 font-semibold">
+                  <table className="w-full text-xs sm:text-[13px] border-collapse">
+                    <thead className="sticky top-0 bg-slate-50 dark:bg-zinc-900 z-10 border-b border-slate-200/80 dark:border-zinc-800 text-slate-600 dark:text-zinc-400 text-xs font-bold uppercase tracking-wider">
                       <tr>
                         <th className="py-2.5 pl-4 pr-3 text-left whitespace-nowrap">
                           Payment Date
@@ -3113,7 +3008,7 @@ function BillingContent() {
                             </td>
 
                             {/* Reference # */}
-                            <td className="py-2.5 px-3 text-left whitespace-nowrap font-mono font-semibold text-slate-700 dark:text-zinc-300">
+                            <td className="py-2.5 px-3 text-left whitespace-nowrap font-mono font-bold text-slate-700 dark:text-zinc-300">
                               {payment.referenceNumber}
                             </td>
 
@@ -3125,16 +3020,16 @@ function BillingContent() {
                                   onClick={() =>
                                     openViewModal(payment.linkedBill)
                                   }
-                                  className="font-mono font-semibold text-blue-600 dark:text-blue-400 hover:underline cursor-pointer"
+                                  className="font-mono font-bold text-blue-600 dark:text-blue-400 hover:underline cursor-pointer"
                                 >
                                   {payment.invoiceNumber}
                                 </button>
                               ) : (
-                                <span className="font-mono font-semibold text-slate-700 dark:text-zinc-300">
+                                <span className="font-mono font-bold text-slate-700 dark:text-zinc-300">
                                   {payment.invoiceNumber}
                                 </span>
                               )}
-                              <span className="text-slate-400 dark:text-zinc-500 ml-1.5">
+                              <span className="text-slate-400 dark:text-zinc-500 ml-1.5 font-medium">
                                 ({payment.billingMonth})
                               </span>
                             </td>
@@ -3158,20 +3053,20 @@ function BillingContent() {
                             {/* Status (Colored text only - no background/outline) */}
                             <td className="py-2.5 px-3 text-center whitespace-nowrap">
                               {payment.normalizedStatus === "Paid" && (
-                                <span className="inline-flex items-center justify-center gap-1 text-xs font-semibold text-emerald-600 dark:text-emerald-400">
+                                <span className="inline-flex items-center justify-center gap-1 text-xs font-bold text-emerald-600 dark:text-emerald-400">
                                   <Check className="w-3.5 h-3.5 stroke-[2.5]" />{" "}
                                   Paid
                                 </span>
                               )}
                               {payment.normalizedStatus ===
                                 "Pending Verification" && (
-                                <span className="inline-flex items-center justify-center gap-1 text-xs font-semibold text-amber-600 dark:text-amber-400">
+                                <span className="inline-flex items-center justify-center gap-1 text-xs font-bold text-amber-600 dark:text-amber-400">
                                   <Clock className="w-3.5 h-3.5 stroke-[2]" />{" "}
                                   Pending Verification
                                 </span>
                               )}
                               {payment.normalizedStatus === "Rejected" && (
-                                <span className="inline-flex items-center justify-center gap-1 text-xs font-semibold text-rose-600 dark:text-rose-400">
+                                <span className="inline-flex items-center justify-center gap-1 text-xs font-bold text-rose-600 dark:text-rose-400">
                                   <XCircle className="w-3.5 h-3.5 stroke-[2]" />{" "}
                                   Rejected
                                 </span>
@@ -3187,7 +3082,7 @@ function BillingContent() {
                                     onClick={() =>
                                       setPreviewReceiptUrl(payment.receiptUrl)
                                     }
-                                    className="text-xs font-semibold text-[#0062cc] dark:text-blue-400 hover:underline cursor-pointer"
+                                    className="text-xs font-bold text-[#0062cc] dark:text-blue-400 hover:underline cursor-pointer"
                                   >
                                     View Receipt
                                   </button>
@@ -3198,7 +3093,7 @@ function BillingContent() {
                                     onClick={() =>
                                       openViewModal(payment.linkedBill)
                                     }
-                                    className="text-xs font-semibold text-slate-600 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white hover:underline cursor-pointer"
+                                    className="text-xs sm:text-sm font-semibold text-slate-600 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white hover:underline cursor-pointer"
                                   >
                                     Statement
                                   </button>

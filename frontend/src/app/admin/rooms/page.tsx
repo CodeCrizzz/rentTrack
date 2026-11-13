@@ -663,33 +663,78 @@ function RoomsContent() {
               : "border-slate-200/90 dark:border-zinc-800 hover:border-slate-300 dark:hover:border-zinc-700 hover:bg-slate-50/50 dark:hover:bg-zinc-800/40 shadow-2xs"
           }`}
         >
-          {/* Dot grid background decoration */}
-          <div className="pointer-events-none absolute inset-0 opacity-[0.035] dark:opacity-[0.05]" style={{ backgroundImage: 'radial-gradient(circle, #10b981 1px, transparent 1px)', backgroundSize: '12px 12px' }} />
+          {/* Fully Occupied Boarding Room Blueprint */}
+          <div className="pointer-events-none select-none absolute inset-0 overflow-hidden" aria-hidden="true">
+            <div className="absolute inset-x-0 top-0 h-[2px] bg-gradient-to-r from-emerald-500 via-emerald-400/50 to-transparent dark:from-emerald-400 dark:via-emerald-500/30 dark:to-transparent" />
+            <div className="absolute -top-10 -right-10 w-28 h-28 rounded-full bg-emerald-500/[0.04] dark:bg-emerald-400/[0.04] blur-xl" />
+            <svg
+              className="absolute right-2 bottom-5 w-28 h-14 opacity-[0.14] dark:opacity-[0.22] text-emerald-600 dark:text-emerald-400"
+              viewBox="0 0 112 56"
+              fill="none"
+              stroke="currentColor"
+            >
+              {/* Outer room boundary walls with architectural corner ticks */}
+              <rect x="6" y="6" width="100" height="44" rx="2" strokeWidth="1.25" />
+              <path d="M2 6 H6 M106 6 H110 M2 50 H6 M106 50 H110" strokeWidth="1" />
+              
+              {/* Center hallway aisle dividing the beds */}
+              <path d="M6 28 H106" strokeWidth="0.75" strokeDasharray="3 3" opacity="0.6" />
+              
+              {/* Bed 1 (Top Left) - Filled with Pillow & Solid Check */}
+              <rect x="12" y="10" width="18" height="14" rx="1.5" strokeWidth="1.1" fill="currentColor" fillOpacity="0.12" />
+              <rect x="14" y="12" width="4" height="10" rx="1" fill="currentColor" fillOpacity="0.3" stroke="none" />
+              <path d="M23 15 L25 17 L29 13" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
+              
+              {/* Bed 2 (Top Right) - Filled with Pillow & Solid Check */}
+              <rect x="42" y="10" width="18" height="14" rx="1.5" strokeWidth="1.1" fill="currentColor" fillOpacity="0.12" />
+              <rect x="44" y="12" width="4" height="10" rx="1" fill="currentColor" fillOpacity="0.3" stroke="none" />
+              <path d="M53 15 L55 17 L59 13" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
+
+              {/* Bed 3 (Bottom Left) - Filled with Pillow & Solid Check */}
+              <rect x="12" y="32" width="18" height="14" rx="1.5" strokeWidth="1.1" fill="currentColor" fillOpacity="0.12" />
+              <rect x="14" y="34" width="4" height="10" rx="1" fill="currentColor" fillOpacity="0.3" stroke="none" />
+              <path d="M23 37 L25 39 L29 35" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
+
+              {/* Bed 4 (Bottom Right) - Filled with Pillow & Solid Check */}
+              <rect x="42" y="32" width="18" height="14" rx="1.5" strokeWidth="1.1" fill="currentColor" fillOpacity="0.12" />
+              <rect x="44" y="34" width="4" height="10" rx="1" fill="currentColor" fillOpacity="0.3" stroke="none" />
+              <path d="M53 37 L55 39 L59 35" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
+
+              {/* Closed Security Door with Lock Indicator on Right Wall */}
+              <path d="M106 20 V36" strokeWidth="2.5" strokeLinecap="round" />
+              <circle cx="102" cy="28" r="2" fill="currentColor" />
+              
+              {/* "100% FULL" Badge Gauge */}
+              <rect x="72" y="17" width="26" height="22" rx="3" strokeWidth="1" strokeDasharray="2 2" />
+              <circle cx="85" cy="28" r="5" fill="currentColor" fillOpacity="0.15" strokeWidth="1" />
+              <path d="M83 28 L84.5 29.5 L87.5 26.5" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </div>
           {/* Top Header: Icon + Title + Percentage Chip */}
-          <div className="flex items-center justify-between gap-2">
+          <div className="relative z-10 flex items-center justify-between gap-2">
             <div className="flex items-center gap-2 min-w-0">
               <div className="w-7 h-7 rounded-lg bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0 border border-emerald-100 dark:border-emerald-900/40">
-                <CheckCircle className="w-3.5 h-3.5 stroke-[2.2]" />
+                <CheckCircle className="w-4 h-4 stroke-[2.2]" />
               </div>
-              <span className="text-xs font-semibold text-slate-800 dark:text-zinc-200 truncate">
+              <span className="text-xs sm:text-[13px] font-bold text-slate-800 dark:text-zinc-200 truncate">
                 Full
               </span>
             </div>
             <div className="flex items-center gap-1.5 shrink-0">
               {statusFilter === "Full" && (
-                <span className="text-[10px] font-bold text-emerald-700 dark:text-emerald-400 bg-emerald-100/80 dark:bg-emerald-950/80 px-1.5 py-0.5 rounded">
+                <span className="text-xs font-bold text-emerald-700 dark:text-emerald-400 bg-emerald-100/80 dark:bg-emerald-950/80 px-1.5 py-0.5 rounded">
                   Filtered
                 </span>
               )}
-              <span className="text-sm sm:text-base font-extrabold font-mono text-slate-800 dark:text-zinc-100 bg-slate-100 dark:bg-zinc-800 px-2 py-0.5 rounded-md shrink-0">
+              <span className="text-xs sm:text-[13px] font-bold font-mono text-slate-800 dark:text-zinc-100 bg-slate-100 dark:bg-zinc-800 px-1.5 py-0.5 rounded-md shrink-0">
                 {metrics.fullPct}%
               </span>
             </div>
           </div>
 
           {/* Metric Value */}
-          <div className="mt-2.5 flex items-baseline gap-1.5">
-            <span className="text-2xl sm:text-[26px] font-bold text-slate-950 dark:text-white tracking-tight tabular-nums">
+          <div className="relative z-10 mt-2.5 flex items-baseline gap-1.5">
+            <span className="text-xl sm:text-2xl font-black text-slate-950 dark:text-white tracking-tight tabular-nums">
               {metrics.full}
             </span>
             <span className="text-xs font-medium text-slate-400 dark:text-zinc-500">
@@ -698,7 +743,7 @@ function RoomsContent() {
           </div>
 
           {/* Precision Progress Track */}
-          <div className="mt-2.5 w-full h-1.5 bg-slate-100 dark:bg-zinc-800 rounded-full overflow-hidden">
+          <div className="relative z-10 mt-2.5 w-full h-1.5 bg-slate-100 dark:bg-zinc-800 rounded-full overflow-hidden">
             <div
               className="h-full bg-emerald-500 rounded-full transition-all duration-500"
               style={{ width: `${metrics.fullPct}%` }}
@@ -706,7 +751,7 @@ function RoomsContent() {
           </div>
 
           {/* Operational Context Subtext */}
-          <div className="mt-2 flex items-center justify-between text-[11px] text-slate-500 dark:text-zinc-400 font-medium">
+          <div className="relative z-10 mt-2 flex items-center justify-between text-[11px] sm:text-xs text-slate-500 dark:text-zinc-400 font-medium">
             <span>Bed capacity</span>
             <span className="flex items-center gap-1 font-semibold text-slate-700 dark:text-zinc-300">
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />
@@ -734,15 +779,49 @@ function RoomsContent() {
               : "border-slate-200/90 dark:border-zinc-800 hover:border-slate-300 dark:hover:border-zinc-700 hover:bg-slate-50/50 dark:hover:bg-zinc-800/40 shadow-2xs"
           }`}
         >
-          {/* Dot grid background decoration */}
-          <div className="pointer-events-none absolute inset-0 opacity-[0.035] dark:opacity-[0.05]" style={{ backgroundImage: 'radial-gradient(circle, #f59e0b 1px, transparent 1px)', backgroundSize: '12px 12px' }} />
+          {/* Shared Room Blueprint with Partial Occupancy & Open Bedspace */}
+          <div className="pointer-events-none select-none absolute inset-0 overflow-hidden" aria-hidden="true">
+            <div className="absolute inset-x-0 top-0 h-[2px] bg-gradient-to-r from-amber-500 via-amber-400/50 to-transparent dark:from-amber-400 dark:via-amber-500/30 dark:to-transparent" />
+            <div className="absolute -top-10 -right-10 w-28 h-28 rounded-full bg-amber-500/[0.04] dark:bg-amber-400/[0.04] blur-xl" />
+            <svg
+              className="absolute right-2 bottom-5 w-28 h-14 opacity-[0.14] dark:opacity-[0.22] text-amber-600 dark:text-amber-400"
+              viewBox="0 0 112 56"
+              fill="none"
+              stroke="currentColor"
+            >
+              {/* Outer room boundary walls with architectural corner ticks */}
+              <rect x="6" y="6" width="100" height="44" rx="2" strokeWidth="1.25" />
+              <path d="M2 6 H6 M106 6 H110 M2 50 H6 M106 50 H110" strokeWidth="1" />
+
+              {/* Room center privacy partition / dividing curtain */}
+              <path d="M56 6 V50" strokeWidth="0.8" strokeDasharray="2.5 2.5" opacity="0.6" />
+
+              {/* Bay 1: Occupied Bed (Left) - Filled with pillow and tenant resident indicator */}
+              <rect x="12" y="13" width="22" height="30" rx="1.5" strokeWidth="1.1" fill="currentColor" fillOpacity="0.14" />
+              <rect x="15" y="15" width="16" height="6" rx="1" fill="currentColor" fillOpacity="0.28" stroke="none" />
+              <circle cx="23" cy="27" r="3" fill="currentColor" fillOpacity="0.25" strokeWidth="1" />
+              <path d="M17 37 C17 33 29 33 29 37" strokeWidth="1" strokeLinecap="round" />
+              <rect x="37" y="15" width="6" height="8" rx="1" strokeWidth="0.9" />
+
+              {/* Bay 2: Available / Open Bedspace (Right) - Dashed bed outline with '+' lease badge */}
+              <rect x="68" y="13" width="22" height="30" rx="1.5" strokeWidth="1.1" strokeDasharray="3 2" />
+              <rect x="71" y="15" width="16" height="6" rx="1" strokeWidth="0.9" strokeDasharray="2 1.5" />
+              {/* '+' Add Bedspace / Available Indicator */}
+              <circle cx="79" cy="29" r="6.5" strokeWidth="1" strokeDasharray="2 2" />
+              <path d="M79 26 V32 M76 29 H82" strokeWidth="1.3" strokeLinecap="round" />
+              <rect x="93" y="15" width="6" height="8" rx="1" strokeWidth="0.9" strokeDasharray="2 2" />
+
+              {/* Top window / daylight vent */}
+              <path d="M46 6 H66 M46 4 H66" strokeWidth="1" />
+            </svg>
+          </div>
           {/* Top Header: Icon + Title + Percentage Chip */}
-          <div className="flex items-center justify-between gap-2">
+          <div className="relative z-10 flex items-center justify-between gap-2">
             <div className="flex items-center gap-2 min-w-0">
               <div className="w-7 h-7 rounded-lg bg-amber-50 dark:bg-amber-950/50 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0 border border-amber-100 dark:border-amber-900/40">
-                <BedDouble className="w-3.5 h-3.5 stroke-[2.2]" />
+                <BedDouble className="w-4 h-4 stroke-[2.2]" />
               </div>
-              <span className="text-xs font-semibold text-slate-800 dark:text-zinc-200 truncate">
+              <span className="text-xs sm:text-[13px] font-bold text-slate-800 dark:text-zinc-200 truncate">
                 Occupied w/ Beds
               </span>
             </div>
@@ -750,19 +829,19 @@ function RoomsContent() {
               {(statusFilter === "Occupied (With Available Beds)" ||
                 statusFilter === "Occupied w/ Beds" ||
                 statusFilter === "Partially Occupied") && (
-                <span className="text-[10px] font-bold text-amber-700 dark:text-amber-400 bg-amber-100/80 dark:bg-amber-950/80 px-1.5 py-0.5 rounded">
+                <span className="text-xs font-bold text-amber-700 dark:text-amber-400 bg-amber-100/80 dark:bg-amber-950/80 px-1.5 py-0.5 rounded">
                   Filtered
                 </span>
               )}
-              <span className="text-sm sm:text-base font-extrabold font-mono text-slate-800 dark:text-zinc-100 bg-slate-100 dark:bg-zinc-800 px-2 py-0.5 rounded-md shrink-0">
+              <span className="text-xs sm:text-[13px] font-bold font-mono text-slate-800 dark:text-zinc-100 bg-slate-100 dark:bg-zinc-800 px-1.5 py-0.5 rounded-md shrink-0">
                 {metrics.occupiedWithBedsPct}%
               </span>
             </div>
           </div>
 
           {/* Metric Value */}
-          <div className="mt-2.5 flex items-baseline gap-1.5">
-            <span className="text-2xl sm:text-[26px] font-bold text-slate-950 dark:text-white tracking-tight tabular-nums">
+          <div className="relative z-10 mt-2.5 flex items-baseline gap-1.5">
+            <span className="text-xl sm:text-2xl font-black text-slate-950 dark:text-white tracking-tight tabular-nums">
               {metrics.occupiedWithBeds}
             </span>
             <span className="text-xs font-medium text-slate-400 dark:text-zinc-500">
@@ -771,7 +850,7 @@ function RoomsContent() {
           </div>
 
           {/* Precision Progress Track */}
-          <div className="mt-2.5 w-full h-1.5 bg-slate-100 dark:bg-zinc-800 rounded-full overflow-hidden">
+          <div className="relative z-10 mt-2.5 w-full h-1.5 bg-slate-100 dark:bg-zinc-800 rounded-full overflow-hidden">
             <div
               className="h-full bg-amber-500 rounded-full transition-all duration-500"
               style={{ width: `${metrics.occupiedWithBedsPct}%` }}
@@ -779,7 +858,7 @@ function RoomsContent() {
           </div>
 
           {/* Operational Context Subtext */}
-          <div className="mt-2 flex items-center justify-between text-[11px] text-slate-500 dark:text-zinc-400 font-medium">
+          <div className="relative z-10 mt-2 flex items-center justify-between text-[11px] sm:text-xs text-slate-500 dark:text-zinc-400 font-medium">
             <span>Available beds</span>
             <span className="flex items-center gap-1 font-semibold text-amber-600 dark:text-amber-400">
               <span className="w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0" />
@@ -802,33 +881,68 @@ function RoomsContent() {
               : "border-slate-200/90 dark:border-zinc-800 hover:border-slate-300 dark:hover:border-zinc-700 hover:bg-slate-50/50 dark:hover:bg-zinc-800/40 shadow-2xs"
           }`}
         >
-          {/* Dot grid background decoration */}
-          <div className="pointer-events-none absolute inset-0 opacity-[0.035] dark:opacity-[0.05]" style={{ backgroundImage: 'radial-gradient(circle, #3b82f6 1px, transparent 1px)', backgroundSize: '12px 12px' }} />
+          {/* Move-in Ready Vacant Room with Open Door & Key Handover Blueprint */}
+          <div className="pointer-events-none select-none absolute inset-0 overflow-hidden" aria-hidden="true">
+            <div className="absolute inset-x-0 top-0 h-[2px] bg-gradient-to-r from-blue-500 via-blue-400/50 to-transparent dark:from-blue-400 dark:via-blue-500/30 dark:to-transparent" />
+            <div className="absolute -top-10 -right-10 w-28 h-28 rounded-full bg-blue-500/[0.04] dark:bg-blue-400/[0.04] blur-xl" />
+            <svg
+              className="absolute right-2 bottom-5 w-28 h-14 opacity-[0.14] dark:opacity-[0.22] text-blue-600 dark:text-blue-400"
+              viewBox="0 0 112 56"
+              fill="none"
+              stroke="currentColor"
+            >
+              {/* Outer room boundary walls with doorway opening */}
+              <path d="M22 50 H6 V6 H106 V50 H44" strokeWidth="1.25" strokeLinecap="round" />
+              <path d="M2 6 H6 M106 6 H110 M2 50 H6 M106 50 H110" strokeWidth="1" />
+
+              {/* Welcoming 90° Open Door with Dashed Swing Arc */}
+              <path d="M22 50 V28" strokeWidth="1.5" strokeLinecap="round" />
+              <path d="M22 28 A22 22 0 0 1 44 50" strokeWidth="1" strokeDasharray="2.5 2" />
+              
+              {/* Move-in path chevrons into the room */}
+              <path d="M30 44 L33 41 L36 44" strokeWidth="1.1" strokeLinecap="round" strokeLinejoin="round" />
+              <path d="M30 37 L33 34 L36 37" strokeWidth="1.1" strokeLinecap="round" strokeLinejoin="round" />
+
+              {/* Ready-to-occupy Bed (Clean, crisp unmade outline) */}
+              <rect x="62" y="12" width="22" height="15" rx="1.5" strokeWidth="1.1" />
+              <rect x="64" y="14" width="5" height="11" rx="1" strokeWidth="0.9" />
+
+              <rect x="62" y="31" width="22" height="15" rx="1.5" strokeWidth="1.1" />
+              <rect x="64" y="33" width="5" height="11" rx="1" strokeWidth="0.9" />
+
+              {/* Key Handover Symbol (Key ring + stem + teeth) */}
+              <circle cx="97" cy="18" r="3.5" strokeWidth="1.1" />
+              <path d="M97 21.5 V33 M97 28 H100 M97 31 H99" strokeWidth="1.2" strokeLinecap="round" />
+
+              {/* Top window with dual pane divider */}
+              <path d="M12 6 H32 M12 3.5 H32 M22 3.5 V6" strokeWidth="0.9" />
+            </svg>
+          </div>
           {/* Top Header: Icon + Title + Percentage Chip */}
-          <div className="flex items-center justify-between gap-2">
+          <div className="relative z-10 flex items-center justify-between gap-2">
             <div className="flex items-center gap-2 min-w-0">
               <div className="w-7 h-7 rounded-lg bg-blue-50 dark:bg-blue-950/50 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0 border border-blue-100 dark:border-blue-900/40">
-                <DoorOpen className="w-3.5 h-3.5 stroke-[2.2]" />
+                <DoorOpen className="w-4 h-4 stroke-[2.2]" />
               </div>
-              <span className="text-xs font-semibold text-slate-800 dark:text-zinc-200 truncate">
+              <span className="text-xs sm:text-[13px] font-bold text-slate-800 dark:text-zinc-200 truncate">
                 Vacant
               </span>
             </div>
             <div className="flex items-center gap-1.5 shrink-0">
               {statusFilter === "Vacant" && (
-                <span className="text-[10px] font-bold text-blue-700 dark:text-blue-400 bg-blue-100/80 dark:bg-blue-950/80 px-1.5 py-0.5 rounded">
+                <span className="text-xs font-bold text-blue-700 dark:text-blue-400 bg-blue-100/80 dark:bg-blue-950/80 px-1.5 py-0.5 rounded">
                   Filtered
                 </span>
               )}
-              <span className="text-sm sm:text-base font-extrabold font-mono text-slate-800 dark:text-zinc-100 bg-slate-100 dark:bg-zinc-800 px-2 py-0.5 rounded-md shrink-0">
+              <span className="text-xs sm:text-[13px] font-bold font-mono text-slate-800 dark:text-zinc-100 bg-slate-100 dark:bg-zinc-800 px-1.5 py-0.5 rounded-md shrink-0">
                 {metrics.vacantPct}%
               </span>
             </div>
           </div>
 
           {/* Metric Value */}
-          <div className="mt-2.5 flex items-baseline gap-1.5">
-            <span className="text-2xl sm:text-[26px] font-bold text-slate-950 dark:text-white tracking-tight tabular-nums">
+          <div className="relative z-10 mt-2.5 flex items-baseline gap-1.5">
+            <span className="text-xl sm:text-2xl font-black text-slate-950 dark:text-white tracking-tight tabular-nums">
               {metrics.vacant}
             </span>
             <span className="text-xs font-medium text-slate-400 dark:text-zinc-500">
@@ -837,7 +951,7 @@ function RoomsContent() {
           </div>
 
           {/* Precision Progress Track */}
-          <div className="mt-2.5 w-full h-1.5 bg-slate-100 dark:bg-zinc-800 rounded-full overflow-hidden">
+          <div className="relative z-10 mt-2.5 w-full h-1.5 bg-slate-100 dark:bg-zinc-800 rounded-full overflow-hidden">
             <div
               className="h-full bg-blue-500 rounded-full transition-all duration-500"
               style={{ width: `${metrics.vacantPct}%` }}
@@ -845,7 +959,7 @@ function RoomsContent() {
           </div>
 
           {/* Operational Context Subtext */}
-          <div className="mt-2 flex items-center justify-between text-[11px] text-slate-500 dark:text-zinc-400 font-medium">
+          <div className="relative z-10 mt-2 flex items-center justify-between text-[11px] sm:text-xs text-slate-500 dark:text-zinc-400 font-medium">
             <span>Move-in ready</span>
             <span className="flex items-center gap-1 font-semibold text-blue-600 dark:text-blue-400">
               <span className="w-1.5 h-1.5 rounded-full bg-blue-500 shrink-0" />
@@ -862,37 +976,79 @@ function RoomsContent() {
               statusFilter === "Maintenance" ? "All Statuses" : "Maintenance",
             )
           }
-          className={`group text-left bg-white dark:bg-zinc-900 border rounded-xl p-3.5 transition-all duration-150 cursor-pointer select-none flex flex-col justify-between ${
+          className={`group relative overflow-hidden text-left bg-white dark:bg-zinc-900 border rounded-xl p-3.5 transition-all duration-150 cursor-pointer select-none flex flex-col justify-between ${
             statusFilter === "Maintenance"
               ? "border-rose-500/80 bg-rose-50/25 dark:bg-rose-950/20 ring-1 ring-rose-500/25 shadow-2xs"
               : "border-slate-200/90 dark:border-zinc-800 hover:border-slate-300 dark:hover:border-zinc-700 hover:bg-slate-50/50 dark:hover:bg-zinc-800/40 shadow-2xs"
           }`}
         >
+          {/* Engineering Maintenance Blueprint with Service Framing & Crossed Tools */}
+          <div className="pointer-events-none select-none absolute inset-0 overflow-hidden" aria-hidden="true">
+            <div className="absolute inset-x-0 top-0 h-[2px] bg-gradient-to-r from-rose-500 via-rose-400/50 to-transparent dark:from-rose-400 dark:via-rose-500/30 dark:to-transparent" />
+            <div className="absolute -top-10 -right-10 w-28 h-28 rounded-full bg-rose-500/[0.04] dark:bg-rose-400/[0.04] blur-xl" />
+            <svg
+              className="absolute right-2 bottom-5 w-28 h-14 opacity-[0.14] dark:opacity-[0.22] text-rose-600 dark:text-rose-400"
+              viewBox="0 0 112 56"
+              fill="none"
+              stroke="currentColor"
+            >
+              {/* Technical Blueprint Framing Corner Brackets */}
+              <path d="M6 14 V6 H14 M98 6 H106 V14 M6 42 V50 H14 M98 50 H106 V42" strokeWidth="1.4" strokeLinecap="round" />
+              
+              {/* Dashed outer boundary perimeter */}
+              <rect x="6" y="6" width="100" height="44" rx="2" strokeWidth="1" strokeDasharray="3.5 2.5" opacity="0.6" />
+
+              {/* Diagonal caution / service hatch striping on left bay */}
+              <path d="M16 6 L6 16 M26 6 L6 26 M36 6 L6 36 M46 6 L10 42" strokeWidth="1" strokeDasharray="2 2" opacity="0.4" />
+
+              {/* Offline Bed under lockout / maintenance */}
+              <rect x="14" y="14" width="24" height="28" rx="1.5" strokeWidth="1.1" strokeDasharray="2 2" />
+              <path d="M14 14 L38 42 M38 14 L14 42" strokeWidth="1" strokeDasharray="2 2" opacity="0.6" />
+
+              {/* Crossed Service Tools (Wrench & Screwdriver) */}
+              {/* Tool 1: Wrench */}
+              <path d="M60 41 L76 25" strokeWidth="1.3" strokeLinecap="round" />
+              <path d="M74 23 L77 20 C78 19 80 19 81 20 L83 18 C81 16 78 16 76 18 L73 21" strokeWidth="1.1" strokeLinecap="round" />
+              <circle cx="58" cy="43" r="1.5" strokeWidth="1" />
+              {/* Tool 2: Screwdriver */}
+              <path d="M77 41 L61 25" strokeWidth="1.3" strokeLinecap="round" />
+              <path d="M59 23 L57 21" strokeWidth="1.8" strokeLinecap="round" />
+              <rect x="74" y="38" width="6" height="5" rx="1" strokeWidth="1" transform="rotate(-45 77 41)" />
+
+              {/* Maintenance Warning Sign Triangle */}
+              <path d="M96 14 L88 28 H104 Z" strokeWidth="1.2" strokeLinejoin="round" />
+              <line x1="96" y1="18.5" x2="96" y2="22.5" strokeWidth="1.2" strokeLinecap="round" />
+              <circle cx="96" cy="25" r="0.7" fill="currentColor" />
+
+              {/* Calibration Rule / Scale Marks at bottom */}
+              <path d="M56 47 H104 M56 44 V47 M68 45 V47 M80 44 V47 M92 45 V47 M104 44 V47" strokeWidth="0.8" opacity="0.7" />
+            </svg>
+          </div>
           {/* Top Header: Icon + Title + Percentage Chip */}
-          <div className="flex items-center justify-between gap-2">
+          <div className="relative z-10 flex items-center justify-between gap-2">
             <div className="flex items-center gap-2 min-w-0">
               <div className="w-7 h-7 rounded-lg bg-rose-50 dark:bg-rose-950/50 text-rose-600 dark:text-rose-400 flex items-center justify-center shrink-0 border border-rose-100 dark:border-rose-900/40">
-                <Wrench className="w-3.5 h-3.5 stroke-[2.2]" />
+                <Wrench className="w-4 h-4 stroke-[2.2]" />
               </div>
-              <span className="text-xs font-semibold text-slate-800 dark:text-zinc-200 truncate">
+              <span className="text-xs sm:text-[13px] font-bold text-slate-800 dark:text-zinc-200 truncate">
                 Maintenance
               </span>
             </div>
             <div className="flex items-center gap-1.5 shrink-0">
               {statusFilter === "Maintenance" && (
-                <span className="text-[10px] font-bold text-rose-700 dark:text-rose-400 bg-rose-100/80 dark:bg-rose-950/80 px-1.5 py-0.5 rounded">
+                <span className="text-xs font-bold text-rose-700 dark:text-rose-400 bg-rose-100/80 dark:bg-rose-950/80 px-1.5 py-0.5 rounded">
                   Filtered
                 </span>
               )}
-              <span className="text-sm sm:text-base font-extrabold font-mono text-slate-800 dark:text-zinc-100 bg-slate-100 dark:bg-zinc-800 px-2 py-0.5 rounded-md shrink-0">
+              <span className="text-xs sm:text-[13px] font-bold font-mono text-slate-800 dark:text-zinc-100 bg-slate-100 dark:bg-zinc-800 px-1.5 py-0.5 rounded-md shrink-0">
                 {metrics.maintenancePct}%
               </span>
             </div>
           </div>
 
           {/* Metric Value */}
-          <div className="mt-2.5 flex items-baseline gap-1.5">
-            <span className="text-2xl sm:text-[26px] font-bold text-slate-950 dark:text-white tracking-tight tabular-nums">
+          <div className="relative z-10 mt-2.5 flex items-baseline gap-1.5">
+            <span className="text-xl sm:text-2xl font-black text-slate-950 dark:text-white tracking-tight tabular-nums">
               {metrics.maintenance}
             </span>
             <span className="text-xs font-medium text-slate-400 dark:text-zinc-500">
@@ -901,7 +1057,7 @@ function RoomsContent() {
           </div>
 
           {/* Precision Progress Track */}
-          <div className="mt-2.5 w-full h-1.5 bg-slate-100 dark:bg-zinc-800 rounded-full overflow-hidden">
+          <div className="relative z-10 mt-2.5 w-full h-1.5 bg-slate-100 dark:bg-zinc-800 rounded-full overflow-hidden">
             <div
               className="h-full bg-rose-500 rounded-full transition-all duration-500"
               style={{ width: `${metrics.maintenancePct}%` }}
@@ -909,7 +1065,7 @@ function RoomsContent() {
           </div>
 
           {/* Operational Context Subtext */}
-          <div className="mt-2 flex items-center justify-between text-[11px] text-slate-500 dark:text-zinc-400 font-medium">
+          <div className="relative z-10 mt-2 flex items-center justify-between text-[11px] sm:text-xs text-slate-500 dark:text-zinc-400 font-medium">
             <span>Offline beds</span>
             <span className="flex items-center gap-1 font-semibold text-rose-600 dark:text-rose-400">
               <span className="w-1.5 h-1.5 rounded-full bg-rose-500 shrink-0" />
@@ -920,16 +1076,16 @@ function RoomsContent() {
       </div>
 
       {/* 3. UNIFIED FILTER & ACTION CONTROLS BAR */}
-      <div className="flex flex-wrap items-center gap-2 shrink-0 z-20">
+      <div className="flex flex-wrap items-center gap-2.5 shrink-0 z-20">
         {/* 1. Searchbar */}
-        <div className="relative w-44 sm:w-56">
-          <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
+        <div className="relative w-48 sm:w-60">
+          <Search className="w-4 h-4 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
           <input
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search room, tenant, type..."
-            className="w-full pl-8 pr-7 py-1.5 text-xs font-medium rounded-lg border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-slate-900 dark:text-white placeholder:text-slate-400 outline-none focus:ring-1 focus:ring-blue-500"
+            className="w-full pl-8 pr-7 py-1.5 text-xs sm:text-[13px] font-medium rounded-lg border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-slate-900 dark:text-white placeholder:text-slate-400 outline-none focus:ring-1 focus:ring-blue-500"
           />
           {searchQuery && (
             <button
@@ -937,24 +1093,24 @@ function RoomsContent() {
               onClick={() => setSearchQuery("")}
               className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-white cursor-pointer"
             >
-              <X className="w-3 h-3" />
+              <X className="w-3.5 h-3.5" />
             </button>
           )}
         </div>
 
         {/* 2. Floors Dropdown Menu */}
-        <div className="w-32 sm:w-36">
+        <div className="w-36 sm:w-40">
           <CustomSelect
             value={selectedFloorTab}
             onChange={(val) => setSelectedFloorTab(val)}
             options={["All Floors", ...uniqueFloors]}
             maxListHeight="175px"
-            className="w-full px-2.5 py-1.5 text-xs font-semibold rounded-lg border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-slate-800 dark:text-zinc-200 outline-none"
+            className="w-full px-2.5 py-1.5 text-xs sm:text-[13px] font-semibold rounded-lg border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-slate-800 dark:text-zinc-200 outline-none"
           />
         </div>
 
         {/* 3. Room Statuses Dropdown */}
-        <div className="w-36 sm:w-44">
+        <div className="w-40 sm:w-48">
           <CustomSelect
             value={statusFilter}
             onChange={(val) => setStatusFilter(val)}
@@ -965,36 +1121,36 @@ function RoomsContent() {
               "Vacant",
               "Maintenance",
             ]}
-            className="w-full px-2.5 py-1.5 text-xs font-semibold rounded-lg border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-slate-800 dark:text-zinc-200 outline-none"
+            className="w-full px-2.5 py-1.5 text-xs sm:text-[13px] font-semibold rounded-lg border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-slate-800 dark:text-zinc-200 outline-none"
           />
         </div>
 
         {/* 4. Room Types Dropdown */}
-        <div className="w-32 sm:w-36">
+        <div className="w-36 sm:w-40">
           <CustomSelect
             value={typeFilter}
             onChange={(val) => setTypeFilter(val)}
             options={["All Room Types", ...uniqueTypes]}
-            className="w-full px-2.5 py-1.5 text-xs font-semibold rounded-lg border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-slate-800 dark:text-zinc-200 outline-none"
+            className="w-full px-2.5 py-1.5 text-xs sm:text-[13px] font-semibold rounded-lg border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-slate-800 dark:text-zinc-200 outline-none"
           />
         </div>
 
         {/* 5. Rental Mode Dropdown */}
-        <div className="w-32 sm:w-36">
+        <div className="w-36 sm:w-40">
           <CustomSelect
             value={rentalTypeFilter}
             onChange={(val) => setRentalTypeFilter(val)}
             options={["All Rental Models", "Whole Room", "Per Bed / Bedspace"]}
-            className="w-full px-2.5 py-1.5 text-xs font-semibold rounded-lg border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-slate-800 dark:text-zinc-200 outline-none"
+            className="w-full px-2.5 py-1.5 text-xs sm:text-[13px] font-semibold rounded-lg border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-slate-800 dark:text-zinc-200 outline-none"
           />
         </div>
 
         {/* 6. Add Room Button */}
         <button
           onClick={() => handleOpenModal()}
-          className="px-3 py-1.5 text-xs font-bold rounded-lg bg-blue-600 hover:bg-blue-700 text-white transition-colors flex items-center gap-1.5 shadow-xs shrink-0 cursor-pointer"
+          className="px-3.5 py-1.5 text-xs sm:text-[13px] font-bold rounded-lg bg-blue-600 hover:bg-blue-700 text-white transition-colors flex items-center gap-1.5 shadow-xs shrink-0 cursor-pointer"
         >
-          <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
+          <Plus className="w-4 h-4 stroke-[2.5]" />
           <span>Add Room</span>
         </button>
       </div>
@@ -1006,10 +1162,10 @@ function RoomsContent() {
           {groupedByFloor.length === 0 ? (
             <div className="bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-xl p-8 text-center">
               <DoorOpen className="w-10 h-10 text-slate-300 dark:text-zinc-700 mx-auto mb-2" />
-              <h3 className="text-xs sm:text-sm font-bold text-slate-800 dark:text-zinc-200">
+              <h3 className="text-sm sm:text-base font-bold text-slate-800 dark:text-zinc-200">
                 No rooms match the selected criteria
               </h3>
-              <p className="text-[11px] text-slate-500 dark:text-zinc-400 mt-0.5">
+              <p className="text-xs text-slate-500 dark:text-zinc-400 mt-0.5">
                 Try adjusting your search keywords, status filter, or floor tabs.
               </p>
             </div>
@@ -1040,13 +1196,13 @@ function RoomsContent() {
                       <h2 className="text-sm sm:text-base font-extrabold text-slate-950 dark:text-white tracking-tight">
                         {group.floor}
                       </h2>
-                      <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-blue-50 text-blue-600 dark:bg-blue-950/60 dark:text-blue-400 border border-blue-200/60 shrink-0">
+                      <span className="px-2 py-0.5 rounded-full text-xs font-bold bg-blue-50 text-blue-600 dark:bg-blue-950/60 dark:text-blue-400 border border-blue-200/60 shrink-0">
                         {group.rooms.length} {group.rooms.length === 1 ? "room" : "rooms"}
                       </span>
                     </div>
 
                     {/* Right: Room Status Summary for this floor */}
-                    <div className="flex flex-wrap items-center gap-2.5 sm:gap-3 text-[10px] sm:text-xs font-bold">
+                    <div className="flex flex-wrap items-center gap-2.5 sm:gap-3 text-xs font-bold">
                       {floorFull > 0 && (
                         <span className="text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
                           <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
@@ -1091,7 +1247,7 @@ function RoomsContent() {
                           id={`room-card-${room.id}`}
                           data-room-number={room.room_number}
                           onClick={() => setSelectedRoom(room)}
-                          className={`w-[245px] sm:w-[260px] min-w-[245px] sm:min-w-[260px] shrink-0 bg-white dark:bg-zinc-900 rounded-2xl p-3.5 sm:p-4 border cursor-pointer transition-all flex flex-col justify-between relative shadow-2xs hover:shadow-xs group min-h-[215px] sm:min-h-[225px] ${
+                          className={`w-[245px] sm:w-[260px] min-w-[245px] sm:min-w-[260px] shrink-0 bg-white dark:bg-zinc-900 rounded-2xl p-3 sm:p-3.5 border cursor-pointer transition-all flex flex-col justify-between relative shadow-2xs hover:shadow-xs group min-h-[210px] sm:min-h-[220px] ${
                             isHighlighted
                               ? "border-blue-600 dark:border-blue-400 ring-4 ring-blue-500/40 shadow-lg scale-[1.02] bg-blue-50/25 dark:bg-blue-950/35"
                               : isSelected
@@ -1101,19 +1257,19 @@ function RoomsContent() {
                         >
                           <div>
                             {/* Top Line: Room Number */}
-                            <div className="mb-1">
-                              <span className="font-black text-base sm:text-lg font-mono text-slate-900 dark:text-white truncate">
+                            <div className="mb-0.5">
+                              <span className="font-extrabold text-sm sm:text-base font-mono text-slate-900 dark:text-white truncate">
                                 Room {room.room_number}
                               </span>
                             </div>
 
                             {/* Room Subtitle: Type & Tier */}
-                            <p className="text-xs text-slate-500 dark:text-zinc-400 font-semibold mt-1 truncate">
+                            <p className="text-xs text-slate-600 dark:text-zinc-300 font-semibold mt-0.5 truncate">
                               {room.type} • {room.rental_type === "Per Bed / Bedspace" ? "Per Bed / Bedspace" : "Whole Room"}
                             </p>
 
                             {/* Bed Capacity & Occupancy Visualization (5 columns, min 2 rows, scrollable if >= 3 rows) */}
-                            <div className="flex items-center justify-between gap-3 bg-slate-50 dark:bg-zinc-800/60 rounded-xl p-2.5 my-2.5 border border-slate-100 dark:border-zinc-800">
+                            <div className="flex items-center justify-between gap-2.5 bg-slate-50 dark:bg-zinc-800/60 rounded-xl p-2 my-2 border border-slate-100 dark:border-zinc-800">
                               <div
                                 className={`w-fit min-h-[38px] max-h-[38px] ${
                                   hasBedScroll
@@ -1128,7 +1284,7 @@ function RoomsContent() {
                                     return (
                                       <BedDouble
                                         key={bIdx}
-                                        className={`w-4 h-4 shrink-0 ${
+                                        className={`w-3.5 h-3.5 shrink-0 ${
                                           isMaint
                                             ? "text-rose-400 fill-rose-400/20"
                                             : isOccupied
@@ -1146,7 +1302,7 @@ function RoomsContent() {
                             </div>
 
                             {/* Room Status Line (Replaces tenant name) */}
-                            <div className="min-h-[26px] flex items-center">
+                            <div className="min-h-[24px] flex items-center">
                               {cat === "Maintenance" && (
                                 <div className="text-xs font-semibold text-rose-600 dark:text-rose-400 flex items-center gap-1.5 truncate">
                                   <Wrench className="w-3.5 h-3.5 text-rose-500 shrink-0" />
@@ -1180,9 +1336,9 @@ function RoomsContent() {
                           </div>
 
                           {/* Bottom Row: Monthly Rate, Amenities & Action Menu */}
-                          <div className="pt-2.5 mt-2 border-t border-slate-100 dark:border-zinc-800/80 flex items-center justify-between">
+                          <div className="pt-2 mt-1.5 border-t border-slate-100 dark:border-zinc-800/80 flex items-center justify-between">
                             <div>
-                              <span className="text-base sm:text-lg font-black font-mono text-slate-900 dark:text-white">
+                              <span className="text-sm sm:text-base font-bold font-mono text-slate-900 dark:text-white">
                                 ₱{Number(room.price).toLocaleString()}
                               </span>
                               <span className="text-[11px] text-slate-400 dark:text-zinc-500 font-medium"> / mo</span>
@@ -1213,7 +1369,7 @@ function RoomsContent() {
                                 {activeMenuRoomId === room.id && (
                                   <div
                                     onClick={(e) => e.stopPropagation()}
-                                    className="absolute right-0 bottom-7 w-38 bg-white dark:bg-zinc-900 rounded-xl shadow-lg border border-slate-200 dark:border-zinc-800 py-1 z-30 text-xs"
+                                    className="absolute right-0 bottom-7 w-40 bg-white dark:bg-zinc-900 rounded-xl shadow-lg border border-slate-200 dark:border-zinc-800 py-1 z-30 text-sm"
                                   >
                                     <button
                                       type="button"
@@ -1221,9 +1377,9 @@ function RoomsContent() {
                                         setActiveMenuRoomId(null);
                                         handleOpenModal(room);
                                       }}
-                                      className="w-full px-3 py-1.5 text-left hover:bg-slate-50 dark:hover:bg-zinc-800 flex items-center gap-2 font-medium"
+                                      className="w-full px-3.5 py-2 text-left hover:bg-slate-50 dark:hover:bg-zinc-800 flex items-center gap-2 font-medium"
                                     >
-                                      <Edit className="w-3.5 h-3.5 text-blue-500" />
+                                      <Edit className="w-4 h-4 text-blue-500" />
                                       Edit Room
                                     </button>
                                     <button
@@ -1232,9 +1388,9 @@ function RoomsContent() {
                                         setActiveMenuRoomId(null);
                                         handleToggleMaintenance(room);
                                       }}
-                                      className="w-full px-3 py-1.5 text-left hover:bg-slate-50 dark:hover:bg-zinc-800 flex items-center gap-2 font-medium"
+                                      className="w-full px-3.5 py-2 text-left hover:bg-slate-50 dark:hover:bg-zinc-800 flex items-center gap-2 font-medium"
                                     >
-                                      <Wrench className="w-3.5 h-3.5 text-amber-500" />
+                                      <Wrench className="w-4 h-4 text-amber-500" />
                                       {room.status === "Maintenance"
                                         ? "Set Available"
                                         : "Maintenance"}
@@ -1246,9 +1402,9 @@ function RoomsContent() {
                                         handleDelete(room);
                                       }}
                                       disabled={room.current_occupants > 0}
-                                      className="w-full px-3 py-1.5 text-left hover:bg-slate-50 dark:hover:bg-zinc-800 text-rose-600 disabled:opacity-40 flex items-center gap-2 font-medium"
+                                      className="w-full px-3.5 py-2 text-left hover:bg-slate-50 dark:hover:bg-zinc-800 text-rose-600 disabled:opacity-40 flex items-center gap-2 font-medium"
                                     >
-                                      <Trash2 className="w-3.5 h-3.5" />
+                                      <Trash2 className="w-4 h-4" />
                                       Delete
                                     </button>
                                   </div>
@@ -1312,7 +1468,7 @@ function RoomsContent() {
                   </button>
                 </div>
 
-                <p className="text-xs text-slate-500 dark:text-zinc-400 mt-1 font-medium">
+                <p className="text-xs text-slate-500 dark:text-zinc-400 mt-0.5 font-medium">
                   {normalizeFloorName(
                     selectedRoom.floor,
                     selectedRoom.room_number,
@@ -1322,16 +1478,16 @@ function RoomsContent() {
               </div>
 
               {/* Price & Rental Mode Pill */}
-              <div className="flex items-center justify-between pt-1">
+              <div className="flex items-center justify-between pt-0.5">
                 <div className="flex items-baseline gap-1">
-                  <span className="text-xl font-black font-mono text-slate-950 dark:text-white">
+                  <span className="text-lg sm:text-xl font-black font-mono text-slate-950 dark:text-white">
                     ₱ {Number(selectedRoom.price).toLocaleString()}
                   </span>
                   <span className="text-xs text-slate-400 font-medium">
                     / month
                   </span>
                 </div>
-                <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-blue-50 dark:bg-blue-950/50 text-blue-600 dark:text-blue-400 border border-blue-200/60 dark:border-blue-900/40">
+                <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-blue-50 dark:bg-blue-950/50 text-blue-600 dark:text-blue-400 border border-blue-200/60 dark:border-blue-900/40">
                   {selectedRoom.rental_type || "Whole Room"}
                 </span>
               </div>
@@ -1352,8 +1508,8 @@ function RoomsContent() {
                 </div>
 
                 {/* Amenities List */}
-                <div className="space-y-1.5 flex flex-col justify-center">
-                  <span className="text-[11px] font-bold text-slate-900 dark:text-white block mb-1">
+                <div className="space-y-1 flex flex-col justify-center">
+                  <span className="text-xs font-bold text-slate-900 dark:text-white block mb-0.5">
                     Amenities
                   </span>
                   <div className="flex items-center gap-1.5 text-xs text-slate-600 dark:text-zinc-300 font-medium">
@@ -1376,25 +1532,25 @@ function RoomsContent() {
               </div>
 
               {/* Room Information Table */}
-              <div className="space-y-2.5 pt-2 border-t border-slate-100 dark:border-zinc-800/80">
-                <h3 className="text-xs font-bold text-slate-900 dark:text-white">
+              <div className="space-y-2 pt-2 border-t border-slate-100 dark:border-zinc-800/80">
+                <h3 className="text-xs sm:text-[13px] font-bold text-slate-900 dark:text-white">
                   Room Information
                 </h3>
                 <div className="space-y-1.5 text-xs">
-                  <div className="flex items-center justify-between text-slate-500 dark:text-zinc-400">
+                  <div className="flex items-center justify-between text-slate-600 dark:text-zinc-400">
                     <span>Total Capacity</span>
                     <span className="font-bold text-slate-800 dark:text-zinc-200">
                       {selectedRoom.capacity}{" "}
                       {selectedRoom.capacity === 1 ? "bed" : "beds"}
                     </span>
                   </div>
-                  <div className="flex items-center justify-between text-slate-500 dark:text-zinc-400">
+                  <div className="flex items-center justify-between text-slate-600 dark:text-zinc-400">
                     <span>Occupied Beds</span>
                     <span className="font-bold text-slate-800 dark:text-zinc-200">
                       {selectedRoom.current_occupants}
                     </span>
                   </div>
-                  <div className="flex items-center justify-between text-slate-500 dark:text-zinc-400">
+                  <div className="flex items-center justify-between text-slate-600 dark:text-zinc-400">
                     <span>Vacant Beds</span>
                     <span className="font-bold text-slate-800 dark:text-zinc-200">
                       {Math.max(
@@ -1403,7 +1559,7 @@ function RoomsContent() {
                       )}
                     </span>
                   </div>
-                  <div className="flex items-center justify-between text-slate-500 dark:text-zinc-400">
+                  <div className="flex items-center justify-between text-slate-600 dark:text-zinc-400">
                     <span>Status</span>
                     <span
                       className={`font-bold ${
@@ -1419,7 +1575,7 @@ function RoomsContent() {
                       {getRoomStatusLabel(selectedRoom)}
                     </span>
                   </div>
-                  <div className="flex items-center justify-between text-slate-500 dark:text-zinc-400">
+                  <div className="flex items-center justify-between text-slate-600 dark:text-zinc-400">
                     <span>Last Updated</span>
                     <span className="font-medium text-slate-700 dark:text-zinc-300">
                       Oct 24, 2026 • 10:24 AM
@@ -1429,39 +1585,34 @@ function RoomsContent() {
               </div>
 
               {/* Current Residents Section */}
-              <div className="space-y-2.5 pt-2 border-t border-slate-100 dark:border-zinc-800/80">
-                <h3 className="text-xs font-bold text-slate-900 dark:text-white">
+              <div className="space-y-2 pt-2 border-t border-slate-100 dark:border-zinc-800/80">
+                <h3 className="text-xs sm:text-[13px] font-bold text-slate-900 dark:text-white">
                   Current Residents
                 </h3>
 
                 {selectedRoom.occupants && selectedRoom.occupants.length > 0 ? (
-                  <div className="space-y-2">
-                    {selectedRoom.occupants.map((resident, idx) => (
+                  <div className="space-y-1.5">
+                    {selectedRoom.occupants.map((resident) => (
                       <div
                         key={resident.id}
                         onClick={() => router.push(`/admin/tenants`)}
-                        className="p-2.5 rounded-xl border border-slate-200/80 dark:border-zinc-800 hover:border-blue-400 bg-slate-50/50 dark:bg-zinc-800/40 flex items-center justify-between gap-2.5 cursor-pointer transition-colors"
+                        className="p-2 rounded-xl border border-slate-200/80 dark:border-zinc-800 hover:border-blue-400 bg-slate-50/50 dark:bg-zinc-800/40 flex items-center justify-between gap-2 cursor-pointer transition-colors"
                       >
-                        <div className="flex items-center gap-2.5 min-w-0">
+                        <div className="flex items-center gap-2 min-w-0">
                           <div className="w-8 h-8 rounded-full bg-slate-200 dark:bg-zinc-700 flex items-center justify-center shrink-0 text-slate-600 dark:text-zinc-300 font-bold text-xs">
-                            <User className="w-4 h-4" />
+                            <User className="w-3.5 h-3.5" />
                           </div>
                           <div className="min-w-0">
                             <div className="flex items-center gap-1.5">
-                              <span className="font-bold text-xs text-slate-900 dark:text-white truncate">
+                              <span className="font-bold text-xs sm:text-[13px] text-slate-900 dark:text-white truncate">
                                 {resident.name}
                               </span>
-                              {idx === 0 && (
-                                <span className="px-1.5 py-0.2 rounded text-[9px] font-bold bg-blue-100 dark:bg-blue-900/60 text-blue-700 dark:text-blue-300">
-                                  Primary
-                                </span>
-                              )}
                             </div>
-                            <p className="text-[10px] text-slate-500 dark:text-zinc-400 truncate">
+                            <p className="text-[11px] text-slate-500 dark:text-zinc-400 truncate">
                               {resident.email ||
                                 `${resident.name.toLowerCase().replace(/\s+/g, ".")}@email.com`}
                             </p>
-                            <p className="text-[10px] text-slate-400 dark:text-zinc-500 font-mono">
+                            <p className="text-[11px] text-slate-400 dark:text-zinc-500 font-mono">
                               {formatPhoneNumber(resident.phone, "+63 999 123 7654")}
                             </p>
                           </div>
@@ -1471,11 +1622,11 @@ function RoomsContent() {
                     ))}
                   </div>
                 ) : (
-                  <div className="py-4 px-3 rounded-xl border border-dashed border-slate-200 dark:border-zinc-800 text-center">
-                    <p className="text-xs font-semibold text-slate-600 dark:text-zinc-400">
+                  <div className="py-3 px-3 rounded-xl border border-dashed border-slate-200 dark:border-zinc-800 text-center">
+                    <p className="text-xs sm:text-[13px] font-semibold text-slate-600 dark:text-zinc-400">
                       No residents currently assigned
                     </p>
-                    <p className="text-[10px] text-slate-400 dark:text-zinc-500 mt-0.5">
+                    <p className="text-xs text-slate-400 dark:text-zinc-500 mt-0.5">
                       Ready for new tenant check-in
                     </p>
                   </div>
@@ -1483,11 +1634,11 @@ function RoomsContent() {
               </div>
 
               {/* 3 Bottom Action Buttons */}
-              <div className="space-y-2 pt-2 border-t border-slate-100 dark:border-zinc-800/80">
+              <div className="space-y-1.5 pt-2 border-t border-slate-100 dark:border-zinc-800/80">
                 <button
                   type="button"
                   onClick={() => handleOpenModal(selectedRoom)}
-                  className="w-full py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-xs transition-colors cursor-pointer"
+                  className="w-full py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs sm:text-[13px] flex items-center justify-center gap-2 shadow-xs transition-colors cursor-pointer"
                 >
                   <Edit className="w-3.5 h-3.5" />
                   <span>Edit Room</span>
@@ -1496,7 +1647,7 @@ function RoomsContent() {
                 <button
                   type="button"
                   onClick={() => router.push(`/admin/tenants?action=assign&room=${selectedRoom.room_number}`)}
-                  className="w-full py-2.5 rounded-xl border border-blue-200 dark:border-blue-900/60 bg-blue-50/50 dark:bg-blue-950/20 text-blue-600 dark:text-blue-400 hover:bg-blue-100/50 font-bold text-xs flex items-center justify-center gap-2 transition-colors cursor-pointer"
+                  className="w-full py-2 rounded-xl border border-blue-200 dark:border-blue-900/60 bg-blue-50/50 dark:bg-blue-950/20 text-blue-600 dark:text-blue-400 hover:bg-blue-100/50 font-bold text-xs sm:text-[13px] flex items-center justify-center gap-2 transition-colors cursor-pointer"
                 >
                   <FileText className="w-3.5 h-3.5" />
                   <span>Assign Resident</span>
@@ -1505,7 +1656,7 @@ function RoomsContent() {
                 <button
                   type="button"
                   onClick={() => handleToggleMaintenance(selectedRoom)}
-                  className="w-full py-2.5 rounded-xl border border-slate-200 dark:border-zinc-800 text-slate-700 dark:text-zinc-300 hover:bg-slate-50 dark:hover:bg-zinc-800 font-bold text-xs flex items-center justify-center gap-2 transition-colors cursor-pointer"
+                  className="w-full py-2 rounded-xl border border-slate-200 dark:border-zinc-800 text-slate-700 dark:text-zinc-300 hover:bg-slate-50 dark:hover:bg-zinc-800 font-bold text-xs sm:text-[13px] flex items-center justify-center gap-2 transition-colors cursor-pointer"
                 >
                   <RotateCcw className="w-3.5 h-3.5 text-slate-500" />
                   <span>

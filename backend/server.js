@@ -7,6 +7,9 @@ require('./config/db');
 // Initialize automated billing & payment reminder cron jobs
 require('./cron/billingCron');
 
+// Initialize automated system backup cron job
+require('./cron/backupCron');
+
 const app = express();
 
 // Import Security Middlewares

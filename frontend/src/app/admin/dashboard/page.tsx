@@ -380,9 +380,7 @@ export default function AdminDashboard() {
   const router = useRouter();
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [cashflowData, setCashflowData] = useState<any[]>([]);
-  const [dateRange, setDateRange] = useState<
-    "this_month" | "last_month" | "this_year" | "last_year"
-  >("this_year");
+  const [dateRange, setDateRange] = useState<"this_year" | "last_year">("this_year");
   const [isLoading, setIsLoading] = useState(true);
   const [adminName, setAdminName] = useState("Admin");
 
@@ -543,13 +541,13 @@ export default function AdminDashboard() {
 
           <p
             title={subType}
-            className="text-xs text-slate-600 dark:text-zinc-300 font-semibold truncate mb-2"
+            className="text-xs text-slate-600 dark:text-zinc-300 font-semibold truncate mb-1.5"
           >
             {subType}
           </p>
 
           <div
-            className={`flex flex-col gap-1.5 my-2 min-h-[46px] max-h-[46px] ${
+            className={`flex flex-col gap-1.5 my-1.5 min-h-[46px] max-h-[46px] ${
               hasBedScroll
                 ? "overflow-y-auto pr-1 [scrollbar-width:thin] [&::-webkit-scrollbar]:w-1 [&::-webkit-scrollbar-thumb]:bg-slate-300 dark:[&::-webkit-scrollbar-thumb]:bg-zinc-700 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-track]:bg-transparent"
                 : "overflow-hidden"
@@ -569,7 +567,7 @@ export default function AdminDashboard() {
           </div>
 
           <p
-            className={`text-xs font-bold truncate my-1.5 ${
+            className={`text-xs font-bold truncate my-1 ${
               effectiveStatus === "Full"
                 ? "text-emerald-600 dark:text-emerald-400"
                 : effectiveStatus === "OccupiedWithBeds"
@@ -585,8 +583,7 @@ export default function AdminDashboard() {
                   ? "Full"
                   : effectiveStatus === "Available"
                     ? "Vacant"
-                    : "Maintenance"
-            }
+                    : "Maintenance"}
           >
             {effectiveStatus === "Full"
               ? "Full"
@@ -600,7 +597,7 @@ export default function AdminDashboard() {
 
         <div className="pt-2 mt-2 border-t border-slate-100 dark:border-zinc-800 text-xs sm:text-sm font-mono font-bold text-slate-700 dark:text-zinc-200">
           ₱{Number(room.price).toLocaleString()}
-          <span className="text-[10px] font-medium text-slate-600 dark:text-zinc-300 ml-0.5">
+          <span className="text-[11px] font-medium text-slate-500 dark:text-zinc-400 ml-0.5">
             /mo
           </span>
         </div>
@@ -832,45 +829,10 @@ export default function AdminDashboard() {
   // Effective Cashflow data to render based on selected dateRange
   const cashflowDataToRender = useMemo(() => {
     if (!cashflowData || cashflowData.length === 0) {
-      if (dateRange === "this_month") {
-        const cur = new Date().toLocaleString("default", { month: "short" });
-        return [{ month: cur, billed: 0, collected: 0, outstanding: 0 }];
-      }
-      if (dateRange === "last_month") {
-        const d = new Date();
-        d.setMonth(d.getMonth() - 1);
-        const last = d.toLocaleString("default", { month: "short" });
-        return [{ month: last, billed: 0, collected: 0, outstanding: 0 }];
-      }
       return EMPTY_MONTHS;
     }
-
-    if (dateRange === "this_month") {
-      const curMonth = new Date().toLocaleString("default", { month: "short" });
-      const currentYear = new Date().getFullYear();
-      const match = cashflowData.filter(
-        (d) => d.month === curMonth && (!d.year || d.year === currentYear),
-      );
-      if (match.length > 0) return match;
-      if (cashflowData.length === 1) return cashflowData;
-      return [cashflowData[cashflowData.length - 1]];
-    }
-
-    if (dateRange === "last_month") {
-      const d = new Date();
-      d.setMonth(d.getMonth() - 1);
-      const lastMonth = d.toLocaleString("default", { month: "short" });
-      const lastYear = d.getFullYear();
-      const match = cashflowData.filter(
-        (d) => d.month === lastMonth && (!d.year || d.year === lastYear),
-      );
-      if (match.length > 0) return match;
-      if (cashflowData.length === 1) return cashflowData;
-      return cashflowData.slice(-2, -1);
-    }
-
     return cashflowData;
-  }, [cashflowData, dateRange]);
+  }, [cashflowData]);
 
   // Cashflow totals for selected period
   const cashflowTotals = useMemo(() => {
@@ -1118,9 +1080,9 @@ export default function AdminDashboard() {
   return (
     <div className="w-full space-y-6 pb-1 font-sans text-slate-900 dark:text-zinc-100">
       {/* TOP HEADER & QUICK ACTIONS */}
-      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 py-1 border-b border-slate-200/80 dark:border-zinc-800/80 pb-4">
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 py-1 border-b border-slate-200/80 dark:border-zinc-800/80 pb-3">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white flex items-center gap-2">
+          <h1 className="text-xl sm:text-2xl font-black tracking-tight text-slate-900 dark:text-white flex items-center gap-2">
             <span>
               {getGreeting()}, {adminName}
             </span>
@@ -1131,7 +1093,7 @@ export default function AdminDashboard() {
         </div>
 
         {/* Top Right Action Controls */}
-        <div className="flex items-center gap-3.5 flex-wrap sm:flex-nowrap">
+        <div className="flex items-center gap-2.5 flex-wrap sm:flex-nowrap">
           {/* Add Announcement Button */}
           <button
             type="button"
@@ -1139,7 +1101,7 @@ export default function AdminDashboard() {
               setShowAnnouncementModal(true);
               fetchCurrentAnnouncement();
             }}
-            className="h-9 px-4 rounded-lg bg-[#0055a5] hover:bg-[#00478f] text-white transition-colors flex items-center gap-2 text-xs sm:text-[13px] font-bold shadow-xs cursor-pointer"
+            className="h-9 px-3.5 rounded-lg bg-[#0055a5] hover:bg-[#00478f] text-white transition-colors flex items-center gap-2 text-xs sm:text-[13px] font-bold shadow-xs cursor-pointer"
           >
             <Megaphone className="w-4 h-4 text-white stroke-[2.2]" />
             <span>Add Announcement</span>
@@ -1164,10 +1126,10 @@ export default function AdminDashboard() {
                   {/* Header: Enter Announcement */}
                   <div className="p-4 sm:p-5 border-b border-slate-200 dark:border-zinc-800 flex items-center justify-between bg-slate-50/80 dark:bg-zinc-900/80">
                     <div className="flex items-center gap-2.5">
-                      <div className="w-9 h-9 rounded-xl bg-blue-50 dark:bg-blue-500/10 text-[#0055a5] dark:text-blue-400 border border-blue-200 dark:border-blue-500/30 flex items-center justify-center shrink-0">
+                      <div className="w-8 h-8 rounded-lg bg-blue-50 dark:bg-blue-500/10 text-[#0055a5] dark:text-blue-400 border border-blue-200 dark:border-blue-500/30 flex items-center justify-center shrink-0">
                         <Megaphone className="w-4 h-4" />
                       </div>
-                      <h2 className="text-base sm:text-lg font-bold text-slate-950 dark:text-white">
+                      <h2 className="text-sm sm:text-base font-bold text-slate-950 dark:text-white">
                         Enter Announcement
                       </h2>
                     </div>
@@ -1177,24 +1139,24 @@ export default function AdminDashboard() {
                       className="p-1.5 rounded-lg hover:bg-slate-200 dark:hover:bg-zinc-800 text-slate-500 dark:text-zinc-400 transition-colors cursor-pointer"
                       title="Close modal"
                     >
-                      <X className="w-5 h-5" />
+                      <X className="w-4 h-4" />
                     </button>
                   </div>
 
                   {/* Body */}
                   <form
                     onSubmit={handlePostAnnouncement}
-                    className="p-4 sm:p-5 space-y-4"
+                    className="p-4 sm:p-5 space-y-3.5"
                   >
                     {/*  Current Announcement */}
-                    <div className="space-y-1.5">
+                    <div className="space-y-1">
                       <label className="text-xs font-bold text-slate-700 dark:text-zinc-300">
                         Current Announcement:
                       </label>
-                      <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 text-xs sm:text-sm text-slate-800 dark:text-zinc-200 min-h-[70px] max-h-[140px] overflow-y-auto leading-relaxed custom-scrollbar">
+                      <div className="p-3 rounded-xl bg-slate-50 dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 text-xs text-slate-800 dark:text-zinc-200 min-h-[60px] max-h-[120px] overflow-y-auto leading-relaxed custom-scrollbar">
                         {isLoadingAnnouncement ? (
-                          <div className="flex items-center gap-2 text-slate-400 py-2">
-                            <RefreshCw className="w-4 h-4 animate-spin text-[#0055a5]" />
+                          <div className="flex items-center gap-2 text-slate-400 py-1">
+                            <RefreshCw className="w-3.5 h-3.5 animate-spin text-[#0055a5]" />
                             <span>Loading current announcement...</span>
                           </div>
                         ) : currentAnnouncement ? (
@@ -1204,7 +1166,7 @@ export default function AdminDashboard() {
                                 currentAnnouncement.title}
                             </p>
                             {currentAnnouncement.created_at && (
-                              <p className="text-[10px] text-slate-400 dark:text-zinc-500 font-mono mt-2">
+                              <p className="text-[10px] text-slate-400 dark:text-zinc-500 font-mono mt-1.5">
                                 Posted on{" "}
                                 {new Date(
                                   currentAnnouncement.created_at,
@@ -1217,7 +1179,7 @@ export default function AdminDashboard() {
                             )}
                           </div>
                         ) : (
-                          <p className="text-slate-400 italic py-2">
+                          <p className="text-slate-400 italic py-1">
                             No current announcement posted.
                           </p>
                         )}
@@ -1225,7 +1187,7 @@ export default function AdminDashboard() {
                     </div>
 
                     {/* Text box */}
-                    <div className="space-y-1.5">
+                    <div className="space-y-1">
                       <label className="text-xs font-bold text-slate-700 dark:text-zinc-300">
                         Enter Announcement:
                       </label>
@@ -1234,17 +1196,17 @@ export default function AdminDashboard() {
                         value={announcementText}
                         onChange={(e) => setAnnouncementText(e.target.value)}
                         placeholder="Type your announcement here..."
-                        className="w-full p-3 text-xs sm:text-sm font-medium rounded-xl border border-slate-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#0055a5] resize-none leading-relaxed"
+                        className="w-full p-2.5 text-xs sm:text-[13px] font-medium rounded-xl border border-slate-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-[#0055a5] resize-none leading-relaxed"
                         autoFocus
                       />
                     </div>
 
                     {/* Modal Footer Controls */}
-                    <div className="flex items-center justify-end gap-2.5 pt-2">
+                    <div className="flex items-center justify-end gap-2 pt-2">
                       <button
                         type="button"
                         onClick={() => setShowAnnouncementModal(false)}
-                        className="px-4 py-2 text-xs sm:text-sm font-semibold rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-zinc-800 text-slate-700 dark:text-zinc-300 transition-colors cursor-pointer"
+                        className="px-3.5 py-1.5 text-xs font-semibold rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-zinc-800 text-slate-700 dark:text-zinc-300 transition-colors cursor-pointer"
                       >
                         Cancel
                       </button>
@@ -1253,7 +1215,7 @@ export default function AdminDashboard() {
                         disabled={
                           isPostingAnnouncement || !announcementText.trim()
                         }
-                        className="h-9 px-4 rounded-lg bg-[#0055a5] hover:bg-[#00478f] text-white text-xs sm:text-[13px] font-bold shadow-xs flex items-center gap-1.5 transition-colors cursor-pointer disabled:opacity-50"
+                        className="h-8.5 px-3.5 rounded-lg bg-[#0055a5] hover:bg-[#00478f] text-white text-xs font-bold shadow-xs flex items-center gap-1.5 transition-colors cursor-pointer disabled:opacity-50"
                       >
                         {isPostingAnnouncement ? (
                           <>
@@ -1275,7 +1237,7 @@ export default function AdminDashboard() {
           <button
             type="button"
             onClick={() => setShowReportModal(true)}
-            className="h-9 px-4 rounded-lg bg-[#0055a5] hover:bg-[#00478f] text-white transition-colors flex items-center gap-2 text-xs sm:text-[13px] font-bold shadow-xs cursor-pointer"
+            className="h-9 px-3.5 rounded-lg bg-[#0055a5] hover:bg-[#00478f] text-white transition-colors flex items-center gap-2 text-xs sm:text-[13px] font-bold shadow-xs cursor-pointer"
           >
             <BarChart3 className="w-4 h-4 text-white stroke-[2.2]" />
             <span>Generate Report</span>
@@ -1284,33 +1246,45 @@ export default function AdminDashboard() {
       </div>
 
       {/* KPI(Key Performance Indicators) CARDS */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-5">
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
         {/* Card 1: Monthly Collections */}
         <motion.div
           variants={cardVariants}
           initial="hidden"
           animate="show"
-          className="bg-card border border-slate-200 dark:border-zinc-800 rounded-2xl p-5 shadow-2xs flex flex-col justify-between relative overflow-hidden"
+          className="bg-card border border-slate-200 dark:border-zinc-800 rounded-2xl p-4 sm:p-5 shadow-2xs flex flex-col justify-between relative overflow-hidden"
         >
-          <div className="pointer-events-none absolute inset-0 opacity-[0.04] dark:opacity-[0.06]" style={{ backgroundImage: 'repeating-linear-gradient(45deg, #10b981 0, #10b981 1px, transparent 0, transparent 8px)' }} />
-          <div className="flex justify-between items-start mb-2">
+          {/* Executive Precision Rim & Split Dual-Plane Elevation */}
+          <div
+            className="pointer-events-none select-none absolute inset-0 overflow-hidden"
+            aria-hidden="true"
+          >
+            <div className="absolute inset-x-0 top-0 h-[2.5px] bg-gradient-to-r from-emerald-500 via-emerald-400/75 to-transparent dark:from-emerald-400 dark:via-emerald-500/40 dark:to-transparent" />
+            <div className="absolute inset-y-0 right-0 w-[38%] border-l border-emerald-500/[0.08] dark:border-emerald-400/[0.08] bg-gradient-to-b from-emerald-50/65 via-emerald-50/20 to-transparent dark:from-emerald-500/[0.07] dark:via-emerald-500/[0.02] dark:to-transparent" />
+            <div className="absolute bottom-3 right-4 flex flex-col items-end gap-1 opacity-45 dark:opacity-35">
+              <span className="w-5 h-px bg-emerald-500 dark:bg-emerald-400" />
+              <span className="w-8 h-px bg-emerald-500 dark:bg-emerald-400" />
+              <span className="w-3.5 h-px bg-emerald-500 dark:bg-emerald-400" />
+            </div>
+          </div>
+          <div className="relative z-10 flex justify-between items-start mb-2">
             <div>
               <span className="text-xs font-bold uppercase tracking-wider text-slate-600 dark:text-zinc-300">
                 Monthly Collections
               </span>
-              <div className="text-2xl sm:text-3xl font-extrabold tracking-tight font-mono text-slate-900 dark:text-white mt-1">
+              <div className="text-xl sm:text-2xl font-black tracking-tight font-mono text-slate-900 dark:text-white mt-1">
                 ₱
                 {computedMetrics.monthlyIncome.toLocaleString("en-US", {
                   minimumFractionDigits: 2,
                 })}
               </div>
             </div>
-            <div className="w-10 h-10 rounded-xl bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0 border border-emerald-200/50 dark:border-emerald-500/20">
-              <Wallet className="w-5 h-5" />
+            <div className="w-9 h-9 rounded-xl bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0 border border-emerald-200/50 dark:border-emerald-500/20">
+              <Wallet className="w-4.5 h-4.5" />
             </div>
           </div>
 
-          <div className="pt-3 border-t border-slate-100 dark:border-zinc-800/80 space-y-2">
+          <div className="relative z-10 pt-2.5 border-t border-slate-100 dark:border-zinc-800/80 space-y-1.5">
             <div className="flex items-center justify-between text-xs">
               <span className="text-emerald-600 dark:text-emerald-400 font-bold">
                 Collection rate: {computedMetrics.collectionRate}%
@@ -1333,7 +1307,7 @@ export default function AdminDashboard() {
               </span>
             </div>
             {/* Progress Bar */}
-            <div className="w-full bg-slate-100 dark:bg-zinc-800 rounded-full h-2 overflow-hidden">
+            <div className="w-full bg-slate-100 dark:bg-zinc-800 rounded-full h-1.5 overflow-hidden">
               <div
                 className="bg-emerald-500 h-full rounded-full transition-all duration-500"
                 style={{
@@ -1341,10 +1315,10 @@ export default function AdminDashboard() {
                 }}
               />
             </div>
-            <div className="pt-1">
+            <div className="pt-0.5">
               <Link
                 href="/admin/billing"
-                className="text-xs text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-1 font-semibold"
+                className="text-xs text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-1 font-bold"
               >
                 View Billing Ledger →
               </Link>
@@ -1357,30 +1331,42 @@ export default function AdminDashboard() {
           variants={cardVariants}
           initial="hidden"
           animate="show"
-          className="bg-card border border-slate-200 dark:border-zinc-800 rounded-2xl p-5 shadow-2xs flex flex-col justify-between relative overflow-hidden"
+          className="bg-card border border-slate-200 dark:border-zinc-800 rounded-2xl p-4 sm:p-5 shadow-2xs flex flex-col justify-between relative overflow-hidden"
         >
-          <div className="pointer-events-none absolute inset-0 opacity-[0.04] dark:opacity-[0.06]" style={{ backgroundImage: 'repeating-linear-gradient(45deg, #3b82f6 0, #3b82f6 1px, transparent 0, transparent 8px)' }} />
-          <div className="flex justify-between items-start mb-2">
+          {/* Executive Precision Rim & Split Dual-Plane Elevation */}
+          <div
+            className="pointer-events-none select-none absolute inset-0 overflow-hidden"
+            aria-hidden="true"
+          >
+            <div className="absolute inset-x-0 top-0 h-[2.5px] bg-gradient-to-r from-blue-500 via-blue-400/75 to-transparent dark:from-blue-400 dark:via-blue-500/40 dark:to-transparent" />
+            <div className="absolute inset-y-0 right-0 w-[38%] border-l border-blue-500/[0.08] dark:border-blue-400/[0.08] bg-gradient-to-b from-blue-50/65 via-blue-50/20 to-transparent dark:from-blue-500/[0.07] dark:via-blue-500/[0.02] dark:to-transparent" />
+            <div className="absolute bottom-3 right-4 flex flex-col items-end gap-1 opacity-45 dark:opacity-35">
+              <span className="w-5 h-px bg-blue-500 dark:bg-blue-400" />
+              <span className="w-8 h-px bg-blue-500 dark:bg-blue-400" />
+              <span className="w-3.5 h-px bg-blue-500 dark:bg-blue-400" />
+            </div>
+          </div>
+          <div className="relative z-10 flex justify-between items-start mb-2">
             <div>
               <span className="text-xs font-bold uppercase tracking-wider text-slate-600 dark:text-zinc-300">
                 Occupancy & Bed Capacity
               </span>
-              <div className="text-2xl sm:text-3xl font-extrabold tracking-tight font-mono text-slate-900 dark:text-white mt-1 flex items-baseline gap-2">
+              <div className="text-xl sm:text-2xl font-black tracking-tight font-mono text-slate-900 dark:text-white mt-1 flex items-baseline gap-1.5">
                 {computedMetrics.bedOccupancyRate}%
-                <span className="text-xs font-sans font-semibold text-slate-600 dark:text-zinc-300">
+                <span className="text-xs font-sans font-semibold text-slate-500 dark:text-zinc-400">
                   ({computedMetrics.occupiedBeds}/{computedMetrics.totalBeds}{" "}
                   beds)
                 </span>
               </div>
             </div>
-            <div className="w-10 h-10 rounded-xl bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0 border border-blue-200/50 dark:border-blue-500/20">
-              <Building2 className="w-5 h-5" />
+            <div className="w-9 h-9 rounded-xl bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0 border border-blue-200/50 dark:border-blue-500/20">
+              <Building2 className="w-4.5 h-4.5" />
             </div>
           </div>
 
-          <div className="pt-3 border-t border-slate-100 dark:border-zinc-800/80 space-y-2">
+          <div className="relative z-10 pt-2.5 border-t border-slate-100 dark:border-zinc-800/80 space-y-1.5">
             {/* Segmented Capacity Bar: Green, Cyan, Rose */}
-            <div className="w-full bg-slate-100 dark:bg-zinc-800 rounded-full h-2 flex overflow-hidden">
+            <div className="w-full bg-slate-100 dark:bg-zinc-800 rounded-full h-1.5 flex overflow-hidden">
               <div
                 style={{
                   width: `${(computedMetrics.occupiedBeds / (computedMetrics.totalBeds || 1)) * 100}%`,
@@ -1404,17 +1390,17 @@ export default function AdminDashboard() {
               />
             </div>
 
-            <div className="flex items-center justify-between text-[11px] text-slate-600 dark:text-zinc-200 font-semibold pt-0.5">
+            <div className="flex items-center justify-between text-xs text-slate-700 dark:text-zinc-200 font-semibold pt-0.5">
               <span className="flex items-center gap-1">
-                <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
                 Occupied {computedMetrics.occupiedBeds}
               </span>
               <span className="flex items-center gap-1">
-                <span className="w-2 h-2 rounded-full bg-cyan-500"></span>
+                <span className="w-1.5 h-1.5 rounded-full bg-cyan-500"></span>
                 Available {computedMetrics.availableBeds}
               </span>
               <span className="flex items-center gap-1">
-                <span className="w-2 h-2 rounded-full bg-rose-500"></span>
+                <span className="w-1.5 h-1.5 rounded-full bg-rose-500"></span>
                 Maintenance {computedMetrics.maintenanceBeds}
               </span>
             </div>
@@ -1422,7 +1408,7 @@ export default function AdminDashboard() {
             <div className="pt-0.5">
               <Link
                 href="/admin/rooms"
-                className="text-xs text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-1 font-semibold"
+                className="text-xs text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-1 font-bold"
               >
                 View Room Manager →
               </Link>
@@ -1435,27 +1421,39 @@ export default function AdminDashboard() {
           variants={cardVariants}
           initial="hidden"
           animate="show"
-          className="bg-card border border-slate-200 dark:border-zinc-800 rounded-2xl p-5 shadow-2xs flex flex-col justify-between relative overflow-hidden"
+          className="bg-card border border-slate-200 dark:border-zinc-800 rounded-2xl p-4 sm:p-5 shadow-2xs flex flex-col justify-between relative overflow-hidden"
         >
-          <div className="pointer-events-none absolute inset-0 opacity-[0.04] dark:opacity-[0.06]" style={{ backgroundImage: 'repeating-linear-gradient(45deg, #f43f5e 0, #f43f5e 1px, transparent 0, transparent 8px)' }} />
-          <div className="flex justify-between items-start mb-2">
+          {/* Executive Precision Rim & Split Dual-Plane Elevation */}
+          <div
+            className="pointer-events-none select-none absolute inset-0 overflow-hidden"
+            aria-hidden="true"
+          >
+            <div className="absolute inset-x-0 top-0 h-[2.5px] bg-gradient-to-r from-rose-500 via-rose-400/75 to-transparent dark:from-rose-400 dark:via-rose-500/40 dark:to-transparent" />
+            <div className="absolute inset-y-0 right-0 w-[38%] border-l border-rose-500/[0.08] dark:border-rose-400/[0.08] bg-gradient-to-b from-rose-50/65 via-rose-50/20 to-transparent dark:from-rose-500/[0.07] dark:via-rose-500/[0.02] dark:to-transparent" />
+            <div className="absolute bottom-3 right-4 flex flex-col items-end gap-1 opacity-45 dark:opacity-35">
+              <span className="w-5 h-px bg-rose-500 dark:bg-rose-400" />
+              <span className="w-8 h-px bg-rose-500 dark:bg-rose-400" />
+              <span className="w-3.5 h-px bg-rose-500 dark:bg-rose-400" />
+            </div>
+          </div>
+          <div className="relative z-10 flex justify-between items-start mb-2">
             <div>
               <span className="text-xs font-bold uppercase tracking-wider text-slate-600 dark:text-zinc-300">
                 Outstanding Bills
               </span>
-              <div className="text-2xl sm:text-3xl font-extrabold tracking-tight font-mono text-slate-900 dark:text-white mt-1">
+              <div className="text-xl sm:text-2xl font-black tracking-tight font-mono text-slate-900 dark:text-white mt-1">
                 ₱
                 {computedMetrics.pendingDues.toLocaleString("en-US", {
                   minimumFractionDigits: 2,
                 })}
               </div>
             </div>
-            <div className="w-10 h-10 rounded-xl bg-rose-50 dark:bg-rose-500/10 text-rose-600 dark:text-rose-400 flex items-center justify-center shrink-0 border border-rose-200/50 dark:border-rose-500/20">
-              <Clock className="w-5 h-5" />
+            <div className="w-9 h-9 rounded-xl bg-rose-50 dark:bg-rose-500/10 text-rose-600 dark:text-rose-400 flex items-center justify-center shrink-0 border border-rose-200/50 dark:border-rose-500/20">
+              <Clock className="w-4.5 h-4.5" />
             </div>
           </div>
 
-          <div className="pt-3 border-t border-slate-100 dark:border-zinc-800/80 space-y-2">
+          <div className="relative z-10 pt-2.5 border-t border-slate-100 dark:border-zinc-800/80 space-y-1.5">
             <div className="flex items-center justify-between text-xs font-semibold">
               <span className="text-slate-700 dark:text-zinc-200">
                 Overdue:{" "}
@@ -1471,10 +1469,10 @@ export default function AdminDashboard() {
                 Unpaid Invoices: {computedMetrics.unpaidBillsCount}
               </span>
             </div>
-            <div className="pt-2">
+            <div className="pt-1.5">
               <Link
                 href="/admin/billing?filter=unpaid"
-                className="text-xs text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-1 font-semibold"
+                className="text-xs text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-1 font-bold"
               >
                 View Bills and Payments →
               </Link>
@@ -1487,45 +1485,57 @@ export default function AdminDashboard() {
           variants={cardVariants}
           initial="hidden"
           animate="show"
-          className="bg-card border border-slate-200 dark:border-zinc-800 rounded-2xl p-5 shadow-2xs flex flex-col justify-between relative overflow-hidden"
+          className="bg-card border border-slate-200 dark:border-zinc-800 rounded-2xl p-4 sm:p-5 shadow-2xs flex flex-col justify-between relative overflow-hidden"
         >
-          <div className="pointer-events-none absolute inset-0 opacity-[0.04] dark:opacity-[0.06]" style={{ backgroundImage: 'repeating-linear-gradient(45deg, #f59e0b 0, #f59e0b 1px, transparent 0, transparent 8px)' }} />
-          <div className="flex justify-between items-start mb-2">
+          {/* Executive Precision Rim & Split Dual-Plane Elevation */}
+          <div
+            className="pointer-events-none select-none absolute inset-0 overflow-hidden"
+            aria-hidden="true"
+          >
+            <div className="absolute inset-x-0 top-0 h-[2.5px] bg-gradient-to-r from-amber-500 via-amber-400/75 to-transparent dark:from-amber-400 dark:via-amber-500/40 dark:to-transparent" />
+            <div className="absolute inset-y-0 right-0 w-[38%] border-l border-amber-500/[0.08] dark:border-amber-400/[0.08] bg-gradient-to-b from-amber-50/65 via-amber-50/20 to-transparent dark:from-amber-500/[0.07] dark:via-amber-500/[0.02] dark:to-transparent" />
+            <div className="absolute bottom-3 right-4 flex flex-col items-end gap-1 opacity-45 dark:opacity-35">
+              <span className="w-5 h-px bg-amber-500 dark:bg-amber-400" />
+              <span className="w-8 h-px bg-amber-500 dark:bg-amber-400" />
+              <span className="w-3.5 h-px bg-amber-500 dark:bg-amber-400" />
+            </div>
+          </div>
+          <div className="relative z-10 flex justify-between items-start mb-2">
             <div>
               <span className="text-xs font-bold uppercase tracking-wider text-slate-600 dark:text-zinc-300">
                 Open Maintenance Requests
               </span>
-              <div className="text-2xl sm:text-3xl font-extrabold tracking-tight font-mono text-slate-900 dark:text-white mt-1">
+              <div className="text-xl sm:text-2xl font-black tracking-tight font-mono text-slate-900 dark:text-white mt-1">
                 {computedMetrics.openWorkOrders}{" "}
-                <span className="text-sm font-sans font-semibold text-slate-600 dark:text-zinc-300">
+                <span className="text-xs font-sans font-semibold text-slate-500 dark:text-zinc-400">
                   requests
                 </span>
               </div>
             </div>
-            <div className="w-10 h-10 rounded-xl bg-amber-50 dark:bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0 border border-amber-200/50 dark:border-amber-500/20">
-              <Wrench className="w-5 h-5" />
+            <div className="w-9 h-9 rounded-xl bg-amber-50 dark:bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0 border border-amber-200/50 dark:border-amber-500/20">
+              <Wrench className="w-4.5 h-4.5" />
             </div>
           </div>
 
-          <div className="pt-3 border-t border-slate-100 dark:border-zinc-800/80 space-y-2">
-            <div className="flex items-center justify-between text-[11px] font-bold text-slate-600 dark:text-zinc-200">
-              <span className="flex items-center gap-1 text-amber-600 dark:text-amber-400">
-                <span className="w-2 h-2 rounded-full bg-amber-500"></span>
+          <div className="relative z-10 pt-2.5 border-t border-slate-100 dark:border-zinc-800/80 space-y-1.5">
+            <div className="flex items-center justify-between text-xs font-bold text-slate-600 dark:text-zinc-200">
+              <span className="flex items-center gap-1.5 text-amber-600 dark:text-amber-400">
+                <span className="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
                 Needs Review {computedMetrics.pendingRequests}
               </span>
-              <span className="flex items-center gap-1 text-blue-600 dark:text-blue-400">
-                <span className="w-2 h-2 rounded-full bg-blue-500"></span>
+              <span className="flex items-center gap-1.5 text-blue-600 dark:text-blue-400">
+                <span className="w-1.5 h-1.5 rounded-full bg-blue-500"></span>
                 In Progress {computedMetrics.inProgressRequests}
               </span>
-              <span className="flex items-center gap-1 text-emerald-600 dark:text-emerald-400">
-                <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
+              <span className="flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
                 Resolved {computedMetrics.resolvedRequests}
               </span>
             </div>
-            <div className="pt-2">
+            <div className="pt-1.5">
               <Link
                 href="/admin/requests"
-                className="text-xs text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-1 font-semibold"
+                className="text-xs text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-1 font-bold"
               >
                 View Request Desk →
               </Link>
@@ -1536,321 +1546,212 @@ export default function AdminDashboard() {
 
       {/* CORE ANALYTICS, ACTION QUEUE & RECENT ACTIVITY */}
       <div
-        className="grid grid-cols-1 xl:grid-cols-[var(--cashflow-col)_minmax(0,1.35fr)_minmax(0,1fr)] gap-5"
+        className="grid grid-cols-1 xl:grid-cols-[var(--cashflow-col)_minmax(0,1.35fr)_minmax(0,1fr)] gap-4"
         style={{ ["--cashflow-col" as any]: "minmax(0, calc(50% + 40px))" }}
       >
         {/* Left Column: Cash Flow Overview */}
-        <div className="bg-card border border-slate-200 dark:border-zinc-800 rounded-2xl p-5 sm:p-6 shadow-2xs flex flex-col justify-between min-h-[580px] xl:h-[580px]">
-          <div>
-            {/* Title & 4 Pill Filters */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
+        <div className="bg-card border border-slate-200 dark:border-zinc-800 rounded-2xl p-4 sm:p-5 shadow-2xs flex flex-col justify-between min-h-[560px] xl:h-[560px]">
+          <div className="flex flex-col justify-between h-full">
+            {/* Title & Period Dropdown */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-2 shrink-0">
               <div>
                 <h2 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white">
                   Cash Flow Overview
                 </h2>
-                <p className="text-xs text-slate-600 dark:text-zinc-300 mt-0.5 font-medium">
+                <p className="text-xs text-slate-500 dark:text-zinc-400 mt-0.5 font-medium">
                   Billed vs. collected vs. outstanding
                 </p>
               </div>
 
-              {/* 4 Pill Buttons */}
-              <div className="flex items-center gap-1 bg-slate-100 dark:bg-zinc-800 p-1 rounded-xl text-xs font-semibold">
-                <button
-                  type="button"
-                  onClick={() => setDateRange("this_month")}
-                  className={`px-2.5 py-1 rounded-lg transition-all cursor-pointer ${
-                    dateRange === "this_month"
-                      ? "bg-[#0284c7] text-white shadow-xs"
-                      : "text-slate-600 dark:text-zinc-300 hover:text-slate-900 dark:hover:text-white"
-                  }`}
-                >
-                  This Month
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setDateRange("last_month")}
-                  className={`px-2.5 py-1 rounded-lg transition-all cursor-pointer ${
-                    dateRange === "last_month"
-                      ? "bg-[#0284c7] text-white shadow-xs"
-                      : "text-slate-600 dark:text-zinc-300 hover:text-slate-900 dark:hover:text-white"
-                  }`}
-                >
-                  Last Month
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setDateRange("this_year")}
-                  className={`px-2.5 py-1 rounded-lg transition-all cursor-pointer ${
-                    dateRange === "this_year"
-                      ? "bg-[#0284c7] text-white shadow-xs"
-                      : "text-slate-600 dark:text-zinc-300 hover:text-slate-900 dark:hover:text-white"
-                  }`}
-                >
-                  This Year
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setDateRange("last_year")}
-                  className={`px-2.5 py-1 rounded-lg transition-all cursor-pointer ${
-                    dateRange === "last_year"
-                      ? "bg-[#0284c7] text-white shadow-xs"
-                      : "text-slate-600 dark:text-zinc-300 hover:text-slate-900 dark:hover:text-white"
-                  }`}
-                >
-                  Last Year
-                </button>
+              {/* Dropdown Menu (Only This Year and Last Year) */}
+              <div className="w-32 sm:w-36">
+                <DropdownSelect
+                  value={dateRange}
+                  onChange={(val) => setDateRange(val as "this_year" | "last_year")}
+                  options={[
+                    { value: "this_year", label: "This Year" },
+                    { value: "last_year", label: "Last Year" },
+                  ]}
+                  className="h-8.5 px-3 text-xs font-bold rounded-xl border border-slate-200 dark:border-zinc-800 bg-slate-50 dark:bg-zinc-900 text-slate-800 dark:text-zinc-200 shadow-2xs"
+                />
               </div>
             </div>
 
-            {/* Split: Chart on Left (Expanded Width), 4 Stacked Cards on Right (Decreased Width) */}
-            <div className="flex flex-col lg:flex-row gap-4 items-stretch">
-              {/* Chart Subpanel (Standard Recharts ResponsiveContainer) */}
-              <div className="flex-1 min-w-0 h-[420px] sm:h-[460px]">
-                <ResponsiveContainer width="100%" height="100%">
-                  <ComposedChart
-                    data={cashflowDataToRender}
-                    margin={{
-                      top: 14,
-                      right: 12,
-                      left: 0,
-                      bottom: 0,
+            {/* Chart Subpanel (Full Width) */}
+            <div className="w-full h-[330px] sm:h-[355px] min-h-[280px]">
+              <ResponsiveContainer width="100%" height="100%">
+                <ComposedChart
+                  data={cashflowDataToRender}
+                  margin={{
+                    top: 8,
+                    right: 12,
+                    left: 0,
+                    bottom: 0,
+                  }}
+                  barGap={2}
+                  barSize={cashflowDataToRender.length <= 3 ? 28 : 7}
+                >
+                  {/* dashed line across each amount on graph */}
+                  <CartesianGrid
+                    strokeDasharray="4 4"
+                    vertical={false}
+                    stroke="currentColor"
+                    className="text-slate-300 dark:text-zinc-700"
+                    strokeOpacity={0.7}
+                  />
+                  <XAxis
+                    dataKey="month"
+                    axisLine={false}
+                    tickLine={false}
+                    tick={{ fill: "#94a3b8", fontSize: 11, fontWeight: 700 }}
+                    dy={5}
+                  />
+                  <YAxis
+                    domain={[0, cashflowMaxVal]}
+                    ticks={cashflowTicks}
+                    axisLine={false}
+                    tickLine={false}
+                    width={68}
+                    tick={({ y, payload }: any) => {
+                      const val = payload.value;
+                      const formatted =
+                        val === 0 ? "₱0" : `₱${Number(val).toLocaleString()}`;
+                      return (
+                        <text
+                          x={0}
+                          y={y}
+                          dy={3.5}
+                          fill="#94a3b8"
+                          fontSize={10.5}
+                          fontWeight={700}
+                          textAnchor="start"
+                        >
+                          {formatted}
+                        </text>
+                      );
                     }}
-                    barGap={
-                      cashflowDataToRender.length <= 1 ||
-                      dateRange === "this_month" ||
-                      dateRange === "last_month"
-                        ? 18
-                        : 2
-                    }
-                    barSize={
-                      cashflowDataToRender.length <= 1 ||
-                      dateRange === "this_month" ||
-                      dateRange === "last_month"
-                        ? 130
-                        : cashflowDataToRender.length <= 3
-                          ? 28
-                          : 7
-                    }
-                  >
-                    {/* dashed line across each amount on graph */}
-                    <CartesianGrid
-                      strokeDasharray="4 4"
-                      vertical={false}
-                      stroke="currentColor"
-                      className="text-slate-300 dark:text-zinc-700"
-                      strokeOpacity={0.7}
-                    />
-                    <XAxis
-                      dataKey="month"
-                      axisLine={false}
-                      tickLine={false}
-                      tick={{ fill: "#94a3b8", fontSize: 11, fontWeight: 700 }}
-                      dy={5}
-                    />
-                    <YAxis
-                      domain={[0, cashflowMaxVal]}
-                      ticks={cashflowTicks}
-                      axisLine={false}
-                      tickLine={false}
-                      width={68}
-                      tick={({ y, payload }: any) => {
-                        const val = payload.value;
-                        const formatted =
-                          val === 0 ? "₱0" : `₱${Number(val).toLocaleString()}`;
-                        return (
-                          <text
-                            x={0}
-                            y={y}
-                            dy={3.5}
-                            fill="#94a3b8"
-                            fontSize={10.5}
-                            fontWeight={700}
-                            textAnchor="start"
-                          >
-                            {formatted}
-                          </text>
-                        );
-                      }}
-                    />
-                    <Tooltip
-                      cursor={{ fill: "rgba(148, 163, 184, 0.08)" }}
-                      content={<CustomChartTooltip />}
-                    />
-                    <Legend
-                      verticalAlign="bottom"
-                      content={() => {
-                        const isSingleMonth =
-                          cashflowDataToRender.length <= 1 ||
-                          dateRange === "this_month" ||
-                          dateRange === "last_month";
-                        return (
-                          <div
-                            style={{ paddingLeft: 68, paddingRight: 12 }}
-                            className="w-full flex items-center justify-center pt-3 text-[11px] font-semibold text-slate-700 dark:text-zinc-200"
-                          >
-                            <div
-                              className={`flex items-center justify-center ${
-                                isSingleMonth ? "gap-[18px]" : "gap-5"
-                              }`}
-                            >
-                              <span
-                                className={`flex items-center justify-center gap-1.5 ${
-                                  isSingleMonth ? "w-[130px] text-center" : ""
-                                }`}
-                              >
-                                <span className="w-2.5 h-2.5 rounded-xs bg-[#10b981] shrink-0" />
-                                <span>Collected</span>
-                              </span>
-                              <span
-                                className={`flex items-center justify-center gap-1.5 ${
-                                  isSingleMonth ? "w-[130px] text-center" : ""
-                                }`}
-                              >
-                                <span className="w-2.5 h-2.5 rounded-xs bg-[#0284c7] shrink-0" />
-                                <span>Invoiced</span>
-                              </span>
-                              <span
-                                className={`flex items-center justify-center gap-1.5 ${
-                                  isSingleMonth ? "w-[130px] text-center" : ""
-                                }`}
-                              >
-                                <span className="w-2.5 h-2.5 rounded-xs bg-[#f43f5e] shrink-0" />
-                                <span>Outstanding</span>
-                              </span>
-                            </div>
-                          </div>
-                        );
-                      }}
-                    />
-                    {/* Graph bars with minPointSize so 0 amounts also show a visible bar */}
-                    <Bar
-                      dataKey="collected"
-                      name="Collected"
-                      fill="#10b981"
-                      radius={
-                        cashflowDataToRender.length <= 1 ||
-                        dateRange === "this_month" ||
-                        dateRange === "last_month"
-                          ? [10, 10, 0, 0]
-                          : [2.5, 2.5, 0, 0]
-                      }
-                      minPointSize={
-                        cashflowDataToRender.length <= 1 ||
-                        dateRange === "this_month" ||
-                        dateRange === "last_month"
-                          ? 12
-                          : 4
-                      }
-                    />
-                    <Bar
-                      dataKey="billed"
-                      name="Invoiced"
-                      fill="#0284c7"
-                      radius={
-                        cashflowDataToRender.length <= 1 ||
-                        dateRange === "this_month" ||
-                        dateRange === "last_month"
-                          ? [10, 10, 0, 0]
-                          : [2.5, 2.5, 0, 0]
-                      }
-                      minPointSize={
-                        cashflowDataToRender.length <= 1 ||
-                        dateRange === "this_month" ||
-                        dateRange === "last_month"
-                          ? 12
-                          : 4
-                      }
-                    />
-                    <Bar
-                      dataKey="outstanding"
-                      name="Outstanding"
-                      fill="#f43f5e"
-                      radius={
-                        cashflowDataToRender.length <= 1 ||
-                        dateRange === "this_month" ||
-                        dateRange === "last_month"
-                          ? [10, 10, 0, 0]
-                          : [2.5, 2.5, 0, 0]
-                      }
-                      minPointSize={
-                        cashflowDataToRender.length <= 1 ||
-                        dateRange === "this_month" ||
-                        dateRange === "last_month"
-                          ? 12
-                          : 4
-                      }
-                    />
-                  </ComposedChart>
-                </ResponsiveContainer>
+                  />
+                  <Tooltip
+                    cursor={{ fill: "rgba(148, 163, 184, 0.08)" }}
+                    content={<CustomChartTooltip />}
+                  />
+                  <Legend
+                    verticalAlign="top"
+                    height={30}
+                    content={() => (
+                      <div
+                        style={{ paddingLeft: 68, paddingRight: 12 }}
+                        className="w-full flex items-center justify-center pb-2 text-[11px] font-semibold text-slate-700 dark:text-zinc-200"
+                      >
+                        <div className="flex items-center justify-center gap-5">
+                          <span className="flex items-center justify-center gap-1.5">
+                            <span className="w-2.5 h-2.5 rounded-xs bg-[#10b981] shrink-0" />
+                            <span>Collected</span>
+                          </span>
+                          <span className="flex items-center justify-center gap-1.5">
+                            <span className="w-2.5 h-2.5 rounded-xs bg-[#0284c7] shrink-0" />
+                            <span>Invoiced</span>
+                          </span>
+                          <span className="flex items-center justify-center gap-1.5">
+                            <span className="w-2.5 h-2.5 rounded-xs bg-[#f43f5e] shrink-0" />
+                            <span>Outstanding</span>
+                          </span>
+                        </div>
+                      </div>
+                    )}
+                  />
+                  {/* Graph bars with minPointSize so 0 amounts also show a visible bar */}
+                  <Bar
+                    dataKey="collected"
+                    name="Collected"
+                    fill="#10b981"
+                    radius={[2.5, 2.5, 0, 0]}
+                    minPointSize={4}
+                  />
+                  <Bar
+                    dataKey="billed"
+                    name="Invoiced"
+                    fill="#0284c7"
+                    radius={[2.5, 2.5, 0, 0]}
+                    minPointSize={4}
+                  />
+                  <Bar
+                    dataKey="outstanding"
+                    name="Outstanding"
+                    fill="#f43f5e"
+                    radius={[2.5, 2.5, 0, 0]}
+                    minPointSize={4}
+                  />
+                </ComposedChart>
+              </ResponsiveContainer>
+            </div>
+
+            {/* 4 KPI Cards Below Chart */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 shrink-0 pt-2">
+              {/* Total Billed */}
+              <div className="p-2 sm:p-2.5 rounded-xl bg-slate-50 dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 flex items-center gap-2 hover:border-blue-300 dark:hover:border-blue-800/60 transition-colors shadow-2xs">
+                <div className="w-8 h-8 rounded-lg bg-blue-50 dark:bg-blue-500/10 text-blue-600 flex items-center justify-center shrink-0 border border-blue-200/50 dark:border-blue-500/20">
+                  <FileText className="w-4 h-4" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-zinc-400 block leading-tight truncate">
+                    Total Due Amount
+                  </span>
+                  <p className="font-mono font-extrabold text-xs sm:text-sm text-slate-900 dark:text-white mt-0.5 truncate">
+                    ₱{cashflowTotals.billed.toLocaleString()}
+                  </p>
+                </div>
               </div>
 
-              {/* 4 Stacked Right KPI Badges */}
-              <div className="w-full lg:w-40 xl:w-44 shrink-0 flex flex-col justify-center gap-3 h-full min-h-[420px] sm:min-h-[460px]">
-                {/* Total Billed */}
-                <div className="p-2 sm:p-2.5 rounded-xl bg-slate-50 dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 flex items-center gap-2 hover:border-blue-300 dark:hover:border-blue-800/60 transition-colors shadow-2xs">
-                  <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-blue-50 dark:bg-blue-500/10 text-blue-600 flex items-center justify-center shrink-0 border border-blue-200/50 dark:border-blue-500/20">
-                    <FileText className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-slate-600 dark:text-zinc-300 block leading-tight">
-                      Total Due Amount
-                    </span>
-                    <p className="font-mono font-extrabold text-xs sm:text-sm text-slate-900 dark:text-white mt-0.5">
-                      ₱{cashflowTotals.billed.toLocaleString()}
-                    </p>
-                  </div>
+              {/* Collected Amount */}
+              <div className="p-2 sm:p-2.5 rounded-xl bg-slate-50 dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 flex items-center gap-2 hover:border-emerald-300 dark:hover:border-emerald-800/60 transition-colors shadow-2xs">
+                <div className="w-8 h-8 rounded-lg bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 flex items-center justify-center shrink-0 border border-emerald-200/50 dark:border-emerald-500/20">
+                  <CheckCircle2 className="w-4 h-4" />
                 </div>
-
-                {/* Collected Amount */}
-                <div className="p-2 sm:p-2.5 rounded-xl bg-slate-50 dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 flex items-center gap-2 hover:border-emerald-300 dark:hover:border-emerald-800/60 transition-colors shadow-2xs">
-                  <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 flex items-center justify-center shrink-0 border border-emerald-200/50 dark:border-emerald-500/20">
-                    <CheckCircle2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-slate-600 dark:text-zinc-300 block leading-tight">
-                      Collected Amount
-                    </span>
-                    <p className="font-mono font-extrabold text-xs sm:text-sm text-emerald-600 dark:text-emerald-400 mt-0.5">
-                      ₱{cashflowTotals.collected.toLocaleString()}
-                    </p>
-                  </div>
+                <div className="flex-1 min-w-0">
+                  <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-zinc-400 block leading-tight truncate">
+                    Collected Amount
+                  </span>
+                  <p className="font-mono font-extrabold text-xs sm:text-sm text-emerald-600 dark:text-emerald-400 mt-0.5 truncate">
+                    ₱{cashflowTotals.collected.toLocaleString()}
+                  </p>
                 </div>
+              </div>
 
-                {/* Overdue Amount */}
-                <div className="p-2 sm:p-2.5 rounded-xl bg-slate-50 dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 flex items-center gap-2 hover:border-rose-300 dark:hover:border-rose-800/60 transition-colors shadow-2xs">
-                  <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-rose-50 dark:bg-rose-500/10 text-rose-600 flex items-center justify-center shrink-0 border border-rose-200/50 dark:border-rose-500/20">
-                    <AlertTriangle className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-slate-600 dark:text-zinc-300 block leading-tight">
-                      Overdue Amount
-                    </span>
-                    <p className="font-mono font-extrabold text-xs sm:text-sm text-rose-600 dark:text-rose-400 mt-0.5">
-                      ₱{cashflowTotals.outstanding.toLocaleString()}
-                    </p>
-                  </div>
+              {/* Overdue Amount */}
+              <div className="p-2 sm:p-2.5 rounded-xl bg-slate-50 dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 flex items-center gap-2 hover:border-rose-300 dark:hover:border-rose-800/60 transition-colors shadow-2xs">
+                <div className="w-8 h-8 rounded-lg bg-rose-50 dark:bg-rose-500/10 text-rose-600 flex items-center justify-center shrink-0 border border-rose-200/50 dark:border-rose-500/20">
+                  <AlertTriangle className="w-4 h-4" />
                 </div>
+                <div className="flex-1 min-w-0">
+                  <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-zinc-400 block leading-tight truncate">
+                    Overdue Amount
+                  </span>
+                  <p className="font-mono font-extrabold text-xs sm:text-sm text-rose-600 dark:text-rose-400 mt-0.5 truncate">
+                    ₱{cashflowTotals.outstanding.toLocaleString()}
+                  </p>
+                </div>
+              </div>
 
-                {/* Collection Rate */}
-                <div className="p-2 sm:p-2.5 rounded-xl bg-slate-50 dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 flex items-center gap-2 hover:border-teal-300 dark:hover:border-teal-800/60 transition-colors shadow-2xs">
-                  <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-teal-50 dark:bg-teal-500/10 text-teal-600 flex items-center justify-center shrink-0 border border-teal-200/50 dark:border-teal-500/20">
-                    <Percent className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-slate-600 dark:text-zinc-300 block leading-tight">
-                      Collection Rate
-                    </span>
-                    <p className="font-mono font-extrabold text-xs sm:text-sm text-teal-600 dark:text-teal-400 mt-0.5">
-                      {cashflowTotals.rate}%
-                    </p>
-                    <div className="w-full bg-slate-200 dark:bg-zinc-700 h-1.5 rounded-full mt-1 overflow-hidden">
-                      <div
-                        className="bg-emerald-500 h-full rounded-full transition-all duration-300"
-                        style={{
-                          width: `${Math.min(100, Math.max(0, cashflowTotals.rate))}%`,
-                        }}
-                      />
-                    </div>
+              {/* Collection Rate */}
+              <div className="p-2 sm:p-2.5 rounded-xl bg-slate-50 dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 flex items-center gap-2 hover:border-teal-300 dark:hover:border-teal-800/60 transition-colors shadow-2xs">
+                <div className="w-8 h-8 rounded-lg bg-teal-50 dark:bg-teal-500/10 text-teal-600 flex items-center justify-center shrink-0 border border-teal-200/50 dark:border-teal-500/20">
+                  <Percent className="w-4 h-4" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-zinc-400 block leading-tight truncate">
+                    Collection Rate
+                  </span>
+                  <p className="font-mono font-extrabold text-xs sm:text-sm text-teal-600 dark:text-teal-400 mt-0.5 truncate">
+                    {cashflowTotals.rate}%
+                  </p>
+                  <div className="w-full bg-slate-200 dark:bg-zinc-700 h-1.5 rounded-full mt-1 overflow-hidden">
+                    <div
+                      className="bg-emerald-500 h-full rounded-full transition-all duration-300"
+                      style={{
+                        width: `${Math.min(100, Math.max(0, cashflowTotals.rate))}%`,
+                      }}
+                    />
                   </div>
                 </div>
               </div>
@@ -1859,21 +1760,21 @@ export default function AdminDashboard() {
         </div>
 
         {/* Urgent Action Center */}
-        <div className="bg-card border border-slate-200 dark:border-zinc-800 rounded-2xl p-4 sm:p-5 shadow-2xs flex flex-col h-[580px]">
+        <div className="bg-card border border-slate-200 dark:border-zinc-800 rounded-2xl p-4 sm:p-5 shadow-2xs flex flex-col h-[560px]">
           {/* Header */}
-          <div className="flex items-center justify-between mb-3 shrink-0">
+          <div className="flex items-center justify-between mb-2.5 shrink-0">
             <div className="flex items-center gap-2">
-              <h2 className="text-sm font-bold text-slate-900 dark:text-white">
+              <h2 className="text-sm sm:text-base font-bold text-slate-900 dark:text-white">
                 Urgent Action Center
               </h2>
             </div>
           </div>
 
           {/* Filter Pills */}
-          <div className="flex items-center gap-1 overflow-x-auto no-scrollbar pb-1 mb-3 text-xs font-semibold shrink-0">
+          <div className="flex items-center gap-1 overflow-x-auto no-scrollbar pb-1 mb-2.5 text-xs font-semibold shrink-0">
             <button
               onClick={() => setUrgentFilter("all")}
-              className={`px-2 py-0.5 rounded-md transition-all shrink-0 cursor-pointer ${
+              className={`px-2 py-0.5 rounded-lg transition-all shrink-0 cursor-pointer ${
                 urgentFilter === "all"
                   ? "bg-[#0284c7] text-white"
                   : "text-slate-600 dark:text-zinc-200 hover:text-slate-900 dark:hover:text-white font-medium"
@@ -1883,7 +1784,7 @@ export default function AdminDashboard() {
             </button>
             <button
               onClick={() => setUrgentFilter("payments")}
-              className={`px-2 py-0.5 rounded-md transition-all shrink-0 cursor-pointer ${
+              className={`px-2 py-0.5 rounded-lg transition-all shrink-0 cursor-pointer ${
                 urgentFilter === "payments"
                   ? "bg-[#0284c7] text-white"
                   : "text-slate-600 dark:text-zinc-200 hover:text-slate-900 dark:hover:text-white font-medium"
@@ -1893,7 +1794,7 @@ export default function AdminDashboard() {
             </button>
             <button
               onClick={() => setUrgentFilter("applicants")}
-              className={`px-2 py-0.5 rounded-md transition-all shrink-0 cursor-pointer ${
+              className={`px-2 py-0.5 rounded-lg transition-all shrink-0 cursor-pointer ${
                 urgentFilter === "applicants"
                   ? "bg-[#0284c7] text-white"
                   : "text-slate-600 dark:text-zinc-200 hover:text-slate-900 dark:hover:text-white font-medium"
@@ -1903,7 +1804,7 @@ export default function AdminDashboard() {
             </button>
             <button
               onClick={() => setUrgentFilter("overdue")}
-              className={`px-2 py-0.5 rounded-md transition-all shrink-0 cursor-pointer ${
+              className={`px-2 py-0.5 rounded-lg transition-all shrink-0 cursor-pointer ${
                 urgentFilter === "overdue"
                   ? "bg-[#0284c7] text-white"
                   : "text-slate-600 dark:text-zinc-200 hover:text-slate-900 dark:hover:text-white font-medium"
@@ -1913,7 +1814,7 @@ export default function AdminDashboard() {
             </button>
             <button
               onClick={() => setUrgentFilter("maintenance")}
-              className={`px-2 py-0.5 rounded-md transition-all shrink-0 cursor-pointer ${
+              className={`px-2 py-0.5 rounded-lg transition-all shrink-0 cursor-pointer ${
                 urgentFilter === "maintenance"
                   ? "bg-[#0284c7] text-white"
                   : "text-slate-600 dark:text-zinc-200 hover:text-slate-900 dark:hover:text-white font-medium"
@@ -1924,16 +1825,16 @@ export default function AdminDashboard() {
           </div>
 
           {/* Action List */}
-          <div className="flex-1 min-h-0 overflow-y-auto flex flex-col gap-2.5 pr-1 custom-scrollbar">
+          <div className="flex-1 min-h-0 overflow-y-auto flex flex-col gap-2 pr-1 custom-scrollbar">
             {urgentActions.filter(
               (a) => urgentFilter === "all" || a.type === urgentFilter,
             ).length === 0 ? (
               <div className="h-full flex flex-col items-center justify-center text-center p-6 text-slate-600 dark:text-zinc-300">
-                <CheckCircle2 className="w-9 h-9 text-emerald-500 mb-2 stroke-[1.5]" />
-                <p className="text-xs font-bold text-slate-800 dark:text-zinc-100">
+                <CheckCircle2 className="w-8 h-8 text-emerald-500 mb-1.5 stroke-[1.5]" />
+                <p className="text-xs sm:text-sm font-bold text-slate-800 dark:text-zinc-100">
                   All caught up!
                 </p>
-                <p className="text-[11px] mt-0.5 text-slate-600 dark:text-zinc-300 font-medium">
+                <p className="text-xs mt-0.5 text-slate-500 dark:text-zinc-400 font-medium">
                   No urgent actions requiring attention right now.
                 </p>
               </div>
@@ -1947,11 +1848,11 @@ export default function AdminDashboard() {
                   return (
                     <div
                       key={item.id}
-                      className="h-[calc((100%-40px)/5)] shrink-0 px-3 py-2 rounded-xl border border-slate-200/80 dark:border-zinc-800/90 bg-white dark:bg-zinc-900/90 flex items-center justify-between gap-3 sm:gap-3.5 shadow-2xs hover:border-slate-300 dark:hover:border-zinc-700 transition-colors"
+                      className="h-[calc((100%-40px)/5)] shrink-0 px-2.5 py-1.5 rounded-xl border border-slate-200/80 dark:border-zinc-800/90 bg-white dark:bg-zinc-900/90 flex items-center justify-between gap-2.5 shadow-2xs hover:border-slate-300 dark:hover:border-zinc-700 transition-colors"
                     >
-                      <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                      <div className="flex items-center gap-2 min-w-0 flex-1">
                         <div
-                          className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${
+                          className={`w-7.5 h-7.5 rounded-lg flex items-center justify-center shrink-0 ${
                             item.color === "amber"
                               ? "bg-amber-100/70 dark:bg-amber-500/20 text-amber-600"
                               : item.color === "blue"
@@ -1959,29 +1860,29 @@ export default function AdminDashboard() {
                                 : "bg-rose-100/70 dark:bg-rose-500/20 text-rose-600"
                           }`}
                         >
-                          <IconComp className="w-4 h-4" />
+                          <IconComp className="w-3.5 h-3.5" />
                         </div>
                         <div className="min-w-0 flex-1">
-                          <p className="text-xs font-bold text-slate-900 dark:text-white truncate">
+                          <p className="text-xs sm:text-[13px] font-bold text-slate-900 dark:text-white truncate">
                             {item.title}
                           </p>
                           {item.subRow1 ? (
                             <>
-                              <p className="text-[11px] text-slate-600 dark:text-zinc-300 truncate mt-0.5 font-medium leading-tight">
+                              <p className="text-[11px] text-slate-500 dark:text-zinc-400 truncate mt-0.5 font-medium leading-tight">
                                 {item.subRow1}
                               </p>
                               <p
-                                className={`text-[10px] truncate leading-tight mt-0.5 font-semibold ${
+                                className={`text-[11px] truncate leading-tight mt-0.5 font-semibold ${
                                   item.type === "overdue"
                                     ? "text-rose-600 dark:text-rose-400"
-                                    : "text-slate-600 dark:text-zinc-300"
+                                    : "text-slate-500 dark:text-zinc-400"
                                 }`}
                               >
                                 {item.subRow2}
                               </p>
                             </>
                           ) : (
-                            <p className="text-[11px] text-slate-600 dark:text-zinc-300 truncate mt-0.5 font-medium">
+                            <p className="text-[11px] text-slate-500 dark:text-zinc-400 truncate mt-0.5 font-medium">
                               {item.subtitle}
                             </p>
                           )}
@@ -1990,7 +1891,7 @@ export default function AdminDashboard() {
                       <div className="flex items-center shrink-0 pl-1">
                         <Link
                           href={item.link}
-                          className="px-2.5 py-1 text-[11px] font-bold rounded-lg border border-blue-500 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-950/40 transition-colors"
+                          className="px-2 py-0.5 text-xs font-bold rounded-lg border border-blue-500 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-950/40 transition-colors"
                         >
                           {item.btnText}
                         </Link>
@@ -2003,29 +1904,29 @@ export default function AdminDashboard() {
         </div>
 
         {/* Recent Activity */}
-        <div className="bg-card border border-slate-200 dark:border-zinc-800 rounded-2xl p-4 sm:p-5 shadow-2xs flex flex-col h-[580px]">
+        <div className="bg-card border border-slate-200 dark:border-zinc-800 rounded-2xl p-4 sm:p-5 shadow-2xs flex flex-col h-[560px]">
           {/* Header */}
-          <div className="flex items-center justify-between mb-3 shrink-0">
-            <h2 className="text-sm font-bold text-slate-900 dark:text-white">
+          <div className="flex items-center justify-between mb-2.5 shrink-0">
+            <h2 className="text-sm sm:text-base font-bold text-slate-900 dark:text-white">
               Recent Activity
             </h2>
             <Link
               href="/admin/activity-logs"
-              className="text-xs font-semibold text-blue-600 dark:text-blue-400 hover:underline"
+              className="text-xs font-bold text-blue-600 dark:text-blue-400 hover:underline"
             >
               View All →
             </Link>
           </div>
 
           {/* Activity Stream (Scrollable - exactly 7 items visible, scroll for remaining) */}
-          <div className="flex-1 min-h-0 overflow-y-auto flex flex-col gap-1.5 pr-1 custom-scrollbar">
+          <div className="flex-1 min-h-0 overflow-y-auto flex flex-col gap-1 pr-1 custom-scrollbar">
             {recentActivitiesList.length === 0 ? (
               <div className="h-full flex flex-col items-center justify-center text-center p-6 text-slate-600 dark:text-zinc-300">
-                <Clock className="w-9 h-9 text-slate-400 dark:text-zinc-600 mb-2 stroke-[1.5]" />
-                <p className="text-xs font-bold text-slate-800 dark:text-zinc-100">
+                <Clock className="w-8 h-8 text-slate-400 dark:text-zinc-600 mb-1.5 stroke-[1.5]" />
+                <p className="text-xs sm:text-sm font-bold text-slate-800 dark:text-zinc-100">
                   No recent activity
                 </p>
-                <p className="text-[11px] mt-0.5 text-slate-600 dark:text-zinc-300 font-medium">
+                <p className="text-xs mt-0.5 text-slate-500 dark:text-zinc-400 font-medium">
                   Events will appear here as payments, tenants, and requests
                   update.
                 </p>
@@ -2043,10 +1944,10 @@ export default function AdminDashboard() {
                   <Link
                     key={act.id}
                     href={act.link || "/admin/dashboard"}
-                    className="h-[calc((100%-36px)/7)] shrink-0 flex items-center gap-2.5 group cursor-pointer pb-1.5 border-b border-slate-100 dark:border-zinc-800/80 last:border-b-0 hover:bg-slate-50/50 dark:hover:bg-zinc-800/30 px-1 rounded-lg transition-colors"
+                    className="h-[calc((100%-36px)/7)] shrink-0 flex items-center gap-2 group cursor-pointer pb-1 border-b border-slate-100 dark:border-zinc-800/80 last:border-b-0 hover:bg-slate-50/50 dark:hover:bg-zinc-800/30 px-1 rounded-lg transition-colors"
                   >
                     <div
-                      className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${
+                      className={`w-7.5 h-7.5 rounded-full flex items-center justify-center shrink-0 ${
                         isPayment
                           ? "bg-emerald-100 text-emerald-600 dark:bg-emerald-950/60 dark:text-emerald-400"
                           : isTenant
@@ -2061,35 +1962,35 @@ export default function AdminDashboard() {
                       }`}
                     >
                       {isPayment ? (
-                        <FileCheck className="w-4 h-4" />
+                        <FileCheck className="w-3.5 h-3.5" />
                       ) : isTenant ? (
-                        <FileText className="w-4 h-4" />
+                        <FileText className="w-3.5 h-3.5" />
                       ) : isMaintenance ? (
-                        <Wrench className="w-4 h-4" />
+                        <Wrench className="w-3.5 h-3.5" />
                       ) : isMoveOut ? (
-                        <LogOut className="w-4 h-4" />
+                        <LogOut className="w-3.5 h-3.5" />
                       ) : isAnnouncement ? (
-                        <Megaphone className="w-4 h-4" />
+                        <Megaphone className="w-3.5 h-3.5" />
                       ) : (
-                        <MessageSquare className="w-4 h-4" />
+                        <MessageSquare className="w-3.5 h-3.5" />
                       )}
                     </div>
 
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center justify-between gap-1">
-                        <p className="text-xs font-bold text-slate-800 dark:text-zinc-200 truncate group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
+                        <p className="text-xs sm:text-[13px] font-bold text-slate-800 dark:text-zinc-200 truncate group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
                           {act.title}
                         </p>
-                        <span className="text-[10px] text-slate-600 dark:text-zinc-300 shrink-0 font-medium">
+                        <span className="text-[11px] text-slate-400 dark:text-zinc-500 shrink-0 font-medium">
                           {act.timeAgo}
                         </span>
                       </div>
                       <div className="mt-0.5 leading-tight">
-                        <p className="text-[11px] text-slate-600 dark:text-zinc-300 truncate font-medium">
+                        <p className="text-xs text-slate-500 dark:text-zinc-400 truncate font-medium">
                           {act.subRow1 || act.description}
                         </p>
                         {act.subRow2 ? (
-                          <p className="text-[11px] text-slate-600 dark:text-zinc-300 truncate font-medium mt-0.5">
+                          <p className="text-[11px] text-slate-400 dark:text-zinc-500 truncate font-medium mt-0.5">
                             {act.subRow2}
                           </p>
                         ) : null}
@@ -2104,15 +2005,15 @@ export default function AdminDashboard() {
       </div>
 
       {/* FLOOR & ROOM MATRIX */}
-      <div className="bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-2xl p-5 shadow-2xs font-sans">
+      <div className="bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-2xl p-4 sm:p-5 shadow-2xs font-sans">
         {/* Header */}
-        <div className="mb-5 space-y-3">
-          <h2 className="text-base sm:text-lg font-extrabold text-slate-900 dark:text-white">
+        <div className="mb-4 space-y-2.5">
+          <h2 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white">
             Floor & Room Matrix
           </h2>
 
           {/* Row: 1st Searchbar, 2nd Status Dropdown, 3rd 4 Room Status Text directly beside dropdown */}
-          <div className="flex flex-wrap items-center gap-3 sm:gap-4">
+          <div className="flex flex-wrap items-center gap-2.5 sm:gap-3">
             {/* 1st: Searchbar */}
             <div className="relative w-52 sm:w-60">
               <Search className="w-3.5 h-3.5 text-slate-500 dark:text-zinc-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
@@ -2121,12 +2022,12 @@ export default function AdminDashboard() {
                 value={matrixSearchQuery}
                 onChange={(e) => setMatrixSearchQuery(e.target.value)}
                 placeholder="Search room, tenant or room type..."
-                className="w-full bg-slate-50 dark:bg-zinc-800/60 border border-slate-200 dark:border-zinc-700/80 rounded-lg pl-8 pr-2.5 py-1.5 text-xs text-slate-900 dark:text-zinc-100 placeholder:text-slate-500 dark:placeholder:text-zinc-400 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                className="w-full bg-slate-50 dark:bg-zinc-800/60 border border-slate-200 dark:border-zinc-700/80 rounded-lg pl-8 pr-2.5 py-1.5 text-xs sm:text-[13px] text-slate-900 dark:text-zinc-100 placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-blue-500"
               />
             </div>
 
             {/* 2nd: Status Dropdown Menu */}
-            <div className="w-36 sm:w-48">
+            <div className="w-36 sm:w-44">
               <DropdownSelect
                 value={matrixStatusFilter}
                 onChange={setMatrixStatusFilter}
@@ -2153,7 +2054,7 @@ export default function AdminDashboard() {
                     dotColor: "bg-rose-500",
                   },
                 ]}
-                className="w-full bg-slate-50 dark:bg-zinc-800/60 border border-slate-200 dark:border-zinc-700/80 text-xs font-semibold text-slate-700 dark:text-zinc-200 rounded-lg px-2.5 py-1.5 hover:border-slate-300 dark:hover:border-zinc-600 focus:outline-none focus:ring-1 focus:ring-blue-500 transition-colors shadow-2xs"
+                className="w-full bg-slate-50 dark:bg-zinc-800/60 border border-slate-200 dark:border-zinc-700/80 text-xs sm:text-[13px] font-semibold text-slate-700 dark:text-zinc-200 rounded-lg px-2.5 py-1.5 hover:border-slate-300 dark:hover:border-zinc-600 focus:outline-none focus:ring-1 focus:ring-blue-500 transition-colors shadow-2xs"
               />
             </div>
 
@@ -2192,7 +2093,7 @@ export default function AdminDashboard() {
         </div>
 
         {/* Architectural Multi-Column Layout (All Floors Displayed) */}
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
           {distinctMatrixFloors.map((fl) => {
             const floorRooms = matrixRoomsByFloor[fl] || [];
             const countLabel = `${floorRooms.length} ${floorRooms.length === 1 ? "room" : "rooms"}`;
@@ -2203,12 +2104,12 @@ export default function AdminDashboard() {
                 className="bg-slate-50/60 dark:bg-zinc-900/40 rounded-xl p-3 border border-slate-100 dark:border-zinc-800/60 flex flex-col"
               >
                 {/* Floor Header Bar */}
-                <div className="flex flex-wrap items-center justify-between mb-2.5 px-0.5 gap-2 shrink-0">
-                  <div className="flex items-center gap-2">
-                    <h3 className="font-extrabold text-sm text-slate-800 dark:text-zinc-200">
+                <div className="flex flex-wrap items-center justify-between mb-2 px-0.5 gap-2 shrink-0">
+                  <div className="flex items-center gap-1.5">
+                    <h3 className="font-extrabold text-sm sm:text-base text-slate-800 dark:text-zinc-200">
                       {fl}
                     </h3>
-                    <span className="text-[10px] font-bold text-blue-600 dark:text-blue-400">
+                    <span className="text-xs font-bold text-blue-600 dark:text-blue-400">
                       {countLabel}
                     </span>
                   </div>
@@ -2228,7 +2129,7 @@ export default function AdminDashboard() {
                     });
 
                     return (
-                      <div className="flex flex-wrap items-center gap-2.5 sm:gap-3 text-[10px] font-bold">
+                      <div className="flex flex-wrap items-center gap-2.5 sm:gap-3 text-xs font-bold">
                         {fFull > 0 && (
                           <span className="text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
                             <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
