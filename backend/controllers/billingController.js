@@ -1,5 +1,25 @@
 const db = require('../config/db');
 const { generateUniqueInvoiceNumber } = require('../utils/invoiceNumberGenerator');
+const { generateUniqueTransactionNumber } = require('../utils/transactionNumberGenerator');
+
+// Normalize online / QRPh / GCash payment method names to "E-Wallet"
+const normalizeOnlinePaymentMethod = (method, fallback = 'Cash') => {
+    const raw = (method || '').trim();
+    if (!raw) return fallback;
+    const lower = raw.toLowerCase();
+    if (lower === 'cash') return 'Cash';
+    if (
+        lower.includes('gcash') ||
+        lower.includes('qrph') ||
+        lower.includes('qr ph') ||
+        lower.includes('e-wallet') ||
+        lower.includes('ewallet') ||
+        lower === 'online'
+    ) {
+        return 'E-Wallet';
+    }
+    return raw;
+};
 
 // @desc    Get all bills
 // @route   GET /api/admin/bills
@@ -118,7 +138,10 @@ const getBillById = async (req, res) => {
 
         res.json({
             ...bill,
-            payments: paymentRows
+            payments: paymentRows.map((p) => ({
+                ...p,
+                payment_method: normalizeOnlinePaymentMethod(p.payment_method, 'Cash')
+            }))
         });
     } catch (error) {
         console.error('Error fetching bill:', error);
@@ -251,14 +274,10 @@ const payBill = async (req, res) => {
             newStatus = 'Paid';
         }
 
-        // Auto-generate reference number for cash settlements if not provided
-        let refNumber = req.body.reference_number || req.body.referenceNumber;
+        // Auto-generate random, collision-proof 8-digit transaction number if not provided
+        let refNumber = req.body.transaction_number || req.body.transactionNumber || req.body.reference_number || req.body.referenceNumber;
         if (!refNumber) {
-            const now = new Date(payment_date || Date.now());
-            const dateStr = now.toISOString().slice(0, 10).replace(/-/g, '');
-            const randomCode = Math.floor(1000 + Math.random() * 9000);
-            const prefix = (payment_method && payment_method.toLowerCase() === 'cash') ? 'CSH' : 'TX';
-            refNumber = `${prefix}-${dateStr}-${randomCode}`;
+            refNumber = await generateUniqueTransactionNumber(db, 'TXN');
         }
 
         // Must run in transaction or sequentially
@@ -266,7 +285,7 @@ const payBill = async (req, res) => {
 
         // 1. Insert Payment
         const paymentQuery = `
-            INSERT INTO payments (bill_id, amount_paid, payment_date, payment_method, notes, status, reference_number)
+            INSERT INTO payments (bill_id, amount_paid, payment_date, payment_method, notes, status, transaction_number)
             VALUES ($1, $2, $3, $4, $5, 'Approved', $6)
             RETURNING *
         `;
@@ -389,7 +408,7 @@ const getPendingPayments = async (req, res) => {
             JOIN bills b ON p.bill_id = b.id
             JOIN users u ON b.tenant_id = u.id
             LEFT JOIN rooms r ON b.room_id = r.id
-            WHERE p.status = 'Pending Verification' AND (p.payment_method IS NULL OR (p.payment_method NOT ILIKE '%gcash%' AND p.payment_method NOT ILIKE '%qrph%'))
+            WHERE p.status = 'Pending Verification' AND (p.payment_method IS NULL OR (p.payment_method NOT ILIKE '%gcash%' AND p.payment_method NOT ILIKE '%qrph%' AND p.payment_method NOT ILIKE '%qr ph%' AND p.payment_method NOT ILIKE '%e-wallet%' AND p.payment_method NOT ILIKE '%ewallet%'))
             ORDER BY p.payment_date ASC
         `;
         const { rows } = await db.query(query);
@@ -519,7 +538,10 @@ const getAllPayments = async (req, res) => {
             ORDER BY p.payment_date DESC
         `;
         const { rows } = await db.query(query);
-        res.json(rows);
+        res.json(rows.map((row) => ({
+            ...row,
+            payment_method: normalizeOnlinePaymentMethod(row.payment_method, 'Cash')
+        })));
     } catch (error) {
         console.error('Error fetching all payments:', error);
         res.status(500).json({ message: 'Server error fetching all payments' });
@@ -548,7 +570,10 @@ const getPaymentHistory = async (req, res) => {
             ORDER BY p.payment_date DESC, p.id DESC
         `;
         const { rows } = await db.query(query, params);
-        res.json(rows);
+        res.json(rows.map((row) => ({
+            ...row,
+            payment_method: normalizeOnlinePaymentMethod(row.payment_method, 'Cash')
+        })));
     } catch (error) {
         console.error('Error fetching payment history:', error);
         res.status(500).json({ message: 'Server error fetching payment history' });
