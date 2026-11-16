@@ -534,14 +534,14 @@ export default function AdminDashboard() {
       >
         <div>
           <div className="mb-1">
-            <span className="font-extrabold text-sm sm:text-base font-mono text-slate-900 dark:text-white">
+            <span className="font-black text-base sm:text-lg font-mono text-slate-900 dark:text-white">
               {room.room_number}
             </span>
           </div>
 
           <p
             title={subType}
-            className="text-xs text-slate-600 dark:text-zinc-300 font-semibold truncate mb-1.5"
+            className="text-xs sm:text-sm text-slate-600 dark:text-zinc-300 font-semibold truncate mb-1.5"
           >
             {subType}
           </p>
@@ -567,7 +567,7 @@ export default function AdminDashboard() {
           </div>
 
           <p
-            className={`text-xs font-bold truncate my-1 ${
+            className={`text-xs sm:text-sm font-bold truncate my-1 ${
               effectiveStatus === "Full"
                 ? "text-emerald-600 dark:text-emerald-400"
                 : effectiveStatus === "OccupiedWithBeds"
@@ -595,9 +595,9 @@ export default function AdminDashboard() {
           </p>
         </div>
 
-        <div className="pt-2 mt-2 border-t border-slate-100 dark:border-zinc-800 text-xs sm:text-sm font-mono font-bold text-slate-700 dark:text-zinc-200">
+        <div className="pt-2 mt-2 border-t border-slate-100 dark:border-zinc-800 text-sm sm:text-base font-mono font-bold text-slate-700 dark:text-zinc-200">
           ₱{Number(room.price).toLocaleString()}
-          <span className="text-[11px] font-medium text-slate-500 dark:text-zinc-400 ml-0.5">
+          <span className="text-xs font-semibold text-slate-500 dark:text-zinc-400 ml-0.5">
             /mo
           </span>
         </div>
@@ -1082,12 +1082,12 @@ export default function AdminDashboard() {
       {/* TOP HEADER & QUICK ACTIONS */}
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 py-1 border-b border-slate-200/80 dark:border-zinc-800/80 pb-3">
         <div>
-          <h1 className="text-xl sm:text-2xl font-black tracking-tight text-slate-900 dark:text-white flex items-center gap-2">
+          <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-slate-900 dark:text-white flex items-center gap-2">
             <span>
               {getGreeting()}, {adminName}
             </span>
           </h1>
-          <p className="text-xs sm:text-sm text-slate-600 dark:text-zinc-300 mt-0.5 font-medium">
+          <p className="text-sm sm:text-base text-slate-600 dark:text-zinc-300 mt-1 font-medium">
             Here's what's happening with your property today.
           </p>
         </div>
@@ -1101,9 +1101,9 @@ export default function AdminDashboard() {
               setShowAnnouncementModal(true);
               fetchCurrentAnnouncement();
             }}
-            className="h-9 px-3.5 rounded-lg bg-[#0055a5] hover:bg-[#00478f] text-white transition-colors flex items-center gap-2 text-xs sm:text-[13px] font-bold shadow-xs cursor-pointer"
+            className="h-10 px-4 rounded-xl bg-[#0055a5] hover:bg-[#00478f] text-white transition-colors flex items-center gap-2 text-sm sm:text-base font-bold shadow-xs cursor-pointer"
           >
-            <Megaphone className="w-4 h-4 text-white stroke-[2.2]" />
+            <Megaphone className="w-4.5 h-4.5 text-white stroke-[2.2]" />
             <span>Add Announcement</span>
           </button>
 
@@ -1129,7 +1129,7 @@ export default function AdminDashboard() {
                       <div className="w-8 h-8 rounded-lg bg-blue-50 dark:bg-blue-500/10 text-[#0055a5] dark:text-blue-400 border border-blue-200 dark:border-blue-500/30 flex items-center justify-center shrink-0">
                         <Megaphone className="w-4 h-4" />
                       </div>
-                      <h2 className="text-sm sm:text-base font-bold text-slate-950 dark:text-white">
+                      <h2 className="text-base sm:text-lg font-bold text-slate-950 dark:text-white">
                         Enter Announcement
                       </h2>
                     </div>
@@ -1150,10 +1150,10 @@ export default function AdminDashboard() {
                   >
                     {/*  Current Announcement */}
                     <div className="space-y-1">
-                      <label className="text-xs font-bold text-slate-700 dark:text-zinc-300">
+                      <label className="text-sm font-bold text-slate-700 dark:text-zinc-300">
                         Current Announcement:
                       </label>
-                      <div className="p-3 rounded-xl bg-slate-50 dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 text-xs text-slate-800 dark:text-zinc-200 min-h-[60px] max-h-[120px] overflow-y-auto leading-relaxed custom-scrollbar">
+                      <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 text-sm text-slate-800 dark:text-zinc-200 min-h-[60px] max-h-[120px] overflow-y-auto leading-relaxed custom-scrollbar">
                         {isLoadingAnnouncement ? (
                           <div className="flex items-center gap-2 text-slate-400 py-1">
                             <RefreshCw className="w-3.5 h-3.5 animate-spin text-[#0055a5]" />
@@ -1166,7 +1166,7 @@ export default function AdminDashboard() {
                                 currentAnnouncement.title}
                             </p>
                             {currentAnnouncement.created_at && (
-                              <p className="text-[10px] text-slate-400 dark:text-zinc-500 font-mono mt-1.5">
+                              <p className="text-xs text-slate-400 dark:text-zinc-500 font-mono mt-1.5">
                                 Posted on{" "}
                                 {new Date(
                                   currentAnnouncement.created_at,
@@ -1179,7 +1179,7 @@ export default function AdminDashboard() {
                             )}
                           </div>
                         ) : (
-                          <p className="text-slate-400 italic py-1">
+                          <p className="text-slate-400 italic py-1 text-sm">
                             No current announcement posted.
                           </p>
                         )}
@@ -1188,7 +1188,7 @@ export default function AdminDashboard() {
 
                     {/* Text box */}
                     <div className="space-y-1">
-                      <label className="text-xs font-bold text-slate-700 dark:text-zinc-300">
+                      <label className="text-sm font-bold text-slate-700 dark:text-zinc-300">
                         Enter Announcement:
                       </label>
                       <textarea
@@ -1196,7 +1196,7 @@ export default function AdminDashboard() {
                         value={announcementText}
                         onChange={(e) => setAnnouncementText(e.target.value)}
                         placeholder="Type your announcement here..."
-                        className="w-full p-2.5 text-xs sm:text-[13px] font-medium rounded-xl border border-slate-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-[#0055a5] resize-none leading-relaxed"
+                        className="w-full p-3 text-sm sm:text-base font-medium rounded-xl border border-slate-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-[#0055a5] resize-none leading-relaxed"
                         autoFocus
                       />
                     </div>
@@ -1206,7 +1206,7 @@ export default function AdminDashboard() {
                       <button
                         type="button"
                         onClick={() => setShowAnnouncementModal(false)}
-                        className="px-3.5 py-1.5 text-xs font-semibold rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-zinc-800 text-slate-700 dark:text-zinc-300 transition-colors cursor-pointer"
+                        className="px-4 py-2 text-sm font-semibold rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-zinc-800 text-slate-700 dark:text-zinc-300 transition-colors cursor-pointer"
                       >
                         Cancel
                       </button>
@@ -1215,11 +1215,11 @@ export default function AdminDashboard() {
                         disabled={
                           isPostingAnnouncement || !announcementText.trim()
                         }
-                        className="h-8.5 px-3.5 rounded-lg bg-[#0055a5] hover:bg-[#00478f] text-white text-xs font-bold shadow-xs flex items-center gap-1.5 transition-colors cursor-pointer disabled:opacity-50"
+                        className="h-10 px-4 rounded-xl bg-[#0055a5] hover:bg-[#00478f] text-white text-sm font-bold shadow-xs flex items-center gap-2 transition-colors cursor-pointer disabled:opacity-50"
                       >
                         {isPostingAnnouncement ? (
                           <>
-                            <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                            <RefreshCw className="w-4 h-4 animate-spin" />
                             <span>Posting...</span>
                           </>
                         ) : (
@@ -1237,9 +1237,9 @@ export default function AdminDashboard() {
           <button
             type="button"
             onClick={() => setShowReportModal(true)}
-            className="h-9 px-3.5 rounded-lg bg-[#0055a5] hover:bg-[#00478f] text-white transition-colors flex items-center gap-2 text-xs sm:text-[13px] font-bold shadow-xs cursor-pointer"
+            className="h-10 px-4 rounded-xl bg-[#0055a5] hover:bg-[#00478f] text-white transition-colors flex items-center gap-2 text-sm sm:text-base font-bold shadow-xs cursor-pointer"
           >
-            <BarChart3 className="w-4 h-4 text-white stroke-[2.2]" />
+            <BarChart3 className="w-4.5 h-4.5 text-white stroke-[2.2]" />
             <span>Generate Report</span>
           </button>
         </div>
@@ -1269,10 +1269,10 @@ export default function AdminDashboard() {
           </div>
           <div className="relative z-10 flex justify-between items-start mb-2">
             <div>
-              <span className="text-xs font-bold uppercase tracking-wider text-slate-600 dark:text-zinc-300">
+              <span className="text-sm font-bold uppercase tracking-wider text-slate-600 dark:text-zinc-300">
                 Monthly Collections
               </span>
-              <div className="text-xl sm:text-2xl font-black tracking-tight font-mono text-slate-900 dark:text-white mt-1">
+              <div className="text-2xl sm:text-3xl font-black tracking-tight font-mono text-slate-900 dark:text-white mt-1">
                 ₱
                 {computedMetrics.monthlyIncome.toLocaleString("en-US", {
                   minimumFractionDigits: 2,
@@ -1285,12 +1285,12 @@ export default function AdminDashboard() {
           </div>
 
           <div className="relative z-10 pt-2.5 border-t border-slate-100 dark:border-zinc-800/80 space-y-1.5">
-            <div className="flex items-center justify-between text-xs">
+            <div className="flex items-center justify-between text-xs sm:text-sm">
               <span className="text-emerald-600 dark:text-emerald-400 font-bold">
                 Collection rate: {computedMetrics.collectionRate}%
               </span>
               <span
-                className={`inline-flex items-center gap-0.5 text-xs font-bold ${
+                className={`inline-flex items-center gap-0.5 text-xs sm:text-sm font-bold ${
                   computedMetrics.revenueIncrease >= 0
                     ? "text-emerald-600 dark:text-emerald-400"
                     : "text-rose-600 dark:text-rose-400"
@@ -1318,7 +1318,7 @@ export default function AdminDashboard() {
             <div className="pt-0.5">
               <Link
                 href="/admin/billing"
-                className="text-xs text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-1 font-bold"
+                className="text-sm text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-1 font-bold"
               >
                 View Billing Ledger →
               </Link>
@@ -1348,12 +1348,12 @@ export default function AdminDashboard() {
           </div>
           <div className="relative z-10 flex justify-between items-start mb-2">
             <div>
-              <span className="text-xs font-bold uppercase tracking-wider text-slate-600 dark:text-zinc-300">
+              <span className="text-sm font-bold uppercase tracking-wider text-slate-600 dark:text-zinc-300">
                 Occupancy & Bed Capacity
               </span>
-              <div className="text-xl sm:text-2xl font-black tracking-tight font-mono text-slate-900 dark:text-white mt-1 flex items-baseline gap-1.5">
+              <div className="text-2xl sm:text-3xl font-black tracking-tight font-mono text-slate-900 dark:text-white mt-1 flex items-baseline gap-1.5">
                 {computedMetrics.bedOccupancyRate}%
-                <span className="text-xs font-sans font-semibold text-slate-500 dark:text-zinc-400">
+                <span className="text-sm font-sans font-semibold text-slate-500 dark:text-zinc-400">
                   ({computedMetrics.occupiedBeds}/{computedMetrics.totalBeds}{" "}
                   beds)
                 </span>
@@ -1390,7 +1390,7 @@ export default function AdminDashboard() {
               />
             </div>
 
-            <div className="flex items-center justify-between text-xs text-slate-700 dark:text-zinc-200 font-semibold pt-0.5">
+            <div className="flex items-center justify-between text-xs sm:text-sm text-slate-700 dark:text-zinc-200 font-bold pt-0.5">
               <span className="flex items-center gap-1">
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
                 Occupied {computedMetrics.occupiedBeds}
@@ -1408,7 +1408,7 @@ export default function AdminDashboard() {
             <div className="pt-0.5">
               <Link
                 href="/admin/rooms"
-                className="text-xs text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-1 font-bold"
+                className="text-sm text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-1 font-bold"
               >
                 View Room Manager →
               </Link>
@@ -1438,10 +1438,10 @@ export default function AdminDashboard() {
           </div>
           <div className="relative z-10 flex justify-between items-start mb-2">
             <div>
-              <span className="text-xs font-bold uppercase tracking-wider text-slate-600 dark:text-zinc-300">
+              <span className="text-sm font-bold uppercase tracking-wider text-slate-600 dark:text-zinc-300">
                 Outstanding Bills
               </span>
-              <div className="text-xl sm:text-2xl font-black tracking-tight font-mono text-slate-900 dark:text-white mt-1">
+              <div className="text-2xl sm:text-3xl font-black tracking-tight font-mono text-slate-900 dark:text-white mt-1">
                 ₱
                 {computedMetrics.pendingDues.toLocaleString("en-US", {
                   minimumFractionDigits: 2,
@@ -1454,7 +1454,7 @@ export default function AdminDashboard() {
           </div>
 
           <div className="relative z-10 pt-2.5 border-t border-slate-100 dark:border-zinc-800/80 space-y-1.5">
-            <div className="flex items-center justify-between text-xs font-semibold">
+            <div className="flex items-center justify-between text-xs sm:text-sm font-bold">
               <span className="text-slate-700 dark:text-zinc-200">
                 Overdue:{" "}
                 <span className="font-mono text-rose-600 dark:text-rose-400 font-bold">
@@ -1472,7 +1472,7 @@ export default function AdminDashboard() {
             <div className="pt-1.5">
               <Link
                 href="/admin/billing?filter=unpaid"
-                className="text-xs text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-1 font-bold"
+                className="text-sm text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-1 font-bold"
               >
                 View Bills and Payments →
               </Link>
@@ -1502,12 +1502,12 @@ export default function AdminDashboard() {
           </div>
           <div className="relative z-10 flex justify-between items-start mb-2">
             <div>
-              <span className="text-xs font-bold uppercase tracking-wider text-slate-600 dark:text-zinc-300">
+              <span className="text-sm font-bold uppercase tracking-wider text-slate-600 dark:text-zinc-300">
                 Open Maintenance Requests
               </span>
-              <div className="text-xl sm:text-2xl font-black tracking-tight font-mono text-slate-900 dark:text-white mt-1">
+              <div className="text-2xl sm:text-3xl font-black tracking-tight font-mono text-slate-900 dark:text-white mt-1">
                 {computedMetrics.openWorkOrders}{" "}
-                <span className="text-xs font-sans font-semibold text-slate-500 dark:text-zinc-400">
+                <span className="text-sm font-sans font-semibold text-slate-500 dark:text-zinc-400">
                   requests
                 </span>
               </div>
@@ -1518,7 +1518,7 @@ export default function AdminDashboard() {
           </div>
 
           <div className="relative z-10 pt-2.5 border-t border-slate-100 dark:border-zinc-800/80 space-y-1.5">
-            <div className="flex items-center justify-between text-xs font-bold text-slate-600 dark:text-zinc-200">
+            <div className="flex items-center justify-between text-xs sm:text-sm font-bold text-slate-600 dark:text-zinc-200">
               <span className="flex items-center gap-1.5 text-amber-600 dark:text-amber-400">
                 <span className="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
                 Needs Review {computedMetrics.pendingRequests}
@@ -1535,7 +1535,7 @@ export default function AdminDashboard() {
             <div className="pt-1.5">
               <Link
                 href="/admin/requests"
-                className="text-xs text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-1 font-bold"
+                className="text-sm text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-1 font-bold"
               >
                 View Request Desk →
               </Link>
@@ -1555,16 +1555,16 @@ export default function AdminDashboard() {
             {/* Title & Period Dropdown */}
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-2 shrink-0">
               <div>
-                <h2 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white">
+                <h2 className="text-lg sm:text-xl font-bold text-slate-900 dark:text-white">
                   Cash Flow Overview
                 </h2>
-                <p className="text-xs text-slate-500 dark:text-zinc-400 mt-0.5 font-medium">
+                <p className="text-sm text-slate-500 dark:text-zinc-400 mt-1 font-medium">
                   Billed vs. collected vs. outstanding
                 </p>
               </div>
 
               {/* Dropdown Menu (Only This Year and Last Year) */}
-              <div className="w-32 sm:w-36">
+              <div className="w-36 sm:w-40">
                 <DropdownSelect
                   value={dateRange}
                   onChange={(val) => setDateRange(val as "this_year" | "last_year")}
@@ -1572,7 +1572,7 @@ export default function AdminDashboard() {
                     { value: "this_year", label: "This Year" },
                     { value: "last_year", label: "Last Year" },
                   ]}
-                  className="h-8.5 px-3 text-xs font-bold rounded-xl border border-slate-200 dark:border-zinc-800 bg-slate-50 dark:bg-zinc-900 text-slate-800 dark:text-zinc-200 shadow-2xs"
+                  className="h-9 px-3.5 text-sm font-bold rounded-xl border border-slate-200 dark:border-zinc-800 bg-slate-50 dark:bg-zinc-900 text-slate-800 dark:text-zinc-200 shadow-2xs"
                 />
               </div>
             </div>
@@ -1603,7 +1603,7 @@ export default function AdminDashboard() {
                     dataKey="month"
                     axisLine={false}
                     tickLine={false}
-                    tick={{ fill: "#94a3b8", fontSize: 11, fontWeight: 700 }}
+                    tick={{ fill: "#94a3b8", fontSize: 12, fontWeight: 700 }}
                     dy={5}
                   />
                   <YAxis
@@ -1611,7 +1611,7 @@ export default function AdminDashboard() {
                     ticks={cashflowTicks}
                     axisLine={false}
                     tickLine={false}
-                    width={68}
+                    width={72}
                     tick={({ y, payload }: any) => {
                       const val = payload.value;
                       const formatted =
@@ -1622,7 +1622,7 @@ export default function AdminDashboard() {
                           y={y}
                           dy={3.5}
                           fill="#94a3b8"
-                          fontSize={10.5}
+                          fontSize={11.5}
                           fontWeight={700}
                           textAnchor="start"
                         >
@@ -1640,8 +1640,8 @@ export default function AdminDashboard() {
                     height={30}
                     content={() => (
                       <div
-                        style={{ paddingLeft: 68, paddingRight: 12 }}
-                        className="w-full flex items-center justify-center pb-2 text-[11px] font-semibold text-slate-700 dark:text-zinc-200"
+                        style={{ paddingLeft: 72, paddingRight: 12 }}
+                        className="w-full flex items-center justify-center pb-2 text-xs sm:text-sm font-bold text-slate-700 dark:text-zinc-200"
                       >
                         <div className="flex items-center justify-center gap-5">
                           <span className="flex items-center justify-center gap-1.5">
@@ -1694,10 +1694,10 @@ export default function AdminDashboard() {
                   <FileText className="w-4 h-4" />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-zinc-400 block leading-tight truncate">
+                  <span className="text-xs sm:text-sm font-bold uppercase tracking-wider text-slate-600 dark:text-zinc-300 block leading-tight truncate">
                     Total Due Amount
                   </span>
-                  <p className="font-mono font-extrabold text-xs sm:text-sm text-slate-900 dark:text-white mt-0.5 truncate">
+                  <p className="font-mono font-extrabold text-sm sm:text-base text-slate-900 dark:text-white mt-0.5 truncate">
                     ₱{cashflowTotals.billed.toLocaleString()}
                   </p>
                 </div>
@@ -1709,10 +1709,10 @@ export default function AdminDashboard() {
                   <CheckCircle2 className="w-4 h-4" />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-zinc-400 block leading-tight truncate">
+                  <span className="text-xs sm:text-sm font-bold uppercase tracking-wider text-slate-600 dark:text-zinc-300 block leading-tight truncate">
                     Collected Amount
                   </span>
-                  <p className="font-mono font-extrabold text-xs sm:text-sm text-emerald-600 dark:text-emerald-400 mt-0.5 truncate">
+                  <p className="font-mono font-extrabold text-sm sm:text-base text-emerald-600 dark:text-emerald-400 mt-0.5 truncate">
                     ₱{cashflowTotals.collected.toLocaleString()}
                   </p>
                 </div>
@@ -1724,10 +1724,10 @@ export default function AdminDashboard() {
                   <AlertTriangle className="w-4 h-4" />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-zinc-400 block leading-tight truncate">
+                  <span className="text-xs sm:text-sm font-bold uppercase tracking-wider text-slate-600 dark:text-zinc-300 block leading-tight truncate">
                     Overdue Amount
                   </span>
-                  <p className="font-mono font-extrabold text-xs sm:text-sm text-rose-600 dark:text-rose-400 mt-0.5 truncate">
+                  <p className="font-mono font-extrabold text-sm sm:text-base text-rose-600 dark:text-rose-400 mt-0.5 truncate">
                     ₱{cashflowTotals.outstanding.toLocaleString()}
                   </p>
                 </div>
@@ -1739,10 +1739,10 @@ export default function AdminDashboard() {
                   <Percent className="w-4 h-4" />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-zinc-400 block leading-tight truncate">
+                  <span className="text-xs sm:text-sm font-bold uppercase tracking-wider text-slate-600 dark:text-zinc-300 block leading-tight truncate">
                     Collection Rate
                   </span>
-                  <p className="font-mono font-extrabold text-xs sm:text-sm text-teal-600 dark:text-teal-400 mt-0.5 truncate">
+                  <p className="font-mono font-extrabold text-sm sm:text-base text-teal-600 dark:text-teal-400 mt-0.5 truncate">
                     {cashflowTotals.rate}%
                   </p>
                   <div className="w-full bg-slate-200 dark:bg-zinc-700 h-1.5 rounded-full mt-1 overflow-hidden">
@@ -1764,60 +1764,60 @@ export default function AdminDashboard() {
           {/* Header */}
           <div className="flex items-center justify-between mb-2.5 shrink-0">
             <div className="flex items-center gap-2">
-              <h2 className="text-sm sm:text-base font-bold text-slate-900 dark:text-white">
+              <h2 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white">
                 Urgent Action Center
               </h2>
             </div>
           </div>
 
           {/* Filter Pills */}
-          <div className="flex items-center gap-1 overflow-x-auto no-scrollbar pb-1 mb-2.5 text-xs font-semibold shrink-0">
+          <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-1 mb-2.5 text-xs sm:text-sm font-bold shrink-0">
             <button
               onClick={() => setUrgentFilter("all")}
-              className={`px-2 py-0.5 rounded-lg transition-all shrink-0 cursor-pointer ${
+              className={`px-2.5 py-1 rounded-lg transition-all shrink-0 cursor-pointer ${
                 urgentFilter === "all"
                   ? "bg-[#0284c7] text-white"
-                  : "text-slate-600 dark:text-zinc-200 hover:text-slate-900 dark:hover:text-white font-medium"
+                  : "text-slate-600 dark:text-zinc-200 hover:text-slate-900 dark:hover:text-white font-semibold"
               }`}
             >
               All
             </button>
             <button
               onClick={() => setUrgentFilter("payments")}
-              className={`px-2 py-0.5 rounded-lg transition-all shrink-0 cursor-pointer ${
+              className={`px-2.5 py-1 rounded-lg transition-all shrink-0 cursor-pointer ${
                 urgentFilter === "payments"
                   ? "bg-[#0284c7] text-white"
-                  : "text-slate-600 dark:text-zinc-200 hover:text-slate-900 dark:hover:text-white font-medium"
+                  : "text-slate-600 dark:text-zinc-200 hover:text-slate-900 dark:hover:text-white font-semibold"
               }`}
             >
               Payments
             </button>
             <button
               onClick={() => setUrgentFilter("applicants")}
-              className={`px-2 py-0.5 rounded-lg transition-all shrink-0 cursor-pointer ${
+              className={`px-2.5 py-1 rounded-lg transition-all shrink-0 cursor-pointer ${
                 urgentFilter === "applicants"
                   ? "bg-[#0284c7] text-white"
-                  : "text-slate-600 dark:text-zinc-200 hover:text-slate-900 dark:hover:text-white font-medium"
+                  : "text-slate-600 dark:text-zinc-200 hover:text-slate-900 dark:hover:text-white font-semibold"
               }`}
             >
               Applicants
             </button>
             <button
               onClick={() => setUrgentFilter("overdue")}
-              className={`px-2 py-0.5 rounded-lg transition-all shrink-0 cursor-pointer ${
+              className={`px-2.5 py-1 rounded-lg transition-all shrink-0 cursor-pointer ${
                 urgentFilter === "overdue"
                   ? "bg-[#0284c7] text-white"
-                  : "text-slate-600 dark:text-zinc-200 hover:text-slate-900 dark:hover:text-white font-medium"
+                  : "text-slate-600 dark:text-zinc-200 hover:text-slate-900 dark:hover:text-white font-semibold"
               }`}
             >
               Overdue
             </button>
             <button
               onClick={() => setUrgentFilter("maintenance")}
-              className={`px-2 py-0.5 rounded-lg transition-all shrink-0 cursor-pointer ${
+              className={`px-2.5 py-1 rounded-lg transition-all shrink-0 cursor-pointer ${
                 urgentFilter === "maintenance"
                   ? "bg-[#0284c7] text-white"
-                  : "text-slate-600 dark:text-zinc-200 hover:text-slate-900 dark:hover:text-white font-medium"
+                  : "text-slate-600 dark:text-zinc-200 hover:text-slate-900 dark:hover:text-white font-semibold"
               }`}
             >
               Maintenance
@@ -1831,10 +1831,10 @@ export default function AdminDashboard() {
             ).length === 0 ? (
               <div className="h-full flex flex-col items-center justify-center text-center p-6 text-slate-600 dark:text-zinc-300">
                 <CheckCircle2 className="w-8 h-8 text-emerald-500 mb-1.5 stroke-[1.5]" />
-                <p className="text-xs sm:text-sm font-bold text-slate-800 dark:text-zinc-100">
+                <p className="text-sm sm:text-base font-bold text-slate-800 dark:text-zinc-100">
                   All caught up!
                 </p>
-                <p className="text-xs mt-0.5 text-slate-500 dark:text-zinc-400 font-medium">
+                <p className="text-xs sm:text-sm mt-0.5 text-slate-500 dark:text-zinc-400 font-medium">
                   No urgent actions requiring attention right now.
                 </p>
               </div>
@@ -1863,16 +1863,16 @@ export default function AdminDashboard() {
                           <IconComp className="w-3.5 h-3.5" />
                         </div>
                         <div className="min-w-0 flex-1">
-                          <p className="text-xs sm:text-[13px] font-bold text-slate-900 dark:text-white truncate">
+                          <p className="text-sm sm:text-base font-bold text-slate-900 dark:text-white truncate">
                             {item.title}
                           </p>
                           {item.subRow1 ? (
                             <>
-                              <p className="text-[11px] text-slate-500 dark:text-zinc-400 truncate mt-0.5 font-medium leading-tight">
+                              <p className="text-xs sm:text-sm text-slate-500 dark:text-zinc-400 truncate mt-0.5 font-medium leading-tight">
                                 {item.subRow1}
                               </p>
                               <p
-                                className={`text-[11px] truncate leading-tight mt-0.5 font-semibold ${
+                                className={`text-xs sm:text-sm truncate leading-tight mt-0.5 font-semibold ${
                                   item.type === "overdue"
                                     ? "text-rose-600 dark:text-rose-400"
                                     : "text-slate-500 dark:text-zinc-400"
@@ -1882,7 +1882,7 @@ export default function AdminDashboard() {
                               </p>
                             </>
                           ) : (
-                            <p className="text-[11px] text-slate-500 dark:text-zinc-400 truncate mt-0.5 font-medium">
+                            <p className="text-xs sm:text-sm text-slate-500 dark:text-zinc-400 truncate mt-0.5 font-medium">
                               {item.subtitle}
                             </p>
                           )}
@@ -1891,7 +1891,7 @@ export default function AdminDashboard() {
                       <div className="flex items-center shrink-0 pl-1">
                         <Link
                           href={item.link}
-                          className="px-2 py-0.5 text-xs font-bold rounded-lg border border-blue-500 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-950/40 transition-colors"
+                          className="px-2.5 py-1 text-xs sm:text-sm font-bold rounded-lg border border-blue-500 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-950/40 transition-colors"
                         >
                           {item.btnText}
                         </Link>
@@ -1907,12 +1907,12 @@ export default function AdminDashboard() {
         <div className="bg-card border border-slate-200 dark:border-zinc-800 rounded-2xl p-4 sm:p-5 shadow-2xs flex flex-col h-[560px]">
           {/* Header */}
           <div className="flex items-center justify-between mb-2.5 shrink-0">
-            <h2 className="text-sm sm:text-base font-bold text-slate-900 dark:text-white">
+            <h2 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white">
               Recent Activity
             </h2>
             <Link
               href="/admin/activity-logs"
-              className="text-xs font-bold text-blue-600 dark:text-blue-400 hover:underline"
+              className="text-xs sm:text-sm font-bold text-blue-600 dark:text-blue-400 hover:underline"
             >
               View All →
             </Link>
@@ -1923,10 +1923,10 @@ export default function AdminDashboard() {
             {recentActivitiesList.length === 0 ? (
               <div className="h-full flex flex-col items-center justify-center text-center p-6 text-slate-600 dark:text-zinc-300">
                 <Clock className="w-8 h-8 text-slate-400 dark:text-zinc-600 mb-1.5 stroke-[1.5]" />
-                <p className="text-xs sm:text-sm font-bold text-slate-800 dark:text-zinc-100">
+                <p className="text-sm sm:text-base font-bold text-slate-800 dark:text-zinc-100">
                   No recent activity
                 </p>
-                <p className="text-xs mt-0.5 text-slate-500 dark:text-zinc-400 font-medium">
+                <p className="text-xs sm:text-sm mt-0.5 text-slate-500 dark:text-zinc-400 font-medium">
                   Events will appear here as payments, tenants, and requests
                   update.
                 </p>
@@ -1978,19 +1978,19 @@ export default function AdminDashboard() {
 
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center justify-between gap-1">
-                        <p className="text-xs sm:text-[13px] font-bold text-slate-800 dark:text-zinc-200 truncate group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
+                        <p className="text-sm sm:text-base font-bold text-slate-800 dark:text-zinc-200 truncate group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
                           {act.title}
                         </p>
-                        <span className="text-[11px] text-slate-400 dark:text-zinc-500 shrink-0 font-medium">
+                        <span className="text-xs sm:text-sm text-slate-400 dark:text-zinc-500 shrink-0 font-semibold">
                           {act.timeAgo}
                         </span>
                       </div>
                       <div className="mt-0.5 leading-tight">
-                        <p className="text-xs text-slate-500 dark:text-zinc-400 truncate font-medium">
+                        <p className="text-xs sm:text-sm text-slate-500 dark:text-zinc-400 truncate font-medium">
                           {act.subRow1 || act.description}
                         </p>
                         {act.subRow2 ? (
-                          <p className="text-[11px] text-slate-400 dark:text-zinc-500 truncate font-medium mt-0.5">
+                          <p className="text-xs sm:text-sm text-slate-400 dark:text-zinc-500 truncate font-medium mt-0.5">
                             {act.subRow2}
                           </p>
                         ) : null}
@@ -2008,26 +2008,26 @@ export default function AdminDashboard() {
       <div className="bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-2xl p-4 sm:p-5 shadow-2xs font-sans">
         {/* Header */}
         <div className="mb-4 space-y-2.5">
-          <h2 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white">
+          <h2 className="text-lg sm:text-xl font-bold text-slate-900 dark:text-white">
             Floor & Room Matrix
           </h2>
 
           {/* Row: 1st Searchbar, 2nd Status Dropdown, 3rd 4 Room Status Text directly beside dropdown */}
           <div className="flex flex-wrap items-center gap-2.5 sm:gap-3">
             {/* 1st: Searchbar */}
-            <div className="relative w-52 sm:w-60">
-              <Search className="w-3.5 h-3.5 text-slate-500 dark:text-zinc-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
+            <div className="relative w-56 sm:w-64">
+              <Search className="w-4 h-4 text-slate-500 dark:text-zinc-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
               <input
                 type="text"
                 value={matrixSearchQuery}
                 onChange={(e) => setMatrixSearchQuery(e.target.value)}
                 placeholder="Search room, tenant or room type..."
-                className="w-full bg-slate-50 dark:bg-zinc-800/60 border border-slate-200 dark:border-zinc-700/80 rounded-lg pl-8 pr-2.5 py-1.5 text-xs sm:text-[13px] text-slate-900 dark:text-zinc-100 placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                className="w-full bg-slate-50 dark:bg-zinc-800/60 border border-slate-200 dark:border-zinc-700/80 rounded-xl pl-9 pr-3 py-2 text-sm text-slate-900 dark:text-zinc-100 placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-blue-500"
               />
             </div>
 
             {/* 2nd: Status Dropdown Menu */}
-            <div className="w-36 sm:w-44">
+            <div className="w-40 sm:w-48">
               <DropdownSelect
                 value={matrixStatusFilter}
                 onChange={setMatrixStatusFilter}
@@ -2054,37 +2054,37 @@ export default function AdminDashboard() {
                     dotColor: "bg-rose-500",
                   },
                 ]}
-                className="w-full bg-slate-50 dark:bg-zinc-800/60 border border-slate-200 dark:border-zinc-700/80 text-xs sm:text-[13px] font-semibold text-slate-700 dark:text-zinc-200 rounded-lg px-2.5 py-1.5 hover:border-slate-300 dark:hover:border-zinc-600 focus:outline-none focus:ring-1 focus:ring-blue-500 transition-colors shadow-2xs"
+                className="w-full bg-slate-50 dark:bg-zinc-800/60 border border-slate-200 dark:border-zinc-700/80 text-sm font-bold text-slate-700 dark:text-zinc-200 rounded-xl px-3 py-2 hover:border-slate-300 dark:hover:border-zinc-600 focus:outline-none focus:ring-1 focus:ring-blue-500 transition-colors shadow-2xs"
               />
             </div>
 
             {/* 3rd: The 4 Room Status Text directly beside the dropdown menu */}
-            <div className="flex items-center gap-3 sm:gap-4 text-xs font-semibold text-slate-700 dark:text-zinc-200 flex-wrap">
+            <div className="flex items-center gap-3 sm:gap-4 text-xs sm:text-sm font-bold text-slate-700 dark:text-zinc-200 flex-wrap">
               <span className="flex items-center gap-1.5">
                 <span className="w-2 h-2 rounded-full bg-emerald-500" />
                 Full{" "}
-                <span className="font-mono font-bold text-slate-800 dark:text-zinc-200">
+                <span className="font-mono font-extrabold text-slate-900 dark:text-white">
                   {matrixMetrics.full}
                 </span>
               </span>
               <span className="flex items-center gap-1.5">
                 <span className="w-2 h-2 rounded-full bg-amber-500" />
                 Occupied w/ Beds{" "}
-                <span className="font-mono font-bold text-slate-800 dark:text-zinc-200">
+                <span className="font-mono font-extrabold text-slate-900 dark:text-white">
                   {matrixMetrics.occupiedWithBeds}
                 </span>
               </span>
               <span className="flex items-center gap-1.5">
                 <span className="w-2 h-2 rounded-full bg-blue-500" />
                 Vacant{" "}
-                <span className="font-mono font-bold text-slate-800 dark:text-zinc-200">
+                <span className="font-mono font-extrabold text-slate-900 dark:text-white">
                   {matrixMetrics.vacant}
                 </span>
               </span>
               <span className="flex items-center gap-1.5">
                 <span className="w-2 h-2 rounded-full bg-rose-500" />
                 Maintenance{" "}
-                <span className="font-mono font-bold text-slate-800 dark:text-zinc-200">
+                <span className="font-mono font-extrabold text-slate-900 dark:text-white">
                   {matrixMetrics.maintenance}
                 </span>
               </span>
@@ -2106,10 +2106,10 @@ export default function AdminDashboard() {
                 {/* Floor Header Bar */}
                 <div className="flex flex-wrap items-center justify-between mb-2 px-0.5 gap-2 shrink-0">
                   <div className="flex items-center gap-1.5">
-                    <h3 className="font-extrabold text-sm sm:text-base text-slate-800 dark:text-zinc-200">
+                    <h3 className="font-extrabold text-base sm:text-lg text-slate-800 dark:text-zinc-200">
                       {fl}
                     </h3>
-                    <span className="text-xs font-bold text-blue-600 dark:text-blue-400">
+                    <span className="text-sm font-bold text-blue-600 dark:text-blue-400">
                       {countLabel}
                     </span>
                   </div>
@@ -2129,7 +2129,7 @@ export default function AdminDashboard() {
                     });
 
                     return (
-                      <div className="flex flex-wrap items-center gap-2.5 sm:gap-3 text-xs font-bold">
+                      <div className="flex flex-wrap items-center gap-2.5 sm:gap-3 text-xs sm:text-sm font-bold">
                         {fFull > 0 && (
                           <span className="text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
                             <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
@@ -2165,7 +2165,7 @@ export default function AdminDashboard() {
                     {floorRooms.length > 0 ? (
                       floorRooms.map((room) => renderMatrixRoomCard(room))
                     ) : (
-                      <div className="col-span-full h-[340px] flex items-center justify-center text-xs text-slate-600 dark:text-zinc-300 font-medium">
+                      <div className="col-span-full h-[340px] flex items-center justify-center text-sm text-slate-600 dark:text-zinc-300 font-medium">
                         No units on this floor.
                       </div>
                     )}
@@ -2196,14 +2196,14 @@ export default function AdminDashboard() {
               >
                 <div className="p-4 sm:p-5 border-b border-slate-200 dark:border-zinc-800 flex items-center justify-between bg-slate-50/70 dark:bg-zinc-900/60">
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-blue-600 text-white flex items-center justify-center font-mono font-bold text-sm shadow-md">
+                    <div className="w-10 h-10 rounded-xl bg-blue-600 text-white flex items-center justify-center font-mono font-bold text-base shadow-md">
                       {activeRoomModal.room_number}
                     </div>
                     <div>
-                      <h3 className="text-base font-bold text-slate-900 dark:text-white">
+                      <h3 className="text-lg font-bold text-slate-900 dark:text-white">
                         Room {activeRoomModal.room_number} Details
                       </h3>
-                      <p className="text-xs text-slate-600 dark:text-zinc-300 font-medium">
+                      <p className="text-sm text-slate-600 dark:text-zinc-300 font-medium">
                         {normalizeFloor(
                           activeRoomModal.floor,
                           activeRoomModal.room_number,
@@ -2226,28 +2226,28 @@ export default function AdminDashboard() {
                 <div className="p-4 sm:p-5 space-y-4">
                   <div className="grid grid-cols-3 gap-2.5 text-center">
                     <div className="p-3 rounded-xl bg-slate-50 dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800">
-                      <span className="text-[10px] uppercase font-bold text-slate-600 dark:text-zinc-300">
+                      <span className="text-xs uppercase font-bold text-slate-600 dark:text-zinc-300">
                         Capacity
                       </span>
-                      <div className="text-sm font-bold font-mono text-slate-900 dark:text-white mt-0.5">
+                      <div className="text-base font-bold font-mono text-slate-900 dark:text-white mt-0.5">
                         {activeRoomModal.current_occupants} /{" "}
                         {activeRoomModal.capacity} Beds
                       </div>
                     </div>
                     <div className="p-3 rounded-xl bg-slate-50 dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800">
-                      <span className="text-[10px] uppercase font-bold text-slate-600 dark:text-zinc-300">
+                      <span className="text-xs uppercase font-bold text-slate-600 dark:text-zinc-300">
                         Monthly Rent
                       </span>
-                      <div className="text-sm font-bold font-mono text-emerald-600 dark:text-emerald-400 mt-0.5">
+                      <div className="text-base font-bold font-mono text-emerald-600 dark:text-emerald-400 mt-0.5">
                         ₱{Number(activeRoomModal.price).toLocaleString()}
                       </div>
                     </div>
                     <div className="p-3 rounded-xl bg-slate-50 dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800">
-                      <span className="text-[10px] uppercase font-bold text-slate-600 dark:text-zinc-300">
+                      <span className="text-xs uppercase font-bold text-slate-600 dark:text-zinc-300">
                         Status
                       </span>
                       <div
-                        className={`text-xs font-bold mt-1 ${
+                        className={`text-sm font-bold mt-1 ${
                           getRoomEffectiveStatus(activeRoomModal) === "Full"
                             ? "text-emerald-600 dark:text-emerald-400"
                             : getRoomEffectiveStatus(activeRoomModal) ===
@@ -2263,7 +2263,7 @@ export default function AdminDashboard() {
                           ? "Full"
                           : getRoomEffectiveStatus(activeRoomModal) ===
                               "OccupiedWithBeds"
-                            ? `Occupied with ${getAvailableBedsCount(activeRoomModal)} ${getAvailableBedsCount(activeRoomModal) === 1 ? "available bed" : "available beds"}`
+                            ? `Occupied (${getAvailableBedsCount(activeRoomModal)} open)`
                             : getRoomEffectiveStatus(activeRoomModal) ===
                                 "Available"
                               ? "Vacant"
@@ -2273,7 +2273,7 @@ export default function AdminDashboard() {
                   </div>
 
                   <div>
-                    <h4 className="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-zinc-200 mb-2">
+                    <h4 className="text-sm font-bold uppercase tracking-wider text-slate-700 dark:text-zinc-200 mb-2">
                       Current Residents ({activeRoomModal.tenants?.length || 0})
                     </h4>
 
@@ -2283,13 +2283,13 @@ export default function AdminDashboard() {
                         {activeRoomModal.tenants.map((t) => (
                           <div
                             key={t.id}
-                            className="p-3 rounded-lg border border-slate-200 dark:border-zinc-800 bg-slate-50/50 dark:bg-zinc-900/40 flex items-center justify-between gap-3"
+                            className="p-3 rounded-xl border border-slate-200 dark:border-zinc-800 bg-slate-50/50 dark:bg-zinc-900/40 flex items-center justify-between gap-3"
                           >
                             <div>
-                              <p className="text-xs font-bold text-slate-900 dark:text-white">
+                              <p className="text-sm sm:text-base font-bold text-slate-900 dark:text-white">
                                 {t.name}
                               </p>
-                              <p className="text-[11px] text-slate-600 dark:text-zinc-300 font-medium">
+                              <p className="text-xs sm:text-sm text-slate-600 dark:text-zinc-300 font-medium">
                                 {t.email || "No email"}{" "}
                                 {t.phone
                                   ? `• ${formatPhoneNumber(t.phone)}`
@@ -2298,16 +2298,16 @@ export default function AdminDashboard() {
                             </div>
                             <Link
                               href={`/admin/tenants?search=${encodeURIComponent(t.name)}`}
-                              className="text-xs font-semibold text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-1 shrink-0"
+                              className="text-sm font-bold text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-1 shrink-0"
                             >
                               <span>Profile</span>
-                              <ExternalLink className="w-3 h-3" />
+                              <ExternalLink className="w-3.5 h-3.5" />
                             </Link>
                           </div>
                         ))}
                       </div>
                     ) : (
-                      <div className="py-6 text-center text-xs text-slate-600 dark:text-zinc-300 font-medium border border-dashed border-slate-200 dark:border-zinc-800 rounded-lg">
+                      <div className="py-6 text-center text-sm text-slate-600 dark:text-zinc-300 font-medium border border-dashed border-slate-200 dark:border-zinc-800 rounded-lg">
                         No tenants currently assigned to this room.
                       </div>
                     )}
@@ -2321,16 +2321,16 @@ export default function AdminDashboard() {
                         ? `/admin/rooms?room=${encodeURIComponent(activeRoomModal.room_number)}`
                         : "/admin/rooms"
                     }
-                    className="text-xs text-blue-600 dark:text-blue-400 font-semibold hover:underline flex items-center gap-1"
+                    className="text-sm text-blue-600 dark:text-blue-400 font-bold hover:underline flex items-center gap-1"
                   >
                     <span>View Room Details</span>
-                    <ChevronRight className="w-3.5 h-3.5" />
+                    <ChevronRight className="w-4 h-4" />
                   </Link>
 
                   <button
                     type="button"
                     onClick={() => setActiveRoomModal(null)}
-                    className="px-4 py-1.5 text-xs font-semibold rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-slate-700 dark:text-zinc-300 transition-colors cursor-pointer"
+                    className="px-4 py-2 text-sm font-bold rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-slate-700 dark:text-zinc-300 transition-colors cursor-pointer"
                   >
                     Close
                   </button>
