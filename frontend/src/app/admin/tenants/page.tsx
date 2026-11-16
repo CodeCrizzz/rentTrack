@@ -574,10 +574,10 @@ function TenantsContent() {
       {/* 1. TOP SECTION HEADER */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 shrink-0 pb-0.5">
         <div>
-          <h1 className="text-xl sm:text-2xl font-black text-slate-950 dark:text-white tracking-tight leading-none">
+          <h1 className="text-2xl sm:text-3xl font-black text-slate-950 dark:text-white tracking-tight leading-none">
             Manage Tenants
           </h1>
-          <p className="text-xs sm:text-[13px] text-slate-500 dark:text-zinc-400 font-medium mt-0.5">
+          <p className="text-sm sm:text-base text-slate-500 dark:text-zinc-400 font-medium mt-1">
             Real-time directory overview of active residents, pending applications, and lease statuses.
           </p>
         </div>
@@ -587,7 +587,7 @@ function TenantsContent() {
           {/* Generate Report Button */}
           <button
             onClick={() => setShowReportModal(true)}
-            className="px-3.5 py-1.5 rounded-lg bg-[#0055a5] hover:bg-[#00478f] text-white text-xs sm:text-[13px] font-bold shadow-xs flex items-center gap-1.5 transition-colors cursor-pointer"
+            className="px-4 py-2 rounded-xl bg-[#0055a5] hover:bg-[#00478f] text-white text-sm font-bold shadow-xs flex items-center gap-2 transition-colors cursor-pointer"
           >
             <BarChart3 className="w-4 h-4 text-white stroke-[2.2]" />
             <span>Generate Report</span>
@@ -612,18 +612,18 @@ function TenantsContent() {
             </div>
           </div>
           <div className="relative z-10">
-            <span className="text-xs font-bold text-slate-500 dark:text-zinc-400 block">
+            <span className="text-sm font-bold text-slate-500 dark:text-zinc-400 block uppercase tracking-wider">
               Total Active Tenants
             </span>
-            <div className="text-xl sm:text-2xl font-black text-slate-950 dark:text-white mt-0.5">
+            <div className="text-2xl sm:text-3xl font-black text-slate-950 dark:text-white mt-0.5">
               {metrics.activeCount}{" "}
-              <span className="text-xs font-semibold text-slate-400">
+              <span className="text-sm font-semibold text-slate-400">
                 / {metrics.totalBeds}
               </span>
             </div>
-            <div className="flex items-center gap-1.5 mt-1 text-xs font-bold">
+            <div className="flex items-center gap-1.5 mt-1.5 text-sm font-bold">
               <span className="flex items-center gap-1 text-emerald-600 dark:text-emerald-400">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                <span className="w-2 h-2 rounded-full bg-emerald-500" />
                 {metrics.activeCount}
               </span>
               <span className="text-emerald-600 dark:text-emerald-400 flex items-center">
@@ -634,8 +634,8 @@ function TenantsContent() {
               </span>
             </div>
           </div>
-          <div className="relative z-10 w-8.5 h-8.5 rounded-lg bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0 border border-blue-100 dark:border-blue-800/40">
-            <Users className="w-4 h-4 stroke-[2.2]" />
+          <div className="relative z-10 w-10 h-10 rounded-xl bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0 border border-blue-100 dark:border-blue-800/40">
+            <Users className="w-5 h-5 stroke-[2.2]" />
           </div>
         </div>
 
@@ -654,19 +654,19 @@ function TenantsContent() {
             </div>
           </div>
           <div className="relative z-10">
-            <span className="text-xs font-bold text-slate-500 dark:text-zinc-400 block">
+            <span className="text-sm font-bold text-slate-500 dark:text-zinc-400 block uppercase tracking-wider">
               Pending Applications
             </span>
-            <div className="text-xl sm:text-2xl font-black text-slate-950 dark:text-white mt-0.5">
+            <div className="text-2xl sm:text-3xl font-black text-slate-950 dark:text-white mt-0.5">
               {metrics.pendingCount}
             </div>
-            <div className="flex items-center gap-1.5 mt-1 text-xs font-bold text-amber-600 dark:text-amber-400">
+            <div className="flex items-center gap-1.5 mt-1.5 text-sm font-bold text-amber-600 dark:text-amber-400">
               <span>🔶</span>
               <span>{metrics.pendingCount} new this week</span>
             </div>
           </div>
-          <div className="relative z-10 w-8.5 h-8.5 rounded-lg bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0 border border-blue-100 dark:border-blue-800/40">
-            <FileText className="w-4 h-4 stroke-[2.2]" />
+          <div className="relative z-10 w-10 h-10 rounded-xl bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0 border border-blue-100 dark:border-blue-800/40">
+            <FileText className="w-5 h-5 stroke-[2.2]" />
           </div>
         </div>
 
@@ -685,19 +685,19 @@ function TenantsContent() {
             </div>
           </div>
           <div className="relative z-10">
-            <span className="text-xs font-bold text-slate-500 dark:text-zinc-400 block">
+            <span className="text-sm font-bold text-slate-500 dark:text-zinc-400 block uppercase tracking-wider">
               Payment Receipts
             </span>
-            <div className="text-xl sm:text-2xl font-black text-slate-950 dark:text-white mt-0.5">
+            <div className="text-2xl sm:text-3xl font-black text-slate-950 dark:text-white mt-0.5">
               {pendingPaymentsCount}
             </div>
-            <div className="flex items-center gap-1.5 mt-1 text-xs font-bold text-blue-600 dark:text-blue-400">
+            <div className="flex items-center gap-1.5 mt-1.5 text-sm font-bold text-blue-600 dark:text-blue-400">
               <span>🔷</span>
               <span>{pendingPaymentsCount} awaiting review</span>
             </div>
           </div>
-          <div className="relative z-10 w-8.5 h-8.5 rounded-lg bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0 border border-blue-100 dark:border-blue-800/40">
-            <Receipt className="w-4 h-4 stroke-[2.2]" />
+          <div className="relative z-10 w-10 h-10 rounded-xl bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0 border border-blue-100 dark:border-blue-800/40">
+            <Receipt className="w-5 h-5 stroke-[2.2]" />
           </div>
         </div>
 
@@ -716,19 +716,19 @@ function TenantsContent() {
             </div>
           </div>
           <div className="relative z-10">
-            <span className="text-xs font-bold text-slate-500 dark:text-zinc-400 block">
+            <span className="text-sm font-bold text-slate-500 dark:text-zinc-400 block uppercase tracking-wider">
               Moved Out (This Month)
             </span>
-            <div className="text-xl sm:text-2xl font-black text-slate-950 dark:text-white mt-0.5">
+            <div className="text-2xl sm:text-3xl font-black text-slate-950 dark:text-white mt-0.5">
               {metrics.movedOutCount}
             </div>
-            <div className="flex items-center gap-1.5 mt-1 text-xs sm:text-[13px] font-bold text-purple-600 dark:text-purple-400">
+            <div className="flex items-center gap-1.5 mt-1.5 text-sm font-bold text-purple-600 dark:text-purple-400">
               <span>🟣</span>
               <span>0 vs. last month</span>
             </div>
           </div>
-          <div className="relative z-10 w-9 h-9 rounded-lg bg-purple-50 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400 flex items-center justify-center shrink-0 border border-purple-100 dark:border-purple-800/40">
-            <UserMinus className="w-4 h-4 stroke-[2.2]" />
+          <div className="relative z-10 w-10 h-10 rounded-xl bg-purple-50 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400 flex items-center justify-center shrink-0 border border-purple-100 dark:border-purple-800/40">
+            <UserMinus className="w-5 h-5 stroke-[2.2]" />
           </div>
         </div>
       </div>
@@ -739,10 +739,10 @@ function TenantsContent() {
         <div className="flex-1 min-w-0 w-full h-full bg-white dark:bg-zinc-900 border border-slate-200/90 dark:border-zinc-800 rounded-2xl p-3.5 sm:p-4 shadow-2xs flex flex-col min-h-0 overflow-hidden">
           {/* Header */}
           <div>
-            <h2 className="text-sm sm:text-base font-extrabold text-slate-950 dark:text-white tracking-tight">
+            <h2 className="text-lg sm:text-xl font-extrabold text-slate-950 dark:text-white tracking-tight">
               Tenant Management
             </h2>
-            <p className="text-xs text-slate-500 dark:text-zinc-400 mt-0.5">
+            <p className="text-sm text-slate-500 dark:text-zinc-400 mt-0.5">
               View and manage all tenant accounts and their details.
             </p>
           </div>
@@ -756,7 +756,7 @@ function TenantsContent() {
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Search tenants..."
-                className="w-full pl-3.5 pr-8 py-1.5 text-xs sm:text-[13px] font-medium rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-slate-900 dark:text-white placeholder:text-slate-400 outline-none focus:ring-1 focus:ring-blue-500"
+                className="w-full pl-4 pr-9 py-2.5 text-sm sm:text-base font-medium rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-slate-900 dark:text-white placeholder:text-slate-400 outline-none focus:ring-1 focus:ring-blue-500"
               />
               {searchQuery ? (
                 <button
@@ -764,7 +764,7 @@ function TenantsContent() {
                   onClick={() => setSearchQuery("")}
                   className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-white cursor-pointer"
                 >
-                  <X className="w-3.5 h-3.5" />
+                  <X className="w-4 h-4" />
                 </button>
               ) : (
                 <Search className="w-4 h-4 text-slate-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
@@ -772,7 +772,7 @@ function TenantsContent() {
             </div>
 
             {/* Statuses Dropdown */}
-            <div className="w-36 sm:w-40">
+            <div className="w-36 sm:w-44">
               <CustomSelect
                 value={statusFilter}
                 onChange={(val) => {
@@ -783,35 +783,35 @@ function TenantsContent() {
                   else setActiveTab("all");
                 }}
                 options={["All Statuses", "Active", "Pending", "Moved Out"]}
-                className="w-full px-2.5 py-1.5 text-xs sm:text-[13px] font-semibold rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-slate-800 dark:text-zinc-200 outline-none"
+                className="w-full px-3 py-2 text-sm sm:text-base font-semibold rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-slate-800 dark:text-zinc-200 outline-none"
               />
             </div>
 
             {/* Room Types Dropdown */}
-            <div className="w-40 sm:w-44">
+            <div className="w-40 sm:w-48">
               <CustomSelect
                 value={roomTypeFilter}
                 onChange={(val) => setRoomTypeFilter(val)}
                 options={["All Room Types", ...uniqueRoomTypes]}
-                className="w-full px-2.5 py-1.5 text-xs sm:text-[13px] font-semibold rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-slate-800 dark:text-zinc-200 outline-none"
+                className="w-full px-3 py-2 text-sm sm:text-base font-semibold rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-slate-800 dark:text-zinc-200 outline-none"
               />
             </div>
 
             {/* All Floors Dropdown */}
-            <div className="w-36 sm:w-40">
+            <div className="w-36 sm:w-44">
               <CustomSelect
                 value={floorFilter}
                 onChange={(val) => setFloorFilter(val)}
                 options={["All Floors", ...uniqueFloors]}
                 maxListHeight="175px"
-                className="w-full px-2.5 py-1.5 text-xs sm:text-[13px] font-semibold rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-slate-800 dark:text-zinc-200 outline-none"
+                className="w-full px-3 py-2 text-sm sm:text-base font-semibold rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-slate-800 dark:text-zinc-200 outline-none"
               />
             </div>
 
             {/* + Add Tenant Button */}
             <button
               onClick={handleOpenAddModal}
-              className="px-3.5 py-1.5 rounded-lg bg-[#0055a5] hover:bg-[#00478f] text-white text-xs sm:text-[13px] font-bold flex items-center gap-1.5 shadow-xs transition-colors shrink-0 cursor-pointer"
+              className="px-4 py-2.5 rounded-xl bg-[#0055a5] hover:bg-[#00478f] text-white text-sm sm:text-base font-bold flex items-center gap-2 shadow-xs transition-colors shrink-0 cursor-pointer"
             >
               <Plus className="w-4 h-4 stroke-[2.5]" />
               <span>Add Tenant</span>
@@ -822,7 +822,7 @@ function TenantsContent() {
           <div className="flex items-center gap-6 border-b border-slate-200/80 dark:border-zinc-800 pt-1">
             <button
               onClick={() => handleTabChange("all")}
-              className={`flex items-center gap-2 pb-2 text-xs font-bold transition-all relative cursor-pointer ${
+              className={`flex items-center gap-2 pb-2.5 text-sm sm:text-base font-bold transition-all relative cursor-pointer ${
                 activeTab === "all"
                   ? "text-blue-600 dark:text-blue-400"
                   : "text-slate-500 hover:text-slate-800 dark:text-zinc-400 dark:hover:text-zinc-200"
@@ -830,7 +830,7 @@ function TenantsContent() {
             >
               <span>All Tenants</span>
               <span
-                className={`px-1.5 py-0.2 rounded-full text-xs font-bold ${
+                className={`px-2 py-0.5 rounded-full text-xs sm:text-sm font-bold ${
                   activeTab === "all"
                     ? "bg-blue-50 text-blue-600 dark:bg-blue-900/40 dark:text-blue-400 border border-blue-200/60 dark:border-blue-800/60"
                     : "bg-slate-100 text-slate-600 dark:bg-zinc-800 dark:text-zinc-400"
@@ -845,7 +845,7 @@ function TenantsContent() {
 
             <button
               onClick={() => handleTabChange("active")}
-              className={`flex items-center gap-2 pb-2 text-xs font-bold transition-all relative cursor-pointer ${
+              className={`flex items-center gap-2 pb-2.5 text-sm sm:text-base font-bold transition-all relative cursor-pointer ${
                 activeTab === "active"
                   ? "text-blue-600 dark:text-blue-400"
                   : "text-slate-500 hover:text-slate-800 dark:text-zinc-400 dark:hover:text-zinc-200"
@@ -853,7 +853,7 @@ function TenantsContent() {
             >
               <span>Active</span>
               <span
-                className={`px-1.5 py-0.2 rounded-full text-xs font-bold ${
+                className={`px-2 py-0.5 rounded-full text-xs sm:text-sm font-bold ${
                   activeTab === "active"
                     ? "bg-blue-50 text-blue-600 dark:bg-blue-900/40 dark:text-blue-400 border border-blue-200/60 dark:border-blue-800/60"
                     : "bg-slate-100 text-slate-600 dark:bg-zinc-800 dark:text-zinc-400"
@@ -868,7 +868,7 @@ function TenantsContent() {
 
             <button
               onClick={() => handleTabChange("pending")}
-              className={`flex items-center gap-2 pb-2 text-xs font-bold transition-all relative cursor-pointer ${
+              className={`flex items-center gap-2 pb-2.5 text-sm sm:text-base font-bold transition-all relative cursor-pointer ${
                 activeTab === "pending"
                   ? "text-blue-600 dark:text-blue-400"
                   : "text-slate-500 hover:text-slate-800 dark:text-zinc-400 dark:hover:text-zinc-200"
@@ -876,7 +876,7 @@ function TenantsContent() {
             >
               <span>Pending</span>
               <span
-                className={`px-1.5 py-0.2 rounded-full text-xs font-bold ${
+                className={`px-2 py-0.5 rounded-full text-xs sm:text-sm font-bold ${
                   activeTab === "pending"
                     ? "bg-blue-50 text-blue-600 dark:bg-blue-900/40 dark:text-blue-400 border border-blue-200/60 dark:border-blue-800/60"
                     : "bg-slate-100 text-slate-600 dark:bg-zinc-800 dark:text-zinc-400"
@@ -891,7 +891,7 @@ function TenantsContent() {
 
             <button
               onClick={() => handleTabChange("moved_out")}
-              className={`flex items-center gap-2 pb-2 text-xs font-bold transition-all relative cursor-pointer ${
+              className={`flex items-center gap-2 pb-2.5 text-sm sm:text-base font-bold transition-all relative cursor-pointer ${
                 activeTab === "moved_out"
                   ? "text-blue-600 dark:text-blue-400"
                   : "text-slate-500 hover:text-slate-800 dark:text-zinc-400 dark:hover:text-zinc-200"
@@ -899,7 +899,7 @@ function TenantsContent() {
             >
               <span>Moved Out</span>
               <span
-                className={`px-1.5 py-0.2 rounded-full text-xs font-bold ${
+                className={`px-2 py-0.5 rounded-full text-xs sm:text-sm font-bold ${
                   activeTab === "moved_out"
                     ? "bg-blue-50 text-blue-600 dark:bg-blue-900/40 dark:text-blue-400 border border-blue-200/60 dark:border-blue-800/60"
                     : "bg-slate-100 text-slate-600 dark:bg-zinc-800 dark:text-zinc-400"
@@ -915,31 +915,31 @@ function TenantsContent() {
 
           {/* Table Container: minimum 8 tenants visible in view, remaining scrollable with scrollbar */}
           <div className="flex-1 min-h-[384px] overflow-x-auto overflow-y-auto custom-scrollbar border border-slate-100 dark:border-zinc-800/80 rounded-xl mt-2">
-            <table className="w-full text-left text-xs sm:text-[13px] border-collapse">
+            <table className="w-full text-left text-sm sm:text-base border-collapse">
               <thead className="sticky top-0 bg-white dark:bg-zinc-900 z-10 border-b border-slate-200/80 dark:border-zinc-800 shadow-2xs">
-                <tr className="text-xs font-bold text-slate-700 dark:text-zinc-300">
-                  <th className="py-2.5 px-3.5 pl-4">Tenant</th>
-                  <th className="py-2.5 px-3.5">Room</th>
-                  <th className="py-2.5 px-3.5">Room Type</th>
-                  <th className="py-2.5 px-3.5">Rental Model</th>
-                  <th className="py-2.5 px-3.5">Status</th>
-                  <th className="py-2.5 px-3.5">Monthly Rent</th>
-                  <th className="py-2.5 px-3.5">Contact</th>
-                  <th className="py-2.5 px-3.5 text-right pr-4">Actions</th>
+                <tr className="text-sm font-bold text-slate-800 dark:text-zinc-200">
+                  <th className="py-3 px-3.5 pl-4">Tenant</th>
+                  <th className="py-3 px-3.5">Room</th>
+                  <th className="py-3 px-3.5">Room Type</th>
+                  <th className="py-3 px-3.5">Rental Model</th>
+                  <th className="py-3 px-3.5">Status</th>
+                  <th className="py-3 px-3.5">Monthly Rent</th>
+                  <th className="py-3 px-3.5">Contact</th>
+                  <th className="py-3 px-3.5 text-right pr-4">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 dark:divide-zinc-800/60">
                 {isLoading ? (
                   [...Array(8)].map((_, i) => (
                     <tr key={i} className="animate-pulse">
-                      <td colSpan={8} className="py-3 px-4">
-                        <div className="h-4.5 bg-slate-100 dark:bg-zinc-800 rounded w-full" />
+                      <td colSpan={8} className="py-3.5 px-4">
+                        <div className="h-5 bg-slate-100 dark:bg-zinc-800 rounded w-full" />
                       </td>
                     </tr>
                   ))
                 ) : filteredTenants.length === 0 ? (
                   <tr>
-                    <td colSpan={8} className="py-12 text-center text-xs sm:text-[13px] font-medium text-slate-400">
+                    <td colSpan={8} className="py-12 text-center text-sm sm:text-base font-medium text-slate-400">
                       No tenants found matching your filter criteria.
                     </td>
                   </tr>
@@ -958,8 +958,8 @@ function TenantsContent() {
                         }`}
                       >
                         {/* Tenant Identity */}
-                        <td className="py-2.5 px-3.5 pl-4">
-                          <div className="flex items-center gap-2.5">
+                        <td className="py-3 px-3.5 pl-4">
+                          <div className="flex items-center gap-3">
                             {(() => {
                               const photo = getTenantPhoto(tenant);
                               if (photo) {
@@ -967,13 +967,13 @@ function TenantsContent() {
                                   <img
                                     src={photo}
                                     alt={tenant.name}
-                                    className="w-8.5 h-8.5 rounded-full object-cover shrink-0 border border-slate-200 dark:border-zinc-700 shadow-2xs"
+                                    className="w-10 h-10 rounded-full object-cover shrink-0 border border-slate-200 dark:border-zinc-700 shadow-2xs"
                                   />
                                 );
                               }
                               return (
                                 <div
-                                  className={`w-8.5 h-8.5 rounded-full font-bold text-xs flex items-center justify-center shrink-0 shadow-2xs ${getAvatarBgClass(
+                                  className={`w-10 h-10 rounded-full font-bold text-sm flex items-center justify-center shrink-0 shadow-2xs ${getAvatarBgClass(
                                     tenant.name
                                   )}`}
                                 >
@@ -982,10 +982,10 @@ function TenantsContent() {
                               );
                             })()}
                             <div className="min-w-0">
-                              <span className="font-bold text-xs sm:text-[13px] text-slate-900 dark:text-white block truncate leading-tight">
+                              <span className="font-bold text-sm sm:text-base text-slate-900 dark:text-white block truncate leading-snug">
                                 {tenant.name}
                               </span>
-                              <span className="text-[11px] text-slate-500 dark:text-zinc-400 block truncate leading-tight mt-0.5">
+                              <span className="text-xs sm:text-[13px] text-slate-500 dark:text-zinc-400 block truncate leading-snug mt-0.5">
                                 {tenant.email}
                               </span>
                             </div>
@@ -993,59 +993,59 @@ function TenantsContent() {
                         </td>
 
                         {/* Room */}
-                        <td className="py-2.5 px-3.5 text-xs sm:text-[13px] font-bold text-slate-900 dark:text-zinc-100">
+                        <td className="py-3 px-3.5 text-sm sm:text-base font-bold text-slate-900 dark:text-zinc-100">
                           {tenant.room_number ? tenant.room_number : "—"}
                         </td>
 
                         {/* Room Type */}
-                        <td className="py-2.5 px-3.5 text-xs sm:text-[13px] font-medium text-slate-700 dark:text-zinc-300">
+                        <td className="py-3 px-3.5 text-sm sm:text-[15px] font-medium text-slate-700 dark:text-zinc-300">
                           {getTenantRoomType(tenant)}
                         </td>
 
                         {/* Rental Model */}
-                        <td className="py-2.5 px-3.5 text-xs sm:text-[13px] font-medium text-slate-700 dark:text-zinc-300">
+                        <td className="py-3 px-3.5 text-sm sm:text-[15px] font-medium text-slate-700 dark:text-zinc-300">
                           {getTenantRentalModel(tenant)}
                         </td>
 
                         {/* Status Badge */}
-                        <td className="py-2.5 px-3.5">
+                        <td className="py-3 px-3.5">
                           {tenant.status === "Active" && (
-                            <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300 border border-emerald-200/70 dark:border-emerald-800/70 inline-flex items-center gap-1.5">
-                              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                            <span className="px-3 py-1 rounded-full text-xs sm:text-sm font-bold bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300 border border-emerald-200/70 dark:border-emerald-800/70 inline-flex items-center gap-1.5">
+                              <span className="w-2 h-2 rounded-full bg-emerald-500" />
                               Active
                             </span>
                           )}
                           {tenant.status === "Pending" && (
-                            <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-50 text-amber-700 dark:bg-amber-950/60 dark:text-amber-300 border border-amber-200/70 dark:border-amber-800/70 inline-flex items-center gap-1.5">
-                              <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
+                            <span className="px-3 py-1 rounded-full text-xs sm:text-sm font-bold bg-amber-50 text-amber-700 dark:bg-amber-950/60 dark:text-amber-300 border border-amber-200/70 dark:border-amber-800/70 inline-flex items-center gap-1.5">
+                              <span className="w-2 h-2 rounded-full bg-amber-500" />
                               Pending
                             </span>
                           )}
                           {(tenant.status === "Moved Out" || tenant.status === "Inactive") && (
-                            <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-slate-100 text-slate-700 dark:bg-zinc-800 dark:text-zinc-300 border border-slate-200 dark:border-zinc-700 inline-flex items-center gap-1.5">
-                              <DoorOpen className="w-3.5 h-3.5" />
+                            <span className="px-3 py-1 rounded-full text-xs sm:text-sm font-bold bg-slate-100 text-slate-700 dark:bg-zinc-800 dark:text-zinc-300 border border-slate-200 dark:border-zinc-700 inline-flex items-center gap-1.5">
+                              <DoorOpen className="w-4 h-4" />
                               Moved Out
                             </span>
                           )}
                           {tenant.status === "Declined" && (
-                            <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-rose-50 text-rose-700 dark:bg-rose-950/60 dark:text-rose-300 border border-rose-200/70 inline-flex items-center gap-1.5">
+                            <span className="px-3 py-1 rounded-full text-xs sm:text-sm font-bold bg-rose-50 text-rose-700 dark:bg-rose-950/60 dark:text-rose-300 border border-rose-200/70 inline-flex items-center gap-1.5">
                               Declined
                             </span>
                           )}
                         </td>
 
                         {/* Monthly Rent */}
-                        <td className="py-2.5 px-3.5 font-mono text-xs sm:text-sm font-bold text-slate-900 dark:text-white">
+                        <td className="py-3 px-3.5 font-mono text-sm sm:text-base font-bold text-slate-900 dark:text-white">
                           ₱ {Number(tenant.monthly_rent || 0).toLocaleString()}
                         </td>
 
                         {/* Contact */}
-                        <td className="py-2.5 px-3.5 font-mono text-xs sm:text-[13px] font-medium text-slate-700 dark:text-zinc-300">
+                        <td className="py-3 px-3.5 font-mono text-sm sm:text-base font-medium text-slate-700 dark:text-zinc-300">
                           {formatPhoneNumber(tenant.phone)}
                         </td>
 
                         {/* Actions */}
-                        <td className="py-2.5 px-3.5 text-right relative pr-4">
+                        <td className="py-3 px-3.5 text-right relative pr-4">
                           <button
                             type="button"
                             onClick={(e) => {
@@ -1204,32 +1204,32 @@ function TenantsContent() {
                 );
               })()}
               <div className="min-w-0 flex-1">
-                <div className="flex items-center gap-1.5">
-                  <h4 className="font-extrabold text-sm sm:text-base text-slate-950 dark:text-white truncate">
+                <div className="flex items-center gap-2">
+                  <h4 className="font-extrabold text-base sm:text-lg text-slate-950 dark:text-white truncate">
                     {selectedTenant.name}
                   </h4>
                   {selectedTenant.status === "Active" && (
-                    <span className="px-2 py-0.2 rounded-full text-xs font-bold bg-emerald-50 text-emerald-600 dark:bg-emerald-950/50 dark:text-emerald-400 border border-emerald-200/60 inline-flex items-center gap-1">
-                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                    <span className="px-2.5 py-0.5 rounded-full text-xs sm:text-sm font-bold bg-emerald-50 text-emerald-600 dark:bg-emerald-950/50 dark:text-emerald-400 border border-emerald-200/60 inline-flex items-center gap-1.5">
+                      <span className="w-2 h-2 rounded-full bg-emerald-500" />
                       Active
                     </span>
                   )}
                   {selectedTenant.status === "Pending" && (
-                    <span className="px-2 py-0.2 rounded-full text-xs font-bold bg-amber-50 text-amber-600 dark:bg-amber-950/50 dark:text-amber-400 border border-amber-200/60 inline-flex items-center gap-1">
-                      <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
+                    <span className="px-2.5 py-0.5 rounded-full text-xs sm:text-sm font-bold bg-amber-50 text-amber-600 dark:bg-amber-950/50 dark:text-amber-400 border border-amber-200/60 inline-flex items-center gap-1.5">
+                      <span className="w-2 h-2 rounded-full bg-amber-500" />
                       Pending
                     </span>
                   )}
                   {(selectedTenant.status === "Moved Out" || selectedTenant.status === "Inactive") && (
-                    <span className="px-2 py-0.2 rounded-full text-xs font-bold bg-slate-100 text-slate-600 dark:bg-zinc-800 dark:text-zinc-400 border border-slate-200 inline-flex items-center gap-1">
+                    <span className="px-2.5 py-0.5 rounded-full text-xs sm:text-sm font-bold bg-slate-100 text-slate-600 dark:bg-zinc-800 dark:text-zinc-400 border border-slate-200 inline-flex items-center gap-1.5">
                       Moved Out
                     </span>
                   )}
                 </div>
-                <p className="text-xs text-slate-500 dark:text-zinc-400 truncate mt-0.5">
+                <p className="text-sm text-slate-500 dark:text-zinc-400 truncate mt-0.5">
                   {selectedTenant.email}
                 </p>
-                <p className="text-xs font-mono font-medium text-slate-600 dark:text-zinc-300 truncate mt-0.5">
+                <p className="text-sm font-mono font-medium text-slate-600 dark:text-zinc-300 truncate mt-0.5">
                   📞 {formatPhoneNumber(selectedTenant.phone, "+63 999 123 7654")}
                 </p>
               </div>
@@ -1237,25 +1237,25 @@ function TenantsContent() {
 
             {/* 3 Metric Tiles (Room, Since, Tenant ID) */}
             <div className="grid grid-cols-3 gap-2">
-              <div className="p-2 rounded-xl border border-slate-200/90 dark:border-zinc-800 bg-slate-50/50 dark:bg-zinc-900/40 flex items-start gap-1.5">
+              <div className="p-2.5 rounded-xl border border-slate-200/90 dark:border-zinc-800 bg-slate-50/50 dark:bg-zinc-900/40 flex items-start gap-2">
                 <DoorOpen className="w-4 h-4 text-blue-600 dark:text-blue-400 shrink-0 mt-0.5" />
                 <div className="min-w-0">
-                  <span className="text-xs font-bold text-slate-900 dark:text-white block truncate leading-tight">
+                  <span className="text-sm font-bold text-slate-900 dark:text-white block truncate leading-tight">
                     Room {selectedTenant.room_number || "101"}
                   </span>
-                  <span className="text-[11px] text-slate-500 dark:text-zinc-400 block truncate mt-0.5">
+                  <span className="text-xs sm:text-sm text-slate-500 dark:text-zinc-400 block truncate mt-0.5">
                     {getTenantRoomType(selectedTenant)}
                   </span>
                 </div>
               </div>
 
-              <div className="p-2 rounded-xl border border-slate-200/90 dark:border-zinc-800 bg-slate-50/50 dark:bg-zinc-900/40 flex items-start gap-1.5">
+              <div className="p-2.5 rounded-xl border border-slate-200/90 dark:border-zinc-800 bg-slate-50/50 dark:bg-zinc-900/40 flex items-start gap-2">
                 <Calendar className="w-4 h-4 text-blue-600 dark:text-blue-400 shrink-0 mt-0.5" />
                 <div className="min-w-0">
-                  <span className="text-xs font-bold text-slate-900 dark:text-white block truncate leading-tight">
+                  <span className="text-sm font-bold text-slate-900 dark:text-white block truncate leading-tight">
                     Since
                   </span>
-                  <span className="text-[11px] text-slate-500 dark:text-zinc-400 block truncate mt-0.5 font-mono">
+                  <span className="text-xs sm:text-sm text-slate-500 dark:text-zinc-400 block truncate mt-0.5 font-mono">
                     {selectedTenant.date_moved_in
                       ? new Date(selectedTenant.date_moved_in).toLocaleDateString("en-US", {
                           month: "short",
@@ -1267,13 +1267,13 @@ function TenantsContent() {
                 </div>
               </div>
 
-              <div className="p-2 rounded-xl border border-slate-200/90 dark:border-zinc-800 bg-slate-50/50 dark:bg-zinc-900/40 flex items-start gap-1.5">
+              <div className="p-2.5 rounded-xl border border-slate-200/90 dark:border-zinc-800 bg-slate-50/50 dark:bg-zinc-900/40 flex items-start gap-2">
                 <CreditCard className="w-4 h-4 text-blue-600 dark:text-blue-400 shrink-0 mt-0.5" />
                 <div className="min-w-0">
-                  <span className="text-xs font-bold text-slate-900 dark:text-white block truncate leading-tight">
+                  <span className="text-sm font-bold text-slate-900 dark:text-white block truncate leading-tight">
                     Tenant ID
                   </span>
-                  <span className="text-[11px] text-slate-500 dark:text-zinc-400 block truncate mt-0.5 font-mono font-bold">
+                  <span className="text-xs sm:text-sm text-slate-500 dark:text-zinc-400 block truncate mt-0.5 font-mono font-bold">
                     TR-{String(selectedTenant.id).padStart(4, "0")}
                   </span>
                 </div>
@@ -1281,11 +1281,11 @@ function TenantsContent() {
             </div>
 
             {/* Room & Billing Information Section */}
-            <div className="space-y-2 pt-1.5 border-t border-slate-100 dark:border-zinc-800/80">
-              <h5 className="text-xs font-bold text-slate-900 dark:text-white uppercase tracking-wider">
+            <div className="space-y-2.5 pt-2 border-t border-slate-100 dark:border-zinc-800/80">
+              <h5 className="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-wider">
                 Room & Billing Information
               </h5>
-              <div className="space-y-1.5 text-xs sm:text-[13px]">
+              <div className="space-y-2 text-sm sm:text-base">
                 <div className="flex items-center justify-between text-slate-600 dark:text-zinc-400">
                   <span>Rental Model</span>
                   <span className="font-bold text-slate-900 dark:text-white">
@@ -1294,7 +1294,7 @@ function TenantsContent() {
                 </div>
                 <div className="flex items-center justify-between text-slate-600 dark:text-zinc-400">
                   <span>Monthly Rent</span>
-                  <span className="font-mono font-black text-slate-900 dark:text-white text-xs sm:text-sm">
+                  <span className="font-mono font-black text-slate-900 dark:text-white text-sm sm:text-base">
                     ₱ {Number(selectedTenant.monthly_rent || 0).toLocaleString()}
                   </span>
                 </div>
@@ -1312,9 +1312,9 @@ function TenantsContent() {
                 </div>
                 <div className="flex items-center justify-between text-slate-600 dark:text-zinc-400">
                   <span>Current Balance</span>
-                  <div className="flex items-center gap-1.5">
+                  <div className="flex items-center gap-2">
                     <span
-                      className={`font-mono font-black text-xs sm:text-sm ${
+                      className={`font-mono font-black text-sm sm:text-base ${
                         (Number(selectedTenant.balance) || 0) > 0
                           ? "text-rose-600 dark:text-rose-400"
                           : "text-slate-900 dark:text-white"
@@ -1323,11 +1323,11 @@ function TenantsContent() {
                       ₱ {Number(selectedTenant.balance || 0).toLocaleString()}
                     </span>
                     {(Number(selectedTenant.balance) || 0) <= 0 ? (
-                      <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400">
+                      <span className="text-xs sm:text-sm font-bold text-emerald-600 dark:text-emerald-400">
                         Paid
                       </span>
                     ) : (
-                      <span className="text-xs font-bold text-rose-600 dark:text-rose-400">
+                      <span className="text-xs sm:text-sm font-bold text-rose-600 dark:text-rose-400">
                         Overdue
                       </span>
                     )}
@@ -1337,14 +1337,14 @@ function TenantsContent() {
             </div>
 
             {/* Emergency Contact Section */}
-            <div className="space-y-2 pt-1.5 border-t border-slate-100 dark:border-zinc-800/80">
-              <h5 className="text-xs font-bold text-slate-900 dark:text-white uppercase tracking-wider">
+            <div className="space-y-2.5 pt-2 border-t border-slate-100 dark:border-zinc-800/80">
+              <h5 className="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-wider">
                 Emergency Contact
               </h5>
               {(() => {
                 const ec = parseEmergencyContact(selectedTenant);
                 return (
-                  <div className="flex items-start justify-between text-xs sm:text-[13px]">
+                  <div className="flex items-start justify-between text-sm sm:text-base">
                     <span className="text-slate-500 dark:text-zinc-400 font-medium">
                       {ec.relation}
                     </span>
@@ -1352,7 +1352,7 @@ function TenantsContent() {
                       <span className="font-bold text-slate-900 dark:text-white block">
                         {ec.name}
                       </span>
-                      <span className="text-xs text-slate-500 dark:text-zinc-400 font-mono block mt-0.5">
+                      <span className="text-xs sm:text-sm text-slate-500 dark:text-zinc-400 font-mono block mt-0.5">
                         📞 {ec.phone}
                       </span>
                     </div>
@@ -1363,15 +1363,15 @@ function TenantsContent() {
 
 
             {/* Quick Actions Section */}
-            <div className="space-y-2 pt-1.5 border-t border-slate-100 dark:border-zinc-800/80">
-              <h5 className="text-xs font-bold text-slate-900 dark:text-white uppercase tracking-wider">
+            <div className="space-y-2.5 pt-2 border-t border-slate-100 dark:border-zinc-800/80">
+              <h5 className="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-wider">
                 Quick Actions
               </h5>
-              <div className="space-y-1.5">
+              <div className="space-y-2">
                 {/* 1. Solid Blue Button: View Tenant Profile */}
                 <button
                   onClick={() => setIsViewModalOpen(true)}
-                  className="w-full py-2 rounded-xl bg-[#0055a5] hover:bg-[#00478f] text-white text-xs sm:text-[13px] font-bold shadow-xs flex items-center justify-center gap-2 transition-colors cursor-pointer"
+                  className="w-full py-2.5 rounded-xl bg-[#0055a5] hover:bg-[#00478f] text-white text-sm font-bold shadow-xs flex items-center justify-center gap-2 transition-colors cursor-pointer"
                 >
                   <User className="w-4 h-4 stroke-[2.2]" />
                   <span>View Tenant Profile</span>
@@ -1380,7 +1380,7 @@ function TenantsContent() {
                 {/* 2. Outlined Button: Send Message */}
                 <button
                   onClick={() => router.push(`/admin/chat?tenant_id=${selectedTenant.id}`)}
-                  className="w-full py-2 rounded-xl bg-white dark:bg-zinc-900 border border-slate-200/90 dark:border-zinc-800 hover:bg-slate-50 dark:hover:bg-zinc-800 text-slate-700 dark:text-zinc-200 text-xs sm:text-[13px] font-bold shadow-2xs flex items-center justify-center gap-2 transition-colors cursor-pointer"
+                  className="w-full py-2.5 rounded-xl bg-white dark:bg-zinc-900 border border-slate-200/90 dark:border-zinc-800 hover:bg-slate-50 dark:hover:bg-zinc-800 text-slate-700 dark:text-zinc-200 text-sm font-bold shadow-2xs flex items-center justify-center gap-2 transition-colors cursor-pointer"
                 >
                   <MessageSquare className="w-4 h-4 text-blue-600 stroke-[2.2]" />
                   <span>Send Message</span>
@@ -1389,7 +1389,7 @@ function TenantsContent() {
                 {/* 3. Outlined Button: Issue Bill */}
                 <button
                   onClick={() => router.push(`/admin/billing?action=create&tenant_id=${selectedTenant.id}`)}
-                  className="w-full py-2 rounded-xl bg-white dark:bg-zinc-900 border border-slate-200/90 dark:border-zinc-800 hover:bg-slate-50 dark:hover:bg-zinc-800 text-slate-700 dark:text-zinc-200 text-xs sm:text-[13px] font-bold shadow-2xs flex items-center justify-center gap-2 transition-colors cursor-pointer"
+                  className="w-full py-2.5 rounded-xl bg-white dark:bg-zinc-900 border border-slate-200/90 dark:border-zinc-800 hover:bg-slate-50 dark:hover:bg-zinc-800 text-slate-700 dark:text-zinc-200 text-sm font-bold shadow-2xs flex items-center justify-center gap-2 transition-colors cursor-pointer"
                 >
                   <Receipt className="w-4 h-4 text-blue-600 stroke-[2.2]" />
                   <span>Issue Bill</span>
@@ -1411,12 +1411,12 @@ function TenantsContent() {
               exit={{ scale: 0.96, opacity: 0 }}
               className="bg-white dark:bg-zinc-900 rounded-2xl w-full max-w-xl overflow-hidden shadow-2xl border border-slate-200 dark:border-zinc-800 max-h-[90vh] flex flex-col"
             >
-              <div className="px-5 py-3.5 border-b border-slate-200 dark:border-zinc-800 flex justify-between items-center shrink-0">
+              <div className="px-5 py-4 border-b border-slate-200 dark:border-zinc-800 flex justify-between items-center shrink-0">
                 <div>
-                  <h3 className="text-sm sm:text-base font-bold text-slate-900 dark:text-white">
+                  <h3 className="text-lg sm:text-xl font-bold text-slate-900 dark:text-white">
                     {editingTenant ? `Edit Resident: ${editingTenant.name}` : "Register New Resident"}
                   </h3>
-                  <p className="text-xs text-slate-500 dark:text-zinc-400 mt-0.5">
+                  <p className="text-sm text-slate-500 dark:text-zinc-400 mt-0.5">
                     Configure resident profile, room assignment, and lease terms.
                   </p>
                 </div>
@@ -1428,17 +1428,17 @@ function TenantsContent() {
                 </button>
               </div>
 
-              <form onSubmit={handleSubmitTenant} className="p-5 overflow-y-auto custom-scrollbar space-y-3.5">
+              <form onSubmit={handleSubmitTenant} className="p-5 overflow-y-auto custom-scrollbar space-y-4">
                 {error && (
-                  <div className="p-2.5 rounded-xl bg-rose-50 text-rose-600 text-xs sm:text-[13px] font-semibold flex items-center gap-2 border border-rose-200">
-                    <AlertTriangle className="w-4 h-4 shrink-0" />
+                  <div className="p-3 rounded-xl bg-rose-50 text-rose-600 text-sm sm:text-base font-bold flex items-center gap-2 border border-rose-200">
+                    <AlertTriangle className="w-5 h-5 shrink-0" />
                     <span>{error}</span>
                   </div>
                 )}
 
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="space-y-1">
-                    <label className="text-xs font-bold text-slate-700 dark:text-zinc-300 uppercase tracking-wide">
+                <div className="grid grid-cols-2 gap-3.5">
+                  <div className="space-y-1.5">
+                    <label className="text-sm font-bold text-slate-700 dark:text-zinc-300 uppercase tracking-wide">
                       Full Name *
                     </label>
                     <input
@@ -1447,12 +1447,12 @@ function TenantsContent() {
                       value={formData.name}
                       onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                       placeholder="e.g. Juan Dela Cruz"
-                      className="w-full px-3 py-2 text-xs sm:text-[13px] rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-slate-900 dark:text-white outline-none focus:ring-1 focus:ring-blue-500"
+                      className="w-full px-3.5 py-2.5 text-sm sm:text-base rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-slate-900 dark:text-white outline-none focus:ring-1 focus:ring-blue-500"
                     />
                   </div>
 
-                  <div className="space-y-1">
-                    <label className="text-xs font-bold text-slate-700 dark:text-zinc-300 uppercase tracking-wide">
+                  <div className="space-y-1.5">
+                    <label className="text-sm font-bold text-slate-700 dark:text-zinc-300 uppercase tracking-wide">
                       Email Address *
                     </label>
                     <input
@@ -1461,14 +1461,14 @@ function TenantsContent() {
                       value={formData.email}
                       onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                       placeholder="e.g. juan@email.com"
-                      className="w-full px-3 py-2 text-xs sm:text-[13px] rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-slate-900 dark:text-white outline-none focus:ring-1 focus:ring-blue-500"
+                      className="w-full px-3.5 py-2.5 text-sm sm:text-base rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-slate-900 dark:text-white outline-none focus:ring-1 focus:ring-blue-500"
                     />
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="space-y-1">
-                    <label className="text-xs font-bold text-slate-700 dark:text-zinc-300 uppercase tracking-wide">
+                <div className="grid grid-cols-2 gap-3.5">
+                  <div className="space-y-1.5">
+                    <label className="text-sm font-bold text-slate-700 dark:text-zinc-300 uppercase tracking-wide">
                       Phone Number *
                     </label>
                     <input
@@ -1479,13 +1479,13 @@ function TenantsContent() {
                         setFormData({ ...formData, phone: formatPhoneInput(e.target.value) })
                       }
                       placeholder="+63 999 123 7654"
-                      className="w-full px-3 py-2 text-xs sm:text-[13px] rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-slate-900 dark:text-white outline-none focus:ring-1 focus:ring-blue-500 font-mono"
+                      className="w-full px-3.5 py-2.5 text-sm sm:text-base rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-slate-900 dark:text-white outline-none focus:ring-1 focus:ring-blue-500 font-mono"
                     />
                   </div>
 
                   {!editingTenant && (
-                    <div className="space-y-1">
-                      <label className="text-xs font-bold text-slate-700 dark:text-zinc-300 uppercase tracking-wide">
+                    <div className="space-y-1.5">
+                      <label className="text-sm font-bold text-slate-700 dark:text-zinc-300 uppercase tracking-wide">
                         Account Password *
                       </label>
                       <input
@@ -1494,14 +1494,14 @@ function TenantsContent() {
                         value={formData.password}
                         onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                         placeholder="••••••••"
-                        className="w-full px-3 py-2 text-xs sm:text-[13px] rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-slate-900 dark:text-white outline-none focus:ring-1 focus:ring-blue-500"
+                        className="w-full px-3.5 py-2.5 text-sm sm:text-base rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-slate-900 dark:text-white outline-none focus:ring-1 focus:ring-blue-500"
                       />
                     </div>
                   )}
 
                   {editingTenant && (
-                    <div className="space-y-1">
-                      <label className="text-xs font-bold text-slate-700 dark:text-zinc-300 uppercase tracking-wide">
+                    <div className="space-y-1.5">
+                      <label className="text-sm font-bold text-slate-700 dark:text-zinc-300 uppercase tracking-wide">
                         Account Status
                       </label>
                       <CustomSelect
@@ -1513,15 +1513,15 @@ function TenantsContent() {
                           { value: "Moved Out", label: "Moved Out", dotColor: "bg-slate-400" },
                           { value: "Declined", label: "Declined", dotColor: "bg-rose-500" },
                         ]}
-                        className="w-full px-3 py-2 text-xs sm:text-[13px] rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-slate-900 dark:text-white outline-none"
+                        className="w-full px-3.5 py-2.5 text-sm sm:text-base rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-slate-900 dark:text-white outline-none"
                       />
                     </div>
                   )}
                 </div>
 
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="space-y-1">
-                    <label className="text-xs font-bold text-slate-700 dark:text-zinc-300 uppercase tracking-wide">
+                <div className="grid grid-cols-2 gap-3.5">
+                  <div className="space-y-1.5">
+                    <label className="text-sm font-bold text-slate-700 dark:text-zinc-300 uppercase tracking-wide">
                       Assigned Room
                     </label>
                     <CustomSelect
@@ -1534,12 +1534,12 @@ function TenantsContent() {
                           label: `Room ${r.room_number} (${r.type}) — ₱${Number(r.price).toLocaleString()}`,
                         })),
                       ]}
-                      className="w-full px-3 py-2 text-xs sm:text-[13px] rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-slate-900 dark:text-white outline-none"
+                      className="w-full px-3.5 py-2.5 text-sm sm:text-base rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-slate-900 dark:text-white outline-none"
                     />
                   </div>
 
-                  <div className="space-y-1">
-                    <label className="text-xs font-bold text-slate-700 dark:text-zinc-300 uppercase tracking-wide">
+                  <div className="space-y-1.5">
+                    <label className="text-sm font-bold text-slate-700 dark:text-zinc-300 uppercase tracking-wide">
                       Monthly Rent (₱)
                     </label>
                     <input
@@ -1547,49 +1547,49 @@ function TenantsContent() {
                       value={formData.monthly_rent}
                       onChange={(e) => setFormData({ ...formData, monthly_rent: e.target.value })}
                       placeholder="e.g. 4500"
-                      className="w-full px-3 py-2 text-xs sm:text-[13px] rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-slate-900 dark:text-white outline-none font-mono"
+                      className="w-full px-3.5 py-2.5 text-sm sm:text-base rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-slate-900 dark:text-white outline-none font-mono"
                     />
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="space-y-1">
-                    <label className="text-xs font-bold text-slate-700 dark:text-zinc-300 uppercase tracking-wide">
+                <div className="grid grid-cols-2 gap-3.5">
+                  <div className="space-y-1.5">
+                    <label className="text-sm font-bold text-slate-700 dark:text-zinc-300 uppercase tracking-wide">
                       Move-In Date
                     </label>
                     <input
                       type="date"
                       value={formData.date_moved_in}
                       onChange={(e) => setFormData({ ...formData, date_moved_in: e.target.value })}
-                      className="w-full px-3 py-2 text-xs sm:text-[13px] rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-slate-900 dark:text-white outline-none"
+                      className="w-full px-3.5 py-2.5 text-sm sm:text-base rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-slate-900 dark:text-white outline-none"
                     />
                   </div>
 
-                  <div className="space-y-1">
-                    <label className="text-xs font-bold text-slate-700 dark:text-zinc-300 uppercase tracking-wide">
+                  <div className="space-y-1.5">
+                    <label className="text-sm font-bold text-slate-700 dark:text-zinc-300 uppercase tracking-wide">
                       Gender
                     </label>
                     <CustomSelect
                       value={formData.gender}
                       onChange={(val) => setFormData({ ...formData, gender: val })}
                       options={["Male", "Female", "Other"]}
-                      className="w-full px-3 py-2 text-xs sm:text-[13px] rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-slate-900 dark:text-white outline-none"
+                      className="w-full px-3.5 py-2.5 text-sm sm:text-base rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-slate-900 dark:text-white outline-none"
                     />
                   </div>
                 </div>
 
-                <div className="pt-3 border-t border-slate-200 dark:border-zinc-800 flex justify-end gap-2">
+                <div className="pt-3.5 border-t border-slate-200 dark:border-zinc-800 flex justify-end gap-2.5">
                   <button
                     type="button"
                     onClick={() => setIsModalOpen(false)}
-                    className="px-3.5 py-2 text-xs sm:text-[13px] font-bold rounded-xl border border-slate-200 dark:border-zinc-800 hover:bg-slate-50 dark:hover:bg-zinc-800 text-slate-700 dark:text-zinc-300 cursor-pointer"
+                    className="px-4 py-2.5 text-sm sm:text-base font-bold rounded-xl border border-slate-200 dark:border-zinc-800 hover:bg-slate-50 dark:hover:bg-zinc-800 text-slate-700 dark:text-zinc-300 cursor-pointer"
                   >
                     Cancel
                   </button>
                   <button
                     type="submit"
                     disabled={isSubmitting}
-                    className="px-4.5 py-2 text-xs sm:text-[13px] font-bold rounded-xl bg-[#0055a5] hover:bg-[#00478f] text-white flex items-center gap-1.5 shadow-xs cursor-pointer disabled:opacity-50"
+                    className="px-5 py-2.5 text-sm sm:text-base font-bold rounded-xl bg-[#0055a5] hover:bg-[#00478f] text-white flex items-center gap-2 shadow-xs cursor-pointer disabled:opacity-50"
                   >
                     {isSubmitting ? (
                       <RefreshCw className="w-4 h-4 animate-spin" />
@@ -1615,16 +1615,16 @@ function TenantsContent() {
               exit={{ scale: 0.96, opacity: 0 }}
               className="bg-white dark:bg-zinc-900 rounded-2xl w-full max-w-2xl overflow-hidden shadow-2xl border border-slate-200 dark:border-zinc-800 max-h-[90vh] flex flex-col"
             >
-              <div className="px-5 py-3.5 border-b border-slate-200 dark:border-zinc-800 flex justify-between items-center shrink-0">
-                <div className="flex items-center gap-2.5">
-                  <div className="w-9 h-9 rounded-full bg-blue-50 dark:bg-blue-900/40 text-blue-600 font-extrabold flex items-center justify-center text-xs sm:text-sm">
+              <div className="px-5 py-4 border-b border-slate-200 dark:border-zinc-800 flex justify-between items-center shrink-0">
+                <div className="flex items-center gap-3">
+                  <div className="w-11 h-11 rounded-full bg-blue-50 dark:bg-blue-900/40 text-blue-600 font-extrabold flex items-center justify-center text-sm sm:text-base">
                     {getInitials(selectedTenant.name)}
                   </div>
                   <div>
-                    <h3 className="text-sm sm:text-base font-bold text-slate-900 dark:text-white">
+                    <h3 className="text-lg sm:text-xl font-bold text-slate-900 dark:text-white">
                       {selectedTenant.name}
                     </h3>
-                    <p className="text-xs text-slate-500 font-mono">
+                    <p className="text-sm text-slate-500 font-mono mt-0.5">
                       Tenant ID: TR-{String(selectedTenant.id).padStart(4, "0")} • Room {selectedTenant.room_number || "Unassigned"}
                     </p>
                   </div>
@@ -1633,95 +1633,95 @@ function TenantsContent() {
                   onClick={() => setIsViewModalOpen(false)}
                   className="p-1 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-white cursor-pointer"
                 >
-                  <X className="w-4 h-4" />
+                  <X className="w-5 h-5" />
                 </button>
               </div>
 
-              <div className="p-5 overflow-y-auto custom-scrollbar space-y-4 text-xs sm:text-[13px]">
+              <div className="p-5 overflow-y-auto custom-scrollbar space-y-4 text-sm sm:text-base">
                 {/* 3 Top Financial Stats */}
                 <div className="grid grid-cols-3 gap-2.5">
-                  <div className="p-3 rounded-xl border border-slate-200 dark:border-zinc-800 bg-slate-50 dark:bg-zinc-900/40">
-                    <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block">Monthly Rent</span>
-                    <span className="text-base sm:text-lg font-black font-mono text-slate-900 dark:text-white mt-0.5 block">
+                  <div className="p-3.5 rounded-xl border border-slate-200 dark:border-zinc-800 bg-slate-50 dark:bg-zinc-900/40">
+                    <span className="text-xs sm:text-sm font-bold text-slate-500 uppercase tracking-wider block">Monthly Rent</span>
+                    <span className="text-xl sm:text-2xl font-black font-mono text-slate-900 dark:text-white mt-1 block">
                       ₱ {Number(selectedTenant.monthly_rent || 0).toLocaleString()}
                     </span>
                   </div>
-                  <div className="p-3 rounded-xl border border-slate-200 dark:border-zinc-800 bg-slate-50 dark:bg-zinc-900/40">
-                    <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block">Current Balance</span>
+                  <div className="p-3.5 rounded-xl border border-slate-200 dark:border-zinc-800 bg-slate-50 dark:bg-zinc-900/40">
+                    <span className="text-xs sm:text-sm font-bold text-slate-500 uppercase tracking-wider block">Current Balance</span>
                     <span
-                      className={`text-base sm:text-lg font-black font-mono mt-0.5 block ${
+                      className={`text-xl sm:text-2xl font-black font-mono mt-1 block ${
                         (Number(selectedTenant.balance) || 0) > 0 ? "text-rose-600" : "text-emerald-600"
                       }`}
                     >
                       ₱ {Number(selectedTenant.balance || 0).toLocaleString()}
                     </span>
                   </div>
-                  <div className="p-3 rounded-xl border border-slate-200 dark:border-zinc-800 bg-slate-50 dark:bg-zinc-900/40">
-                    <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block">Last Payment</span>
-                    <span className="text-xs sm:text-[13px] font-bold text-slate-800 dark:text-zinc-200 mt-0.5 block font-mono">
+                  <div className="p-3.5 rounded-xl border border-slate-200 dark:border-zinc-800 bg-slate-50 dark:bg-zinc-900/40">
+                    <span className="text-xs sm:text-sm font-bold text-slate-500 uppercase tracking-wider block">Last Payment</span>
+                    <span className="text-sm sm:text-base font-bold text-slate-800 dark:text-zinc-200 mt-1 block font-mono">
                       {selectedTenant.last_payment_date || "No payment record"}
                     </span>
                   </div>
                 </div>
 
                 {/* Personal & Lease Details */}
-                <div className="grid grid-cols-2 gap-3.5 pt-1">
-                  <div className="space-y-2.5 p-3.5 rounded-xl border border-slate-200/90 dark:border-zinc-800">
-                    <h5 className="font-bold text-slate-900 dark:text-white uppercase text-xs tracking-wider">
+                <div className="grid grid-cols-2 gap-4 pt-1">
+                  <div className="space-y-3 p-4 rounded-xl border border-slate-200/90 dark:border-zinc-800">
+                    <h5 className="font-bold text-slate-900 dark:text-white uppercase text-sm tracking-wider">
                       Contact Details
                     </h5>
                     <div>
-                      <span className="text-slate-400 block text-[11px] font-medium">Email</span>
-                      <span className="font-bold text-slate-800 dark:text-zinc-200 text-xs sm:text-[13px]">{selectedTenant.email}</span>
+                      <span className="text-slate-400 block text-xs sm:text-sm font-semibold">Email</span>
+                      <span className="font-bold text-slate-800 dark:text-zinc-200 text-sm sm:text-base mt-0.5 block">{selectedTenant.email}</span>
                     </div>
                     <div>
-                      <span className="text-slate-400 block text-[11px] font-medium">Phone</span>
-                      <span className="font-mono font-bold text-slate-800 dark:text-zinc-200 text-xs sm:text-[13px]">
+                      <span className="text-slate-400 block text-xs sm:text-sm font-semibold">Phone</span>
+                      <span className="font-mono font-bold text-slate-800 dark:text-zinc-200 text-sm sm:text-base mt-0.5 block">
                         {formatPhoneNumber(selectedTenant.phone)}
                       </span>
                     </div>
                     <div>
-                      <span className="text-slate-400 block text-[11px] font-medium">Address</span>
-                      <span className="font-medium text-slate-700 dark:text-zinc-300 text-xs sm:text-[13px]">
+                      <span className="text-slate-400 block text-xs sm:text-sm font-semibold">Address</span>
+                      <span className="font-medium text-slate-700 dark:text-zinc-300 text-sm sm:text-base mt-0.5 block">
                         {selectedTenant.address || "Riverside Boarding House"}
                       </span>
                     </div>
                   </div>
 
-                  <div className="space-y-2.5 p-3.5 rounded-xl border border-slate-200/90 dark:border-zinc-800">
-                    <h5 className="font-bold text-slate-900 dark:text-white uppercase text-xs tracking-wider">
+                  <div className="space-y-3 p-4 rounded-xl border border-slate-200/90 dark:border-zinc-800">
+                    <h5 className="font-bold text-slate-900 dark:text-white uppercase text-sm tracking-wider">
                       Lease Information
                     </h5>
                     <div>
-                      <span className="text-slate-400 block text-[11px] font-medium">Room Number</span>
-                      <span className="font-bold text-slate-800 dark:text-zinc-200 text-xs sm:text-[13px]">
+                      <span className="text-slate-400 block text-xs sm:text-sm font-semibold">Room Number</span>
+                      <span className="font-bold text-slate-800 dark:text-zinc-200 text-sm sm:text-base mt-0.5 block">
                         {selectedTenant.room_number ? `Room ${selectedTenant.room_number}` : "Unassigned"}
                       </span>
                     </div>
                     <div>
-                      <span className="text-slate-400 block text-[11px] font-medium">Rental Model</span>
-                      <span className="font-bold text-slate-800 dark:text-zinc-200 text-xs sm:text-[13px]">
+                      <span className="text-slate-400 block text-xs sm:text-sm font-semibold">Rental Model</span>
+                      <span className="font-bold text-slate-800 dark:text-zinc-200 text-sm sm:text-base mt-0.5 block">
                         {getTenantRentalModel(selectedTenant)}
                       </span>
                     </div>
                     <div>
-                      <span className="text-slate-400 block text-[11px] font-medium">Move-In Date</span>
-                      <span className="font-mono font-medium text-slate-700 dark:text-zinc-300 text-xs sm:text-[13px]">
+                      <span className="text-slate-400 block text-xs sm:text-sm font-semibold">Move-In Date</span>
+                      <span className="font-mono font-medium text-slate-700 dark:text-zinc-300 text-sm sm:text-base mt-0.5 block">
                         {selectedTenant.date_moved_in || "Aug 15, 2026"}
                       </span>
                     </div>
                   </div>
                 </div>
 
-                <div className="pt-2.5 border-t border-slate-100 dark:border-zinc-800 flex justify-end gap-2">
+                <div className="pt-3 border-t border-slate-100 dark:border-zinc-800 flex justify-end gap-2.5">
                   <button
                     onClick={() => {
                       setIsViewModalOpen(false);
                       handleOpenEditModal(selectedTenant);
                     }}
-                    className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs sm:text-[13px] flex items-center gap-1.5 cursor-pointer"
+                    className="px-4.5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm sm:text-base flex items-center gap-2 cursor-pointer"
                   >
-                    <Edit className="w-3.5 h-3.5" />
+                    <Edit className="w-4 h-4" />
                     <span>Edit Profile</span>
                   </button>
                 </div>
@@ -1741,31 +1741,31 @@ function TenantsContent() {
               exit={{ scale: 0.95, opacity: 0 }}
               className="bg-white dark:bg-zinc-900 rounded-2xl w-full max-w-sm overflow-hidden shadow-2xl border border-slate-200 dark:border-zinc-800 p-5"
             >
-              <h3 className="text-sm sm:text-base font-extrabold text-slate-950 dark:text-white">
+              <h3 className="text-base sm:text-lg font-extrabold text-slate-950 dark:text-white">
                 {confirmStatus.action === "Approve" ? "Approve Resident" : "Decline Application"}
               </h3>
-              <p className="text-xs sm:text-[13px] text-slate-600 dark:text-zinc-300 mt-1 leading-relaxed">
+              <p className="text-sm sm:text-base text-slate-600 dark:text-zinc-300 mt-1.5 leading-relaxed">
                 {confirmStatus.action === "Approve"
                   ? `Confirm onboarding approval for ${confirmStatus.name}? Their status will become Active.`
                   : `Decline application for ${confirmStatus.name}? Their record will be flagged as Declined.`}
               </p>
 
-              <div className="mt-4 flex items-center justify-end gap-2">
+              <div className="mt-5 flex items-center justify-end gap-2.5">
                 <button
                   onClick={() => setConfirmStatus(null)}
-                  className="px-3.5 py-1.5 text-xs sm:text-[13px] font-bold rounded-xl border border-slate-200 dark:border-zinc-800 text-slate-700 hover:bg-slate-50 dark:hover:bg-zinc-800 cursor-pointer"
+                  className="px-4 py-2 text-sm font-bold rounded-xl border border-slate-200 dark:border-zinc-800 text-slate-700 hover:bg-slate-50 dark:hover:bg-zinc-800 cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button
                   onClick={executeStatusUpdate}
                   disabled={isStatusUpdating !== null}
-                  className={`px-4 py-1.5 text-xs sm:text-[13px] font-bold rounded-xl text-white transition-colors cursor-pointer ${
+                  className={`px-5 py-2 text-sm font-bold rounded-xl text-white transition-colors cursor-pointer ${
                     confirmStatus.action === "Approve" ? "bg-emerald-600 hover:bg-emerald-700" : "bg-rose-600 hover:bg-rose-700"
                   }`}
                 >
                   {isStatusUpdating !== null ? (
-                    <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                    <RefreshCw className="w-4 h-4 animate-spin" />
                   ) : (
                     confirmStatus.action
                   )}
