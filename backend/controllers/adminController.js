@@ -6,6 +6,25 @@ const presenceService = require('../services/presenceService');
 const { formatPhoneNumber } = require('../utils/phoneUtils');
 const { normalizeRoomGender, ensureRoomGenderColumn } = require('../utils/roomGenderUtils');
 
+// Normalize online / QRPh / GCash payment method names to "E-Wallet"
+const normalizeOnlinePaymentMethod = (method, fallback = 'Cash') => {
+    const raw = (method || '').trim();
+    if (!raw) return fallback;
+    const lower = raw.toLowerCase();
+    if (lower === 'cash') return 'Cash';
+    if (
+        lower.includes('gcash') ||
+        lower.includes('qrph') ||
+        lower.includes('qr ph') ||
+        lower.includes('e-wallet') ||
+        lower.includes('ewallet') ||
+        lower === 'online'
+    ) {
+        return 'E-Wallet';
+    }
+    return raw;
+};
+
 // @desc    Get Admin Dashboard Statistics
 const getDashboardStats = async (req, res) => {
     try {
@@ -64,7 +83,7 @@ const getDashboardStats = async (req, res) => {
             
             // Recent Payments & Requests for Activity Feed
             db.query(`
-                SELECT p.id, u.name as tenant_name, p.amount_paid, p.payment_date, p.reference_number 
+                SELECT p.id, u.name as tenant_name, p.amount_paid, p.payment_date, p.transaction_number, p.transaction_number AS reference_number 
                 FROM payments p 
                 JOIN bills b ON p.bill_id = b.id 
                 JOIN users u ON b.tenant_id = u.id 
@@ -162,13 +181,14 @@ const getDashboardStats = async (req, res) => {
                     r.room_number,
                     p.amount_paid as total_amount,
                     p.payment_date as created_at,
-                    p.reference_number,
+                    p.transaction_number,
+                    p.transaction_number AS reference_number,
                     p.payment_method
                 FROM payments p
                 JOIN bills b ON p.bill_id = b.id
                 JOIN users u ON b.tenant_id = u.id
                 LEFT JOIN rooms r ON u.room_id = r.id
-                WHERE p.status = 'Pending Verification' AND (p.payment_method IS NULL OR (p.payment_method NOT ILIKE '%gcash%' AND p.payment_method NOT ILIKE '%qrph%'))
+                WHERE p.status = 'Pending Verification' AND (p.payment_method IS NULL OR (p.payment_method NOT ILIKE '%gcash%' AND p.payment_method NOT ILIKE '%qrph%' AND p.payment_method NOT ILIKE '%qr ph%' AND p.payment_method NOT ILIKE '%e-wallet%' AND p.payment_method NOT ILIKE '%ewallet%'))
                 ORDER BY p.payment_date ASC
             `),
             
@@ -302,8 +322,9 @@ const getDashboardStats = async (req, res) => {
         // 3. Recent Payments (e.g. Maria Santos paid ₱ 3,500.00 / (Ref: #PAY-2026-104))
         recentPaymentsResult.rows.forEach(p => {
             const formattedAmount = parseFloat(p.amount_paid).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-            const refNo = p.reference_number 
-                ? (p.reference_number.startsWith('#') ? p.reference_number : `#${p.reference_number}`) 
+            const rawRef = p.transaction_number || p.reference_number;
+            const refNo = rawRef 
+                ? (rawRef.startsWith('#') ? rawRef : `#${rawRef}`) 
                 : `#PAY-2026-${String(p.id).padStart(3, '0')}`;
             activities.push({
                 id: `p_${p.id}`,
@@ -877,7 +898,7 @@ const getConversations = async (req, res) => {
                 latest.last_message_time,
                 (
                     SELECT COUNT(*) FROM messages 
-                    WHERE sender_id = u.id AND receiver_id = 1 AND status != 'read'
+                    WHERE sender_id = u.id AND (receiver_id = 1 OR sender_type = 'tenant') AND status != 'read'
                 ) as unread_count
             FROM users u
             LEFT JOIN rooms r ON u.room_id = r.id
@@ -892,7 +913,8 @@ const getConversations = async (req, res) => {
                         END as msg_text,
                         m.created_at
                     FROM messages m
-                    WHERE (m.sender_id = u.id AND m.receiver_id = 1) OR (m.sender_id = 1 AND m.receiver_id = u.id)
+                    WHERE (m.sender_id = u.id AND (m.receiver_id = 1 OR m.sender_type = 'tenant'))
+                       OR (m.receiver_id = u.id AND (m.sender_id = 1 OR m.sender_type = 'admin'))
                     UNION ALL
                     SELECT 
                         'Maintenance Ticket: ' || COALESCE(req.title, 'Issue Reported') as msg_text,
@@ -934,8 +956,8 @@ const getMessages = async (req, res) => {
 
         const query = `
             SELECT * FROM messages 
-            WHERE (sender_id = $1 AND receiver_id = 1) 
-               OR (sender_id = 1 AND receiver_id = $1)
+            WHERE (sender_id = $1 AND (receiver_id = 1 OR sender_type = 'tenant')) 
+               OR (receiver_id = $1 AND (sender_id = 1 OR sender_type = 'admin'))
             ORDER BY created_at ASC
         `;
         const result = await db.query(query, [tenant_id]);
@@ -944,7 +966,7 @@ const getMessages = async (req, res) => {
         await db.query(`
             UPDATE messages 
             SET status = 'read' 
-            WHERE sender_id = $1 AND receiver_id = 1 AND status != 'read'
+            WHERE sender_id = $1 AND (receiver_id = 1 OR sender_type = 'tenant') AND status != 'read'
         `, [tenant_id]);
         
         res.status(200).json(result.rows);
@@ -958,21 +980,39 @@ const getMessages = async (req, res) => {
 // @route   POST /api/admin/chat
 const sendMessage = async (req, res) => {
     try {
-        const { message, tenant_id } = req.body;
+        let { message, tenant_id } = req.body;
+        const file = req.file;
         
-        if (!message || !tenant_id) {
-            return res.status(400).json({ message: 'Message and Tenant ID are required' });
+        if (!tenant_id) {
+            return res.status(400).json({ message: 'Tenant ID is required' });
         }
 
-        // Assuming admin user ID is 1
-        const adminId = 1;
+        if ((!message || !message.trim()) && !file) {
+            return res.status(400).json({ message: 'Message or attachment is required' });
+        }
+
+        // Assuming admin user ID is 1 (or authenticated user's ID)
+        const adminId = req.user ? req.user.id : 1;
+
+        let attachmentUrl = null;
+        let fileName = null;
+        let fileType = null;
+
+        if (file) {
+            attachmentUrl = `/uploads/chat/${file.filename}`;
+            fileName = file.originalname;
+            fileType = file.mimetype;
+            if (!message || !message.trim()) {
+                message = `Sent attachment: ${fileName}`;
+            }
+        }
 
         const query = `
-            INSERT INTO messages (sender_id, receiver_id, message, sender_type, status) 
-            VALUES ($1, $2, $3, 'admin', 'sent') 
+            INSERT INTO messages (sender_id, receiver_id, message, sender_type, status, attachment_url, file_name, file_type) 
+            VALUES ($1, $2, $3, 'admin', 'sent', $4, $5, $6) 
             RETURNING *;
         `;
-        const result = await db.query(query, [adminId, tenant_id, message]);
+        const result = await db.query(query, [adminId, tenant_id, (message || '').trim(), attachmentUrl, fileName, fileType]);
         
         res.status(201).json(result.rows[0]);
     } catch (error) {
@@ -1288,16 +1328,28 @@ const getReportData = async (req, res) => {
 
             // Payment Methods Breakdown
             db.query(`
-                SELECT COALESCE(p.payment_method, 'Cash') as method, COUNT(*) as count, SUM(p.amount_paid) as total
+                SELECT
+                    CASE
+                        WHEN p.payment_method ILIKE '%gcash%'
+                          OR p.payment_method ILIKE '%qrph%'
+                          OR p.payment_method ILIKE '%qr ph%'
+                          OR p.payment_method ILIKE '%e-wallet%'
+                          OR p.payment_method ILIKE '%ewallet%'
+                          OR LOWER(COALESCE(p.payment_method, '')) = 'online'
+                        THEN 'E-Wallet'
+                        ELSE COALESCE(p.payment_method, 'Cash')
+                    END as method,
+                    COUNT(*) as count,
+                    SUM(p.amount_paid) as total
                 FROM payments p
                 WHERE ${paymentDateClause}
-                GROUP BY COALESCE(p.payment_method, 'Cash')
+                GROUP BY 1
                 ORDER BY total DESC
             `),
 
             // Individual Payment Ledger
             db.query(`
-                SELECT p.id, p.reference_number, p.payment_date, p.payment_method, p.amount_paid, p.status,
+                SELECT p.id, p.transaction_number, p.transaction_number AS reference_number, p.payment_date, p.payment_method, p.amount_paid, p.status,
                        u.name as tenant_name, r.room_number, b.billing_month
                 FROM payments p
                 JOIN bills b ON p.bill_id = b.id
@@ -1396,7 +1448,10 @@ const getReportData = async (req, res) => {
                 otherTotal: parseFloat(billsResult.rows[0]?.other_total || 0),
                 paymentCount: parseInt(paymentsResult.rows[0]?.count || 0),
                 methodBreakdown: methodBreakdownResult.rows,
-                ledger: recentPaymentsResult.rows
+                ledger: recentPaymentsResult.rows.map((p) => ({
+                    ...p,
+                    payment_method: normalizeOnlinePaymentMethod(p.payment_method, 'Cash')
+                }))
             },
             occupancy: {
                 totalRooms,
@@ -1440,7 +1495,7 @@ const getActivityLogs = async (req, res) => {
         ] = await Promise.all([
             // Payments
             db.query(`
-                SELECT p.id, p.amount_paid, p.payment_date, p.payment_method, p.status, p.reference_number,
+                SELECT p.id, p.amount_paid, p.payment_date, p.payment_method, p.status, p.transaction_number, p.transaction_number AS reference_number,
                        u.name as tenant_name, rm.room_number
                 FROM payments p
                 JOIN bills b ON p.bill_id = b.id
@@ -1501,15 +1556,17 @@ const getActivityLogs = async (req, res) => {
         // 1. Payments
         paymentsResult.rows.forEach(p => {
             const formattedAmount = parseFloat(p.amount_paid).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-            const refNo = p.reference_number 
-                ? (p.reference_number.startsWith('#') ? p.reference_number : `#${p.reference_number}`) 
+            const rawRef = p.transaction_number || p.reference_number;
+            const refNo = rawRef 
+                ? (rawRef.startsWith('#') ? rawRef : `#${rawRef}`) 
                 : `#PAY-2026-${String(p.id).padStart(3, '0')}`;
             const roomStr = p.room_number ? `Room ${p.room_number}` : 'Unassigned';
+            const displayMethod = normalizeOnlinePaymentMethod(p.payment_method, 'Cash');
             activities.push({
                 id: `pay_${p.id}`,
                 type: 'payment',
                 title: p.status === 'Verified' || p.status === 'Approved' ? 'Payment Verified' : 'Payment Submitted',
-                description: `${p.tenant_name} paid ₱ ${formattedAmount} via ${p.payment_method || 'Cash'}`,
+                description: `${p.tenant_name} paid ₱ ${formattedAmount} via ${displayMethod}`,
                 details: `Reference: ${refNo} • Status: ${p.status}`,
                 tenant_name: p.tenant_name,
                 room_number: roomStr,
