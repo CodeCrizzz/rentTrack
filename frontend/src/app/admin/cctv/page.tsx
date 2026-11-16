@@ -165,14 +165,14 @@ export default function CCTVPage() {
             <Video className="w-5 h-5 stroke-[2]" />
           </div>
           <div className="min-w-0 flex-1">
-            <span className="text-xs font-medium text-slate-500 dark:text-zinc-400 block">
+            <span className="text-sm font-bold text-slate-500 dark:text-zinc-400 block uppercase tracking-wider">
               Total Cameras
             </span>
-            <span className="text-2xl sm:text-3xl font-bold text-slate-900 dark:text-white leading-tight block">
+            <span className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white leading-tight block">
               8
             </span>
-            <span className="text-[11px] font-medium text-amber-600 dark:text-amber-400 flex items-center gap-1 mt-0.5">
-              <AlertCircle className="w-3 h-3 stroke-[2.5]" />
+            <span className="text-xs sm:text-sm font-semibold text-amber-600 dark:text-amber-400 flex items-center gap-1 mt-0.5">
+              <AlertCircle className="w-3.5 h-3.5 stroke-[2.5]" />
               All cameras offline
             </span>
           </div>
@@ -184,14 +184,14 @@ export default function CCTVPage() {
             <div className="w-4 h-4 rounded-full bg-slate-400 dark:bg-zinc-600" />
           </div>
           <div className="min-w-0 flex-1">
-            <span className="text-xs font-medium text-slate-500 dark:text-zinc-400 block">
+            <span className="text-sm font-bold text-slate-500 dark:text-zinc-400 block uppercase tracking-wider">
               Online
             </span>
-            <span className="text-2xl sm:text-3xl font-bold text-slate-900 dark:text-white leading-tight block">
+            <span className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white leading-tight block">
               0
             </span>
-            <span className="text-[11px] font-medium text-slate-400 dark:text-zinc-500 flex items-center gap-1 mt-0.5">
-              <Radio className="w-3 h-3" />
+            <span className="text-xs sm:text-sm font-semibold text-slate-400 dark:text-zinc-500 flex items-center gap-1 mt-0.5">
+              <Radio className="w-3.5 h-3.5" />
               0% operational
             </span>
           </div>
@@ -203,14 +203,14 @@ export default function CCTVPage() {
             <VideoOff className="w-5 h-5 stroke-[2]" />
           </div>
           <div className="min-w-0 flex-1">
-            <span className="text-xs font-medium text-slate-500 dark:text-zinc-400 block">
+            <span className="text-sm font-bold text-slate-500 dark:text-zinc-400 block uppercase tracking-wider">
               Offline
             </span>
-            <span className="text-2xl sm:text-3xl font-bold text-slate-900 dark:text-white leading-tight block">
+            <span className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white leading-tight block">
               8
             </span>
-            <span className="text-[11px] font-medium text-rose-600 dark:text-rose-400 flex items-center gap-1 mt-0.5">
-              <AlertCircle className="w-3 h-3 stroke-[2]" />
+            <span className="text-xs sm:text-sm font-semibold text-rose-600 dark:text-rose-400 flex items-center gap-1 mt-0.5">
+              <AlertCircle className="w-3.5 h-3.5 stroke-[2]" />
               8 cameras offline
             </span>
           </div>
@@ -222,20 +222,20 @@ export default function CCTVPage() {
             <HardDrive className="w-5 h-5 stroke-[2]" />
           </div>
           <div className="min-w-0 flex-1">
-            <span className="text-xs font-medium text-slate-500 dark:text-zinc-400 block">
+            <span className="text-sm font-bold text-slate-500 dark:text-zinc-400 block uppercase tracking-wider">
               Storage Usage
             </span>
-            <span className="text-2xl sm:text-3xl font-bold text-slate-900 dark:text-white leading-tight block">
+            <span className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white leading-tight block">
               42%
             </span>
             {/* Progress bar */}
-            <div className="w-full h-1.5 bg-slate-100 dark:bg-zinc-800 rounded-full overflow-hidden mt-1.5">
+            <div className="w-full h-2 bg-slate-100 dark:bg-zinc-800 rounded-full overflow-hidden mt-1.5">
               <div
                 className="h-full bg-blue-600 rounded-full transition-all duration-500"
                 style={{ width: "42%" }}
               />
             </div>
-            <span className="text-[11px] font-medium text-slate-400 dark:text-zinc-500 block mt-1">
+            <span className="text-xs sm:text-sm font-semibold text-slate-500 dark:text-zinc-400 block mt-1">
               168 GB / 400 GB
             </span>
           </div>
@@ -250,16 +250,16 @@ export default function CCTVPage() {
         <div className="flex items-center justify-between gap-3 pb-3 border-b border-slate-100 dark:border-zinc-800/80">
           {/* Left: Title & Live indicator & Active Recordings */}
           <div className="flex items-center gap-2.5">
-            <h2 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white tracking-tight">
+            <h2 className="text-lg sm:text-xl font-bold text-slate-900 dark:text-white tracking-tight">
               Live View
             </h2>
-            <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-rose-600 dark:text-rose-400">
-              <span className="w-2 h-2 rounded-full bg-rose-500" />
+            <span className="inline-flex items-center gap-1.5 text-xs sm:text-sm font-bold text-rose-600 dark:text-rose-400">
+              <span className="w-2.5 h-2.5 rounded-full bg-rose-500" />
               No Signal (All Offline)
             </span>
             {isAnyRecording && (
-              <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-rose-600 dark:text-rose-400 ml-2 animate-pulse">
-                <span className="w-2 h-2 rounded-full bg-rose-600" />
+              <span className="inline-flex items-center gap-1.5 text-xs sm:text-sm font-bold text-rose-600 dark:text-rose-400 ml-2 animate-pulse">
+                <span className="w-2.5 h-2.5 rounded-full bg-rose-600" />
                 REC ({Object.keys(recordingState).length} Active)
               </span>
             )}
@@ -281,20 +281,20 @@ export default function CCTVPage() {
                 >
                   {/* Top Bar: Camera Channel & Offline / REC Badge */}
                   <div className="flex items-center justify-between z-10 w-full">
-                    <div className="flex items-center gap-1.5 bg-black/60 backdrop-blur-xs px-2 py-0.5 rounded text-[11px] font-semibold text-white/90">
-                      <span className="text-blue-400 font-mono">{cam.camNumber}</span>
+                    <div className="flex items-center gap-1.5 bg-black/60 backdrop-blur-xs px-2.5 py-1 rounded-md text-xs sm:text-sm font-semibold text-white/90">
+                      <span className="text-blue-400 font-mono font-bold">{cam.camNumber}</span>
                       <span className="text-white/40">·</span>
                       <span className="truncate max-w-[120px] sm:max-w-[150px]">{cam.name}</span>
                     </div>
 
                     {isCamRecording ? (
-                      <span className="px-2 py-0.5 rounded bg-rose-600 text-[10px] font-semibold text-white flex items-center gap-1 shadow-xs animate-pulse">
-                        <span className="w-1.5 h-1.5 rounded-full bg-white" />
+                      <span className="px-2.5 py-1 rounded-md bg-rose-600 text-xs font-bold text-white flex items-center gap-1 shadow-xs animate-pulse">
+                        <span className="w-2 h-2 rounded-full bg-white" />
                         REC {formatTimer(camTimer)}
                       </span>
                     ) : (
-                      <span className="text-[10px] font-semibold text-rose-400 flex items-center gap-1">
-                        <span className="w-1.5 h-1.5 rounded-full bg-rose-500" />
+                      <span className="text-xs font-bold text-rose-400 flex items-center gap-1">
+                        <span className="w-2 h-2 rounded-full bg-rose-500" />
                         No Signal
                       </span>
                     )}
@@ -302,21 +302,21 @@ export default function CCTVPage() {
 
                   {/* Center: VideoOff Icon + Camera Offline + No Signal */}
                   <div className="flex flex-col items-center justify-center my-auto py-2 text-center">
-                    <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-xl bg-zinc-900/90 border border-zinc-800/80 flex items-center justify-center text-zinc-500 group-hover:text-rose-400 group-hover:border-rose-500/30 transition-colors shadow-inner">
-                      <VideoOff className="w-5 h-5 sm:w-6 sm:h-6 stroke-[1.75]" />
+                    <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-zinc-900/90 border border-zinc-800/80 flex items-center justify-center text-zinc-500 group-hover:text-rose-400 group-hover:border-rose-500/30 transition-colors shadow-inner">
+                      <VideoOff className="w-6 h-6 sm:w-7 sm:h-7 stroke-[1.75]" />
                     </div>
-                    <span className="text-xs sm:text-sm font-bold text-slate-200 dark:text-zinc-200 mt-2 block tracking-tight">
+                    <span className="text-sm sm:text-base font-bold text-slate-200 dark:text-zinc-200 mt-2 block tracking-tight">
                       Camera Offline
                     </span>
-                    <span className="text-[11px] font-mono font-semibold text-rose-400/90 dark:text-rose-400 mt-0.5 block tracking-wider uppercase">
+                    <span className="text-xs font-mono font-bold text-rose-400/90 dark:text-rose-400 mt-0.5 block tracking-wider uppercase">
                       No Signal
                     </span>
                   </div>
 
                   {/* Bottom Bar: Location & Record Video Button inside Card */}
-                  <div className="flex items-center justify-between pt-2 border-t border-zinc-855/80 z-10 gap-2">
-                    <div className="min-w-0 flex items-center gap-1 text-[10px] text-zinc-400 font-mono">
-                      <span className="truncate">{cam.location}</span>
+                  <div className="flex items-center justify-between pt-2.5 border-t border-zinc-800/80 z-10 gap-2">
+                    <div className="min-w-0 flex items-center gap-1 text-xs text-zinc-400 font-mono">
+                      <span className="truncate font-semibold">{cam.location}</span>
                       <span className="text-zinc-600 hidden sm:inline">·</span>
                       <span className="text-zinc-500 hidden sm:inline">{cam.resolution}</span>
                     </div>
@@ -328,7 +328,7 @@ export default function CCTVPage() {
                         e.stopPropagation();
                         handleToggleCamRecord(cam);
                       }}
-                      className={`px-2.5 py-1 text-[11px] font-semibold rounded-md flex items-center gap-1.5 transition-all cursor-pointer shrink-0 shadow-2xs ${
+                      className={`px-3 py-1.5 text-xs sm:text-sm font-bold rounded-lg flex items-center gap-1.5 transition-all cursor-pointer shrink-0 shadow-2xs ${
                         isCamRecording
                           ? "bg-rose-600 hover:bg-rose-700 text-white animate-pulse"
                           : "bg-zinc-900 hover:bg-zinc-800 text-zinc-200 border border-zinc-800 hover:border-zinc-700 hover:text-white"
@@ -336,7 +336,7 @@ export default function CCTVPage() {
                       title={isCamRecording ? "Stop Recording" : "Record Video"}
                     >
                       <Video
-                        className={`w-3 h-3 shrink-0 ${
+                        className={`w-3.5 h-3.5 shrink-0 ${
                           isCamRecording ? "text-white" : "text-rose-400"
                         }`}
                       />
@@ -350,31 +350,31 @@ export default function CCTVPage() {
             {/* 9th Slot: Camera Offline */}
             <div className="group relative aspect-[16/11] sm:aspect-[4/3] rounded-xl overflow-hidden bg-slate-950 dark:bg-zinc-950 border border-dashed border-slate-800 dark:border-zinc-850 p-3.5 flex flex-col justify-between select-none">
               <div className="flex items-center justify-between z-10 w-full">
-                <div className="flex items-center gap-1.5 bg-black/60 backdrop-blur-xs px-2 py-0.5 rounded text-[11px] font-semibold text-white/90">
-                  <span className="text-zinc-400 font-mono">CAM 09</span>
+                <div className="flex items-center gap-1.5 bg-black/60 backdrop-blur-xs px-2.5 py-1 rounded-md text-xs sm:text-sm font-semibold text-white/90">
+                  <span className="text-zinc-400 font-mono font-bold">CAM 09</span>
                   <span className="text-white/40">·</span>
                   <span className="text-zinc-400">Unassigned</span>
                 </div>
 
-                <span className="text-[10px] font-semibold text-rose-400 flex items-center gap-1">
-                  <span className="w-1.5 h-1.5 rounded-full bg-rose-500" />
+                <span className="text-xs font-bold text-rose-400 flex items-center gap-1">
+                  <span className="w-2 h-2 rounded-full bg-rose-500" />
                   No Signal
                 </span>
               </div>
 
               <div className="flex flex-col items-center justify-center my-auto py-2 text-center">
-                <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-xl bg-zinc-900/90 border border-zinc-800/80 flex items-center justify-center text-zinc-500 shadow-inner">
-                  <VideoOff className="w-5 h-5 sm:w-6 sm:h-6 stroke-[1.75]" />
+                <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-zinc-900/90 border border-zinc-800/80 flex items-center justify-center text-zinc-500 shadow-inner">
+                  <VideoOff className="w-6 h-6 sm:w-7 sm:h-7 stroke-[1.75]" />
                 </div>
-                <span className="text-xs sm:text-sm font-bold text-slate-300 dark:text-zinc-300 mt-2 block tracking-tight">
+                <span className="text-sm sm:text-base font-bold text-slate-300 dark:text-zinc-300 mt-2 block tracking-tight">
                   Camera Offline
                 </span>
-                <span className="text-[11px] font-mono font-semibold text-rose-400/90 dark:text-rose-400 mt-0.5 block tracking-wider uppercase">
+                <span className="text-xs font-mono font-bold text-rose-400/90 dark:text-rose-400 mt-0.5 block tracking-wider uppercase">
                   No Signal
                 </span>
               </div>
 
-              <div className="flex items-center justify-between text-[10px] text-zinc-500 font-mono pt-2 border-t border-zinc-850 z-10">
+              <div className="flex items-center justify-between text-xs text-zinc-400 font-mono pt-2.5 border-t border-zinc-800/80 z-10 font-semibold">
                 <span>Slot 09 · Spare Port</span>
                 <span>Disconnected</span>
               </div>
@@ -399,17 +399,17 @@ export default function CCTVPage() {
               {/* Modal Header */}
               <div className="p-4 border-b border-slate-200 dark:border-zinc-800 flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-lg bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400 flex items-center justify-center">
+                  <div className="w-10 h-10 rounded-lg bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400 flex items-center justify-center">
                     <VideoOff className="w-5 h-5 stroke-[2]" />
                   </div>
                   <div>
-                    <h3 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                    <h3 className="text-lg sm:text-xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
                       {focusedModalCam.fullName}
-                      <span className="text-xs text-rose-600 dark:text-rose-400 font-semibold">
+                      <span className="text-xs sm:text-sm text-rose-600 dark:text-rose-400 font-bold">
                         No Signal
                       </span>
                     </h3>
-                    <p className="text-xs text-slate-500 dark:text-zinc-400">
+                    <p className="text-xs sm:text-sm text-slate-500 dark:text-zinc-400 mt-0.5 font-medium">
                       Location: {focusedModalCam.location} · Channel {focusedModalCam.camNumber} · Offline
                     </p>
                   </div>
@@ -428,16 +428,16 @@ export default function CCTVPage() {
                 <div className="w-16 h-16 rounded-2xl bg-zinc-900/90 border border-zinc-800 flex items-center justify-center text-zinc-500 mb-3 shadow-inner">
                   <VideoOff className="w-8 h-8 stroke-[1.75] text-rose-500/80" />
                 </div>
-                <span className="text-lg font-bold text-zinc-200">Camera Offline</span>
-                <span className="text-xs text-rose-400 font-mono mt-1 font-semibold tracking-wider uppercase">
+                <span className="text-xl font-bold text-zinc-200">Camera Offline</span>
+                <span className="text-sm text-rose-400 font-mono mt-1 font-bold tracking-wider uppercase">
                   No Signal
                 </span>
-                <span className="text-xs text-zinc-500 mt-2 max-w-sm">
+                <span className="text-sm text-zinc-400 mt-2 max-w-sm font-medium">
                   RTSP stream unreachable on channel {focusedModalCam.camNumber}. Video carrier signal lost.
                 </span>
 
-                <div className="absolute top-3 left-3 bg-black/70 px-2.5 py-1 rounded text-xs font-mono text-zinc-300 flex items-center gap-2 border border-zinc-800">
-                  <span className="w-2 h-2 rounded-full bg-rose-500" />
+                <div className="absolute top-3 left-3 bg-black/70 px-3 py-1.5 rounded-lg text-xs sm:text-sm font-mono text-zinc-300 flex items-center gap-2 border border-zinc-800 font-bold">
+                  <span className="w-2.5 h-2.5 rounded-full bg-rose-500" />
                   RTSP // {focusedModalCam.id.toUpperCase()} // OFFLINE
                 </div>
 
@@ -445,13 +445,13 @@ export default function CCTVPage() {
                   <button
                     type="button"
                     onClick={() => handleToggleCamRecord(focusedModalCam)}
-                    className={`px-3 py-1.5 text-xs font-semibold rounded-lg flex items-center gap-1.5 cursor-pointer transition-all shadow-xs ${
+                    className={`px-3.5 py-2 text-sm font-bold rounded-xl flex items-center gap-1.5 cursor-pointer transition-all shadow-xs ${
                       recordingState[focusedModalCam.id] !== undefined
                         ? "bg-rose-600 hover:bg-rose-700 text-white animate-pulse"
                         : "bg-zinc-800/90 hover:bg-zinc-700 text-white border border-zinc-700"
                     }`}
                   >
-                    <Video className="w-3.5 h-3.5 text-rose-400" />
+                    <Video className="w-4 h-4 text-rose-400" />
                     <span>
                       {recordingState[focusedModalCam.id] !== undefined
                         ? `Stop REC (${formatTimer(recordingState[focusedModalCam.id])})`
@@ -462,9 +462,9 @@ export default function CCTVPage() {
                     onClick={() => {
                       toast.info(`Camera is offline (${focusedModalCam.fullName})`);
                     }}
-                    className="px-3 py-1.5 bg-white/20 hover:bg-white/30 backdrop-blur-xs text-white text-xs font-semibold rounded-lg flex items-center gap-1.5 cursor-pointer"
+                    className="px-3.5 py-2 bg-white/20 hover:bg-white/30 backdrop-blur-xs text-white text-sm font-bold rounded-xl flex items-center gap-1.5 cursor-pointer"
                   >
-                    <Camera className="w-3.5 h-3.5" />
+                    <Camera className="w-4 h-4" />
                     Snapshot
                   </button>
                 </div>
