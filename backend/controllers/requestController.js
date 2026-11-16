@@ -151,6 +151,54 @@ const updateRequest = async (req, res) => {
 
         const updated = updatedRequest.rows[0];
         const request_number = updated.request_number || `RT-${String(updated.id).padStart(6, '0')}`;
+
+        // Automatically post the updated maintenance request to the tenant in chat when status is updated
+        if (status !== undefined && existing.tenant_id) {
+            try {
+                const introText = 'Here is the updated status of your maintenance request:';
+                const ticketMsg = [
+                    introText,
+                    `[MAINTENANCE_REQUEST#${updated.id}] ${updated.title}`,
+                    `Status: ${updated.status}`,
+                    updated.category ? `Category: ${updated.category}` : null,
+                    updated.priority ? `Priority: ${updated.priority}` : null,
+                    updated.assigned_to ? `Assigned To: ${updated.assigned_to}` : null,
+                    updated.admin_notes ? `Notes: ${updated.admin_notes}` : null
+                ].filter(Boolean).join('\n');
+
+                await db.query(
+                    `INSERT INTO messages (sender_id, receiver_id, message, sender_type, status, attachment_url, file_name, file_type)
+                     VALUES ($1, $2, $3, 'admin', 'sent', $4, $5, $6)`,
+                    [
+                        1,
+                        existing.tenant_id,
+                        ticketMsg,
+                        null,
+                        null,
+                        null
+                    ]
+                );
+            } catch (chatErr) {
+                console.error('Error posting updated maintenance status to chat:', chatErr.message);
+            }
+
+            // Also notify the tenant in notifications table
+            try {
+                await db.query(
+                    `INSERT INTO notifications (user_id, title, message, type)
+                     VALUES ($1, $2, $3, $4)`,
+                    [
+                        existing.tenant_id,
+                        'Maintenance Request Status Updated',
+                        `Your maintenance request "${updated.title}" (${request_number}) is now marked as "${updated.status}".`,
+                        'maintenance'
+                    ]
+                );
+            } catch (notifErr) {
+                console.error('Error queuing tenant maintenance status notification:', notifErr.message);
+            }
+        }
+
         res.status(200).json({ 
             message: 'Request updated successfully', 
             request: { ...updated, request_number },

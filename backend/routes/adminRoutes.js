@@ -42,9 +42,31 @@ const {
 } = require('../controllers/backupController');
 
 const multer = require('multer');
+const fs = require('fs');
+const path = require('path');
+
 const uploadBackup = multer({
     storage: multer.memoryStorage(),
     limits: { fileSize: 50 * 1024 * 1024 }
+});
+
+const chatStorage = multer.diskStorage({
+    destination: function (req, file, cb) {
+        const dir = path.join(__dirname, '../uploads/chat');
+        if (!fs.existsSync(dir)) {
+            fs.mkdirSync(dir, { recursive: true });
+        }
+        cb(null, dir);
+    },
+    filename: function (req, file, cb) {
+        const fileExt = path.extname(file.originalname).toLowerCase() || '.png';
+        const adminId = req.user ? req.user.id : 'admin';
+        cb(null, `chat-${Date.now()}-${adminId}${fileExt}`);
+    }
+});
+const uploadChat = multer({
+    storage: chatStorage,
+    limits: { fileSize: 25 * 1024 * 1024 } // 25 MB file limit for chat attachments
 });
 
 // All admin routes require valid authentication and administrative roles (RBAC)
@@ -81,7 +103,7 @@ router.delete('/requests/:id', hasPermission(PERMISSIONS.REQUESTS_DELETE), delet
 router.get('/chat/conversations', hasPermission(PERMISSIONS.CHAT_READ), getConversations);
 router.get('/chat/unread', hasPermission(PERMISSIONS.CHAT_READ), getUnreadCount);
 router.get('/chat', hasPermission(PERMISSIONS.CHAT_READ), getMessages);
-router.post('/chat', hasPermission(PERMISSIONS.CHAT_SEND), sendMessage);
+router.post('/chat', hasPermission(PERMISSIONS.CHAT_SEND), uploadChat.single('file'), sendMessage);
 
 // Admin Notifications
 router.get('/notifications', hasPermission(PERMISSIONS.ANNOUNCEMENTS_READ), getAdminNotifications);

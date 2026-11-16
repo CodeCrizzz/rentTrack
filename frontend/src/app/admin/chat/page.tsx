@@ -12,9 +12,10 @@ import {
     FileText,
     Users, Download,
     MessageSquare,
-    Phone, Video, MoreVertical,
+    Phone, MoreVertical,
     Mail, ExternalLink, CreditCard,
-    Flame, Zap, Clock, CheckCircle2, ArrowRight
+    Flame, Zap, Clock, CheckCircle2, ArrowRight,
+    X, File
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -146,7 +147,12 @@ const normalizeTicketStatus = (s?: string): 'Pending' | 'In Progress' | 'Resolve
 // Clean raw [MAINTENANCE_REQUEST#...] tag for conversation list previews
 const cleanPreviewMessage = (raw?: string | null): string => {
     if (!raw) return 'No messages yet';
-    if (/^\[MAINTENANCE_REQUEST/i.test(raw)) {
+    if (/\[MAINTENANCE_REQUEST/i.test(raw)) {
+        if (raw.toLowerCase().includes('here is the updated status')) {
+            const statusMatch = raw.match(/Status:\s*([^\n\r]+)/i);
+            const statusStr = statusMatch ? ` (${statusMatch[1].trim()})` : '';
+            return `Maintenance Status Updated${statusStr}`;
+        }
         const title = raw.replace(/^\[MAINTENANCE_REQUEST(?:#\d+)?\]\s*/i, '').trim();
         return `Maintenance Ticket: ${title || 'Issue Reported'}`;
     }
@@ -171,10 +177,61 @@ export default function AdminChat() {
     const [selectedTenant, setSelectedTenant] = useState<ConversationItem | null>(null);
     const [newMessage, setNewMessage] = useState('');
     const [searchFilter, setSearchFilter] = useState('');
-    const [categoryTab, setCategoryTab] = useState<'all' | 'tenant' | 'staff'>('all');
     const [isSending, setIsSending] = useState(false);
     const [isLoadingConversations, setIsLoadingConversations] = useState(true);
     const [isLoadingMessages, setIsLoadingMessages] = useState(false);
+
+    // Attachment file upload state
+    const [selectedFile, setSelectedFile] = useState<File | null>(null);
+    const [filePreviewUrl, setFilePreviewUrl] = useState<string | null>(null);
+    const fileInputRef = useRef<HTMLInputElement>(null);
+
+    // 25 MB attachment size limit for chat
+    const MAX_FILE_SIZE_MB = 25;
+    const MAX_FILE_SIZE_BYTES = MAX_FILE_SIZE_MB * 1024 * 1024;
+
+    const formatFileSize = (bytes: number) => {
+        if (!bytes || bytes === 0) return '0 B';
+        const k = 1024;
+        const sizes = ['B', 'KB', 'MB', 'GB'];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        return `${parseFloat((bytes / Math.pow(k, i)).toFixed(1))} ${sizes[i]}`;
+    };
+
+    const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        if (file.size > MAX_FILE_SIZE_BYTES) {
+            toast.error('File Exceeds Size Limit', {
+                description: `Chat attachments cannot exceed ${MAX_FILE_SIZE_MB} MB. Your selected file is ${(file.size / (1024 * 1024)).toFixed(1)} MB.`
+            });
+            if (fileInputRef.current) fileInputRef.current.value = '';
+            return;
+        }
+
+        setSelectedFile(file);
+        if (file.type.startsWith('image/')) {
+            setFilePreviewUrl(URL.createObjectURL(file));
+        } else {
+            setFilePreviewUrl(null);
+        }
+    };
+
+    const handleRemoveSelectedFile = () => {
+        if (filePreviewUrl) {
+            URL.revokeObjectURL(filePreviewUrl);
+        }
+        setSelectedFile(null);
+        setFilePreviewUrl(null);
+        if (fileInputRef.current) fileInputRef.current.value = '';
+    };
+
+    useEffect(() => {
+        return () => {
+            if (filePreviewUrl) URL.revokeObjectURL(filePreviewUrl);
+        };
+    }, [filePreviewUrl]);
 
     const scrollRef = useRef<HTMLDivElement>(null);
     const prevMsgCountRef = useRef<number>(0);
@@ -237,8 +294,8 @@ export default function AdminChat() {
                         return {
                             id: c.id,
                             name: c.name || 'Tenant',
-                            role: c.role === 'staff' ? 'Staff' : 'Tenant',
-                            category: (c.role === 'staff' ? 'staff' : 'tenant') as 'tenant' | 'staff',
+                            role: 'Tenant',
+                            category: 'tenant',
                             room_number: c.room_number ? `Room ${c.room_number}` : undefined,
                             bed_space: roomDetails || undefined,
                             email: c.email || '',
@@ -319,15 +376,21 @@ export default function AdminChat() {
                 const mappedMessages: ChatMessage[] = rawMessages.map((msg: any) => {
                     const rawText = String(msg.message || '');
                     const createdTs = msg.created_at ? new Date(msg.created_at).getTime() : Date.now();
-                    const ticketMatch = rawText.match(/^\[MAINTENANCE_REQUEST(?:#(\d+))?\]\s*([\s\S]*)$/i);
+                    const ticketMatch = rawText.match(/\[MAINTENANCE_REQUEST(?:#(\d+))?\]\s*([^\n\r]*)/i);
 
                     let ticketInfo: MaintenanceTicketInfo | undefined;
                     let cleanText = rawText;
 
                     if (ticketMatch) {
+                        const ticketStart = ticketMatch.index ?? 0;
+                        const prefix = rawText.substring(0, ticketStart).trim();
+                        const ticketSection = rawText.substring(ticketStart);
                         const parsedId = ticketMatch[1] ? Number(ticketMatch[1]) : null;
                         const parsedTitle = (ticketMatch[2] || '').trim() || 'Maintenance Request';
-                        cleanText = parsedTitle;
+                        const statusMatch = ticketSection.match(/^Status:\s*([^\n\r]+)/im);
+                        const parsedStatus = statusMatch ? statusMatch[1].trim() : undefined;
+
+                        cleanText = prefix || parsedTitle;
 
                         let matchedReq = parsedId ? requestsById.get(parsedId) : undefined;
                         if (!matchedReq) {
@@ -339,8 +402,13 @@ export default function AdminChat() {
                         }
 
                         if (matchedReq) {
-                            matchedRequestIds.add(Number(matchedReq.id));
-                            ticketInfo = toTicketInfo(matchedReq);
+                            if (msg.sender_type !== 'admin') {
+                                matchedRequestIds.add(Number(matchedReq.id));
+                            }
+                            ticketInfo = {
+                                ...toTicketInfo(matchedReq),
+                                status: parsedStatus || matchedReq.status,
+                            };
                         } else {
                             ticketInfo = {
                                 id: parsedId || 0,
@@ -350,7 +418,7 @@ export default function AdminChat() {
                                 title: parsedTitle,
                                 category: 'Maintenance',
                                 priority: 'Medium',
-                                status: 'Pending',
+                                status: parsedStatus || 'Pending',
                                 created_at: msg.created_at,
                             };
                         }
@@ -364,7 +432,7 @@ export default function AdminChat() {
                         date: formatDateLabel(msg.created_at),
                         timestamp: createdTs,
                         is_read: msg.status === 'read',
-                        attachment: msg.attachment_url ? {
+                        attachment: msg.attachment_url && !(msg.sender_type === 'admin' && ticketInfo) ? {
                             title: msg.file_name || 'Attachment',
                             type: msg.file_type || 'File',
                             size: '',
@@ -413,16 +481,9 @@ export default function AdminChat() {
         return () => clearInterval(pollTimer);
     }, [selectedTenant?.id]);
 
-    // Counts for Category Tabs
-    const allCount = conversations.length;
-    const tenantCount = conversations.filter(c => c.category === 'tenant').length;
-    const staffCount = conversations.filter(c => c.category === 'staff').length;
-
     // Filtered conversations list
     const filteredConversations = useMemo(() => {
         return conversations.filter(c => {
-            if (categoryTab === 'tenant' && c.category !== 'tenant') return false;
-            if (categoryTab === 'staff' && c.category !== 'staff') return false;
             if (searchFilter.trim()) {
                 const q = searchFilter.toLowerCase().trim();
                 const matchesName = c.name.toLowerCase().includes(q);
@@ -432,10 +493,11 @@ export default function AdminChat() {
             }
             return true;
         });
-    }, [conversations, categoryTab, searchFilter]);
+    }, [conversations, searchFilter]);
 
     // Select a conversation
     const handleSelectConversation = (conv: ConversationItem) => {
+        handleRemoveSelectedFile();
         setSelectedTenant(conv);
         setConversations(prev => prev.map(c => c.id === conv.id ? { ...c, unread_count: 0 } : c));
     };
@@ -443,27 +505,35 @@ export default function AdminChat() {
     // Send a message
     const handleSend = async (e?: React.FormEvent) => {
         if (e) e.preventDefault();
-        if (!selectedTenant || !newMessage.trim() || isSending) return;
+        if (!selectedTenant || (!newMessage.trim() && !selectedFile) || isSending) return;
 
         const textToSend = newMessage.trim();
+        const fileToSend = selectedFile;
+        const filePreview = filePreviewUrl;
         const now = new Date();
         const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
         const createdMsg: ChatMessage = {
             id: `msg-${Date.now()}`,
             sender: 'admin',
-            text: textToSend,
+            text: textToSend || (fileToSend ? `Sent attachment: ${fileToSend.name}` : ''),
             time: timeStr,
             date: formatDateLabel(now.toISOString()),
             timestamp: now.getTime(),
-            is_read: true
+            is_read: true,
+            attachment: fileToSend ? {
+                title: fileToSend.name,
+                type: fileToSend.type || 'File',
+                size: formatFileSize(fileToSend.size),
+                url: filePreview || undefined
+            } : undefined
         };
 
         setIsSending(true);
 
         setSelectedTenant(prev => prev ? ({
             ...prev,
-            last_message: textToSend,
+            last_message: createdMsg.text,
             last_message_time: timeStr,
             total_messages: prev.total_messages + 1,
             messages: [...prev.messages, createdMsg]
@@ -473,7 +543,7 @@ export default function AdminChat() {
             if (c.id === selectedTenant.id) {
                 return {
                     ...c,
-                    last_message: textToSend,
+                    last_message: createdMsg.text,
                     last_message_time: timeStr,
                     total_messages: c.total_messages + 1,
                     messages: [...c.messages, createdMsg]
@@ -483,18 +553,49 @@ export default function AdminChat() {
         }));
 
         setNewMessage('');
-        setIsSending(false);
+        handleRemoveSelectedFile();
 
         // Dispatch to backend API
         if (typeof selectedTenant.id === 'number') {
             try {
-                await api.post('/admin/chat', {
-                    message: textToSend,
-                    tenant_id: selectedTenant.id
-                });
-            } catch {
-                // Keep local state
+                if (fileToSend) {
+                    const formData = new FormData();
+                    if (textToSend) formData.append('message', textToSend);
+                    formData.append('tenant_id', String(selectedTenant.id));
+                    formData.append('file', fileToSend);
+
+                    const res = await api.post('/admin/chat', formData, {
+                        headers: { 'Content-Type': 'multipart/form-data' }
+                    });
+
+                    if (res.data && res.data.attachment_url) {
+                        const serverUrl = resolveUploadUrl(res.data.attachment_url);
+                        setSelectedTenant(prev => {
+                            if (!prev) return prev;
+                            return {
+                                ...prev,
+                                messages: prev.messages.map(m => m.id === createdMsg.id ? {
+                                    ...m,
+                                    attachment: m.attachment ? { ...m.attachment, url: serverUrl } : undefined
+                                } : m)
+                            };
+                        });
+                    }
+                } else {
+                    await api.post('/admin/chat', {
+                        message: textToSend,
+                        tenant_id: selectedTenant.id
+                    });
+                }
+            } catch (err: any) {
+                console.error('Failed to send message:', err);
+                const msg = err.response?.data?.message || 'Failed to send message';
+                toast.error('Send Error', { description: msg });
+            } finally {
+                setIsSending(false);
             }
+        } else {
+            setIsSending(false);
         }
     };
 
@@ -570,8 +671,8 @@ export default function AdminChat() {
                    ======================================================== */}
                 <div className="w-full sm:w-72 md:w-80 lg:w-[310px] xl:w-[330px] border-r border-slate-200/80 dark:border-zinc-800 flex flex-col shrink-0 bg-white dark:bg-zinc-950">
                     
-                    {/* Search Bar & Category Filter Tabs Header */}
-                    <div className="p-3.5 border-b border-slate-100 dark:border-zinc-900 space-y-2.5">
+                    {/* Search Bar Header */}
+                    <div className="p-3.5 border-b border-slate-100 dark:border-zinc-900">
                         <div className="relative">
                             <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
                             <input
@@ -579,45 +680,8 @@ export default function AdminChat() {
                                 placeholder="Search conversations..."
                                 value={searchFilter}
                                 onChange={(e) => setSearchFilter(e.target.value)}
-                                className="w-full py-2 pl-9 pr-3.5 text-xs rounded-xl bg-slate-50/80 dark:bg-zinc-900/90 border border-slate-200/80 dark:border-zinc-800 text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-blue-600 transition-all"
+                                className="w-full py-2.5 pl-9 pr-3.5 text-sm sm:text-base rounded-xl bg-slate-50/80 dark:bg-zinc-900/90 border border-slate-200/80 dark:border-zinc-800 text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-blue-600 transition-all"
                             />
-                        </div>
-
-                        {/* Category Filter Tabs (All | Tenants | Staff) */}
-                        <div className="flex items-center gap-1.5 select-none pt-0.5">
-                            <button
-                                type="button"
-                                onClick={() => setCategoryTab('all')}
-                                className={`py-1.5 px-3 rounded-lg text-xs font-semibold transition-colors cursor-pointer ${
-                                    categoryTab === 'all'
-                                        ? 'bg-[#0062cc] text-white shadow-xs'
-                                        : 'bg-slate-100 hover:bg-slate-200/70 dark:bg-zinc-800 text-slate-600 dark:text-zinc-400'
-                                }`}
-                            >
-                                All ({allCount})
-                            </button>
-                            <button
-                                type="button"
-                                onClick={() => setCategoryTab('tenant')}
-                                className={`py-1.5 px-3 rounded-lg text-xs font-semibold transition-colors cursor-pointer ${
-                                    categoryTab === 'tenant'
-                                        ? 'bg-[#0062cc] text-white shadow-xs'
-                                        : 'bg-slate-100 hover:bg-slate-200/70 dark:bg-zinc-800 text-slate-600 dark:text-zinc-400'
-                                }`}
-                            >
-                                Tenants ({tenantCount})
-                            </button>
-                            <button
-                                type="button"
-                                onClick={() => setCategoryTab('staff')}
-                                className={`py-1.5 px-3 rounded-lg text-xs font-semibold transition-colors cursor-pointer ${
-                                    categoryTab === 'staff'
-                                        ? 'bg-[#0062cc] text-white shadow-xs'
-                                        : 'bg-slate-100 hover:bg-slate-200/70 dark:bg-zinc-800 text-slate-600 dark:text-zinc-400'
-                                }`}
-                            >
-                                Staff ({staffCount})
-                            </button>
                         </div>
                     </div>
 
@@ -630,7 +694,7 @@ export default function AdminChat() {
                         ) : filteredConversations.length === 0 ? (
                             <div className="flex flex-col items-center justify-center py-16 text-slate-400 dark:text-zinc-500">
                                 <MessageSquare className="w-8 h-8 mb-2 opacity-40" />
-                                <p className="text-xs font-medium">No conversations found</p>
+                                <p className="text-sm font-medium">No conversations found</p>
                             </div>
                         ) : (
                             filteredConversations.map(conv => {
@@ -670,7 +734,7 @@ export default function AdminChat() {
                                         {/* Name, Snippet, Time & Counter */}
                                         <div className="flex-1 min-w-0">
                                             <div className="flex items-center justify-between gap-1 leading-tight">
-                                                <span className={`text-[13px] truncate ${
+                                                <span className={`text-sm sm:text-base truncate ${
                                                     isSelected 
                                                         ? 'font-bold text-slate-950 dark:text-white' 
                                                         : conv.unread_count > 0 
@@ -679,7 +743,7 @@ export default function AdminChat() {
                                                 }`}>
                                                     {conv.name}
                                                 </span>
-                                                <span className={`text-[11px] shrink-0 font-medium ${
+                                                <span className={`text-xs shrink-0 font-semibold ${
                                                     isSelected ? 'text-[#0062cc] dark:text-blue-400' : 'text-slate-400 dark:text-zinc-500'
                                                 }`}>
                                                     {conv.last_message_time}
@@ -687,12 +751,12 @@ export default function AdminChat() {
                                             </div>
 
                                             <div className="flex items-center justify-between gap-2 mt-1">
-                                                <p className="text-xs text-slate-500 dark:text-zinc-400 truncate">
+                                                <p className="text-xs sm:text-sm text-slate-500 dark:text-zinc-400 truncate">
                                                     {conv.last_message}
                                                 </p>
 
                                                 {conv.unread_count > 0 && (
-                                                    <span className="min-w-4.5 h-4.5 px-1 rounded-full bg-[#0062cc] text-white text-[10px] font-bold flex items-center justify-center shadow-xs shrink-0">
+                                                    <span className="min-w-5 h-5 px-1.5 rounded-full bg-[#0062cc] text-white text-xs font-bold flex items-center justify-center shadow-xs shrink-0">
                                                         {conv.unread_count}
                                                     </span>
                                                 )}
@@ -737,20 +801,20 @@ export default function AdminChat() {
                                     </div>
 
                                     <div>
-                                        <h3 className="font-bold text-[15px] sm:text-base text-slate-900 dark:text-white leading-tight">
+                                        <h3 className="font-bold text-base sm:text-lg text-slate-900 dark:text-white leading-tight">
                                             {selectedTenant.name}
                                         </h3>
 
-                                        <div className="flex items-center gap-2 text-xs mt-0.5">
+                                        <div className="flex items-center gap-2 text-xs sm:text-sm mt-0.5">
                                             {/* Online / Offline status */}
                                             {selectedTenant.is_online ? (
-                                                <div className="flex items-center gap-1 text-emerald-600 dark:text-emerald-400 font-semibold text-[11.5px]">
-                                                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                                                <div className="flex items-center gap-1 text-emerald-600 dark:text-emerald-400 font-semibold text-xs sm:text-sm">
+                                                    <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
                                                     <span>Online</span>
                                                 </div>
                                             ) : (
-                                                <div className="flex items-center gap-1 text-slate-400 dark:text-zinc-500 font-semibold text-[11.5px]">
-                                                    <span className="w-1.5 h-1.5 rounded-full bg-slate-300 dark:bg-zinc-600"></span>
+                                                <div className="flex items-center gap-1 text-slate-400 dark:text-zinc-500 font-semibold text-xs sm:text-sm">
+                                                    <span className="w-2 h-2 rounded-full bg-slate-300 dark:bg-zinc-600"></span>
                                                     <span>Offline</span>
                                                 </div>
                                             )}
@@ -758,40 +822,24 @@ export default function AdminChat() {
                                             <span className="text-slate-300 dark:text-zinc-600">•</span>
 
                                             {/* Room & Role */}
-                                            <div className="flex items-center gap-1.5 text-slate-500 dark:text-zinc-400 text-[11.5px]">
-                                                <Building2 className="w-3.5 h-3.5 text-slate-400" />
+                                            <div className="flex items-center gap-1.5 text-slate-500 dark:text-zinc-400 text-xs sm:text-sm font-medium">
+                                                <Building2 className="w-4 h-4 text-slate-400" />
                                                 <span>{selectedTenant.room_number || "—"}</span>
                                                 <span className="text-slate-300 dark:text-zinc-600">•</span>
-                                                <User className="w-3.5 h-3.5 text-slate-400" />
+                                                <User className="w-4 h-4 text-slate-400" />
                                                 <span>{selectedTenant.role || "Tenant"}</span>
                                             </div>
                                         </div>
                                     </div>
                                 </div>
 
-                                {/* Call, Video & More Buttons on Right */}
+                                {/* Conversation Options */}
                                 <div className="flex items-center gap-1.5">
                                     <button
                                         type="button"
-                                        onClick={() => toast.info(`Starting voice call with ${selectedTenant.name}...`)}
+                                        onClick={() => toast.info("Conversation Active", { description: `Direct messaging channel with ${selectedTenant.name}.` })}
                                         className="w-8 h-8 rounded-lg border border-slate-200/80 dark:border-zinc-800 hover:bg-slate-50 dark:hover:bg-zinc-850 flex items-center justify-center text-slate-600 dark:text-zinc-400 transition-colors cursor-pointer"
-                                        title="Phone call"
-                                    >
-                                        <Phone className="w-4 h-4" />
-                                    </button>
-                                    <button
-                                        type="button"
-                                        onClick={() => toast.info(`Starting video call with ${selectedTenant.name}...`)}
-                                        className="w-8 h-8 rounded-lg border border-slate-200/80 dark:border-zinc-800 hover:bg-slate-50 dark:hover:bg-zinc-850 flex items-center justify-center text-slate-600 dark:text-zinc-400 transition-colors cursor-pointer"
-                                        title="Video call"
-                                    >
-                                        <Video className="w-4 h-4" />
-                                    </button>
-                                    <button
-                                        type="button"
-                                        onClick={() => toast.info("Options", { description: "Conversation options" })}
-                                        className="w-8 h-8 rounded-lg border border-slate-200/80 dark:border-zinc-800 hover:bg-slate-50 dark:hover:bg-zinc-850 flex items-center justify-center text-slate-600 dark:text-zinc-400 transition-colors cursor-pointer"
-                                        title="More options"
+                                        title="Options"
                                     >
                                         <MoreVertical className="w-4 h-4" />
                                     </button>
@@ -809,9 +857,9 @@ export default function AdminChat() {
                                     </div>
                                 ) : selectedTenant.messages.length === 0 ? (
                                     <div className="flex-1 flex flex-col items-center justify-center text-slate-400 dark:text-zinc-500">
-                                        <MessageSquare className="w-10 h-10 mb-2 opacity-30" />
-                                        <p className="text-xs font-medium">No messages yet</p>
-                                        <p className="text-[11px] mt-0.5">Send a message to start a conversation.</p>
+                                        <MessageSquare className="w-12 h-12 mb-3 opacity-30" />
+                                        <p className="text-base font-bold text-slate-600 dark:text-zinc-300">No messages yet</p>
+                                        <p className="text-sm font-medium mt-1">Send a message to start a conversation.</p>
                                     </div>
                                 ) : (
                                     <div className="mt-auto flex flex-col space-y-4 w-full">
@@ -820,7 +868,7 @@ export default function AdminChat() {
                                                 {/* Date Separator */}
                                                 <div className="relative flex py-2 items-center select-none my-1">
                                                     <div className="flex-grow border-t border-slate-100 dark:border-zinc-900"></div>
-                                                    <span className="flex-shrink mx-4 text-xs font-medium text-slate-400 dark:text-zinc-500">
+                                                    <span className="flex-shrink mx-4 text-xs sm:text-sm font-bold text-slate-400 dark:text-zinc-500">
                                                         {group.date}
                                                     </span>
                                                     <div className="flex-grow border-t border-slate-100 dark:border-zinc-900"></div>
@@ -835,34 +883,91 @@ export default function AdminChat() {
                                                             <div key={msg.id} className="w-full flex justify-end mb-4">
                                                                 <div className="flex flex-col items-end max-w-[500px]">
                                                                     {/* Admin Outgoing Bubble */}
-                                                                    <div className="bg-[#0062cc] text-white rounded-2xl rounded-tr-xs p-4 shadow-xs text-[13px] leading-relaxed">
+                                                                    <div className="bg-[#0062cc] text-white rounded-2xl rounded-tr-xs p-4 shadow-xs text-sm sm:text-base leading-relaxed">
                                                                         <p className="whitespace-pre-wrap">{msg.text}</p>
+
+                                                                        {/* Maintenance Ticket Card inside Outgoing Bubble */}
+                                                                        {msg.maintenanceTicket && (
+                                                                            <div className="mt-3 bg-white dark:bg-zinc-900 text-slate-900 dark:text-white rounded-xl border border-white/20 dark:border-zinc-800 p-3 shadow-xs text-left">
+                                                                                <div className="flex items-center justify-between gap-2 pb-2 border-b border-slate-100 dark:border-zinc-800">
+                                                                                    <div className="flex items-center gap-2 min-w-0">
+                                                                                        <div className="w-7 h-7 rounded-md bg-blue-50 dark:bg-blue-950/60 text-[#0062cc] dark:text-blue-400 flex items-center justify-center shrink-0">
+                                                                                            <Wrench className="w-4 h-4 stroke-[2.2]" />
+                                                                                        </div>
+                                                                                        <div className="min-w-0">
+                                                                                            <span className="text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-500 block leading-none">
+                                                                                                Updated Ticket
+                                                                                            </span>
+                                                                                            <span className="text-sm font-mono font-bold text-slate-900 dark:text-white leading-tight mt-0.5 block truncate">
+                                                                                                {msg.maintenanceTicket.request_number}
+                                                                                            </span>
+                                                                                        </div>
+                                                                                    </div>
+                                                                                    <span className={`text-xs font-bold px-2.5 py-0.5 rounded-full shrink-0 ${
+                                                                                        normalizeTicketStatus(msg.maintenanceTicket.status) === 'Resolved'
+                                                                                            ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-400'
+                                                                                            : normalizeTicketStatus(msg.maintenanceTicket.status) === 'In Progress'
+                                                                                            ? 'bg-blue-100 text-blue-700 dark:bg-blue-950/60 dark:text-blue-400'
+                                                                                            : normalizeTicketStatus(msg.maintenanceTicket.status) === 'Cancelled'
+                                                                                            ? 'bg-rose-100 text-rose-700 dark:bg-rose-950/60 dark:text-rose-400'
+                                                                                            : 'bg-amber-100 text-amber-700 dark:bg-amber-950/60 dark:text-amber-400'
+                                                                                    }`}>
+                                                                                        {normalizeTicketStatus(msg.maintenanceTicket.status)}
+                                                                                    </span>
+                                                                                </div>
+                                                                                <div className="pt-2">
+                                                                                    <h5 className="font-bold text-sm sm:text-base text-slate-900 dark:text-white leading-tight">
+                                                                                        {msg.maintenanceTicket.title}
+                                                                                    </h5>
+                                                                                    {msg.maintenanceTicket.description && (
+                                                                                        <p className="text-xs sm:text-sm text-slate-600 dark:text-zinc-400 mt-1 line-clamp-2">
+                                                                                            {msg.maintenanceTicket.description}
+                                                                                        </p>
+                                                                                    )}
+                                                                                </div>
+                                                                                {msg.maintenanceTicket.id > 0 && (
+                                                                                    <button
+                                                                                        type="button"
+                                                                                        onClick={() =>
+                                                                                            router.push(
+                                                                                                `/admin/requests?tenant=${encodeURIComponent(selectedTenant.name)}&requestId=${msg.maintenanceTicket?.id}`
+                                                                                            )
+                                                                                        }
+                                                                                        className="mt-2.5 w-full pt-2 border-t border-slate-100 dark:border-zinc-800 text-xs sm:text-sm font-bold text-[#0062cc] dark:text-blue-400 flex items-center justify-between hover:underline cursor-pointer"
+                                                                                    >
+                                                                                        <span>View Maintenance Ticket</span>
+                                                                                        <ArrowRight className="w-4 h-4" />
+                                                                                    </button>
+                                                                                )}
+                                                                            </div>
+                                                                        )}
 
                                                                         {/* Attachment Box */}
                                                                         {msg.attachment && (
-                                                                            <div className="mt-3 bg-white dark:bg-zinc-900 rounded-xl p-3 flex items-center justify-between gap-3 border border-blue-200/40 dark:border-zinc-800 shadow-xs text-slate-900 dark:text-white cursor-pointer hover:bg-slate-50 dark:hover:bg-zinc-850 transition-colors">
-                                                                                <div className="flex items-center gap-3 min-w-0">
-                                                                                    <div className="w-10 h-10 rounded-lg bg-blue-50 dark:bg-blue-950/60 text-[#0062cc] dark:text-blue-400 flex items-center justify-center shrink-0">
-                                                                                        <FileText className="w-5 h-5 stroke-[2.2]" />
-                                                                                    </div>
-                                                                                    <div className="min-w-0">
-                                                                                        <h4 className="font-bold text-xs text-slate-900 dark:text-white truncate">
-                                                                                            {msg.attachment.title}
-                                                                                        </h4>
-                                                                                        <span className="text-[11px] text-slate-400 font-medium">
-                                                                                            {msg.attachment.type} • {msg.attachment.size}
-                                                                                        </span>
-                                                                                    </div>
-                                                                                </div>
-
-                                                                                <Download className="w-4 h-4 text-slate-400 hover:text-slate-700 dark:hover:text-zinc-200 shrink-0" />
+                                                                            <div className="mt-2.5">
+                                                                                {msg.attachment.type.startsWith('image/') || msg.attachment.url?.match(/\.(png|jpe?g|gif|webp|svg)$/i) ? (
+                                                                                    <a href={msg.attachment.url} target="_blank" rel="noopener noreferrer" className="block overflow-hidden rounded-xl border border-white/20 hover:opacity-95 transition-opacity">
+                                                                                        <img src={msg.attachment.url} alt={msg.attachment.title} className="max-h-60 max-w-full rounded-xl object-contain bg-black/20" />
+                                                                                    </a>
+                                                                                ) : (
+                                                                                    <a href={msg.attachment.url} download={msg.attachment.title} target="_blank" rel="noopener noreferrer" className="bg-white/10 hover:bg-white/20 text-white rounded-xl p-2.5 flex items-center justify-between gap-3 border border-white/20 transition-colors">
+                                                                                        <div className="flex items-center gap-2.5 min-w-0">
+                                                                                            <FileText className="w-4 h-4 text-white shrink-0" />
+                                                                                            <div className="min-w-0">
+                                                                                                <p className="truncate max-w-[200px] text-xs sm:text-sm font-semibold leading-tight">{msg.attachment.title}</p>
+                                                                                                {msg.attachment.size && <span className="text-xs text-white/70">{msg.attachment.size}</span>}
+                                                                                            </div>
+                                                                                        </div>
+                                                                                        <Download className="w-4 h-4 opacity-80 shrink-0 ml-2" />
+                                                                                    </a>
+                                                                                )}
                                                                             </div>
                                                                         )}
                                                                     </div>
 
                                                                     {/* Timestamp & Read Receipt */}
-                                                                    <div className="flex items-center gap-1 text-[11px] text-slate-400 dark:text-zinc-500 mt-1 pr-1 font-sans">
-                                                                        <CheckCheck className="w-3.5 h-3.5 text-[#0062cc] dark:text-blue-400" />
+                                                                    <div className="flex items-center gap-1 text-xs text-slate-400 dark:text-zinc-500 mt-1 pr-1 font-sans">
+                                                                        <CheckCheck className="w-4 h-4 text-[#0062cc] dark:text-blue-400" />
                                                                         <span>{msg.time}</span>
                                                                     </div>
                                                                 </div>
@@ -889,14 +994,14 @@ export default function AdminChat() {
                                                                         {/* Ticket Header */}
                                                                         <div className="px-3.5 py-2.5 bg-slate-50/80 dark:bg-zinc-900/80 border-b border-slate-100 dark:border-zinc-800 flex items-center justify-between gap-2">
                                                                             <div className="flex items-center gap-2 min-w-0">
-                                                                                <div className="w-7 h-7 rounded-lg bg-blue-50 dark:bg-blue-950/60 text-[#0062cc] dark:text-blue-400 flex items-center justify-center shrink-0">
-                                                                                    <Wrench className="w-3.5 h-3.5 stroke-[2.2]" />
+                                                                                <div className="w-8 h-8 rounded-lg bg-blue-50 dark:bg-blue-950/60 text-[#0062cc] dark:text-blue-400 flex items-center justify-center shrink-0">
+                                                                                    <Wrench className="w-4 h-4 stroke-[2.2]" />
                                                                                 </div>
                                                                                 <div className="min-w-0">
-                                                                                    <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-500 block leading-none">
+                                                                                    <span className="text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-500 block leading-none">
                                                                                         Requested Maintenance Ticket
                                                                                     </span>
-                                                                                    <span className="text-xs font-mono font-bold text-slate-900 dark:text-white leading-tight mt-0.5 block truncate">
+                                                                                    <span className="text-sm font-mono font-bold text-slate-900 dark:text-white leading-tight mt-0.5 block truncate">
                                                                                         {ticket.request_number}
                                                                                     </span>
                                                                                 </div>
@@ -905,22 +1010,22 @@ export default function AdminChat() {
                                                                             {/* Status - Colored text only */}
                                                                             <div className="shrink-0">
                                                                                 {normStatus === 'Pending' && (
-                                                                                    <span className="inline-flex items-center gap-1 text-[11px] font-bold text-amber-600 dark:text-amber-400">
-                                                                                        <Clock className="w-3 h-3" /> Pending
+                                                                                    <span className="inline-flex items-center gap-1 text-xs sm:text-sm font-bold text-amber-600 dark:text-amber-400">
+                                                                                        <Clock className="w-3.5 h-3.5" /> Pending
                                                                                     </span>
                                                                                 )}
                                                                                 {normStatus === 'In Progress' && (
-                                                                                    <span className="inline-flex items-center gap-1 text-[11px] font-bold text-blue-600 dark:text-blue-400">
-                                                                                        <User className="w-3 h-3" /> In Progress
+                                                                                    <span className="inline-flex items-center gap-1 text-xs sm:text-sm font-bold text-blue-600 dark:text-blue-400">
+                                                                                        <User className="w-3.5 h-3.5" /> In Progress
                                                                                     </span>
                                                                                 )}
                                                                                 {normStatus === 'Resolved' && (
-                                                                                    <span className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-600 dark:text-emerald-400">
-                                                                                        <CheckCircle2 className="w-3 h-3" /> Resolved
+                                                                                    <span className="inline-flex items-center gap-1 text-xs sm:text-sm font-bold text-emerald-600 dark:text-emerald-400">
+                                                                                        <CheckCircle2 className="w-3.5 h-3.5" /> Resolved
                                                                                     </span>
                                                                                 )}
                                                                                 {normStatus === 'Cancelled' && (
-                                                                                    <span className="inline-flex items-center gap-1 text-[11px] font-bold text-rose-600 dark:text-rose-400">
+                                                                                    <span className="inline-flex items-center gap-1 text-xs sm:text-sm font-bold text-rose-600 dark:text-rose-400">
                                                                                         Cancelled
                                                                                     </span>
                                                                                 )}
@@ -929,30 +1034,30 @@ export default function AdminChat() {
 
                                                                         {/* Ticket Body */}
                                                                         <div className="p-3.5 space-y-2">
-                                                                            <h4 className="font-bold text-[13px] text-slate-900 dark:text-white leading-snug">
+                                                                            <h4 className="font-bold text-sm sm:text-base text-slate-900 dark:text-white leading-snug">
                                                                                 {ticket.title}
                                                                             </h4>
 
                                                                             {ticket.description && (
-                                                                                <p className="text-xs text-slate-600 dark:text-zinc-400 leading-relaxed line-clamp-3 whitespace-pre-wrap">
+                                                                                <p className="text-xs sm:text-sm text-slate-600 dark:text-zinc-400 leading-relaxed line-clamp-3 whitespace-pre-wrap">
                                                                                     {ticket.description}
                                                                                 </p>
                                                                             )}
 
                                                                             {/* Category, Priority & Room */}
-                                                                            <div className="flex items-center flex-wrap gap-x-2.5 gap-y-1 pt-0.5 text-[11px]">
+                                                                            <div className="flex items-center flex-wrap gap-x-2.5 gap-y-1 pt-0.5 text-xs">
                                                                                 <span className="font-semibold text-slate-600 dark:text-zinc-300">
                                                                                     {ticket.category}
                                                                                 </span>
                                                                                 <span className="text-slate-300 dark:text-zinc-700">•</span>
                                                                                 {normPriority === 'High' && (
                                                                                     <span className="inline-flex items-center gap-1 font-bold text-rose-600 dark:text-rose-400">
-                                                                                        <Flame className="w-3 h-3 fill-current" /> High Priority
+                                                                                        <Flame className="w-3.5 h-3.5 fill-current" /> High Priority
                                                                                     </span>
                                                                                 )}
                                                                                 {normPriority === 'Medium' && (
                                                                                     <span className="inline-flex items-center gap-1 font-bold text-amber-600 dark:text-amber-400">
-                                                                                        <Zap className="w-3 h-3 fill-current" /> Medium Priority
+                                                                                        <Zap className="w-3.5 h-3.5 fill-current" /> Medium Priority
                                                                                     </span>
                                                                                 )}
                                                                                 {normPriority === 'Low' && (
@@ -991,15 +1096,15 @@ export default function AdminChat() {
                                                                                         `/admin/requests?tenant=${encodeURIComponent(selectedTenant.name)}&requestId=${ticket.id}`
                                                                                     )
                                                                                 }
-                                                                                className="w-full px-3.5 py-2 border-t border-slate-100 dark:border-zinc-800 bg-slate-50/40 dark:bg-zinc-900/40 hover:bg-blue-50/60 dark:hover:bg-blue-950/30 text-xs font-bold text-[#0062cc] dark:text-blue-400 flex items-center justify-between transition-colors cursor-pointer"
+                                                                                className="w-full px-3.5 py-2.5 border-t border-slate-100 dark:border-zinc-800 bg-slate-50/40 dark:bg-zinc-900/40 hover:bg-blue-50/60 dark:hover:bg-blue-950/30 text-xs sm:text-sm font-bold text-[#0062cc] dark:text-blue-400 flex items-center justify-between transition-colors cursor-pointer"
                                                                             >
                                                                                 <span>View Maintenance Ticket</span>
-                                                                                <ArrowRight className="w-3.5 h-3.5" />
+                                                                                <ArrowRight className="w-4 h-4" />
                                                                             </button>
                                                                         )}
                                                                     </div>
 
-                                                                    <span className="text-[11px] text-slate-400 dark:text-zinc-500 mt-1 pl-1 font-sans">
+                                                                    <span className="text-xs text-slate-400 dark:text-zinc-500 mt-1 pl-1 font-sans">
                                                                         {msg.time}
                                                                     </span>
                                                                 </div>
@@ -1017,7 +1122,7 @@ export default function AdminChat() {
                                                             </div>
 
                                                             <div className="flex flex-col items-start max-w-[480px]">
-                                                                <div className="bg-[#f0f2f5] dark:bg-zinc-900 text-slate-800 dark:text-zinc-200 rounded-2xl rounded-tl-xs px-4 py-3 shadow-2xs text-[13px] leading-relaxed border border-slate-100 dark:border-zinc-800/80">
+                                                                <div className="bg-[#f0f2f5] dark:bg-zinc-900 text-slate-800 dark:text-zinc-200 rounded-2xl rounded-tl-xs px-4 py-3 shadow-2xs text-sm sm:text-base leading-relaxed border border-slate-100 dark:border-zinc-800/80">
                                                                     <p className="whitespace-pre-wrap">{msg.text}</p>
                                                                     {msg.attachment && (
                                                                         <div className="mt-2.5 pt-2 border-t border-slate-200/60 dark:border-zinc-800">
@@ -1026,7 +1131,7 @@ export default function AdminChat() {
                                                                                     <img src={msg.attachment.url} alt={msg.attachment.title} className="max-h-60 max-w-full rounded-lg object-contain bg-black/5 dark:bg-black/20" />
                                                                                 </a>
                                                                             ) : (
-                                                                                <a href={msg.attachment.url} download={msg.attachment.title} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 text-xs font-semibold hover:bg-slate-100 dark:hover:bg-zinc-700 transition-colors">
+                                                                                <a href={msg.attachment.url} download={msg.attachment.title} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 text-xs sm:text-sm font-semibold hover:bg-slate-100 dark:hover:bg-zinc-700 transition-colors">
                                                                                     <FileText className="w-4 h-4 text-[#0062cc]" />
                                                                                     <span className="truncate max-w-[200px]">{msg.attachment.title}</span>
                                                                                     <Download className="w-3.5 h-3.5 opacity-70 ml-1" />
@@ -1036,7 +1141,7 @@ export default function AdminChat() {
                                                                     )}
                                                                 </div>
 
-                                                                <span className="text-[11px] text-slate-400 dark:text-zinc-500 mt-1 pl-1 font-sans">
+                                                                <span className="text-xs text-slate-400 dark:text-zinc-500 mt-1 pl-1 font-sans">
                                                                     {msg.time}
                                                                 </span>
                                                             </div>
@@ -1051,13 +1156,63 @@ export default function AdminChat() {
 
                             {/* Chat Input Bar */}
                             <div className="p-3.5 border-t border-slate-200/80 dark:border-zinc-800 bg-white dark:bg-zinc-950 shrink-0">
+                                {/* Hidden file input to open file manager */}
+                                <input
+                                    ref={fileInputRef}
+                                    type="file"
+                                    className="hidden"
+                                    onChange={handleFileSelect}
+                                    accept="*/*"
+                                />
+
+                                {/* Selected Attachment Preview Banner */}
+                                {selectedFile && (
+                                    <div className="mb-2.5 px-3 py-2 rounded-xl bg-slate-50 dark:bg-zinc-900 border border-slate-200/80 dark:border-zinc-800 flex items-center justify-between gap-3 shadow-2xs">
+                                        <div className="flex items-center gap-2.5 min-w-0">
+                                            {filePreviewUrl ? (
+                                                <div className="w-10 h-10 rounded-lg overflow-hidden border border-slate-200 dark:border-zinc-700 bg-black/5 shrink-0">
+                                                    <img src={filePreviewUrl} alt={selectedFile.name} className="w-full h-full object-cover" />
+                                                </div>
+                                            ) : (
+                                                <div className="w-10 h-10 rounded-lg bg-blue-50 dark:bg-blue-950/60 text-[#0062cc] dark:text-blue-400 flex items-center justify-center border border-blue-200/50 dark:border-blue-900/50 shrink-0">
+                                                    <FileText className="w-5 h-5 stroke-[2]" />
+                                                </div>
+                                            )}
+                                            <div className="min-w-0">
+                                                <p className="text-sm sm:text-base font-bold text-slate-900 dark:text-white truncate max-w-[240px] sm:max-w-md">
+                                                    {selectedFile.name}
+                                                </p>
+                                                <div className="flex items-center gap-1.5 text-xs sm:text-sm text-slate-500 dark:text-zinc-400 font-semibold">
+                                                    <span className="font-mono">{formatFileSize(selectedFile.size)}</span>
+                                                    <span>•</span>
+                                                    <span className="text-emerald-600 dark:text-emerald-400 font-bold">Max {MAX_FILE_SIZE_MB} MB</span>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <button
+                                            type="button"
+                                            onClick={handleRemoveSelectedFile}
+                                            className="w-7 h-7 rounded-lg hover:bg-slate-200 dark:hover:bg-zinc-800 text-slate-400 hover:text-slate-700 dark:hover:text-zinc-200 flex items-center justify-center transition-colors cursor-pointer shrink-0"
+                                            title="Remove attachment"
+                                        >
+                                            <X className="w-4 h-4" />
+                                        </button>
+                                    </div>
+                                )}
+
                                 <form onSubmit={handleSend} className="flex items-center gap-2.5">
-                                    {/* Attachment Button */}
+                                    {/* Attachment Button (Hair pin / Paperclip icon) */}
                                     <button
                                         type="button"
-                                        onClick={() => toast.info("Attach Document", { description: "Select file or photo to send." })}
-                                        className="w-9 h-9 rounded-xl flex items-center justify-center text-slate-400 hover:text-slate-600 dark:hover:text-zinc-200 hover:bg-slate-100 dark:hover:bg-zinc-800 transition-colors cursor-pointer shrink-0"
-                                        title="Attach file"
+                                        onClick={() => fileInputRef.current?.click()}
+                                        disabled={isSending}
+                                        className={`w-9 h-9 rounded-xl flex items-center justify-center transition-colors cursor-pointer shrink-0 ${
+                                            selectedFile
+                                                ? "bg-blue-50 text-[#0062cc] dark:bg-blue-950/60 dark:text-blue-400 border border-blue-200 dark:border-blue-900/40"
+                                                : "text-slate-400 hover:text-slate-600 dark:hover:text-zinc-200 hover:bg-slate-100 dark:hover:bg-zinc-800"
+                                        }`}
+                                        title={`Attach image or file (Max ${MAX_FILE_SIZE_MB} MB)`}
                                     >
                                         <Paperclip className="w-4 h-4" />
                                     </button>
@@ -1065,16 +1220,16 @@ export default function AdminChat() {
                                     {/* Message Input */}
                                     <input
                                         type="text"
-                                        placeholder="Type a message..."
+                                        placeholder={selectedFile ? "Add a message with this file (optional)..." : "Type a message..."}
                                         value={newMessage}
                                         onChange={(e) => setNewMessage(e.target.value)}
-                                        className="flex-1 py-2.5 px-4 text-xs rounded-xl bg-slate-50/70 dark:bg-zinc-900/90 border border-slate-200/80 dark:border-zinc-800 text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-blue-600 transition-all"
+                                        className="flex-1 py-3 px-4 text-sm sm:text-base rounded-xl bg-slate-50/70 dark:bg-zinc-900/90 border border-slate-200/80 dark:border-zinc-800 text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-blue-600 transition-all"
                                     />
 
                                     {/* Send Button */}
                                     <button
                                         type="submit"
-                                        disabled={!newMessage.trim() || isSending}
+                                        disabled={(!newMessage.trim() && !selectedFile) || isSending}
                                         className="w-9 h-9 rounded-xl bg-[#0062cc] hover:bg-[#0052ad] text-white flex items-center justify-center shadow-xs transition-colors cursor-pointer shrink-0 disabled:opacity-40 disabled:cursor-not-allowed"
                                         title="Send message"
                                     >
@@ -1086,11 +1241,11 @@ export default function AdminChat() {
                     ) : (
                         /* No conversation selected placeholder */
                         <div className="flex-1 flex flex-col items-center justify-center text-slate-400 dark:text-zinc-500">
-                            <MessageSquare className="w-12 h-12 mb-3 opacity-30" />
-                            <p className="text-sm font-bold text-slate-600 dark:text-zinc-300">
+                            <MessageSquare className="w-14 h-14 mb-3 opacity-30" />
+                            <p className="text-base sm:text-lg font-bold text-slate-600 dark:text-zinc-300">
                                 {isLoadingConversations ? 'Loading conversations...' : 'Select a conversation'}
                             </p>
-                            <p className="text-xs mt-0.5">Choose a tenant from the list to start messaging.</p>
+                            <p className="text-sm font-medium mt-1">Choose a tenant from the list to start messaging.</p>
                         </div>
                     )}
                 </div>
@@ -1127,28 +1282,28 @@ export default function AdminChat() {
                                     </div>
 
                                     <div className="min-w-0 flex-1">
-                                        <h3 className="font-bold text-base text-slate-900 dark:text-white truncate leading-tight">
+                                        <h3 className="font-bold text-lg sm:text-xl text-slate-900 dark:text-white truncate leading-tight">
                                             {selectedTenant.name}
                                         </h3>
 
                                         {/* Online / Offline badge */}
-                                        <div className="flex items-center gap-1.5 mt-1">
+                                        <div className="flex items-center gap-1.5 mt-1.5">
                                             {selectedTenant.is_online ? (
-                                                <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-600 dark:text-emerald-400">
-                                                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                                                <span className="inline-flex items-center gap-1.5 text-xs sm:text-sm font-bold text-emerald-600 dark:text-emerald-400">
+                                                    <span className="w-2 h-2 rounded-full bg-emerald-500" />
                                                     Online
                                                 </span>
                                             ) : (
-                                                <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-slate-500 dark:text-zinc-400">
-                                                    <span className="w-1.5 h-1.5 rounded-full bg-slate-400" />
+                                                <span className="inline-flex items-center gap-1.5 text-xs sm:text-sm font-bold text-slate-500 dark:text-zinc-400">
+                                                    <span className="w-2 h-2 rounded-full bg-slate-400" />
                                                     Offline
                                                 </span>
                                             )}
                                         </div>
 
                                         {/* Room & Bedspace info */}
-                                        <div className="flex items-center gap-1.5 text-xs text-slate-500 dark:text-zinc-400 mt-1.5 truncate">
-                                            <Building2 className="w-3.5 h-3.5 shrink-0 text-slate-400" />
+                                        <div className="flex items-center gap-1.5 text-sm sm:text-base text-slate-500 dark:text-zinc-400 mt-2 truncate">
+                                            <Building2 className="w-4 h-4 shrink-0 text-slate-400" />
                                             <span className="truncate">
                                                 {selectedTenant.room_number || "Room —"} {selectedTenant.bed_space ? `• ${selectedTenant.bed_space}` : ""}
                                             </span>
@@ -1157,7 +1312,7 @@ export default function AdminChat() {
                                 </div>
 
                                 {/* Contact Info (Email & Phone) */}
-                                <div className="space-y-2 pt-2 border-t border-slate-100 dark:border-zinc-900 text-xs">
+                                <div className="space-y-2.5 pt-3 border-t border-slate-100 dark:border-zinc-900 text-sm sm:text-base">
                                     <div className="flex items-center gap-2.5 text-slate-600 dark:text-zinc-300">
                                         <Mail className="w-4 h-4 text-slate-400 shrink-0" />
                                         <span className="truncate">{selectedTenant.email || "No email registered"}</span>
@@ -1171,27 +1326,27 @@ export default function AdminChat() {
                                 {/* View Tenant Profile Button */}
                                 <Link
                                     href={`/admin/tenants?tenant=${encodeURIComponent(selectedTenant.name)}`}
-                                    className="w-full py-2 px-3 border border-[#0062cc] text-[#0062cc] hover:bg-blue-50 dark:hover:bg-blue-950/30 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+                                    className="w-full py-2.5 px-3 border border-[#0062cc] text-[#0062cc] hover:bg-blue-50 dark:hover:bg-blue-950/30 rounded-xl text-sm font-bold flex items-center justify-center gap-2 transition-colors cursor-pointer"
                                 >
-                                    <ExternalLink className="w-3.5 h-3.5" />
+                                    <ExternalLink className="w-4 h-4" />
                                     <span>View Tenant Profile</span>
                                 </Link>
                             </div>
 
                             {/* Card 2: Quick Actions */}
                             <div className="bg-white dark:bg-zinc-950 border border-slate-200/80 dark:border-zinc-800 rounded-2xl p-4 shadow-xs">
-                                <h4 className="font-bold text-xs text-slate-900 dark:text-white mb-2.5">
+                                <h4 className="font-bold text-sm sm:text-base text-slate-900 dark:text-white mb-3">
                                     Quick Actions
                                 </h4>
 
-                                <div className="space-y-1.5">
+                                <div className="space-y-2">
                                     {/* View Room Details */}
                                     <Link
                                         href={`/admin/rooms${selectedTenant.room_number ? `?search=${encodeURIComponent(selectedTenant.room_number.replace(/\D/g, ''))}` : ''}`}
-                                        className="w-full p-2 rounded-xl border border-slate-200/70 dark:border-zinc-800 hover:border-blue-300 hover:bg-blue-50/40 dark:hover:bg-zinc-900 flex items-center justify-between text-xs font-semibold text-slate-700 dark:text-zinc-200 transition-colors group cursor-pointer"
+                                        className="w-full p-2.5 rounded-xl border border-slate-200/70 dark:border-zinc-800 hover:border-blue-300 hover:bg-blue-50/40 dark:hover:bg-zinc-900 flex items-center justify-between text-sm font-semibold text-slate-700 dark:text-zinc-200 transition-colors group cursor-pointer"
                                     >
                                         <div className="flex items-center gap-2.5">
-                                            <div className="w-7 h-7 rounded-lg bg-blue-50 dark:bg-blue-950/60 text-[#0062cc] dark:text-blue-400 flex items-center justify-center shrink-0">
+                                            <div className="w-8 h-8 rounded-lg bg-blue-50 dark:bg-blue-950/60 text-[#0062cc] dark:text-blue-400 flex items-center justify-center shrink-0">
                                                 <FileText className="w-4 h-4 stroke-[2.2]" />
                                             </div>
                                             <span>View Room Details</span>
@@ -1202,10 +1357,10 @@ export default function AdminChat() {
                                     {/* View Payment History */}
                                     <Link
                                         href={`/admin/billing?tenant=${encodeURIComponent(selectedTenant.name)}&tenantId=${encodeURIComponent(String(selectedTenant.id))}&history=true`}
-                                        className="w-full p-2 rounded-xl border border-slate-200/70 dark:border-zinc-800 hover:border-blue-300 hover:bg-blue-50/40 dark:hover:bg-zinc-900 flex items-center justify-between text-xs font-semibold text-slate-700 dark:text-zinc-200 transition-colors group cursor-pointer"
+                                        className="w-full p-2.5 rounded-xl border border-slate-200/70 dark:border-zinc-800 hover:border-blue-300 hover:bg-blue-50/40 dark:hover:bg-zinc-900 flex items-center justify-between text-sm font-semibold text-slate-700 dark:text-zinc-200 transition-colors group cursor-pointer"
                                     >
                                         <div className="flex items-center gap-2.5">
-                                            <div className="w-7 h-7 rounded-lg bg-blue-50 dark:bg-blue-950/60 text-[#0062cc] dark:text-blue-400 flex items-center justify-center shrink-0">
+                                            <div className="w-8 h-8 rounded-lg bg-blue-50 dark:bg-blue-950/60 text-[#0062cc] dark:text-blue-400 flex items-center justify-center shrink-0">
                                                 <CreditCard className="w-4 h-4 stroke-[2.2]" />
                                             </div>
                                             <span>View Payment History</span>
@@ -1217,10 +1372,10 @@ export default function AdminChat() {
                                     <button
                                         type="button"
                                         onClick={handleViewMaintenanceRequest}
-                                        className="w-full p-2 rounded-xl border border-slate-200/70 dark:border-zinc-800 hover:border-blue-300 hover:bg-blue-50/40 dark:hover:bg-zinc-900 flex items-center justify-between text-xs font-semibold text-slate-700 dark:text-zinc-200 transition-colors group cursor-pointer"
+                                        className="w-full p-2.5 rounded-xl border border-slate-200/70 dark:border-zinc-800 hover:border-blue-300 hover:bg-blue-50/40 dark:hover:bg-zinc-900 flex items-center justify-between text-sm font-semibold text-slate-700 dark:text-zinc-200 transition-colors group cursor-pointer"
                                     >
                                         <div className="flex items-center gap-2.5">
-                                            <div className="w-7 h-7 rounded-lg bg-blue-50 dark:bg-blue-950/60 text-[#0062cc] dark:text-blue-400 flex items-center justify-center shrink-0">
+                                            <div className="w-8 h-8 rounded-lg bg-blue-50 dark:bg-blue-950/60 text-[#0062cc] dark:text-blue-400 flex items-center justify-center shrink-0">
                                                 <Wrench className="w-4 h-4 stroke-[2.2]" />
                                             </div>
                                             <span>View Request Maintenance</span>

@@ -34,7 +34,7 @@ interface AdminNotification {
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
     const pathname = usePathname();
     const router = useRouter();
-    const [adminName, setAdminName] = useState('Admin');
+    const [adminName, setAdminName] = useState('Administrator');
     const [adminEmail, setAdminEmail] = useState('admin@renttrack.com');
     const [adminAvatar, setAdminAvatar] = useState('');
     const [unreadCount, setUnreadCount] = useState(0);
@@ -201,7 +201,14 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                 router.replace('/tenant/dashboard');
                 return;
             }
-            setAdminName(user.name);
+            const normalizedName =
+                user.name && !user.name.toLowerCase().includes('master')
+                    ? user.name
+                    : 'Administrator';
+            setAdminName(normalizedName);
+            if (normalizedName !== user.name) {
+                localStorage.setItem('user', JSON.stringify({ ...user, name: normalizedName }));
+            }
             if (user.email) setAdminEmail(user.email);
             if (user.avatar) setAdminAvatar(user.avatar);
         } catch (e) {
@@ -448,7 +455,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                         name: adminName,
                         email: adminEmail,
                         avatar: adminAvatar,
-                        role: "Master Admin"
+                        role: "Administrator"
                     }}
                     onLogout={handleLogout}
                 />
@@ -460,10 +467,10 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                             <SidebarTrigger className="-ml-2 text-slate-500 hover:text-slate-900 dark:text-zinc-400 dark:hover:text-white" />
                             <div className="h-5 w-px bg-slate-200 dark:bg-zinc-800 hidden sm:block" />
                             <div className="flex flex-col">
-                                <h1 className="text-sm sm:text-base lg:text-lg font-black text-slate-900 dark:text-white leading-tight tracking-tight">
+                                <h1 className="text-base sm:text-lg lg:text-xl font-black text-slate-900 dark:text-white leading-tight tracking-tight">
                                     {getPageTitle()}
                                 </h1>
-                                <p className="text-[11px] font-bold text-slate-400 dark:text-zinc-500 uppercase tracking-widest hidden sm:block">
+                                <p className="text-xs sm:text-sm font-bold text-slate-400 dark:text-zinc-500 uppercase tracking-widest hidden sm:block">
                                     Admin Portal
                                 </p>
                             </div>
@@ -471,8 +478,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
                         <div className="flex items-center gap-2">
                             {currentDate && (
-                                <div className="hidden md:flex items-center gap-2 px-3 py-1.5 mr-2 bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-zinc-800 rounded-lg text-xs font-semibold text-slate-700 dark:text-zinc-200">
-                                    <Calendar className="w-3.5 h-3.5 text-slate-500 dark:text-zinc-400" />
+                                <div className="hidden md:flex items-center gap-2 px-3 py-1.5 mr-2 bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-zinc-800 rounded-lg text-sm font-semibold text-slate-700 dark:text-zinc-200">
+                                    <Calendar className="w-4 h-4 text-slate-500 dark:text-zinc-400" />
                                     {currentDate}
                                 </div>
                             )}
@@ -507,9 +514,9 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                                 <DropdownMenuContent align="end" className="w-80 sm:w-96 p-0 border border-slate-200 dark:border-zinc-800 rounded-xl overflow-hidden shadow-xl bg-card">
                                     <div className="flex items-center justify-between p-3.5 border-b border-slate-100 dark:border-zinc-800 bg-slate-50/50 dark:bg-zinc-900/50">
                                         <div className="flex items-center gap-2">
-                                            <span className="font-bold text-sm text-slate-800 dark:text-white">Offline Activity Catch-up</span>
+                                            <span className="font-bold text-sm sm:text-base text-slate-800 dark:text-white">Offline Activity Catch-up</span>
                                             {notifUnreadCount > 0 && (
-                                                <span className="text-[10px] font-bold text-rose-600 dark:text-rose-400">
+                                                <span className="text-xs font-bold text-rose-600 dark:text-rose-400">
                                                     {notifUnreadCount} new
                                                 </span>
                                             )}
@@ -517,9 +524,9 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                                         {notifications.length > 0 && (
                                             <button 
                                                 onClick={handleMarkAllRead} 
-                                                className="text-xs font-semibold text-zinc-900 dark:text-white hover:underline flex items-center gap-1 cursor-pointer"
+                                                className="text-xs sm:text-sm font-semibold text-zinc-900 dark:text-white hover:underline flex items-center gap-1 cursor-pointer"
                                             >
-                                                <CheckCheck className="w-3.5 h-3.5" />
+                                                <CheckCheck className="w-4 h-4" />
                                                 <span>Mark all read</span>
                                             </button>
                                         )}
@@ -553,14 +560,14 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                                                     </div>
                                                     <div className="flex-1 min-w-0">
                                                         <div className="flex items-center justify-between gap-2">
-                                                            <p className="text-xs font-bold text-slate-900 dark:text-white truncate">
+                                                            <p className="text-sm font-bold text-slate-900 dark:text-white truncate">
                                                                 {notif.title}
                                                             </p>
-                                                            <span className="text-[10px] text-slate-400 dark:text-zinc-500 whitespace-nowrap">
+                                                            <span className="text-xs text-slate-400 dark:text-zinc-500 whitespace-nowrap">
                                                                 {formatTimeAgo(notif.created_at)}
                                                             </span>
                                                         </div>
-                                                        <p className="text-xs text-slate-600 dark:text-zinc-400 mt-0.5 line-clamp-2">
+                                                        <p className="text-xs sm:text-sm text-slate-600 dark:text-zinc-400 mt-0.5 line-clamp-2">
                                                             {notif.message}
                                                         </p>
                                                     </div>
@@ -572,8 +579,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                                         ) : (
                                             <div className="p-8 text-center text-slate-500 dark:text-zinc-400">
                                                 <Bell className="w-8 h-8 mx-auto mb-2 opacity-20" />
-                                                <p className="text-sm font-semibold text-slate-700 dark:text-zinc-300">No new notifications</p>
-                                                <p className="text-xs text-slate-400 dark:text-zinc-500 mt-1">
+                                                <p className="text-base font-bold text-slate-700 dark:text-zinc-300">No new notifications</p>
+                                                <p className="text-sm text-slate-400 dark:text-zinc-500 mt-1">
                                                     No tenant activity occurred while you were offline.
                                                 </p>
                                             </div>
@@ -586,7 +593,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                                                     e.preventDefault();
                                                     setShowAllNotifications(!showAllNotifications);
                                                 }}
-                                                className="text-xs font-semibold text-slate-500 dark:text-zinc-400 hover:text-slate-800 dark:hover:text-white transition-colors cursor-pointer"
+                                                className="text-xs sm:text-sm font-semibold text-slate-500 dark:text-zinc-400 hover:text-slate-800 dark:hover:text-white transition-colors cursor-pointer"
                                             >
                                                 {showAllNotifications ? 'View fewer notifications' : `View all (${notifications.length})`}
                                             </button>

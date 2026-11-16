@@ -4,16 +4,48 @@ const db = require('../config/db');
 const { hashPassword, comparePassword } = require('../utils/passwordUtils');
 const { formatPhoneNumber } = require('../utils/phoneUtils');
 const { generateUniqueInvoiceNumber } = require('../utils/invoiceNumberGenerator');
+const { generateUniqueTransactionNumber } = require('../utils/transactionNumberGenerator');
 const { normalizeRoomGender, ensureRoomGenderColumn } = require('../utils/roomGenderUtils');
+
+// Normalize online / QRPh / GCash payment method names to "E-Wallet"
+const normalizeOnlinePaymentMethod = (method, fallback = 'Cash') => {
+    const raw = (method || '').trim();
+    if (!raw) return fallback;
+    const lower = raw.toLowerCase();
+    if (lower === 'cash') return 'Cash';
+    if (
+        lower.includes('gcash') ||
+        lower.includes('qrph') ||
+        lower.includes('qr ph') ||
+        lower.includes('e-wallet') ||
+        lower.includes('ewallet') ||
+        lower === 'online'
+    ) {
+        return 'E-Wallet';
+    }
+    return raw;
+};
+
+// Record tenant account data changes for the dashboard Recent Activity feed
+const logTenantAccountActivity = async (tenantId, title, message, type) => {
+    try {
+        await db.query(
+            `INSERT INTO "rentTrack_schema".notifications (user_id, title, message, type, is_read) VALUES ($1, $2, $3, $4, TRUE)`,
+            [tenantId, title, message, type]
+        );
+    } catch (err) {
+        console.error('Tenant activity log error:', err.message);
+    }
+};
 
 // Get Tenant Dashboard Data
 const getTenantDashboard = async (req, res) => {
     const tenantId = req.user.id;
 
     try {
-        // Get tenant's current status, name and room
+        // Get tenant's current status, profile fields and room
         const userResult = await db.query(
-            "SELECT u.name, u.status, r.room_number FROM users u LEFT JOIN rooms r ON u.room_id = r.id WHERE u.id = $1",
+            "SELECT u.name, u.email, u.status, u.created_at, u.date_moved_in, u.bed_space, r.room_number FROM users u LEFT JOIN rooms r ON u.room_id = r.id WHERE u.id = $1",
             [tenantId]
         );
         const user = userResult.rows[0];
@@ -35,13 +67,134 @@ const getTenantDashboard = async (req, res) => {
             [tenantId]
         );
 
+        // Get maintenance requests & account change notifications for Recent Activity
+        const [requestsResult, notificationsResult] = await Promise.all([
+            db.query(
+                "SELECT id, request_number, title, category, status, created_at FROM requests WHERE tenant_id = $1 ORDER BY created_at DESC LIMIT 15",
+                [tenantId]
+            ).catch(() => ({ rows: [] })),
+            db.query(
+                'SELECT id, title, message, type, created_at FROM "rentTrack_schema".notifications WHERE user_id = $1 ORDER BY created_at DESC LIMIT 20',
+                [tenantId]
+            ).catch(() => ({ rows: [] }))
+        ]);
+
+        const normalizedRecentTransactions = historyResult.rows.map((row) => ({
+            ...row,
+            payment_method: normalizeOnlinePaymentMethod(row.payment_method, 'E-Wallet')
+        }));
+
+        const recentActivities = [];
+
+        // 1. Account updates, room changes, security changes & status notifications
+        notificationsResult.rows.forEach((n) => {
+            const notifType = (n.type || '').toLowerCase();
+            let category = 'Account';
+            let status = 'Updated';
+            if (notifType === 'account_update') {
+                category = 'Profile';
+                status = 'Updated';
+            } else if (notifType === 'security_update') {
+                category = 'Security';
+                status = 'Updated';
+            } else if (notifType === 'room_update') {
+                category = 'Room';
+                status = 'Updated';
+            } else if (notifType.includes('maintenance')) {
+                category = 'Maintenance';
+                status = 'Updated';
+            } else if (notifType === 'billing_overdue') {
+                category = 'Billing';
+                status = 'Overdue';
+            } else if (notifType.includes('payment') || notifType.includes('bill')) {
+                category = 'Billing';
+                status = 'Updated';
+            }
+
+            recentActivities.push({
+                id: `notif_${n.id}`,
+                title: n.title,
+                detail: n.message,
+                category,
+                status,
+                date: n.created_at
+            });
+        });
+
+        // 2. Payment records
+        normalizedRecentTransactions.forEach((row) => {
+            const rawStatus = row.status || 'Paid';
+            const normalizedStatus = (rawStatus === 'Verified' || rawStatus === 'Approved') ? 'Paid' : rawStatus;
+            recentActivities.push({
+                id: `pay_${row.id}`,
+                title: `Payment Recorded — ₱${Number(row.amount_paid || 0).toLocaleString()}`,
+                detail: `${row.billing_month || 'Billing'} Statement • ${row.payment_method}`,
+                category: 'Payment',
+                status: normalizedStatus,
+                date: row.payment_date || row.created_at
+            });
+        });
+
+        // 3. Billing statements
+        billsResult.rows.forEach((b) => {
+            const rawStatus = b.status || 'Unpaid';
+            const normalizedStatus = (rawStatus === 'Verified' || rawStatus === 'Approved') ? 'Paid' : rawStatus;
+            recentActivities.push({
+                id: `bill_${b.id}`,
+                title: `${b.billing_month} Statement Generated`,
+                detail: `Total: ₱${Number(b.total_amount || 0).toLocaleString()} • Due ${b.due_date || 'N/A'}`,
+                category: 'Billing',
+                status: normalizedStatus,
+                date: b.created_at || b.due_date
+            });
+        });
+
+        // 4. Maintenance requests
+        requestsResult.rows.forEach((r) => {
+            const ticketCode = r.request_number ? `#${String(r.request_number).replace(/^#/, '')}` : '';
+            recentActivities.push({
+                id: `req_${r.id}`,
+                title: `Maintenance Ticket ${ticketCode}`.trim(),
+                detail: `${r.title} (${r.category || 'General'})`,
+                category: 'Maintenance',
+                status: r.status || 'Pending',
+                date: r.created_at
+            });
+        });
+
+        // 5. Room assignment & account registration
+        const hasRoomNotif = notificationsResult.rows.some((n) => n.type === 'room_update');
+        if (user?.room_number && !hasRoomNotif) {
+            recentActivities.push({
+                id: `room_assigned_${tenantId}`,
+                title: `Suite Assigned — Room ${user.room_number}`,
+                detail: `Occupancy status: ${user.status || 'Active'}`,
+                category: 'Room',
+                status: user.status || 'Active',
+                date: user.date_moved_in || user.created_at
+            });
+        }
+        if (user?.created_at) {
+            recentActivities.push({
+                id: `account_created_${tenantId}`,
+                title: 'Account Registered',
+                detail: `${user.name || 'Tenant'} (${user.email || 'Resident Portal'})`,
+                category: 'Account',
+                status: user.status || 'Active',
+                date: user.created_at
+            });
+        }
+
+        recentActivities.sort((a, b) => new Date(b.date || 0).getTime() - new Date(a.date || 0).getTime());
+
         res.status(200).json({
             name: user ? user.name : null,
             status: user ? user.status : 'Active',
             roomNumber: user ? user.room_number : null,
             balanceDue: parseFloat(balanceResult.rows[0]?.sum || 0),
             bills: billsResult.rows,
-            recentTransactions: historyResult.rows
+            recentTransactions: normalizedRecentTransactions,
+            recentActivities
         });
     } catch (error) {
         console.error('Tenant Dashboard Error:', error);
@@ -145,9 +298,12 @@ const getTenantPayments = async (req, res) => {
                     p.payment_method,
                     p.payment_method AS method, 
                     p.notes,
-                    COALESCE(p.reference_number, p.id::text) AS "referenceNumber",
-                    COALESCE(p.reference_number, p.id::text) AS reference_number,
+                    COALESCE(p.transaction_number, p.id::text) AS "transactionNumber",
+                    COALESCE(p.transaction_number, p.id::text) AS transaction_number,
+                    COALESCE(p.transaction_number, p.id::text) AS "referenceNumber",
+                    COALESCE(p.transaction_number, p.id::text) AS reference_number,
                     p.created_at,
+                    b.id AS bill_id,
                     b.billing_month,
                     b.invoice_number,
                     b.invoice_number AS bill_invoice_number,
@@ -157,6 +313,7 @@ const getTenantPayments = async (req, res) => {
                     b.other_fees,
                     b.total_amount AS bill_total,
                     b.balance AS bill_balance,
+                    b.amount_paid AS bill_amount_paid,
                     b.status AS bill_status,
                     TO_CHAR(b.due_date, 'YYYY-MM-DD') AS bill_due_date
              FROM payments p
@@ -167,7 +324,15 @@ const getTenantPayments = async (req, res) => {
              ORDER BY p.payment_date DESC, p.id DESC`,
             [tenantId]
         );
-        res.status(200).json(result.rows);
+        const normalizedPayments = result.rows.map((row) => {
+            const normalizedMethod = normalizeOnlinePaymentMethod(row.payment_method, 'E-Wallet');
+            return {
+                ...row,
+                payment_method: normalizedMethod,
+                method: normalizedMethod
+            };
+        });
+        res.status(200).json(normalizedPayments);
     } catch (error) {
         console.error('Tenant Payments Error:', error);
         res.status(500).json({ message: 'Server error fetching payments' });
@@ -180,8 +345,8 @@ const getTenantMessages = async (req, res) => {
     try {
         const query = `
             SELECT * FROM messages 
-            WHERE (sender_id = $1 AND receiver_id = 1) 
-               OR (sender_id = 1 AND receiver_id = $1)
+            WHERE (sender_id = $1 AND (receiver_id = 1 OR sender_type = 'tenant')) 
+               OR (receiver_id = $1 AND (sender_id = 1 OR sender_type = 'admin'))
             ORDER BY created_at ASC
         `;
         const result = await db.query(query, [tenantId]);
@@ -190,7 +355,7 @@ const getTenantMessages = async (req, res) => {
         await db.query(`
             UPDATE messages 
             SET status = 'read' 
-            WHERE sender_id = 1 AND receiver_id = $1 AND status != 'read'
+            WHERE receiver_id = $1 AND (sender_id = 1 OR sender_type = 'admin') AND status != 'read'
         `, [tenantId]);
         
         res.status(200).json(result.rows);
@@ -307,6 +472,13 @@ const updateTenantProfile = async (req, res) => {
             return res.status(404).json({ message: 'Tenant record not found' });
         }
 
+        await logTenantAccountActivity(
+            tenantId,
+            'Profile Information Updated',
+            `Updated account profile details (${result.rows[0].name})`,
+            'account_update'
+        );
+
         res.status(200).json({ 
             message: 'Profile updated successfully', 
             user: result.rows[0] 
@@ -348,6 +520,12 @@ const updateTenantPassword = async (req, res) => {
         const hashedPassword = await hashPassword(newPassword.trim());
         
         await db.query("UPDATE users SET password = $1 WHERE id = $2", [hashedPassword, tenantId]);
+        await logTenantAccountActivity(
+            tenantId,
+            'Password Updated',
+            'Account security password was changed',
+            'security_update'
+        );
         res.status(200).json({ message: 'Password updated successfully' });
     } catch (error) {
         console.error('Update Password Error:', error);
@@ -359,16 +537,44 @@ const updateTenantPassword = async (req, res) => {
 const getCurrentBill = async (req, res) => {
     const tenantId = req.user.id;
     try {
-        // Fetch user creation date for cycle info
-        const userResult = await db.query("SELECT created_at FROM users WHERE id = $1", [tenantId]);
+        // Fetch user creation date, name, and room info for cycle & statement details
+        const userResult = await db.query(
+            "SELECT u.name, u.created_at, r.room_number FROM users u LEFT JOIN rooms r ON u.room_id = r.id WHERE u.id = $1",
+            [tenantId]
+        );
         const user = userResult.rows[0];
         const creationDay = user?.created_at ? new Date(user.created_at).getDate() : 1;
         const createdAt = user?.created_at || null;
+        const tenantName = user?.name || 'Resident';
+        const roomNumber = user?.room_number || null;
 
         const result = await db.query(
             "SELECT id, billing_month, total_amount, amount_paid, balance, rent_amount, water_charges, electricity_charges, other_fees, TO_CHAR(due_date, 'YYYY-MM-DD') AS due_date, status, invoice_number FROM bills WHERE tenant_id = $1 AND status != 'Paid' ORDER BY due_date ASC LIMIT 1",
             [tenantId]
         );
+
+        const formatBillPayload = (bill) => ({
+            id: bill.id,
+            invoice_number: bill.invoice_number,
+            month: bill.billing_month,
+            totalAmount: parseFloat(bill.total_amount),
+            amountPaid: parseFloat(bill.amount_paid),
+            remainingBalance: parseFloat(bill.balance),
+            dueDate: bill.due_date,
+            status: bill.status,
+            tenantName,
+            roomNumber,
+            hasBill: true,
+            createdAt,
+            creationDay,
+            breakdown: {
+                rent: parseFloat(bill.rent_amount || 0),
+                water: parseFloat(bill.water_charges || 0),
+                electricity: parseFloat(bill.electricity_charges || 0),
+                other: parseFloat(bill.other_fees || 0),
+                penalty: 0
+            }
+        });
 
         if (result.rows.length === 0) {
             // Check if tenant is active with an assigned room and needs current month bill auto-generated
@@ -406,27 +612,17 @@ const getCurrentBill = async (req, res) => {
                         tenantId, tenantInfo.room_id, billingMonthStr, dueDate,
                         tenantInfo.rent_amount, totalAmount, totalAmount, invoiceNumber
                     ]);
-                    const newBill = newBillRes.rows[0];
-                    return res.status(200).json({
-                        id: newBill.id,
-                        invoice_number: newBill.invoice_number,
-                        month: newBill.billing_month,
-                        totalAmount: parseFloat(newBill.total_amount),
-                        amountPaid: parseFloat(newBill.amount_paid),
-                        remainingBalance: parseFloat(newBill.balance),
-                        dueDate: newBill.due_date,
-                        status: newBill.status,
-                        createdAt,
-                        creationDay,
-                        breakdown: {
-                            rent: parseFloat(newBill.rent_amount || 0),
-                            water: 0,
-                            electricity: 0,
-                            other: 0,
-                            penalty: 0
-                        }
-                    });
+                    return res.status(200).json(formatBillPayload(newBillRes.rows[0]));
                 }
+            }
+
+            // Fall back to latest bill (e.g. recently paid current statement with 0 balance)
+            const latestBillRes = await db.query(
+                "SELECT id, billing_month, total_amount, amount_paid, balance, rent_amount, water_charges, electricity_charges, other_fees, TO_CHAR(due_date, 'YYYY-MM-DD') AS due_date, status, invoice_number FROM bills WHERE tenant_id = $1 ORDER BY due_date DESC, id DESC LIMIT 1",
+                [tenantId]
+            );
+            if (latestBillRes.rows.length > 0) {
+                return res.status(200).json(formatBillPayload(latestBillRes.rows[0]));
             }
 
             return res.status(200).json({
@@ -436,6 +632,8 @@ const getCurrentBill = async (req, res) => {
                 amountPaid: 0,
                 remainingBalance: 0,
                 status: "No bill yet",
+                tenantName,
+                roomNumber,
                 hasBill: false,
                 createdAt,
                 creationDay,
@@ -450,25 +648,7 @@ const getCurrentBill = async (req, res) => {
         }
 
         const bill = result.rows[0];
-        res.status(200).json({
-            id: bill.id,
-            invoice_number: bill.invoice_number,
-            month: bill.billing_month,
-            totalAmount: parseFloat(bill.total_amount),
-            amountPaid: parseFloat(bill.amount_paid),
-            remainingBalance: parseFloat(bill.balance),
-            dueDate: bill.due_date,
-            status: bill.status,
-            createdAt,
-            creationDay,
-            breakdown: { 
-                rent: parseFloat(bill.rent_amount || 0), 
-                water: parseFloat(bill.water_charges || 0), 
-                electricity: parseFloat(bill.electricity_charges || 0), 
-                other: parseFloat(bill.other_fees || 0),
-                penalty: 0 // Optional logic if you track penalties later
-            }
-        });
+        res.status(200).json(formatBillPayload(bill));
     } catch (error) {
         console.error('Get Current Bill Error:', error);
         res.status(500).json({ message: 'Server error fetching current bill' });
@@ -528,7 +708,7 @@ const getTenantRooms = async (req, res) => {
             
             // Fetch roommates
             const roommatesQuery = `
-                SELECT id, name, phone, email, gender, date_moved_in 
+                SELECT id, name, phone, email, gender, date_moved_in, status 
                 FROM users 
                 WHERE room_id = $1 AND role = 'tenant' AND status != 'Moved Out'
             `;
@@ -678,6 +858,13 @@ const chooseRoom = async (req, res) => {
         `;
         const updatedUser = await db.query(updateQuery, [room_id, tenantId, inferredTenantGender]);
 
+        await logTenantAccountActivity(
+            tenantId,
+            `Suite Assigned — Room ${room.room_number}`,
+            `Occupancy activated for Room ${room.room_number}`,
+            'room_update'
+        );
+
         res.status(200).json({ 
             message: 'Room selected successfully! You are now an Active tenant.',
             user: updatedUser.rows[0]
@@ -800,27 +987,30 @@ const completeGcashPayment = async (req, res) => {
             );
             if (recentPayment.rows.length > 0) {
                 const rp = recentPayment.rows[0];
+                const normalizedMethod = normalizeOnlinePaymentMethod(rp.payment_method, 'E-Wallet');
                 return res.status(200).json({
                     message: 'Payment complete',
-                    payment: rp,
+                    payment: { ...rp, payment_method: normalizedMethod },
                     bill: bill,
-                    reference_number: rp.reference_number || `QRPH-${rp.id}`,
+                    transaction_number: rp.transaction_number || `TXN-${rp.id}`,
+                    transactionNumber: rp.transaction_number || `TXN-${rp.id}`,
+                    reference_number: rp.transaction_number || `TXN-${rp.id}`,
                     amount_paid: rp.amount_paid,
                     billing_month: bill.billing_month,
                     paid_at: rp.payment_date,
-                    payment_method: rp.payment_method || 'QR Ph'
+                    payment_method: normalizedMethod
                 });
             }
             return res.status(400).json({ message: 'Bill has already been completely settled.' });
         }
 
-        const paymentMethod = req.body.payment_method || 'QR Ph';
-        // Generate authentic QR Ph / GCash reference number format: e.g. "QRPH-YYYYMMDD-XXXX"
-        const now = new Date();
-        const dateStr = now.toISOString().slice(0, 10).replace(/-/g, '');
-        const randomCode = Math.floor(1000 + Math.random() * 9000);
-        const prefix = paymentMethod.toLowerCase().includes('gcash') ? 'GCASH' : 'QRPH';
-        const refNumber = req.body.reference_number || `${prefix}-${dateStr}-${randomCode}`;
+        const paymentMethod = normalizeOnlinePaymentMethod(req.body.payment_method, 'E-Wallet');
+        // Generate random, collision-proof 12-digit transaction number
+        const refNumber = req.body.transaction_number || 
+                          req.body.transactionNumber || 
+                          req.body.reference_number || 
+                          req.body.referenceNumber || 
+                          await generateUniqueTransactionNumber(db, 'TXN');
 
         const newTotalPaid = Math.min(totalAmount, currentPaid + payAmount);
         const newBalance = Math.max(0, totalAmount - newTotalPaid);
@@ -830,28 +1020,31 @@ const completeGcashPayment = async (req, res) => {
 
         // Check if duplicate payment was just inserted within 30 seconds
         const duplicateCheck = await db.query(
-            `SELECT * FROM payments WHERE bill_id = $1 AND (payment_method ILIKE '%qrph%' OR payment_method ILIKE '%gcash%') AND payment_date > NOW() - INTERVAL '30 seconds' ORDER BY id DESC LIMIT 1`,
+            `SELECT * FROM payments WHERE bill_id = $1 AND (payment_method ILIKE '%qrph%' OR payment_method ILIKE '%qr ph%' OR payment_method ILIKE '%gcash%' OR payment_method ILIKE '%e-wallet%') AND payment_date > NOW() - INTERVAL '30 seconds' ORDER BY id DESC LIMIT 1`,
             [bill.id]
         );
         if (duplicateCheck.rows.length > 0) {
             await db.query('ROLLBACK');
             const rp = duplicateCheck.rows[0];
+            const normalizedMethod = normalizeOnlinePaymentMethod(rp.payment_method, 'E-Wallet');
             return res.status(200).json({
                 message: 'Payment complete',
-                payment: rp,
+                payment: { ...rp, payment_method: normalizedMethod },
                 bill: bill,
-                reference_number: rp.reference_number || `QRPH-${rp.id}`,
+                transaction_number: rp.transaction_number || `TXN-${rp.id}`,
+                    transactionNumber: rp.transaction_number || `TXN-${rp.id}`,
+                    reference_number: rp.transaction_number || `TXN-${rp.id}`,
                 amount_paid: rp.amount_paid,
                 billing_month: bill.billing_month,
                 paid_at: rp.payment_date,
-                payment_method: rp.payment_method || 'QR Ph'
+                payment_method: normalizedMethod
             });
         }
 
         // Insert into payments as Paid
         const insertPaymentQuery = `
-            INSERT INTO payments (bill_id, amount_paid, payment_date, payment_method, notes, status, reference_number)
-            VALUES ($1, $2, CURRENT_TIMESTAMP, $3, 'Online QR Ph Payment (GCash/Maya/Banks)', 'Verified', $4)
+            INSERT INTO payments (bill_id, amount_paid, payment_date, payment_method, notes, status, transaction_number)
+            VALUES ($1, $2, CURRENT_TIMESTAMP, $3, 'Online E-Wallet Payment (QRPh National Standard)', 'Verified', $4)
             RETURNING *
         `;
         const paymentRes = await db.query(insertPaymentQuery, [bill.id, payAmount, paymentMethod, refNumber]);
@@ -869,7 +1062,7 @@ const completeGcashPayment = async (req, res) => {
         try {
             const adminNotificationService = require('../services/adminNotificationService');
             adminNotificationService.notifyAdminsIfOffline({
-                title: 'QR Ph Payment Received',
+                title: 'E-Wallet (QRPh) Payment Received',
                 message: `Tenant paid ₱${payAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })} via ${paymentMethod} for ${bill.billing_month} (Ref: ${refNumber}). Automatically verified and marked as Paid. No admin action required.`,
                 type: 'payment_verification',
                 link: '/admin/billing'
@@ -882,9 +1075,12 @@ const completeGcashPayment = async (req, res) => {
             message: 'Payment complete',
             payment: paymentRes.rows[0],
             bill: updatedBillRes.rows[0],
+            transaction_number: refNumber,
+            transactionNumber: refNumber,
             reference_number: refNumber,
             amount_paid: payAmount,
             billing_month: bill.billing_month,
+            payment_method: paymentMethod,
             paid_at: now.toISOString()
         });
     } catch (error) {

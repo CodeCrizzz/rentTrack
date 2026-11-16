@@ -34,16 +34,8 @@ import {
   User,
   CheckCircle2,
   Clock,
-  Eye,
   X,
-  Droplets,
   Zap,
-  Wind,
-  Armchair,
-  Lock,
-  Paintbrush,
-  Tv,
-  MoreHorizontal,
   ArrowRight,
   ArrowUp,
   ArrowDown,
@@ -57,7 +49,6 @@ import {
   Camera,
   Trash2,
   Check,
-  Snowflake,
   Pencil,
 } from "lucide-react";
 
@@ -68,77 +59,6 @@ interface TenantItem {
   room_number?: string;
   floor?: string;
 }
-
-// Maintenance Category Items
-const CATEGORY_ITEMS = [
-  {
-    id: "Plumbing",
-    label: "Plumbing",
-    icon: Droplets,
-    color: "text-[#0284c7]",
-    bg: "bg-blue-100 dark:bg-blue-950/60",
-    activeBorder: "border-blue-500 bg-blue-50/60 dark:bg-blue-950/40",
-    fill: "fill-[#0284c7]",
-  },
-  {
-    id: "Electrical",
-    label: "Electrical",
-    icon: Zap,
-    color: "text-[#f59e0b]",
-    bg: "bg-amber-100 dark:bg-amber-950/60",
-    activeBorder: "border-amber-500 bg-amber-50/60 dark:bg-amber-950/40",
-    fill: "fill-[#f59e0b]",
-  },
-  {
-    id: "AC / Cooling",
-    label: "AC / Cooling",
-    icon: Snowflake,
-    color: "text-[#06b6d4]",
-    bg: "bg-cyan-100 dark:bg-cyan-950/60",
-    activeBorder: "border-cyan-500 bg-cyan-50/60 dark:bg-cyan-950/40",
-  },
-  {
-    id: "Appliance",
-    label: "Appliance",
-    icon: Tv,
-    color: "text-[#0d9488]",
-    bg: "bg-teal-100 dark:bg-teal-950/60",
-    activeBorder: "border-teal-500 bg-teal-50/60 dark:bg-teal-950/40",
-  },
-  {
-    id: "Furniture",
-    label: "Furniture",
-    icon: Armchair,
-    color: "text-[#3b82f6]",
-    bg: "bg-blue-100 dark:bg-blue-950/60",
-    activeBorder: "border-blue-500 bg-blue-50/60 dark:bg-blue-950/40",
-  },
-  {
-    id: "Locks / Security",
-    label: "Locks / Security",
-    icon: Lock,
-    color: "text-[#0284c7]",
-    bg: "bg-cyan-100 dark:bg-cyan-950/60",
-    activeBorder: "border-cyan-500 bg-cyan-50/60 dark:bg-cyan-950/40",
-  },
-  {
-    id: "Wall / Ceiling",
-    label: "Wall / Ceiling",
-    icon: Paintbrush,
-    color: "text-[#e11d48]",
-    bg: "bg-rose-100 dark:bg-rose-950/60",
-    activeBorder: "border-rose-500 bg-rose-50/60 dark:bg-rose-950/40",
-  },
-  {
-    id: "Others",
-    label: "Others",
-    icon: MoreHorizontal,
-    color: "text-[#64748b]",
-    bg: "bg-slate-100 dark:bg-zinc-800",
-    activeBorder: "border-slate-500 bg-slate-100 dark:bg-zinc-800",
-  },
-];
-
 
 function MaintenanceRequestsContent() {
   const searchParams = useSearchParams();
@@ -410,34 +330,6 @@ function MaintenanceRequestsContent() {
     };
   }, [requests]);
 
-  // Category counts calculated dynamically from real requests
-  const categoryCounts: Record<string, number> = useMemo(() => {
-    const counts: Record<string, number> = {
-      Plumbing: 0,
-      Electrical: 0,
-      "AC / Cooling": 0,
-      Appliance: 0,
-      Furniture: 0,
-      "Locks / Security": 0,
-      "Wall / Ceiling": 0,
-      Others: 0,
-    };
-
-    requests.forEach((r) => {
-      const cat = r.category || "Others";
-      const matchKey = Object.keys(counts).find(
-        (k) => k.toLowerCase() === cat.toLowerCase(),
-      );
-      if (matchKey) {
-        counts[matchKey]++;
-      } else {
-        counts["Others"] = (counts["Others"] || 0) + 1;
-      }
-    });
-
-    return counts;
-  }, [requests]);
-
   // Filtered requests
   const filteredRequests = useMemo(() => {
     return requests.filter((req) => {
@@ -485,12 +377,8 @@ function MaintenanceRequestsContent() {
     });
   }, [requests, statusFilter, categoryFilter, floorFilter, searchQuery]);
 
-  // Paginated Requests (8 items)
-  const totalPages = Math.max(1, Math.ceil(filteredRequests.length / pageSize));
-  const paginatedRequests = useMemo(() => {
-    const startIndex = (currentPage - 1) * pageSize;
-    return filteredRequests.slice(startIndex, startIndex + pageSize);
-  }, [filteredRequests, currentPage, pageSize]);
+  // Display all filtered requests in the scrollable table
+  const paginatedRequests = filteredRequests;
 
   // Active Request for Right Panel
   const activeRequest = useMemo(() => {
@@ -504,18 +392,16 @@ function MaintenanceRequestsContent() {
   // Quick Status Update Handler
   const handleQuickStatusUpdate = async (reqId: number, nextStatus: string) => {
     try {
+      await api.put(`/admin/requests/${reqId}`, {
+        status: nextStatus,
+        date_resolved:
+          nextStatus === "Resolved" ? new Date().toISOString() : null,
+      });
       setRequests((prev) =>
         prev.map((r) => (r.id === reqId ? { ...r, status: nextStatus } : r)),
       );
-      await api
-        .put(`/admin/requests/${reqId}`, {
-          status: nextStatus,
-          date_resolved:
-            nextStatus === "Resolved" ? new Date().toISOString() : null,
-        })
-        .catch(() => {});
       toast.success("Work Order Updated", {
-        description: `Request marked as ${nextStatus}.`,
+        description: `Request marked as ${nextStatus} and sent to tenant in chat.`,
       });
       setActiveMenuId(null);
     } catch (err) {
@@ -554,21 +440,21 @@ function MaintenanceRequestsContent() {
     if (!updatingRequest) return;
     setIsSubmittingStatus(true);
     try {
-      await api
-        .put(`/admin/requests/${updatingRequest.id}`, {
-          status: statusForm.status,
-          priority: statusForm.priority,
-          assigned_to: statusForm.assigned_to,
-          admin_notes: statusForm.admin_notes,
-          date_resolved:
-            statusForm.status === "Resolved" ? new Date().toISOString() : null,
-        })
-        .catch(() => {});
+      const res = await api.put(`/admin/requests/${updatingRequest.id}`, {
+        status: statusForm.status,
+        priority: statusForm.priority,
+        assigned_to: statusForm.assigned_to,
+        admin_notes: statusForm.admin_notes,
+        date_resolved:
+          statusForm.status === "Resolved" ? new Date().toISOString() : null,
+      });
+      const updatedReq = res.data?.request;
       setRequests((prev) =>
         prev.map((r) =>
           r.id === updatingRequest.id
             ? {
                 ...r,
+                ...(updatedReq || {}),
                 status: statusForm.status,
                 priority: statusForm.priority,
                 assigned_to: statusForm.assigned_to,
@@ -577,8 +463,8 @@ function MaintenanceRequestsContent() {
             : r,
         ),
       );
-      toast.success("Work Order Saved", {
-        description: `Status changed to ${statusForm.status} (Priority: ${statusForm.priority}).`,
+      toast.success("Work Order Updated", {
+        description: `Status changed to ${statusForm.status} and sent to ${updatingRequest.tenant_name || "tenant"} in chat.`,
       });
       setIsUpdateStatusModalOpen(false);
       if (typeof window !== 'undefined') window.dispatchEvent(new CustomEvent('renttrack-refresh-counts'));
@@ -597,8 +483,8 @@ function MaintenanceRequestsContent() {
   const openUpdateModal = (req: MaintenanceRequest) => {
     setUpdatingRequest(req);
     setStatusForm({
-      status: req.status || "In Progress",
-      priority: req.priority || "High",
+      status: normalizeStatus(req.status),
+      priority: normalizePriority(req.priority),
       assigned_to: req.assigned_to || "Maintenance Team",
       admin_notes: req.admin_notes || "",
     });
@@ -611,10 +497,10 @@ function MaintenanceRequestsContent() {
       {/* PAGE HEADER: TITLE & SUBHEADER */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 shrink-0 pb-0.5">
         <div>
-          <h1 className="text-xl sm:text-2xl font-black text-slate-950 dark:text-white tracking-tight leading-none">
+          <h1 className="text-2xl sm:text-3xl font-black text-slate-950 dark:text-white tracking-tight leading-none">
             Maintenance Requests
           </h1>
-          <p className="text-xs sm:text-[13px] text-slate-500 dark:text-zinc-400 font-medium mt-1">
+          <p className="text-sm sm:text-base text-slate-500 dark:text-zinc-400 font-medium mt-1">
             Track, prioritize, and manage resident repair tickets, work orders, and resolution performance in real time.
           </p>
         </div>
@@ -623,7 +509,7 @@ function MaintenanceRequestsContent() {
       {/* TOP SECTION: 4 KPI CARDS */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 shrink-0">
         {/* Card 1: Open Maintenance Requests */}
-        <div className="bg-white dark:bg-zinc-900 rounded-xl border border-slate-200/90 dark:border-zinc-800 p-3 sm:p-3.5 pr-4 sm:pr-5 shadow-2xs flex flex-col justify-between relative overflow-hidden">
+        <div className="bg-white dark:bg-zinc-900 rounded-xl border border-slate-200/90 dark:border-zinc-800 p-3.5 sm:p-4 pr-4 sm:pr-5 shadow-2xs flex flex-col justify-between relative overflow-hidden">
           {/* Industrial Work-Order Ticket Spine & CAD Registration Brackets */}
           <div className="pointer-events-none select-none absolute inset-0 overflow-hidden" aria-hidden="true">
             <div className="absolute inset-y-0 right-2.5 w-16 bg-orange-50/40 dark:bg-orange-500/[0.03]" />
@@ -640,47 +526,47 @@ function MaintenanceRequestsContent() {
           </div>
           <div className="relative z-10">
             <div className="flex items-center gap-2">
-              <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-[#fff2ea] dark:bg-amber-950/40 border border-[#ffedd5] dark:border-amber-800/40 text-[#f97316] flex items-center justify-center shrink-0">
-                <Wrench className="w-4 h-4 stroke-[2.2]" />
+              <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-lg bg-[#fff2ea] dark:bg-amber-950/40 border border-[#ffedd5] dark:border-amber-800/40 text-[#f97316] flex items-center justify-center shrink-0">
+                <Wrench className="w-4.5 h-4.5 stroke-[2.2]" />
               </div>
-              <span className="text-xs sm:text-[13px] font-bold text-slate-800 dark:text-zinc-200 truncate">
+              <span className="text-sm sm:text-base font-bold text-slate-800 dark:text-zinc-200 truncate">
                 Maintenance Requests
               </span>
             </div>
 
-            <div className="mt-1.5">
-              <div className="text-xl sm:text-2xl font-black text-slate-950 dark:text-white tracking-tight font-sans">
+            <div className="mt-2">
+              <div className="text-2xl sm:text-3xl font-black text-slate-950 dark:text-white tracking-tight font-sans">
                 {metrics.openCount}
               </div>
 
               {/* 3 Columns Sub-Items matching mockup */}
-              <div className="grid grid-cols-3 gap-1 mt-1.5">
+              <div className="grid grid-cols-3 gap-1 mt-2">
                 <div>
-                  <div className="flex items-center gap-1 text-[11px] sm:text-xs font-semibold text-slate-500 dark:text-zinc-400">
-                    <span className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-[#f97316] shrink-0" />
+                  <div className="flex items-center gap-1.5 text-xs sm:text-sm font-bold text-slate-500 dark:text-zinc-400">
+                    <span className="w-2 h-2 rounded-full bg-[#f97316] shrink-0" />
                     <span>Pending</span>
                   </div>
-                  <div className="text-xs sm:text-[13px] font-bold text-slate-900 dark:text-white pl-2.5 sm:pl-3 mt-0.5">
+                  <div className="text-sm sm:text-base font-bold text-slate-900 dark:text-white pl-3.5 mt-0.5">
                     {metrics.pending}
                   </div>
                 </div>
 
                 <div>
-                  <div className="flex items-center gap-1 text-[11px] sm:text-xs font-semibold text-slate-500 dark:text-zinc-400">
-                    <span className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-[#2563eb] shrink-0" />
+                  <div className="flex items-center gap-1.5 text-xs sm:text-sm font-bold text-slate-500 dark:text-zinc-400">
+                    <span className="w-2 h-2 rounded-full bg-[#2563eb] shrink-0" />
                     <span>In Progress</span>
                   </div>
-                  <div className="text-xs sm:text-[13px] font-bold text-slate-900 dark:text-white pl-2.5 sm:pl-3 mt-0.5">
+                  <div className="text-sm sm:text-base font-bold text-slate-900 dark:text-white pl-3.5 mt-0.5">
                     {metrics.inProgress}
                   </div>
                 </div>
 
                 <div>
-                  <div className="flex items-center gap-1 text-[11px] sm:text-xs font-semibold text-slate-500 dark:text-zinc-400">
-                    <span className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-[#ef4444] shrink-0" />
+                  <div className="flex items-center gap-1.5 text-xs sm:text-sm font-bold text-slate-500 dark:text-zinc-400">
+                    <span className="w-2 h-2 rounded-full bg-[#ef4444] shrink-0" />
                     <span>High Priority</span>
                   </div>
-                  <div className="text-xs sm:text-[13px] font-bold text-slate-900 dark:text-white pl-2.5 sm:pl-3 mt-0.5">
+                  <div className="text-sm sm:text-base font-bold text-slate-900 dark:text-white pl-3.5 mt-0.5">
                     {metrics.highPriority}
                   </div>
                 </div>
@@ -688,7 +574,7 @@ function MaintenanceRequestsContent() {
             </div>
           </div>
 
-          <div className="relative z-10 mt-2 pt-1.5 border-t border-slate-100 dark:border-zinc-800/80">
+          <div className="relative z-10 mt-2.5 pt-2 border-t border-slate-100 dark:border-zinc-800/80">
             <button
               onClick={() => {
                 setStatusFilter("All Statuses");
@@ -696,16 +582,16 @@ function MaintenanceRequestsContent() {
                 setFloorFilter("All Floors");
                 setSearchQuery("");
               }}
-              className="text-xs font-bold text-[#0055a5] dark:text-blue-400 hover:underline flex items-center gap-1 transition-colors cursor-pointer"
+              className="text-sm font-bold text-[#0055a5] dark:text-blue-400 hover:underline flex items-center gap-1.5 transition-colors cursor-pointer"
             >
               <span>View All Requests</span>
-              <ArrowRight className="w-3.5 h-3.5" />
+              <ArrowRight className="w-4 h-4" />
             </button>
           </div>
         </div>
 
         {/* Card 2: Avg. Resolution Time */}
-        <div className="bg-white dark:bg-zinc-900 rounded-xl border border-slate-200/90 dark:border-zinc-800 p-3 sm:p-3.5 pr-4 sm:pr-5 shadow-2xs flex flex-col justify-between relative overflow-hidden">
+        <div className="bg-white dark:bg-zinc-900 rounded-xl border border-slate-200/90 dark:border-zinc-800 p-3.5 sm:p-4 pr-4 sm:pr-5 shadow-2xs flex flex-col justify-between relative overflow-hidden">
           {/* Industrial Work-Order Ticket Spine & CAD Registration Brackets */}
           <div className="pointer-events-none select-none absolute inset-0 overflow-hidden" aria-hidden="true">
             <div className="absolute inset-y-0 right-2.5 w-16 bg-blue-50/40 dark:bg-blue-500/[0.03]" />
@@ -722,42 +608,42 @@ function MaintenanceRequestsContent() {
           </div>
           <div className="relative z-10">
             <div className="flex items-center gap-2">
-              <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-[#eff6ff] dark:bg-blue-950/40 border border-[#dbeafe] dark:border-blue-800/40 text-[#2563eb] flex items-center justify-center shrink-0">
-                <Clock className="w-4 h-4 stroke-[2.2]" />
+              <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-lg bg-[#eff6ff] dark:bg-blue-950/40 border border-[#dbeafe] dark:border-blue-800/40 text-[#2563eb] flex items-center justify-center shrink-0">
+                <Clock className="w-4.5 h-4.5 stroke-[2.2]" />
               </div>
-              <span className="text-xs sm:text-[13px] font-bold text-slate-800 dark:text-zinc-200 truncate">
+              <span className="text-sm sm:text-base font-bold text-slate-800 dark:text-zinc-200 truncate">
                 Avg. Resolution Time
               </span>
             </div>
 
-            <div className="mt-1.5 flex items-baseline justify-between">
-              <div className="flex items-center gap-1.5">
-                <span className="text-xl sm:text-2xl font-black text-slate-950 dark:text-white tracking-tight font-sans">
+            <div className="mt-2 flex items-baseline justify-between">
+              <div className="flex items-center gap-2">
+                <span className="text-2xl sm:text-3xl font-black text-slate-950 dark:text-white tracking-tight font-sans">
                   {metrics.avgResolutionDays} days
                 </span>
-                <span className="inline-flex items-center gap-0.5 text-xs font-bold text-[#16a34a] dark:text-emerald-400">
-                  <ArrowDown className="w-3 h-3 stroke-[2.5]" /> 42%
+                <span className="inline-flex items-center gap-0.5 text-sm font-bold text-[#16a34a] dark:text-emerald-400">
+                  <ArrowDown className="w-3.5 h-3.5 stroke-[2.5]" /> 42%
                 </span>
               </div>
-              <span className="text-[11px] sm:text-xs text-slate-400 dark:text-zinc-500 font-medium self-end">
+              <span className="text-xs sm:text-sm text-slate-400 dark:text-zinc-500 font-semibold self-end">
                 vs. last mo.
               </span>
             </div>
           </div>
 
-          <div className="relative z-10 mt-2 pt-1.5 border-t border-slate-100 dark:border-zinc-800/80">
+          <div className="relative z-10 mt-2.5 pt-2 border-t border-slate-100 dark:border-zinc-800/80">
             <button
               onClick={() => setStatusFilter("Resolved")}
-              className="text-xs font-bold text-[#0055a5] dark:text-blue-400 hover:underline flex items-center gap-1 transition-colors cursor-pointer"
+              className="text-sm font-bold text-[#0055a5] dark:text-blue-400 hover:underline flex items-center gap-1.5 transition-colors cursor-pointer"
             >
               <span>View Performance</span>
-              <ArrowRight className="w-3.5 h-3.5" />
+              <ArrowRight className="w-4 h-4" />
             </button>
           </div>
         </div>
 
         {/* Card 3: Completed This Month */}
-        <div className="bg-white dark:bg-zinc-900 rounded-xl border border-slate-200/90 dark:border-zinc-800 p-3 sm:p-3.5 pr-4 sm:pr-5 shadow-2xs flex flex-col justify-between relative overflow-hidden">
+        <div className="bg-white dark:bg-zinc-900 rounded-xl border border-slate-200/90 dark:border-zinc-800 p-3.5 sm:p-4 pr-4 sm:pr-5 shadow-2xs flex flex-col justify-between relative overflow-hidden">
           {/* Industrial Work-Order Ticket Spine & CAD Registration Brackets */}
           <div className="pointer-events-none select-none absolute inset-0 overflow-hidden" aria-hidden="true">
             <div className="absolute inset-y-0 right-2.5 w-16 bg-emerald-50/40 dark:bg-emerald-500/[0.03]" />
@@ -774,42 +660,42 @@ function MaintenanceRequestsContent() {
           </div>
           <div className="relative z-10">
             <div className="flex items-center gap-2">
-              <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-[#f0fdf4] dark:bg-emerald-950/40 border border-[#dcfce7] dark:border-emerald-800/40 text-[#16a34a] flex items-center justify-center shrink-0">
-                <CheckCircle2 className="w-4 h-4 stroke-[2.2]" />
+              <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-lg bg-[#f0fdf4] dark:bg-emerald-950/40 border border-[#dcfce7] dark:border-emerald-800/40 text-[#16a34a] flex items-center justify-center shrink-0">
+                <CheckCircle2 className="w-4.5 h-4.5 stroke-[2.2]" />
               </div>
-              <span className="text-xs sm:text-[13px] font-bold text-slate-800 dark:text-zinc-200 truncate">
+              <span className="text-sm sm:text-base font-bold text-slate-800 dark:text-zinc-200 truncate">
                 Completed This Month
               </span>
             </div>
 
-            <div className="mt-1.5 flex items-baseline justify-between">
-              <div className="text-xl sm:text-2xl font-black text-slate-950 dark:text-white tracking-tight font-sans">
+            <div className="mt-2 flex items-baseline justify-between">
+              <div className="text-2xl sm:text-3xl font-black text-slate-950 dark:text-white tracking-tight font-sans">
                 {metrics.completedThisMonth}
               </div>
               <div className="text-right">
-                <span className="inline-flex items-center gap-0.5 text-xs font-bold text-[#16a34a] dark:text-emerald-400">
-                  <ArrowUp className="w-3 h-3 stroke-[2.5]" /> 71%
+                <span className="inline-flex items-center gap-0.5 text-sm font-bold text-[#16a34a] dark:text-emerald-400">
+                  <ArrowUp className="w-3.5 h-3.5 stroke-[2.5]" /> 71%
                 </span>
-                <p className="text-[11px] sm:text-xs text-slate-400 dark:text-zinc-500 font-medium">
+                <p className="text-xs sm:text-sm text-slate-400 dark:text-zinc-500 font-semibold">
                   vs. last mo.
                 </p>
               </div>
             </div>
           </div>
 
-          <div className="relative z-10 mt-2 pt-1.5 border-t border-slate-100 dark:border-zinc-800/80">
+          <div className="relative z-10 mt-2.5 pt-2 border-t border-slate-100 dark:border-zinc-800/80">
             <button
               onClick={() => setStatusFilter("Resolved")}
-              className="text-xs font-bold text-[#0055a5] dark:text-blue-400 hover:underline flex items-center gap-1 transition-colors cursor-pointer"
+              className="text-sm font-bold text-[#0055a5] dark:text-blue-400 hover:underline flex items-center gap-1.5 transition-colors cursor-pointer"
             >
               <span>View Maintenance Report</span>
-              <ArrowRight className="w-3.5 h-3.5" />
+              <ArrowRight className="w-4 h-4" />
             </button>
           </div>
         </div>
 
         {/* Card 4: High Priority Issues */}
-        <div className="bg-white dark:bg-zinc-900 rounded-xl border border-slate-200/90 dark:border-zinc-800 p-3 sm:p-3.5 pr-4 sm:pr-5 shadow-2xs flex flex-col justify-between relative overflow-hidden">
+        <div className="bg-white dark:bg-zinc-900 rounded-xl border border-slate-200/90 dark:border-zinc-800 p-3.5 sm:p-4 pr-4 sm:pr-5 shadow-2xs flex flex-col justify-between relative overflow-hidden">
           {/* Industrial Work-Order Ticket Spine & CAD Registration Brackets */}
           <div className="pointer-events-none select-none absolute inset-0 overflow-hidden" aria-hidden="true">
             <div className="absolute inset-y-0 right-2.5 w-16 bg-rose-50/40 dark:bg-rose-500/[0.03]" />
@@ -826,34 +712,34 @@ function MaintenanceRequestsContent() {
           </div>
           <div className="relative z-10">
             <div className="flex items-center gap-2">
-              <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-[#fef2f2] dark:bg-rose-950/40 border border-[#fee2e2] dark:border-rose-800/40 text-[#ef4444] flex items-center justify-center shrink-0">
-                <AlertTriangle className="w-4 h-4 stroke-[2.2]" />
+              <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-lg bg-[#fef2f2] dark:bg-rose-950/40 border border-[#fee2e2] dark:border-rose-800/40 text-[#ef4444] flex items-center justify-center shrink-0">
+                <AlertTriangle className="w-4.5 h-4.5 stroke-[2.2]" />
               </div>
-              <span className="text-xs sm:text-[13px] font-bold text-slate-800 dark:text-zinc-200 truncate">
+              <span className="text-sm sm:text-base font-bold text-slate-800 dark:text-zinc-200 truncate">
                 High Priority Issues
               </span>
             </div>
 
-            <div className="mt-1.5">
-              <div className="text-xl sm:text-2xl font-black text-slate-950 dark:text-white tracking-tight font-sans">
+            <div className="mt-2">
+              <div className="text-2xl sm:text-3xl font-black text-slate-950 dark:text-white tracking-tight font-sans">
                 {metrics.highPriority}
               </div>
-              <p className="text-xs font-semibold text-slate-500 dark:text-zinc-400 mt-0.5">
+              <p className="text-sm font-semibold text-slate-500 dark:text-zinc-400 mt-0.5">
                 Requires immediate attention
               </p>
             </div>
           </div>
 
-          <div className="relative z-10 mt-2 pt-1.5 border-t border-slate-100 dark:border-zinc-800/80">
+          <div className="relative z-10 mt-2.5 pt-2 border-t border-slate-100 dark:border-zinc-800/80">
             <button
               onClick={() => {
                 setStatusFilter("All Statuses");
                 setCategoryFilter("All Categories");
               }}
-              className="text-xs font-bold text-[#0055a5] dark:text-blue-400 hover:underline flex items-center gap-1 transition-colors cursor-pointer"
+              className="text-sm font-bold text-[#0055a5] dark:text-blue-400 hover:underline flex items-center gap-1.5 transition-colors cursor-pointer"
             >
               <span>View High Priority</span>
-              <ArrowRight className="w-3.5 h-3.5" />
+              <ArrowRight className="w-4 h-4" />
             </button>
           </div>
         </div>
@@ -862,41 +748,41 @@ function MaintenanceRequestsContent() {
       {/* ========================================================= */}
       {/* 2. MAIN TWO-COLUMN WORKSPACE (Left: Table, Right: Cards)  */}
       {/* ========================================================= */}
-      <div className="flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-12 gap-3 overflow-hidden">
+      <div className="flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_310px] xl:grid-cols-[minmax(0,1fr)_340px] gap-3 overflow-hidden">
         {/* ======================================================= */}
         {/* LEFT COLUMN: MAINTENANCE REQUESTS TABLE                 */}
         {/* ======================================================= */}
-        <div className="lg:col-span-8 flex flex-col h-full min-h-0 overflow-hidden">
+        <div className="flex flex-col h-full min-h-0 overflow-hidden min-w-0">
           {/* Table Container */}
           <div className="flex-1 min-h-0 bg-white dark:bg-zinc-900 border border-slate-200/90 dark:border-zinc-800 rounded-2xl shadow-2xs overflow-hidden flex flex-col">
             {/* Section Title & Controls Bar */}
-            <div className="p-3 sm:p-3.5 pb-2.5 sm:pb-3 border-b border-slate-100 dark:border-zinc-800/60 space-y-2.5 shrink-0">
+            <div className="p-3 sm:p-4 pb-3 border-b border-slate-100 dark:border-zinc-800/60 space-y-3 shrink-0">
               <div className="flex items-center justify-between">
-                <h2 className="text-base sm:text-lg font-extrabold text-slate-900 dark:text-white tracking-tight">
+                <h2 className="text-lg sm:text-xl font-extrabold text-slate-900 dark:text-white tracking-tight">
                   Maintenance Requests
                 </h2>
-                <span className="text-xs font-semibold text-slate-400 dark:text-zinc-500">
+                <span className="text-sm font-bold text-slate-500 dark:text-zinc-400">
                   {filteredRequests.length}{" "}
                   {filteredRequests.length === 1 ? "ticket" : "tickets"} found
                 </span>
               </div>
 
               {/* Controls Bar: Search, Status, Category, Floor Dropdowns */}
-              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5">
                 {/* Search */}
                 <div className="relative flex-1 min-w-45">
-                  <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+                  <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
                   <input
                     type="text"
                     placeholder="Search by request ID, tenant name, room number, or issue..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    className="w-full bg-slate-50 dark:bg-zinc-800/50 border border-slate-200/90 dark:border-zinc-700/80 rounded-xl pl-9 pr-3.5 py-1.5 text-xs sm:text-[13px] placeholder:text-slate-400 dark:placeholder:text-zinc-500 text-slate-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-blue-500 shadow-2xs font-medium"
+                    className="w-full bg-slate-50 dark:bg-zinc-800/50 border border-slate-200/90 dark:border-zinc-700/80 rounded-xl pl-10 pr-4 py-2.5 text-sm sm:text-base placeholder:text-slate-400 dark:placeholder:text-zinc-500 text-slate-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-blue-500 shadow-2xs font-medium"
                   />
                 </div>
 
                 {/* Status Dropdown */}
-                <div className="w-34 sm:w-36 shrink-0">
+                <div className="w-38 sm:w-42 shrink-0">
                   <DropdownSelect
                     value={statusFilter}
                     onChange={(val) => setStatusFilter(val)}
@@ -918,12 +804,12 @@ function MaintenanceRequestsContent() {
                         dotColor: "bg-emerald-500",
                       },
                     ]}
-                    className="w-full bg-slate-50 dark:bg-zinc-800/50 border border-slate-200/90 dark:border-zinc-700/80 rounded-xl pl-3 pr-8 py-1.5 text-xs sm:text-[13px] font-semibold text-slate-700 dark:text-zinc-300 focus:outline-none focus:ring-1 focus:ring-blue-500 shadow-2xs"
+                    className="w-full bg-slate-50 dark:bg-zinc-800/50 border border-slate-200/90 dark:border-zinc-700/80 rounded-xl pl-3.5 pr-8 py-2 text-sm sm:text-base font-semibold text-slate-700 dark:text-zinc-300 focus:outline-none focus:ring-1 focus:ring-blue-500 shadow-2xs"
                   />
                 </div>
 
                 {/* Category Dropdown */}
-                <div className="w-40 sm:w-44 shrink-0">
+                <div className="w-44 sm:w-48 shrink-0">
                   <DropdownSelect
                     value={categoryFilter}
                     onChange={(val) => setCategoryFilter(val)}
@@ -939,12 +825,12 @@ function MaintenanceRequestsContent() {
                       "Locks / Security",
                       "Others",
                     ]}
-                    className="w-full bg-slate-50 dark:bg-zinc-800/50 border border-slate-200/90 dark:border-zinc-700/80 rounded-xl pl-3 pr-8 py-1.5 text-xs sm:text-[13px] font-semibold text-slate-700 dark:text-zinc-300 focus:outline-none focus:ring-1 focus:ring-blue-500 shadow-2xs"
+                    className="w-full bg-slate-50 dark:bg-zinc-800/50 border border-slate-200/90 dark:border-zinc-700/80 rounded-xl pl-3.5 pr-8 py-2 text-sm sm:text-base font-semibold text-slate-700 dark:text-zinc-300 focus:outline-none focus:ring-1 focus:ring-blue-500 shadow-2xs"
                   />
                 </div>
 
                 {/* Floor Dropdown */}
-                <div className="w-32 sm:w-34 shrink-0">
+                <div className="w-36 sm:w-40 shrink-0">
                   <DropdownSelect
                     value={floorFilter}
                     onChange={(val) => setFloorFilter(val)}
@@ -955,7 +841,7 @@ function MaintenanceRequestsContent() {
                       "Floor 3",
                       "Floor 4",
                     ]}
-                    className="w-full bg-slate-50 dark:bg-zinc-800/50 border border-slate-200/90 dark:border-zinc-700/80 rounded-xl pl-3 pr-8 py-1.5 text-xs sm:text-[13px] font-semibold text-slate-700 dark:text-zinc-300 focus:outline-none focus:ring-1 focus:ring-blue-500 shadow-2xs"
+                    className="w-full bg-slate-50 dark:bg-zinc-800/50 border border-slate-200/90 dark:border-zinc-700/80 rounded-xl pl-3.5 pr-8 py-2 text-sm sm:text-base font-semibold text-slate-700 dark:text-zinc-300 focus:outline-none focus:ring-1 focus:ring-blue-500 shadow-2xs"
                   />
                 </div>
               </div>
@@ -963,20 +849,20 @@ function MaintenanceRequestsContent() {
 
             {/* Table Scroll Container */}
             <div className="flex-1 min-h-0 overflow-x-auto overflow-y-auto custom-scrollbar">
-              <table className="w-full text-left border-collapse text-xs sm:text-[13px]">
-                <thead className="sticky top-0 bg-white dark:bg-zinc-900 z-10 border-b border-slate-100 dark:border-zinc-800/80 text-xs font-bold uppercase tracking-wider text-slate-600 dark:text-zinc-400">
+              <table className="w-full text-left border-collapse text-sm sm:text-base">
+                <thead className="sticky top-0 bg-white dark:bg-zinc-900 z-10 border-b border-slate-100 dark:border-zinc-800/80 text-sm font-bold uppercase tracking-tight whitespace-nowrap text-slate-700 dark:text-zinc-300">
                   <tr>
-                    <th className="py-2.5 sm:py-3 pl-4 pr-3">ID</th>
-                    <th className="py-2.5 sm:py-3 px-3">Tenant</th>
-                    <th className="py-2.5 sm:py-3 px-3">Room</th>
-                    <th className="py-2.5 sm:py-3 px-3">Issue Category</th>
-                    <th className="py-2.5 sm:py-3 px-3">Priority</th>
-                    <th className="py-2.5 sm:py-3 px-3">Status</th>
-                    <th className="py-2.5 sm:py-3 px-3">Date Reported</th>
-                    <th className="py-2.5 sm:py-3 pr-4 pl-2 text-right">Actions</th>
+                    <th className="py-3 sm:py-3.5 pl-3 pr-2">ID</th>
+                    <th className="py-3 sm:py-3.5 px-2">Tenant</th>
+                    <th className="py-3 sm:py-3.5 px-2">Room</th>
+                    <th className="py-3 sm:py-3.5 px-2">Issue Category</th>
+                    <th className="py-3 sm:py-3.5 px-2">Priority</th>
+                    <th className="py-3 sm:py-3.5 px-2">Status</th>
+                    <th className="py-3 sm:py-3.5 px-2">Date Reported</th>
+                    <th className="py-3 sm:py-3.5 pr-3 pl-1.5 text-center">Actions</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-100/90 dark:divide-zinc-800/60 font-sans text-xs sm:text-[13px]">
+                <tbody className="divide-y divide-slate-100/90 dark:divide-zinc-800/60 font-sans text-sm sm:text-base">
                   {paginatedRequests.length === 0 ? (
                     <tr>
                       <td
@@ -984,7 +870,7 @@ function MaintenanceRequestsContent() {
                         className="py-14 text-center text-slate-400 dark:text-zinc-500"
                       >
                         <Wrench className="w-10 h-10 mx-auto mb-2 opacity-30" />
-                        <p className="font-bold text-slate-800 dark:text-zinc-200 text-xs sm:text-[13px]">
+                        <p className="font-bold text-slate-800 dark:text-zinc-200 text-sm sm:text-base">
                           No requests found
                         </p>
                       </td>
@@ -1008,22 +894,22 @@ function MaintenanceRequestsContent() {
                             setSelectedRequestId(req.id);
                             setViewingRequest(req);
                           }}
-                          className={`h-12 transition-colors cursor-pointer ${
+                          className={`h-14 transition-colors cursor-pointer ${
                             isSelected
                               ? "bg-blue-50/50 dark:bg-blue-950/20"
                               : "hover:bg-slate-50/60 dark:hover:bg-zinc-800/30"
                           }`}
                         >
                           {/* ID */}
-                          <td className="py-2 pl-4 pr-3 font-mono text-xs font-bold text-slate-700 dark:text-zinc-300 whitespace-nowrap">
+                          <td className="py-2.5 pl-3 pr-2 font-mono text-sm sm:text-base font-bold text-slate-800 dark:text-zinc-200 whitespace-nowrap">
                             {mrId}
                           </td>
 
                           {/* Tenant */}
-                          <td className="py-2 px-3 whitespace-nowrap">
+                          <td className="py-2.5 px-2 whitespace-nowrap">
                             <div className="flex items-center gap-2.5">
                               <div
-                                className={`w-7 h-7 sm:w-8 sm:h-8 rounded-full font-bold text-xs flex items-center justify-center shrink-0 shadow-2xs select-none ${getAvatarBgClass(
+                                className={`w-8.5 h-8.5 sm:w-9 sm:h-9 rounded-full font-bold text-sm flex items-center justify-center shrink-0 shadow-2xs select-none ${getAvatarBgClass(
                                   req.tenant_name || "Tenant",
                                 )}`}
                               >
@@ -1032,11 +918,11 @@ function MaintenanceRequestsContent() {
                                   .charAt(0)
                                   .toUpperCase()}
                               </div>
-                              <div className="min-w-0">
-                                <div className="font-bold text-xs sm:text-[13px] text-slate-900 dark:text-white leading-tight truncate">
+                              <div className="min-w-0 max-w-[150px] xl:max-w-[190px]">
+                                <div className="font-bold text-sm sm:text-base text-slate-900 dark:text-white leading-snug truncate">
                                   {req.tenant_name || "Tenant"}
                                 </div>
-                                <div className="text-[11px] text-slate-400 dark:text-zinc-400 leading-tight mt-0.5">
+                                <div className="text-xs sm:text-[13px] text-slate-500 dark:text-zinc-400 leading-snug mt-0.5 truncate">
                                   {req.room_number
                                     ? `Room ${req.room_number}`
                                     : "—"}
@@ -1046,71 +932,71 @@ function MaintenanceRequestsContent() {
                           </td>
 
                           {/* Room */}
-                          <td className="py-2 px-3 whitespace-nowrap">
-                            <div className="font-bold text-xs sm:text-[13px] text-slate-800 dark:text-zinc-200 leading-tight">
+                          <td className="py-2.5 px-2 whitespace-nowrap">
+                            <div className="font-bold text-sm sm:text-base text-slate-900 dark:text-zinc-100 leading-snug">
                               {req.room_number ? `Room ${req.room_number}` : "—"}
                             </div>
-                            <div className="text-[11px] text-slate-400 dark:text-zinc-400 leading-tight mt-0.5">
+                            <div className="text-xs sm:text-[13px] text-slate-500 dark:text-zinc-400 leading-snug mt-0.5">
                               {floorDisplay}
                             </div>
                           </td>
 
                           {/* Issue Category */}
-                          <td className="py-2 px-3 font-medium text-xs sm:text-[13px] text-slate-700 dark:text-zinc-300 whitespace-nowrap">
+                          <td className="py-2.5 px-2 font-semibold text-sm sm:text-base text-slate-800 dark:text-zinc-200 whitespace-nowrap">
                             {req.category || "General"}
                           </td>
 
                           {/* Priority Badge */}
-                          <td className="py-2 px-3 whitespace-nowrap">
+                          <td className="py-2.5 px-2 whitespace-nowrap">
                             {normPriority === "High" && (
-                              <span className="inline-flex items-center gap-1 text-xs font-bold text-rose-600 dark:text-rose-400">
-                                <Flame className="w-3.5 h-3.5 fill-current" /> High
+                              <span className="inline-flex items-center gap-1.5 text-xs sm:text-sm font-bold text-rose-600 dark:text-rose-400">
+                                <Flame className="w-4 h-4 fill-current" /> High
                               </span>
                             )}
                             {normPriority === "Medium" && (
-                              <span className="inline-flex items-center gap-1 text-xs font-bold text-amber-600 dark:text-amber-400">
-                                <Zap className="w-3.5 h-3.5 fill-current" /> Medium
+                              <span className="inline-flex items-center gap-1.5 text-xs sm:text-sm font-bold text-amber-600 dark:text-amber-400">
+                                <Zap className="w-4 h-4 fill-current" /> Medium
                               </span>
                             )}
                             {normPriority === "Low" && (
-                              <span className="inline-flex items-center text-xs font-bold text-teal-600 dark:text-teal-400">
+                              <span className="inline-flex items-center text-xs sm:text-sm font-bold text-teal-600 dark:text-teal-400">
                                 Low
                               </span>
                             )}
                           </td>
 
                           {/* Status Badge */}
-                          <td className="py-2 px-3 whitespace-nowrap">
+                          <td className="py-2.5 px-2 whitespace-nowrap">
                             {normStatus === "In Progress" && (
-                              <span className="inline-flex items-center gap-1.5 text-xs font-bold text-blue-600 dark:text-blue-400">
-                                <User className="w-3.5 h-3.5" /> In Progress
+                              <span className="inline-flex items-center gap-1.5 text-xs sm:text-sm font-bold text-blue-600 dark:text-blue-400">
+                                <User className="w-4 h-4" /> In Progress
                               </span>
                             )}
                             {normStatus === "Pending" && (
-                              <span className="inline-flex items-center gap-1.5 text-xs font-bold text-amber-600 dark:text-amber-400">
-                                <User className="w-3.5 h-3.5" /> Pending
+                              <span className="inline-flex items-center gap-1.5 text-xs sm:text-sm font-bold text-amber-600 dark:text-amber-400">
+                                <User className="w-4 h-4" /> Pending
                               </span>
                             )}
                             {normStatus === "Resolved" && (
-                              <span className="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-600 dark:text-emerald-400">
-                                <User className="w-3.5 h-3.5" /> Resolved
+                              <span className="inline-flex items-center gap-1.5 text-xs sm:text-sm font-bold text-emerald-600 dark:text-emerald-400">
+                                <User className="w-4 h-4" /> Resolved
                               </span>
                             )}
                           </td>
 
                           {/* Date Reported */}
-                          <td className="py-2 px-3 whitespace-nowrap">
-                            <div className="font-semibold text-xs sm:text-[13px] text-slate-800 dark:text-zinc-200 leading-tight">
+                          <td className="py-2.5 px-2 whitespace-nowrap">
+                            <div className="font-semibold text-sm sm:text-base text-slate-800 dark:text-zinc-200 leading-snug">
                               {dateObj.date}
                             </div>
-                            <div className="text-[11px] text-slate-400 dark:text-zinc-400 leading-tight mt-0.5">
+                            <div className="text-xs sm:text-[13px] text-slate-500 dark:text-zinc-400 leading-snug mt-0.5">
                               {dateObj.time}
                             </div>
                           </td>
 
                           {/* Actions: Edit Icon Button */}
                           <td
-                            className="py-2 pr-4 pl-2 text-right whitespace-nowrap"
+                            className="py-2 pr-3 pl-1.5 text-center whitespace-nowrap"
                             onClick={(e) => e.stopPropagation()}
                           >
                             <button
@@ -1128,280 +1014,209 @@ function MaintenanceRequestsContent() {
                 </tbody>
               </table>
             </div>
-
-            {/* Table Footer: Count & Pagination */}
-            <div className="px-4 py-2 border-t border-slate-100 dark:border-zinc-800/80 flex items-center justify-between text-xs sm:text-[13px] text-slate-500 dark:text-zinc-400 shrink-0">
-              <div>
-                Showing 1-{paginatedRequests.length} of {filteredRequests.length} requests
-              </div>
-
-              {/* Pagination buttons */}
-              <div className="flex items-center gap-1.5">
-                <button
-                  disabled={currentPage <= 1}
-                  onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                  className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg border border-slate-200 dark:border-zinc-700 flex items-center justify-center text-slate-500 dark:text-zinc-400 hover:bg-slate-100 dark:hover:bg-zinc-800 disabled:opacity-40 disabled:cursor-not-allowed transition-colors cursor-pointer"
-                >
-                  <ChevronLeft className="w-3.5 h-3.5" />
-                </button>
-
-                <button className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-[#0055a5] text-white flex items-center justify-center text-xs font-bold">
-                  {currentPage}
-                </button>
-
-                <button
-                  disabled={currentPage >= totalPages}
-                  onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-                  className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg border border-slate-200 dark:border-zinc-700 flex items-center justify-center text-slate-400 hover:bg-slate-100 dark:hover:bg-zinc-800 disabled:opacity-40 disabled:cursor-not-allowed transition-colors cursor-pointer"
-                >
-                  <ChevronRight className="w-3.5 h-3.5" />
-                </button>
-              </div>
-            </div>
           </div>
         </div>
 
         {/* ======================================================= */}
-        {/* RIGHT COLUMN: REQUEST DETAILS + MAINTENANCE CATEGORIES  */}
+        {/* RIGHT COLUMN: REQUEST DETAILS                           */}
         {/* ======================================================= */}
-        <div className="lg:col-span-4 flex flex-col gap-2.5 h-full min-h-0 overflow-hidden">
-          {/* Card 1: Request Details */}
-          <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200/90 dark:border-zinc-800 p-3.5 sm:p-4 shadow-2xs flex flex-col gap-2.5 shrink-0">
+        <div className="flex flex-col h-full min-h-0 overflow-hidden min-w-0">
+          {/* Card: Request Details */}
+          <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200/90 dark:border-zinc-800 p-4 sm:p-5 shadow-2xs flex flex-col flex-1 min-h-0 overflow-y-auto custom-scrollbar justify-between">
             {/* Header */}
-            <div className="flex items-center justify-between">
-              <h3 className="text-sm sm:text-base font-black text-slate-900 dark:text-white tracking-tight">
+            <div className="flex items-center justify-between shrink-0">
+              <h3 className="text-base sm:text-lg font-black text-slate-900 dark:text-white tracking-tight">
                 Request Details
               </h3>
               <button
                 onClick={() => setViewingRequest(activeRequest)}
-                className="text-xs font-bold text-[#0055a5] dark:text-blue-400 hover:underline flex items-center gap-1 cursor-pointer"
+                className="text-sm font-bold text-[#0055a5] dark:text-blue-400 hover:underline flex items-center gap-1 cursor-pointer"
               >
                 <span>View All</span>
-                <ArrowRight className="w-3.5 h-3.5" />
+                <ArrowRight className="w-4 h-4" />
               </button>
             </div>
 
             {activeRequest ? (
-              <>
-                {/* ID + Badges */}
-                <div className="flex items-center gap-2 flex-wrap">
-                  <span className="text-base sm:text-lg font-black font-mono text-slate-950 dark:text-white tracking-tight">
-                    {formatMRId(activeRequest)}
-                  </span>
-                  {normalizePriority(activeRequest.priority) === "High" && (
-                    <span className="inline-flex items-center gap-1 text-xs font-bold text-rose-600 dark:text-rose-400">
-                      <Flame className="w-3.5 h-3.5 fill-current" /> High Priority
+              <div className="flex flex-col flex-1 min-h-0 justify-between gap-4 mt-3">
+                <div className="space-y-4">
+                  {/* ID + Badges */}
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="text-lg sm:text-xl font-black font-mono text-slate-950 dark:text-white tracking-tight">
+                      {formatMRId(activeRequest)}
                     </span>
-                  )}
-                  {normalizePriority(activeRequest.priority) === "Medium" && (
-                    <span className="inline-flex items-center gap-1 text-xs font-bold text-amber-600 dark:text-amber-400">
-                      <Zap className="w-3.5 h-3.5 fill-current" /> Medium Priority
-                    </span>
-                  )}
-                  {normalizePriority(activeRequest.priority) === "Low" && (
-                    <span className="inline-flex items-center text-xs font-bold text-teal-600 dark:text-teal-400">
-                      Low Priority
-                    </span>
-                  )}
-                  {normalizeStatus(activeRequest.status) === "Pending" && (
-                    <span className="inline-flex items-center gap-1 text-xs font-bold text-amber-600 dark:text-amber-400">
-                      <Clock className="w-3.5 h-3.5" /> Pending
-                    </span>
-                  )}
-                  {normalizeStatus(activeRequest.status) === "In Progress" && (
-                    <span className="inline-flex items-center gap-1 text-xs font-bold text-blue-600 dark:text-blue-400">
-                      <User className="w-3.5 h-3.5" /> In Progress
-                    </span>
-                  )}
-                  {normalizeStatus(activeRequest.status) === "Resolved" && (
-                    <span className="inline-flex items-center gap-1 text-xs font-bold text-emerald-600 dark:text-emerald-400">
-                      <CheckCircle2 className="w-3.5 h-3.5" /> Resolved
-                    </span>
-                  )}
-                </div>
+                    {normalizePriority(activeRequest.priority) === "High" && (
+                      <span className="inline-flex items-center gap-1 text-xs sm:text-sm font-bold text-rose-600 dark:text-rose-400">
+                        <Flame className="w-4 h-4 fill-current" /> High Priority
+                      </span>
+                    )}
+                    {normalizePriority(activeRequest.priority) === "Medium" && (
+                      <span className="inline-flex items-center gap-1 text-xs sm:text-sm font-bold text-amber-600 dark:text-amber-400">
+                        <Zap className="w-4 h-4 fill-current" /> Medium Priority
+                      </span>
+                    )}
+                    {normalizePriority(activeRequest.priority) === "Low" && (
+                      <span className="inline-flex items-center text-xs sm:text-sm font-bold text-teal-600 dark:text-teal-400">
+                        Low Priority
+                      </span>
+                    )}
+                    {normalizeStatus(activeRequest.status) === "Pending" && (
+                      <span className="inline-flex items-center gap-1 text-xs sm:text-sm font-bold text-amber-600 dark:text-amber-400">
+                        <Clock className="w-4 h-4" /> Pending
+                      </span>
+                    )}
+                    {normalizeStatus(activeRequest.status) === "In Progress" && (
+                      <span className="inline-flex items-center gap-1 text-xs sm:text-sm font-bold text-blue-600 dark:text-blue-400">
+                        <User className="w-4 h-4" /> In Progress
+                      </span>
+                    )}
+                    {normalizeStatus(activeRequest.status) === "Resolved" && (
+                      <span className="inline-flex items-center gap-1 text-xs sm:text-sm font-bold text-emerald-600 dark:text-emerald-400">
+                        <CheckCircle2 className="w-4 h-4" /> Resolved
+                      </span>
+                    )}
+                  </div>
 
-                {/* Info breakdown + Photo Thumbnail */}
-                <div className="flex items-start justify-between gap-2.5">
-                  {/* Left: Info Rows */}
-                  <div className="space-y-2 flex-1 min-w-0">
-                    {/* Tenant */}
-                    <div className="flex items-start gap-2">
-                      <User className="w-4 h-4 text-slate-400 dark:text-zinc-500 shrink-0 mt-0.5" />
-                      <div className="min-w-0">
-                        <div className="text-xs sm:text-[13px] font-bold text-slate-900 dark:text-white truncate">
-                          {activeRequest.tenant_name || "Unknown Resident"}
+                  {/* Info breakdown + Photo Thumbnail */}
+                  <div className="flex items-start justify-between gap-3">
+                    {/* Left: Info Rows */}
+                    <div className="space-y-3 flex-1 min-w-0">
+                      {/* Tenant */}
+                      <div className="flex items-start gap-2.5">
+                        <User className="w-4.5 h-4.5 text-slate-400 dark:text-zinc-500 shrink-0 mt-0.5" />
+                        <div className="min-w-0">
+                          <div className="text-sm sm:text-base font-bold text-slate-900 dark:text-white truncate">
+                            {activeRequest.tenant_name || "Unknown Resident"}
+                          </div>
+                          <div className="text-xs sm:text-sm text-slate-400 dark:text-zinc-400 truncate mt-0.5">
+                            {activeRequest.room_number
+                              ? `Room ${activeRequest.room_number}`
+                              : "—"}
+                            {getFloorDisplay(
+                              activeRequest.room_number,
+                              activeRequest.floor,
+                            )
+                              ? ` • ${getFloorDisplay(
+                                  activeRequest.room_number,
+                                  activeRequest.floor,
+                                )}`
+                              : ""}
+                          </div>
                         </div>
-                        <div className="text-[11px] text-slate-400 dark:text-zinc-400 truncate mt-0.5">
-                          {activeRequest.room_number
-                            ? `Room ${activeRequest.room_number}`
-                            : "—"}
-                          {getFloorDisplay(
-                            activeRequest.room_number,
-                            activeRequest.floor,
+                      </div>
+
+                      {/* Date */}
+                      <div className="flex items-start gap-2.5">
+                        <Calendar className="w-4.5 h-4.5 text-slate-400 dark:text-zinc-500 shrink-0 mt-0.5" />
+                        <div className="min-w-0">
+                          <div className="text-sm sm:text-base font-bold text-slate-900 dark:text-white truncate">
+                            {formatDate(activeRequest.created_at).date} ·{" "}
+                            {formatDate(activeRequest.created_at).time}
+                          </div>
+                          <div className="text-xs sm:text-sm text-slate-400 dark:text-zinc-400 mt-0.5">
+                            {formatRelativeTime(activeRequest.created_at)}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Category & Description */}
+                      <div className="flex items-start gap-2.5">
+                        <Wrench className="w-4.5 h-4.5 text-slate-400 dark:text-zinc-500 shrink-0 mt-0.5" />
+                        <div className="min-w-0">
+                          <div className="text-sm sm:text-base font-bold text-slate-900 dark:text-white">
+                            {activeRequest.category || "General"}
+                          </div>
+                          <div className="text-xs sm:text-sm text-slate-500 dark:text-zinc-400 line-clamp-3 mt-0.5">
+                            {activeRequest.description ||
+                              activeRequest.title ||
+                              "No description provided."}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Right: Issue Photo Thumbnail (only if attached) */}
+                    {(activeRequest.attachment_url || activeRequest.image_url) && (
+                      <div
+                        onClick={() =>
+                          setLightboxImage(
+                            activeRequest.attachment_url ||
+                              activeRequest.image_url ||
+                              null,
                           )
-                            ? ` • ${getFloorDisplay(
-                                activeRequest.room_number,
-                                activeRequest.floor,
-                              )}`
-                            : ""}
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Date */}
-                    <div className="flex items-start gap-2">
-                      <Calendar className="w-4 h-4 text-slate-400 dark:text-zinc-500 shrink-0 mt-0.5" />
-                      <div className="min-w-0">
-                        <div className="text-xs sm:text-[13px] font-bold text-slate-900 dark:text-white truncate">
-                          {formatDate(activeRequest.created_at).date} ·{" "}
-                          {formatDate(activeRequest.created_at).time}
-                        </div>
-                        <div className="text-[11px] text-slate-400 dark:text-zinc-400 mt-0.5">
-                          {formatRelativeTime(activeRequest.created_at)}
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Category & Description */}
-                    <div className="flex items-start gap-2">
-                      <Wrench className="w-4 h-4 text-slate-400 dark:text-zinc-500 shrink-0 mt-0.5" />
-                      <div className="min-w-0">
-                        <div className="text-xs sm:text-[13px] font-bold text-slate-900 dark:text-white">
-                          {activeRequest.category || "General"}
-                        </div>
-                        <div className="text-xs text-slate-500 dark:text-zinc-400 line-clamp-2 mt-0.5">
-                          {activeRequest.description ||
-                            activeRequest.title ||
-                            "No description provided."}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Right: Issue Photo Thumbnail (only if attached) */}
-                  {(activeRequest.attachment_url || activeRequest.image_url) && (
-                    <div
-                      onClick={() =>
-                        setLightboxImage(
-                          activeRequest.attachment_url ||
-                            activeRequest.image_url ||
-                            null,
-                        )
-                      }
-                      className="relative w-16 h-16 sm:w-18 sm:h-18 rounded-xl overflow-hidden border border-slate-200 dark:border-zinc-700 shadow-2xs shrink-0 cursor-pointer group"
-                      title="Click to zoom image"
-                    >
-                      <img
-                        src={
-                          activeRequest.attachment_url ||
-                          activeRequest.image_url ||
-                          ""
                         }
-                        alt="Proof of issue"
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
-                      />
-                      <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white">
-                        <ZoomIn className="w-4 h-4" />
+                        className="relative w-20 h-20 sm:w-24 sm:h-24 rounded-xl overflow-hidden border border-slate-200 dark:border-zinc-700 shadow-2xs shrink-0 cursor-pointer group"
+                        title="Click to zoom image"
+                      >
+                        <img
+                          src={
+                            activeRequest.attachment_url ||
+                            activeRequest.image_url ||
+                            ""
+                          }
+                          alt="Proof of issue"
+                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
+                        />
+                        <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white">
+                          <ZoomIn className="w-4 h-4" />
+                        </div>
                       </div>
-                    </div>
-                  )}
-                </div>
-
-                {/* Assigned To Section */}
-                <div className="pt-2 border-t border-slate-100 dark:border-zinc-800">
-                  <div className="text-[11px] sm:text-xs font-bold text-slate-600 dark:text-zinc-400 uppercase tracking-wider mb-1.5">
-                    Assigned To
+                    )}
                   </div>
-                  <div className="flex items-center gap-2">
-                    <div className="w-7 h-7 rounded-full bg-blue-100 dark:bg-blue-900/60 text-[#0062cc] dark:text-blue-400 font-bold text-xs flex items-center justify-center border border-blue-200 dark:border-blue-800 select-none">
-                      {(activeRequest.assigned_to || "M")
-                        .charAt(0)
-                        .toUpperCase()}
+
+                  {/* Assigned To Section */}
+                  <div className="pt-3 border-t border-slate-100 dark:border-zinc-800">
+                    <div className="text-xs sm:text-sm font-bold text-slate-600 dark:text-zinc-400 uppercase tracking-wider mb-1.5">
+                      Assigned To
                     </div>
-                    <div>
-                      <div className="text-xs sm:text-[13px] font-bold text-slate-900 dark:text-white leading-tight">
-                        {activeRequest.assigned_to || "Maintenance Team"}
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-8 h-8 rounded-full bg-blue-100 dark:bg-blue-900/60 text-[#0062cc] dark:text-blue-400 font-bold text-xs sm:text-sm flex items-center justify-center border border-blue-200 dark:border-blue-800 select-none">
+                        {(activeRequest.assigned_to || "M")
+                          .charAt(0)
+                          .toUpperCase()}
                       </div>
-                      <div className="text-[11px] text-slate-400 dark:text-zinc-400 leading-tight mt-0.5">
-                        {activeRequest.admin_notes ||
-                          (normalizeStatus(activeRequest.status) === "Resolved"
-                            ? "Work completed"
-                            : "Ongoing repair")}
+                      <div>
+                        <div className="text-sm sm:text-base font-bold text-slate-900 dark:text-white leading-tight">
+                          {activeRequest.assigned_to || "Maintenance Team"}
+                        </div>
+                        <div className="text-xs sm:text-sm text-slate-400 dark:text-zinc-400 leading-tight mt-0.5">
+                          {activeRequest.admin_notes ||
+                            (normalizeStatus(activeRequest.status) === "Resolved"
+                              ? "Work completed"
+                              : "Ongoing repair")}
+                        </div>
                       </div>
                     </div>
                   </div>
                 </div>
 
                 {/* Action Buttons */}
-                <div className="flex items-center gap-2 pt-1">
+                <div className="flex items-center gap-2.5 pt-3 mt-auto border-t border-slate-100 dark:border-zinc-800">
                   <button
                     onClick={() => setViewingRequest(activeRequest)}
-                    className="flex-1 py-1.5 px-3 border border-[#0055a5] text-[#0055a5] hover:bg-blue-50 dark:hover:bg-blue-950/30 rounded-xl text-xs sm:text-[13px] font-bold text-center transition-colors cursor-pointer"
+                    className="flex-1 py-2.5 px-3.5 border border-[#0055a5] text-[#0055a5] hover:bg-blue-50 dark:hover:bg-blue-950/30 rounded-xl text-sm font-bold text-center transition-colors cursor-pointer"
                   >
                     View Details
                   </button>
                   <button
                     onClick={() => openUpdateModal(activeRequest)}
-                    className="flex-1 py-1.5 px-3 bg-[#0055a5] hover:bg-[#00478f] text-white rounded-xl text-xs sm:text-[13px] font-bold text-center shadow-xs transition-colors cursor-pointer"
+                    className="flex-1 py-2.5 px-3.5 bg-[#0055a5] hover:bg-[#00478f] text-white rounded-xl text-sm font-bold text-center shadow-xs transition-colors cursor-pointer"
                   >
                     Update Status
                   </button>
                 </div>
-              </>
+              </div>
             ) : (
-              <div className="py-12 flex flex-col items-center justify-center text-slate-400 dark:text-zinc-500 text-center">
-                <Wrench className="w-8 h-8 mb-2 opacity-30" />
-                <p className="text-xs sm:text-[13px] font-semibold">
+              <div className="py-12 flex flex-col items-center justify-center text-slate-400 dark:text-zinc-500 text-center my-auto">
+                <Wrench className="w-10 h-10 mb-2.5 opacity-30" />
+                <p className="text-sm sm:text-base font-bold">
                   No maintenance request selected
                 </p>
-                <p className="text-[11px] text-slate-400 mt-0.5">
+                <p className="text-xs sm:text-sm text-slate-400 mt-1">
                   Select a request from the list to view details
                 </p>
               </div>
             )}
-          </div>
-
-          {/* Card 2: Maintenance Categories */}
-          <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200/90 dark:border-zinc-800 p-3 sm:p-3.5 shadow-2xs flex flex-col gap-2 min-h-0 shrink-0">
-            <h3 className="text-sm sm:text-base font-black text-slate-900 dark:text-white tracking-tight">
-              Maintenance Categories
-            </h3>
-
-            {/* Scrollable if reaches 4 rows or above */}
-            <div className="max-h-41.25 overflow-y-auto custom-scrollbar pr-0.5">
-              <div className="grid grid-cols-3 gap-2">
-                {CATEGORY_ITEMS.map((cat) => (
-                  <div
-                    key={cat.id}
-                    onClick={() =>
-                      setCategoryFilter(
-                        categoryFilter === cat.id ? "All Categories" : cat.id,
-                      )
-                    }
-                    className={`p-2 rounded-xl border transition-all cursor-pointer flex items-center gap-2 select-none ${
-                      categoryFilter === cat.id
-                        ? cat.activeBorder
-                        : "border-slate-100 dark:border-zinc-800 bg-slate-50/50 dark:bg-zinc-800/30 hover:bg-slate-100/70 dark:hover:bg-zinc-800/60"
-                    }`}
-                  >
-                    <div
-                      className={`w-7 h-7 rounded-lg ${cat.bg} ${cat.color} flex items-center justify-center shrink-0`}
-                    >
-                      <cat.icon className={`w-3.5 h-3.5 ${cat.fill || ""}`} />
-                    </div>
-                    <div className="min-w-0">
-                      <div className="text-xs font-bold text-slate-900 dark:text-white truncate">
-                        {cat.label}
-                      </div>
-                      <div className="text-[11px] text-slate-500 dark:text-zinc-400 font-medium whitespace-nowrap">
-                        {categoryCounts[cat.id] ?? 0}{" "}
-                        {categoryCounts[cat.id] === 1 ? "request" : "requests"}
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
           </div>
         </div>
       </div>
@@ -1427,41 +1242,41 @@ function MaintenanceRequestsContent() {
               <div className="p-3.5 sm:p-4 border-b border-slate-100 dark:border-zinc-800 flex items-center justify-between bg-slate-50/80 dark:bg-zinc-900/80">
                 <div className="flex items-center gap-2.5">
                   <div className="w-8 h-8 rounded-xl bg-blue-50 dark:bg-blue-950/40 text-[#0055a5] dark:text-blue-400 flex items-center justify-center">
-                    <Wrench className="w-4 h-4" />
+                    <Wrench className="w-5 h-5" />
                   </div>
                   <div>
-                    <h3 className="font-bold text-sm sm:text-base text-slate-900 dark:text-white">
+                    <h3 className="font-bold text-lg sm:text-xl text-slate-900 dark:text-white">
                       {formatMRId(viewingRequest)}
                     </h3>
-                    <p className="text-xs text-slate-500 dark:text-zinc-400">
+                    <p className="text-sm text-slate-500 dark:text-zinc-400">
                       Maintenance Request Details
                     </p>
                   </div>
                 </div>
                 <button
                   onClick={() => setViewingRequest(null)}
-                  className="p-1 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-zinc-200 transition-colors cursor-pointer"
+                  className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-zinc-200 transition-colors cursor-pointer"
                 >
-                  <X className="w-4 h-4" />
+                  <X className="w-5 h-5" />
                 </button>
               </div>
 
               {/* Modal Body */}
-              <div className="p-3.5 sm:p-4 overflow-y-auto space-y-3.5">
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 p-3 rounded-xl bg-slate-50 dark:bg-zinc-800/40 border border-slate-100 dark:border-zinc-800 text-xs">
+              <div className="p-4 sm:p-5 overflow-y-auto space-y-4">
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 p-3.5 rounded-xl bg-slate-50 dark:bg-zinc-800/40 border border-slate-100 dark:border-zinc-800 text-sm">
                   <div>
-                    <span className="text-[10px] sm:text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-zinc-400">
+                    <span className="text-xs sm:text-sm font-bold uppercase tracking-wider text-slate-500 dark:text-zinc-400">
                       Tenant
                     </span>
-                    <p className="font-bold text-xs sm:text-sm text-slate-900 dark:text-white mt-0.5">
+                    <p className="font-bold text-sm sm:text-base text-slate-900 dark:text-white mt-1">
                       {viewingRequest.tenant_name || "Resident"}
                     </p>
                   </div>
                   <div>
-                    <span className="text-[10px] sm:text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-zinc-400">
+                    <span className="text-xs sm:text-sm font-bold uppercase tracking-wider text-slate-500 dark:text-zinc-400">
                       Room / Floor
                     </span>
-                    <p className="font-bold text-xs sm:text-[13px] text-slate-900 dark:text-white mt-0.5">
+                    <p className="font-bold text-sm sm:text-base text-slate-900 dark:text-white mt-1">
                       {viewingRequest.room_number
                         ? `Room ${viewingRequest.room_number}`
                         : "—"}{" "}
@@ -1474,66 +1289,66 @@ function MaintenanceRequestsContent() {
                     </p>
                   </div>
                   <div>
-                    <span className="text-[10px] sm:text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-zinc-400">
+                    <span className="text-xs sm:text-sm font-bold uppercase tracking-wider text-slate-500 dark:text-zinc-400">
                       Date Reported
                     </span>
-                    <p className="font-semibold text-xs sm:text-[13px] text-slate-800 dark:text-zinc-200 mt-0.5">
+                    <p className="font-semibold text-sm sm:text-base text-slate-800 dark:text-zinc-200 mt-1 font-mono">
                       {formatDate(viewingRequest.created_at).date}{" "}
                       {formatDate(viewingRequest.created_at).time}
                     </p>
                   </div>
                   <div>
-                    <span className="text-[10px] sm:text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-zinc-400">
+                    <span className="text-xs sm:text-sm font-bold uppercase tracking-wider text-slate-500 dark:text-zinc-400">
                       Category
                     </span>
-                    <p className="font-bold text-xs sm:text-[13px] text-slate-900 dark:text-white mt-0.5">
+                    <p className="font-bold text-sm sm:text-base text-slate-900 dark:text-white mt-1">
                       {viewingRequest.category || "General"}
                     </p>
                   </div>
                   <div>
-                    <span className="text-[10px] sm:text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-zinc-400">
+                    <span className="text-xs sm:text-sm font-bold uppercase tracking-wider text-slate-500 dark:text-zinc-400">
                       Priority
                     </span>
-                    <div className="mt-0.5">
+                    <div className="mt-1">
                       {normalizePriority(viewingRequest.priority) ===
                         "High" && (
-                        <span className="inline-flex items-center gap-1 text-xs font-bold text-rose-600 dark:text-rose-400">
-                          <Flame className="w-3.5 h-3.5 fill-current" /> High
+                        <span className="inline-flex items-center gap-1.5 text-xs sm:text-sm font-bold text-rose-600 dark:text-rose-400">
+                          <Flame className="w-4 h-4 fill-current" /> High
                         </span>
                       )}
                       {normalizePriority(viewingRequest.priority) ===
                         "Medium" && (
-                        <span className="inline-flex items-center gap-1 text-xs font-bold text-amber-600 dark:text-amber-400">
-                          <Zap className="w-3.5 h-3.5 fill-current" /> Medium
+                        <span className="inline-flex items-center gap-1.5 text-xs sm:text-sm font-bold text-amber-600 dark:text-amber-400">
+                          <Zap className="w-4 h-4 fill-current" /> Medium
                         </span>
                       )}
                       {normalizePriority(viewingRequest.priority) === "Low" && (
-                        <span className="inline-flex items-center text-xs font-bold text-teal-600 dark:text-teal-400">
+                        <span className="inline-flex items-center text-xs sm:text-sm font-bold text-teal-600 dark:text-teal-400">
                           Low
                         </span>
                       )}
                     </div>
                   </div>
                   <div>
-                    <span className="text-[10px] sm:text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-zinc-400">
+                    <span className="text-xs sm:text-sm font-bold uppercase tracking-wider text-slate-500 dark:text-zinc-400">
                       Status
                     </span>
-                    <div className="mt-0.5">
+                    <div className="mt-1">
                       {normalizeStatus(viewingRequest.status) === "Pending" && (
-                        <span className="inline-flex items-center gap-1 text-xs font-bold text-amber-600 dark:text-amber-400">
-                          <User className="w-3.5 h-3.5" /> Pending
+                        <span className="inline-flex items-center gap-1.5 text-xs sm:text-sm font-bold text-amber-600 dark:text-amber-400">
+                          <Clock className="w-4 h-4" /> Pending
                         </span>
                       )}
                       {normalizeStatus(viewingRequest.status) ===
                         "In Progress" && (
-                        <span className="inline-flex items-center gap-1 text-xs font-bold text-blue-600 dark:text-blue-400">
-                          <User className="w-3.5 h-3.5" /> In Progress
+                        <span className="inline-flex items-center gap-1.5 text-xs sm:text-sm font-bold text-blue-600 dark:text-blue-400">
+                          <User className="w-4 h-4" /> In Progress
                         </span>
                       )}
                       {normalizeStatus(viewingRequest.status) ===
                         "Resolved" && (
-                        <span className="inline-flex items-center gap-1 text-xs font-bold text-emerald-600 dark:text-emerald-400">
-                          <User className="w-3.5 h-3.5" /> Resolved
+                        <span className="inline-flex items-center gap-1.5 text-xs sm:text-sm font-bold text-emerald-600 dark:text-emerald-400">
+                          <CheckCircle2 className="w-4 h-4" /> Resolved
                         </span>
                       )}
                     </div>
@@ -1541,10 +1356,10 @@ function MaintenanceRequestsContent() {
                 </div>
 
                 <div>
-                  <h4 className="text-xs sm:text-[13px] font-bold text-slate-700 dark:text-zinc-300 mb-1">
+                  <h4 className="text-sm sm:text-base font-bold text-slate-700 dark:text-zinc-300 mb-1.5">
                     Issue Description
                   </h4>
-                  <p className="text-xs sm:text-[13px] text-slate-600 dark:text-zinc-300 leading-relaxed p-2.5 sm:p-3 rounded-xl bg-slate-50 dark:bg-zinc-800/40 border border-slate-100 dark:border-zinc-800">
+                  <p className="text-sm sm:text-base text-slate-600 dark:text-zinc-300 leading-relaxed p-3 sm:p-3.5 rounded-xl bg-slate-50 dark:bg-zinc-800/40 border border-slate-100 dark:border-zinc-800">
                     {viewingRequest.description ||
                       viewingRequest.title ||
                       "No description provided."}
@@ -1555,7 +1370,7 @@ function MaintenanceRequestsContent() {
                 {(viewingRequest.attachment_url ||
                   viewingRequest.image_url) && (
                   <div>
-                    <h4 className="text-xs sm:text-[13px] font-bold text-slate-700 dark:text-zinc-300 mb-1">
+                    <h4 className="text-sm sm:text-base font-bold text-slate-700 dark:text-zinc-300 mb-1.5">
                       Attached Photo
                     </h4>
                     <div
@@ -1566,7 +1381,7 @@ function MaintenanceRequestsContent() {
                             null,
                         )
                       }
-                      className="relative rounded-xl overflow-hidden border border-slate-200 dark:border-zinc-700 h-40 bg-slate-100 cursor-pointer group"
+                      className="relative rounded-xl overflow-hidden border border-slate-200 dark:border-zinc-700 h-44 bg-slate-100 cursor-pointer group"
                     >
                       <img
                         src={
@@ -1577,8 +1392,8 @@ function MaintenanceRequestsContent() {
                         alt="Attachment"
                         className="w-full h-full object-cover group-hover:scale-102 transition-transform duration-200"
                       />
-                      <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white gap-1.5 text-xs font-bold">
-                        <ZoomIn className="w-3.5 h-3.5" />
+                      <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white gap-2 text-sm font-bold">
+                        <ZoomIn className="w-4 h-4" />
                         <span>Click to view full size</span>
                       </div>
                     </div>
@@ -1586,20 +1401,20 @@ function MaintenanceRequestsContent() {
                 )}
 
                 {/* Assigned Technician & Notes */}
-                <div className="p-3 rounded-xl bg-slate-50 dark:bg-zinc-800/40 border border-slate-100 dark:border-zinc-800 flex items-center justify-between text-xs">
+                <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-zinc-800/40 border border-slate-100 dark:border-zinc-800 flex items-center justify-between text-sm sm:text-base">
                   <div>
-                    <span className="text-[10px] sm:text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-zinc-400">
+                    <span className="text-xs sm:text-sm font-bold uppercase tracking-wider text-slate-500 dark:text-zinc-400">
                       Assigned Technician
                     </span>
-                    <p className="font-bold text-xs sm:text-[13px] text-slate-900 dark:text-white mt-0.5">
+                    <p className="font-bold text-sm sm:text-base text-slate-900 dark:text-white mt-1">
                       {viewingRequest.assigned_to || "Maintenance Team"}
                     </p>
                   </div>
                   <div className="text-right">
-                    <span className="text-[10px] sm:text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-zinc-400">
+                    <span className="text-xs sm:text-sm font-bold uppercase tracking-wider text-slate-500 dark:text-zinc-400">
                       Service Status
                     </span>
-                    <p className="font-bold text-xs sm:text-[13px] text-[#0055a5] dark:text-blue-400 mt-0.5">
+                    <p className="font-bold text-sm sm:text-base text-[#0055a5] dark:text-blue-400 mt-1">
                       {viewingRequest.status}
                     </p>
                   </div>
@@ -1607,10 +1422,10 @@ function MaintenanceRequestsContent() {
               </div>
 
               {/* Modal Footer */}
-              <div className="p-3 sm:p-3.5 border-t border-slate-100 dark:border-zinc-800 flex items-center justify-end gap-2 bg-slate-50/50 dark:bg-zinc-900/50">
+              <div className="p-3.5 sm:p-4 border-t border-slate-100 dark:border-zinc-800 flex items-center justify-end gap-2.5 bg-slate-50/50 dark:bg-zinc-900/50">
                 <button
                   onClick={() => setViewingRequest(null)}
-                  className="px-3.5 py-2 text-xs sm:text-[13px] font-bold rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-zinc-800 text-slate-700 dark:text-zinc-300 transition-colors cursor-pointer"
+                  className="px-4 py-2.5 text-sm font-bold rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-zinc-800 text-slate-700 dark:text-zinc-300 transition-colors cursor-pointer"
                 >
                   Close
                 </button>
@@ -1619,9 +1434,9 @@ function MaintenanceRequestsContent() {
                     openUpdateModal(viewingRequest);
                     setViewingRequest(null);
                   }}
-                  className="px-3.5 py-2 text-xs sm:text-[13px] font-bold rounded-xl bg-[#0055a5] hover:bg-[#00478f] text-white transition-colors cursor-pointer flex items-center gap-1.5"
+                  className="px-4.5 py-2.5 text-sm font-bold rounded-xl bg-[#0055a5] hover:bg-[#00478f] text-white transition-colors cursor-pointer flex items-center gap-2"
                 >
-                  <Pencil className="w-3.5 h-3.5" />
+                  <Pencil className="w-4 h-4" />
                   <span>Update Status</span>
                 </button>
               </div>
@@ -1648,34 +1463,34 @@ function MaintenanceRequestsContent() {
               exit={{ opacity: 0, scale: 0.95, y: 10 }}
               className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 shadow-2xl w-full max-w-md overflow-hidden flex flex-col"
             >
-              <div className="p-3.5 sm:p-4 border-b border-slate-100 dark:border-zinc-800 flex items-center justify-between bg-slate-50/80 dark:bg-zinc-900/80">
-                <div className="flex items-center gap-2.5">
-                  <div className="w-8 h-8 rounded-xl bg-blue-50 dark:bg-blue-950/40 text-[#0055a5] dark:text-blue-400 flex items-center justify-center">
-                    <Clock className="w-4 h-4" />
+              <div className="p-4 sm:p-4.5 border-b border-slate-100 dark:border-zinc-800 flex items-center justify-between bg-slate-50/80 dark:bg-zinc-900/80">
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-xl bg-blue-50 dark:bg-blue-950/40 text-[#0055a5] dark:text-blue-400 flex items-center justify-center">
+                    <Clock className="w-5 h-5" />
                   </div>
                   <div>
-                    <h3 className="font-bold text-sm sm:text-base text-slate-900 dark:text-white">
+                    <h3 className="font-bold text-lg sm:text-xl text-slate-900 dark:text-white">
                       Update Request Status
                     </h3>
-                    <p className="text-xs text-slate-500 dark:text-zinc-400">
+                    <p className="text-sm text-slate-500 dark:text-zinc-400">
                       {formatMRId(updatingRequest)}
                     </p>
                   </div>
                 </div>
                 <button
                   onClick={() => setIsUpdateStatusModalOpen(false)}
-                  className="p-1 rounded-lg text-slate-400 hover:text-slate-600 transition-colors"
+                  className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 transition-colors cursor-pointer"
                 >
-                  <X className="w-4 h-4" />
+                  <X className="w-5 h-5" />
                 </button>
               </div>
 
               <form
                 onSubmit={handleSaveStatusModal}
-                className="p-3.5 sm:p-4 space-y-3"
+                className="p-4 sm:p-5 space-y-4"
               >
-                <div className="space-y-1">
-                  <label className="text-[11px] sm:text-xs font-bold text-slate-700 dark:text-zinc-300 uppercase tracking-wider">
+                <div className="space-y-1.5">
+                  <label className="text-xs sm:text-sm font-bold text-slate-700 dark:text-zinc-300 uppercase tracking-wider">
                     Status
                   </label>
                   <DropdownSelect
@@ -1700,12 +1515,12 @@ function MaintenanceRequestsContent() {
                         dotColor: "bg-emerald-500",
                       },
                     ]}
-                    className="w-full px-3 py-2 text-xs sm:text-[13px] rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-slate-900 dark:text-white font-medium"
+                    className="w-full px-3.5 py-2.5 text-sm sm:text-base rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-slate-900 dark:text-white font-medium"
                   />
                 </div>
 
-                <div className="space-y-1">
-                  <label className="text-[11px] sm:text-xs font-bold text-slate-700 dark:text-zinc-300 uppercase tracking-wider">
+                <div className="space-y-1.5">
+                  <label className="text-xs sm:text-sm font-bold text-slate-700 dark:text-zinc-300 uppercase tracking-wider">
                     Assigned Technician
                   </label>
                   <input
@@ -1717,12 +1532,12 @@ function MaintenanceRequestsContent() {
                         assigned_to: e.target.value,
                       })
                     }
-                    className="w-full px-3 py-2 text-xs sm:text-[13px] rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-slate-900 dark:text-white font-medium"
+                    className="w-full px-3.5 py-2.5 text-sm sm:text-base rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-slate-900 dark:text-white font-medium"
                   />
                 </div>
 
-                <div className="space-y-1">
-                  <label className="text-[11px] sm:text-xs font-bold text-slate-700 dark:text-zinc-300 uppercase tracking-wider">
+                <div className="space-y-1.5">
+                  <label className="text-xs sm:text-sm font-bold text-slate-700 dark:text-zinc-300 uppercase tracking-wider">
                     Admin Notes
                   </label>
                   <textarea
@@ -1735,22 +1550,22 @@ function MaintenanceRequestsContent() {
                         admin_notes: e.target.value,
                       })
                     }
-                    className="w-full px-3 py-2 text-xs sm:text-[13px] rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-slate-900 dark:text-white resize-none font-medium"
+                    className="w-full px-3.5 py-2.5 text-sm sm:text-base rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-slate-900 dark:text-white resize-none font-medium"
                   />
                 </div>
 
-                <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100 dark:border-zinc-800">
+                <div className="flex items-center justify-end gap-2.5 pt-2.5 border-t border-slate-100 dark:border-zinc-800">
                   <button
                     type="button"
                     onClick={() => setIsUpdateStatusModalOpen(false)}
-                    className="px-3.5 py-2 text-xs sm:text-[13px] font-bold rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 transition-colors"
+                    className="px-4 py-2.5 text-sm font-bold rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 transition-colors cursor-pointer"
                   >
                     Cancel
                   </button>
                   <button
                     type="submit"
                     disabled={isSubmittingStatus}
-                    className="px-3.5 py-2 text-xs sm:text-[13px] font-bold rounded-xl bg-[#0055a5] hover:bg-[#00478f] text-white transition-colors"
+                    className="px-4.5 py-2.5 text-sm font-bold rounded-xl bg-[#0055a5] hover:bg-[#00478f] text-white transition-colors cursor-pointer"
                   >
                     {isSubmittingStatus ? "Saving..." : "Save Changes"}
                   </button>

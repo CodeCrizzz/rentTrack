@@ -73,21 +73,21 @@ function getNextScheduledDate(schedule) {
     }
     const now = new Date();
     const next = new Date(now);
-    next.setHours(2, 0, 0, 0); // 02:00 AM
+    next.setHours(6, 0, 0, 0); // 06:00 AM
 
     if (schedule === 'everyday') {
-        if (now.getHours() >= 2) {
+        if (now.getHours() >= 6) {
             next.setDate(next.getDate() + 1);
         }
     } else if (schedule === 'every_3_days') {
         next.setDate(next.getDate() + 3);
     } else if (schedule === '1_week') {
-        // Next Sunday at 02:00 AM
+        // Next Sunday at 06:00 AM
         const day = now.getDay();
         const diff = (7 - day) % 7 || 7;
         next.setDate(now.getDate() + diff);
     } else if (schedule === 'per_month') {
-        // 1st of next month at 02:00 AM
+        // 1st of next month at 06:00 AM
         next.setMonth(next.getMonth() + 1, 1);
     }
     return next.toISOString();
@@ -254,13 +254,13 @@ function pruneOldBackups(dir, maxCount = 20) {
 function getCronExpression(schedule) {
     switch (schedule) {
         case 'everyday':
-            return '0 2 * * *';      // Every day at 02:00 AM
+            return '0 6 * * *';      // Every day at 06:00 AM
         case 'every_3_days':
-            return '0 2 */3 * *';    // Every 3 days at 02:00 AM
+            return '0 6 */3 * *';    // Every 3 days at 06:00 AM
         case '1_week':
-            return '0 2 * * 0';      // Every Sunday at 02:00 AM
+            return '0 6 * * 0';      // Every Sunday at 06:00 AM
         case 'per_month':
-            return '0 2 1 * *';      // 1st of every month at 02:00 AM
+            return '0 6 1 * *';      // 1st of every month at 06:00 AM
         default:
             return null;             // Off / Manual
     }
