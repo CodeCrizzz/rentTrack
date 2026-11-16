@@ -93,25 +93,25 @@ const SCHEDULE_OPTIONS = [
   {
     key: "everyday",
     title: "Everyday",
-    tagline: "Daily at 2:00 AM",
-    description: "Nightly automated snapshot for high activity properties.",
+    tagline: "Daily at 6:00 AM",
+    description: "Daily automated snapshot for high activity properties.",
   },
   {
     key: "every_3_days",
     title: "Every 3 Days",
-    tagline: "Every 72 Hours at 2:00 AM",
+    tagline: "Every 72 Hours at 6:00 AM",
     description: "Balanced frequency ideal for typical property management.",
   },
   {
     key: "1_week",
     title: "1 Week",
-    tagline: "Weekly at 2:00 AM",
+    tagline: "Weekly at 6:00 AM",
     description: "Weekly automated snapshot to save storage overhead.",
   },
   {
     key: "per_month",
     title: "Per Month",
-    tagline: "1st of Every Month at 2:00 AM",
+    tagline: "1st of Every Month at 6:00 AM",
     description: "Monthly milestone backup for long-term historical records.",
   },
   {
@@ -581,7 +581,7 @@ export default function AdminBackupPage() {
   };
 
   return (
-    <div className="flex-1 w-full p-4 sm:p-6 lg:p-8 space-y-6 max-w-7xl mx-auto overflow-y-auto">
+    <div className="w-full flex-1 flex flex-col font-sans text-slate-900 dark:text-zinc-100 space-y-4 pb-6">
       {/* Hidden File Input for Import */}
       <input
         ref={fileInputRef}
@@ -594,15 +594,15 @@ export default function AdminBackupPage() {
       {/* 1. Header & Quick Actions */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <div className="flex items-center gap-2">
-            <span className="p-2 rounded-xl bg-blue-50 dark:bg-blue-950/40 text-[#0055a5] dark:text-blue-400 border border-blue-200/50 dark:border-blue-900/40">
+          <div className="flex items-center gap-2.5">
+            <span className="p-2.5 rounded-xl bg-blue-50 dark:bg-blue-950/40 text-[#0055a5] dark:text-blue-400 border border-blue-200/50 dark:border-blue-900/40">
               <Database className="w-5 h-5 stroke-[2.2]" />
             </span>
-            <h1 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white tracking-tight">
+            <h1 className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white tracking-tight">
               System Backup & Disaster Recovery
             </h1>
           </div>
-          <p className="text-xs sm:text-sm text-slate-500 dark:text-zinc-400 mt-1 font-medium">
+          <p className="text-sm sm:text-base text-slate-500 dark:text-zinc-400 mt-1 font-medium">
             Automate scheduled snapshots, import/export database files, and
             protect property records against system malfunctions.
           </p>
@@ -612,7 +612,7 @@ export default function AdminBackupPage() {
           <button
             onClick={() => fetchBackupStatus(false)}
             disabled={isLoading}
-            className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs sm:text-sm font-bold border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-slate-700 dark:text-zinc-300 hover:bg-slate-50 dark:hover:bg-zinc-800 transition-all cursor-pointer shadow-2xs disabled:opacity-50"
+            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-slate-700 dark:text-zinc-300 hover:bg-slate-50 dark:hover:bg-zinc-800 transition-all cursor-pointer shadow-2xs disabled:opacity-50"
             title="Refresh Status"
           >
             <RefreshCw
@@ -624,7 +624,7 @@ export default function AdminBackupPage() {
           <button
             onClick={handleExportBackup}
             disabled={isExporting}
-            className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-bold border border-blue-200 dark:border-blue-900/50 bg-blue-50 dark:bg-blue-950/40 text-[#0055a5] dark:text-blue-300 hover:bg-blue-100 dark:hover:bg-blue-900/60 transition-all cursor-pointer shadow-2xs disabled:opacity-50"
+            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold border border-blue-200 dark:border-blue-900/50 bg-blue-50 dark:bg-blue-950/40 text-[#0055a5] dark:text-blue-300 hover:bg-blue-100 dark:hover:bg-blue-900/60 transition-all cursor-pointer shadow-2xs disabled:opacity-50"
           >
             <Download
               className={`w-4 h-4 ${isExporting ? "animate-bounce" : ""}`}
@@ -635,7 +635,7 @@ export default function AdminBackupPage() {
           <button
             onClick={handleCreateManualBackup}
             disabled={isCreatingBackup}
-            className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-bold bg-[#0055a5] hover:bg-[#004182] text-white transition-all cursor-pointer shadow-sm hover:shadow-md disabled:opacity-50"
+            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold bg-[#0055a5] hover:bg-[#004182] text-white transition-all cursor-pointer shadow-sm hover:shadow-md disabled:opacity-50"
           >
             <Server
               className={`w-4 h-4 ${isCreatingBackup ? "animate-spin" : ""}`}
@@ -650,152 +650,128 @@ export default function AdminBackupPage() {
       {/* 2. Top Telemetry KPI Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {/* Card 1: Database Status */}
-        <div className="relative overflow-hidden bg-card border border-slate-200/90 dark:border-zinc-800 rounded-2xl p-5 shadow-2xs group hover:border-blue-300 dark:hover:border-blue-800/80 transition-colors">
-          {/* Data Partition & Disk Platter Orbit */}
-          <div
-            className="pointer-events-none select-none absolute inset-0 overflow-hidden"
-            aria-hidden="true"
-          >
-            <div className="absolute inset-x-0 top-0 h-[2.5px] bg-gradient-to-r from-blue-500 via-blue-400/60 to-transparent dark:from-blue-400 dark:via-blue-500/40 dark:to-transparent" />
-            <div className="absolute -top-12 -right-12 w-32 h-32 rounded-full bg-blue-500/[0.04] dark:bg-blue-400/[0.03] blur-xl" />
-            <svg
-              className="absolute -bottom-1 right-2 w-32 h-14 opacity-[0.14] dark:opacity-[0.20] text-blue-600 dark:text-blue-400"
-              viewBox="0 0 128 56"
-              fill="none"
-              stroke="currentColor"
-            >
-              <ellipse cx="64" cy="18" rx="48" ry="10" strokeWidth="1.2" />
-              <path
-                d="M16 18 V34 C16 39.5 37.5 44 64 44 C90.5 44 112 39.5 112 34 V18"
-                strokeWidth="1.2"
-              />
-              <path
-                d="M16 26 C16 31.5 37.5 36 64 36 C90.5 36 112 31.5 112 26"
-                strokeWidth="1"
-                strokeDasharray="3 3"
-                opacity="0.6"
-              />
-            </svg>
+        <div className="relative overflow-hidden text-left bg-white dark:bg-zinc-900 border border-slate-200/90 dark:border-zinc-800 rounded-xl sm:rounded-2xl p-4 sm:p-5 shadow-2xs select-none flex flex-col justify-between group hover:border-blue-300 dark:hover:border-blue-800/80 transition-colors">
+          {/* Minimal accent: left status bar + subtle watermark icon */}
+          <div className="pointer-events-none select-none absolute inset-0 overflow-hidden" aria-hidden="true">
+            <div className="absolute left-0 top-4 bottom-4 w-1 rounded-r-full bg-blue-500/80 dark:bg-blue-400/80" />
+            <Database className="absolute -right-4 -bottom-4 w-24 h-24 stroke-[1.25] text-blue-600/[0.07] dark:text-blue-400/[0.08]" />
           </div>
-          <div className="relative z-10 flex items-center justify-between">
-            <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-zinc-400">
-              Database Records
-            </span>
-            <div className="w-9 h-9 rounded-xl bg-blue-50 dark:bg-blue-950/50 text-[#0055a5] dark:text-blue-400 border border-blue-100 dark:border-blue-900/40 flex items-center justify-center shrink-0">
-              <Database className="w-4 h-4 stroke-[2.2]" />
+
+          {/* Top Header: Icon + Title + Status Chip */}
+          <div className="relative z-10 flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2 min-w-0">
+              <div className="w-8 h-8 rounded-lg bg-blue-50 dark:bg-blue-950/50 text-[#0055a5] dark:text-blue-400 flex items-center justify-center shrink-0 border border-blue-100 dark:border-blue-900/40">
+                <Database className="w-4.5 h-4.5 stroke-[2.2]" />
+              </div>
+              <span className="text-xs sm:text-[13px] font-bold text-slate-800 dark:text-zinc-200 truncate">
+                Database Records
+              </span>
             </div>
+            <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-bold bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-400 border border-emerald-200/80 dark:border-emerald-900/50 shrink-0">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+              <span>Healthy</span>
+            </span>
           </div>
-          <div className="relative z-10 mt-2">
-            <div className="text-2xl sm:text-3xl font-black font-mono text-slate-900 dark:text-white">
+
+          {/* Metric Value */}
+          <div className="relative z-10 mt-3 flex items-baseline gap-1.5">
+            <span className="text-2xl sm:text-3xl font-black font-mono text-slate-950 dark:text-white tracking-tight tabular-nums">
               {isLoading
                 ? "..."
                 : (data?.database.totalRecords ?? 0).toLocaleString()}
-            </div>
-            <p className="text-[11px] text-slate-500 dark:text-zinc-400 mt-1 flex items-center gap-1.5 font-medium">
-              <span className="inline-block w-2 h-2 rounded-full bg-emerald-500" />
-              <span>PostgreSQL 16 • 8 Core Tables</span>
-            </p>
+            </span>
+            <span className="text-xs sm:text-sm font-semibold text-slate-400 dark:text-zinc-500">
+              total rows
+            </span>
+          </div>
+
+          {/* Operational Context Subtext */}
+          <div className="relative z-10 mt-2.5 flex items-center justify-between text-xs sm:text-[13px] text-slate-500 dark:text-zinc-400 font-medium">
+            <span>PostgreSQL 16</span>
+            <span className="font-semibold text-slate-700 dark:text-zinc-300">
+              8 Core Tables
+            </span>
           </div>
         </div>
 
         {/* Card 2: Backup Schedule */}
-        <div className="relative overflow-hidden bg-card border border-slate-200/90 dark:border-zinc-800 rounded-2xl p-5 shadow-2xs group hover:border-emerald-300 dark:hover:border-emerald-800/80 transition-colors">
-          {/* Recurrence Chronometer Wheel */}
-          <div
-            className="pointer-events-none select-none absolute inset-0 overflow-hidden"
-            aria-hidden="true"
-          >
-            <div className="absolute inset-x-0 top-0 h-[2.5px] bg-gradient-to-r from-emerald-500 via-emerald-400/60 to-transparent dark:from-emerald-400 dark:via-emerald-500/40 dark:to-transparent" />
-            <div className="absolute -top-12 -right-12 w-32 h-32 rounded-full bg-emerald-500/[0.04] dark:bg-emerald-400/[0.03] blur-xl" />
-            <svg
-              className="absolute -bottom-2 right-2 w-28 h-16 opacity-[0.14] dark:opacity-[0.20] text-emerald-600 dark:text-emerald-400"
-              viewBox="0 0 112 64"
-              fill="none"
-              stroke="currentColor"
-            >
-              <circle
-                cx="56"
-                cy="32"
-                r="24"
-                strokeWidth="1.2"
-                strokeDasharray="3 3"
-              />
-              <path
-                d="M56 18 V32 L66 38"
-                strokeWidth="1.5"
-                strokeLinecap="round"
-              />
-              <circle cx="56" cy="32" r="2.5" fill="currentColor" />
-            </svg>
+        <div className="relative overflow-hidden text-left bg-white dark:bg-zinc-900 border border-slate-200/90 dark:border-zinc-800 rounded-xl sm:rounded-2xl p-4 sm:p-5 shadow-2xs select-none flex flex-col justify-between group hover:border-emerald-300 dark:hover:border-emerald-800/80 transition-colors">
+          {/* Minimal accent: left status bar + subtle watermark icon */}
+          <div className="pointer-events-none select-none absolute inset-0 overflow-hidden" aria-hidden="true">
+            <div className="absolute left-0 top-4 bottom-4 w-1 rounded-r-full bg-emerald-500/80 dark:bg-emerald-400/80" />
+            <CalendarClock className="absolute -right-4 -bottom-4 w-24 h-24 stroke-[1.25] text-emerald-600/[0.07] dark:text-emerald-400/[0.08]" />
           </div>
-          <div className="relative z-10 flex items-center justify-between">
-            <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-zinc-400">
-              Backup Schedule
-            </span>
-            <div className="w-9 h-9 rounded-xl bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400 border border-emerald-100 dark:border-emerald-900/40 flex items-center justify-center shrink-0">
-              <CalendarClock className="w-4 h-4 stroke-[2.2]" />
+
+          {/* Top Header: Icon + Title + Status Chip */}
+          <div className="relative z-10 flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2 min-w-0">
+              <div className="w-8 h-8 rounded-lg bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0 border border-emerald-100 dark:border-emerald-900/40">
+                <CalendarClock className="w-4.5 h-4.5 stroke-[2.2]" />
+              </div>
+              <span className="text-xs sm:text-[13px] font-bold text-slate-800 dark:text-zinc-200 truncate">
+                Backup Schedule
+              </span>
             </div>
+            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-bold bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-400 border border-emerald-200/80 dark:border-emerald-900/50 shrink-0 capitalize">
+              {data?.config.schedule === "manual" ? "Manual Only" : "Automated"}
+            </span>
           </div>
-          <div className="relative z-10 mt-2">
-            <div className="text-2xl sm:text-3xl font-black text-emerald-600 dark:text-emerald-400 capitalize">
+
+          {/* Metric Value */}
+          <div className="relative z-10 mt-3 flex items-baseline gap-1.5">
+            <span className="text-2xl sm:text-3xl font-black text-emerald-600 dark:text-emerald-400 tracking-tight capitalize">
               {isLoading
                 ? "..."
                 : SCHEDULE_OPTIONS.find((s) => s.key === data?.config.schedule)
                     ?.title || "Everyday"}
-            </div>
-            <p
-              className="text-[11px] text-slate-500 dark:text-zinc-400 mt-1 truncate font-medium"
-              title={data?.config.nextScheduledBackupAt || "Manual Only"}
-            >
-              Next:{" "}
+            </span>
+          </div>
+
+          {/* Operational Context Subtext */}
+          <div className="relative z-10 mt-2.5 text-xs sm:text-[13px] text-slate-500 dark:text-zinc-400 font-medium truncate" title={data?.config.nextScheduledBackupAt || "Manual Only"}>
+            <span className="text-slate-400 dark:text-zinc-500 font-normal">Next: </span>
+            <span className="font-semibold text-slate-700 dark:text-zinc-300">
               {data?.config.schedule === "manual"
                 ? "Manual triggers only"
                 : formatDate(data?.config.nextScheduledBackupAt)}
-            </p>
+            </span>
           </div>
         </div>
 
         {/* Card 3: Storage Folder */}
-        <div className="relative overflow-hidden bg-card border border-slate-200/90 dark:border-zinc-800 rounded-2xl p-5 shadow-2xs group hover:border-amber-300 dark:hover:border-amber-800/80 transition-colors">
-          {/* Filesystem Hierarchy Bracket */}
-          <div
-            className="pointer-events-none select-none absolute inset-0 overflow-hidden"
-            aria-hidden="true"
-          >
-            <div className="absolute inset-x-0 top-0 h-[2.5px] bg-gradient-to-r from-amber-500 via-amber-400/60 to-transparent dark:from-amber-400 dark:via-amber-500/40 dark:to-transparent" />
-            <div className="absolute -top-12 -right-12 w-32 h-32 rounded-full bg-amber-500/[0.04] dark:bg-amber-400/[0.03] blur-xl" />
-            <svg
-              className="absolute -bottom-1 right-2 w-32 h-14 opacity-[0.14] dark:opacity-[0.20] text-amber-600 dark:text-amber-400"
-              viewBox="0 0 128 56"
-              fill="none"
-              stroke="currentColor"
-            >
-              <path d="M20 16 H44 L52 24 H108 V48 H20 Z" strokeWidth="1.2" />
-              <path
-                d="M40 28 H88 M40 36 H72"
-                strokeWidth="1"
-                opacity="0.6"
-                strokeLinecap="round"
-              />
-            </svg>
+        <div className="relative overflow-hidden text-left bg-white dark:bg-zinc-900 border border-slate-200/90 dark:border-zinc-800 rounded-xl sm:rounded-2xl p-4 sm:p-5 shadow-2xs select-none flex flex-col justify-between group hover:border-amber-300 dark:hover:border-amber-800/80 transition-colors">
+          {/* Minimal accent: left status bar + subtle watermark icon */}
+          <div className="pointer-events-none select-none absolute inset-0 overflow-hidden" aria-hidden="true">
+            <div className="absolute left-0 top-4 bottom-4 w-1 rounded-r-full bg-amber-500/80 dark:bg-amber-400/80" />
+            <FolderArchive className="absolute -right-4 -bottom-4 w-24 h-24 stroke-[1.25] text-amber-600/[0.07] dark:text-amber-400/[0.08]" />
           </div>
-          <div className="relative z-10 flex items-center justify-between">
-            <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-zinc-400">
-              Storage Path
-            </span>
+
+          {/* Top Header: Icon + Title + Action Button */}
+          <div className="relative z-10 flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2 min-w-0">
+              <div className="w-8 h-8 rounded-lg bg-amber-50 dark:bg-amber-950/50 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0 border border-amber-100 dark:border-amber-900/40">
+                <FolderArchive className="w-4.5 h-4.5 stroke-[2.2]" />
+              </div>
+              <span className="text-xs sm:text-[13px] font-bold text-slate-800 dark:text-zinc-200 truncate">
+                Storage Path
+              </span>
+            </div>
             <button
               type="button"
               onClick={() => handleOpenInFileExplorer(data?.config.backupPath)}
               disabled={isOpeningFolder}
               title="Click to open this folder in Windows File Explorer"
-              className="w-9 h-9 rounded-xl bg-amber-50 hover:bg-amber-100 dark:bg-amber-950/50 dark:hover:bg-amber-900/60 text-amber-600 dark:text-amber-400 border border-amber-100 dark:border-amber-900/40 flex items-center justify-center shrink-0 cursor-pointer transition-colors shadow-2xs"
+              className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[11px] font-bold text-amber-700 dark:text-amber-300 bg-amber-50 hover:bg-amber-100 dark:bg-amber-950/50 dark:hover:bg-amber-900/60 border border-amber-200 dark:border-amber-900/40 transition-colors cursor-pointer shrink-0"
             >
-              <FolderArchive className="w-4 h-4 stroke-[2.2]" />
+              <span>Explorer</span>
+              <ExternalLink className="w-3 h-3" />
             </button>
           </div>
-          <div className="relative z-10 mt-2">
+
+          {/* Metric Value */}
+          <div className="relative z-10 mt-3">
             <div
-              className="text-sm sm:text-base font-bold text-slate-900 dark:text-white truncate font-mono"
+              className="text-xl sm:text-2xl font-black font-mono text-slate-950 dark:text-white tracking-tight truncate"
               title={data?.config.backupPath}
             >
               {isLoading
@@ -804,11 +780,15 @@ export default function AdminBackupPage() {
                   ? data.config.backupPath.split(/[\\/]/).pop() || "backups"
                   : "backups"}
             </div>
+          </div>
+
+          {/* Operational Context Subtext */}
+          <div className="relative z-10 mt-2.5">
             <button
               type="button"
               onClick={() => handleOpenInFileExplorer(data?.config.backupPath)}
               disabled={isOpeningFolder}
-              className="text-[11px] text-amber-600 dark:text-amber-400 hover:underline mt-1 truncate block text-left font-medium cursor-pointer"
+              className="text-xs sm:text-[13px] text-amber-600 dark:text-amber-400 hover:underline truncate block text-left font-medium cursor-pointer"
               title="Click to open folder in File Explorer"
             >
               {data?.config.backupPath || "Server storage directory"} ↗
@@ -817,68 +797,47 @@ export default function AdminBackupPage() {
         </div>
 
         {/* Card 4: Archive Library */}
-        <div className="relative overflow-hidden bg-card border border-slate-200/90 dark:border-zinc-800 rounded-2xl p-5 shadow-2xs group hover:border-purple-300 dark:hover:border-purple-800/80 transition-colors">
-          {/* Archive Vault Cassette Plates */}
-          <div
-            className="pointer-events-none select-none absolute inset-0 overflow-hidden"
-            aria-hidden="true"
-          >
-            <div className="absolute inset-x-0 top-0 h-[2.5px] bg-gradient-to-r from-purple-500 via-purple-400/60 to-transparent dark:from-purple-400 dark:via-purple-500/40 dark:to-transparent" />
-            <div className="absolute -top-12 -right-12 w-32 h-32 rounded-full bg-purple-500/[0.04] dark:bg-purple-400/[0.03] blur-xl" />
-            <svg
-              className="absolute -bottom-1 right-2 w-32 h-14 opacity-[0.14] dark:opacity-[0.20] text-purple-600 dark:text-purple-400"
-              viewBox="0 0 128 56"
-              fill="none"
-              stroke="currentColor"
-            >
-              <rect
-                x="28"
-                y="14"
-                width="80"
-                height="18"
-                rx="3"
-                strokeWidth="1.2"
-              />
-              <rect
-                x="24"
-                y="24"
-                width="88"
-                height="18"
-                rx="3"
-                strokeWidth="1.2"
-              />
-              <rect
-                x="20"
-                y="34"
-                width="96"
-                height="18"
-                rx="3"
-                strokeWidth="1.2"
-              />
-              <circle cx="96" cy="43" r="2" fill="currentColor" />
-            </svg>
+        <div className="relative overflow-hidden text-left bg-white dark:bg-zinc-900 border border-slate-200/90 dark:border-zinc-800 rounded-xl sm:rounded-2xl p-4 sm:p-5 shadow-2xs select-none flex flex-col justify-between group hover:border-purple-300 dark:hover:border-purple-800/80 transition-colors">
+          {/* Minimal accent: left status bar + subtle watermark icon */}
+          <div className="pointer-events-none select-none absolute inset-0 overflow-hidden" aria-hidden="true">
+            <div className="absolute left-0 top-4 bottom-4 w-1 rounded-r-full bg-purple-500/80 dark:bg-purple-400/80" />
+            <HardDrive className="absolute -right-4 -bottom-4 w-24 h-24 stroke-[1.25] text-purple-600/[0.07] dark:text-purple-400/[0.08]" />
           </div>
-          <div className="relative z-10 flex items-center justify-between">
-            <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-zinc-400">
-              Stored Archives
-            </span>
-            <div className="w-9 h-9 rounded-xl bg-purple-50 dark:bg-purple-950/50 text-purple-600 dark:text-purple-400 border border-purple-100 dark:border-purple-900/40 flex items-center justify-center shrink-0">
-              <HardDrive className="w-4 h-4 stroke-[2.2]" />
-            </div>
-          </div>
-          <div className="relative z-10 mt-2">
-            <div className="text-2xl sm:text-3xl font-black font-mono text-purple-600 dark:text-purple-400">
-              {isLoading ? "..." : (data?.storage.totalBackupsCount ?? 0)}{" "}
-              <span className="text-xs font-semibold text-slate-500">
-                files
+
+          {/* Top Header: Icon + Title + Status Chip */}
+          <div className="relative z-10 flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2 min-w-0">
+              <div className="w-8 h-8 rounded-lg bg-purple-50 dark:bg-purple-950/50 text-purple-600 dark:text-purple-400 flex items-center justify-center shrink-0 border border-purple-100 dark:border-purple-900/40">
+                <HardDrive className="w-4.5 h-4.5 stroke-[2.2]" />
+              </div>
+              <span className="text-xs sm:text-[13px] font-bold text-slate-800 dark:text-zinc-200 truncate">
+                Stored Archives
               </span>
             </div>
-            <p className="text-[11px] text-slate-500 dark:text-zinc-400 mt-1 font-medium">
+            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-bold font-mono bg-purple-50 dark:bg-purple-950/50 text-purple-700 dark:text-purple-400 border border-purple-200/80 dark:border-purple-900/50 shrink-0">
+              {isLoading ? "..." : formatBytes(data?.storage.totalStorageBytes || 0)}
+            </span>
+          </div>
+
+          {/* Metric Value */}
+          <div className="relative z-10 mt-3 flex items-baseline gap-1.5">
+            <span className="text-2xl sm:text-3xl font-black font-mono text-purple-600 dark:text-purple-400 tracking-tight tabular-nums">
+              {isLoading ? "..." : (data?.storage.totalBackupsCount ?? 0)}
+            </span>
+            <span className="text-xs sm:text-sm font-semibold text-slate-400 dark:text-zinc-500">
+              snapshots
+            </span>
+          </div>
+
+          {/* Operational Context Subtext */}
+          <div className="relative z-10 mt-2.5 flex items-center justify-between text-xs sm:text-[13px] text-slate-500 dark:text-zinc-400 font-medium">
+            <span>Disk usage</span>
+            <span className="font-semibold text-slate-700 dark:text-zinc-300">
               {isLoading
                 ? "..."
                 : formatBytes(data?.storage.totalStorageBytes || 0)}{" "}
-              total disk usage
-            </p>
+              total
+            </span>
           </div>
         </div>
       </div>
