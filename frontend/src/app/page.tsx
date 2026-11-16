@@ -270,14 +270,14 @@ export default function Home() {
 
         {/* 3. Loading Progress Journey: Human figure walking from the left to reach the RentTrack house on the right */}
         <div
-          className={`mt-2 sm:mt-2.5 flex flex-col items-center gap-2 sm:gap-2.5 w-full max-w-[360px] sm:max-w-[480px] md:max-w-[540px] px-3 transition-opacity duration-300 select-none ${
+          className={`mt-1.5 sm:mt-2 flex flex-col items-center gap-1.5 sm:gap-2 w-full max-w-[240px] sm:max-w-[300px] md:max-w-[340px] px-3 transition-opacity duration-300 select-none ${
             showProgress ? "opacity-100" : "opacity-0 pointer-events-none"
           }`}
         >
           {/* Journey Track Arena */}
-          <div className="relative w-full h-14 sm:h-16 flex items-end">
+          <div className="relative w-full h-9 sm:h-10 flex items-end">
             {/* Ground Road Track Line */}
-            <div className="absolute bottom-2 sm:bottom-2.5 left-0 right-14 sm:right-16 md:right-20 h-[3px] sm:h-1 bg-white/15 rounded-full overflow-hidden">
+            <div className="absolute bottom-1.5 sm:bottom-2 left-0 right-8 sm:right-10 h-[2px] sm:h-[2.5px] bg-white/15 rounded-full overflow-hidden">
               {/* Traveled Path (filled teal line with soft glow) */}
               <div
                 className="h-full bg-teal-400 rounded-full transition-all duration-75 shadow-[0_0_12px_rgba(45,212,191,0.6)]"
@@ -286,10 +286,10 @@ export default function Home() {
             </div>
 
             {/* Walker Runway */}
-            <div className="absolute inset-y-0 left-4 sm:left-5 right-14 sm:right-16 md:right-20 pointer-events-none">
+            <div className="absolute inset-y-0 left-2.5 sm:left-3 right-8 sm:right-10 pointer-events-none">
               {/* Walking Human Figure */}
               <div
-                className="absolute bottom-2 sm:bottom-2.5 -translate-x-1/2 transition-all duration-75 z-10"
+                className="absolute bottom-1.5 sm:bottom-2 -translate-x-1/2 transition-all duration-75 z-10"
                 style={{
                   left: `${progress}%`,
                   ["--walk-speed" as any]: isSlowConnection ? "0.45s" : "0.36s",
@@ -298,7 +298,7 @@ export default function Home() {
                 <div className={progress < 100 ? "animate-walk-bob" : ""}>
                   <svg
                     viewBox="0 0 28 34"
-                    className="w-8 h-10 sm:w-10 sm:h-12 md:w-11 md:h-13 text-teal-300 drop-shadow-[0_0_8px_rgba(45,212,191,0.6)]"
+                    className="w-5 h-6 sm:w-6 sm:h-7 text-teal-300 drop-shadow-[0_0_8px_rgba(45,212,191,0.6)]"
                     fill="none"
                   >
                     {/* Head */}
@@ -381,14 +381,14 @@ export default function Home() {
                 <img
                   src="/images/logo/rentTrack_icon.png"
                   alt="Destination House"
-                  className="w-12 h-12 sm:w-14 sm:h-14 md:w-16 md:h-16 object-contain"
+                  className="w-7 h-7 sm:w-8 sm:h-8 md:w-9 md:h-9 object-contain"
                 />
               </div>
             </div>
           </div>
 
           {/* Centered Actual Loading Text & Percentage */}
-          <div className="flex items-center justify-center gap-2 w-full text-xs sm:text-sm font-mono tracking-wider">
+          <div className="flex items-center justify-center gap-2 w-full text-[11px] sm:text-xs font-mono tracking-wider">
             <span className="text-slate-400">Loading...</span>
             <span className="font-semibold text-teal-300">{progress}%</span>
           </div>
