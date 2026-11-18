@@ -63,10 +63,10 @@ export function NavUser({
               </AvatarFallback>
             </Avatar>
             <div className="grid flex-1 text-left text-sm leading-tight min-w-0">
-              <span className="truncate font-bold text-xs text-slate-900 dark:text-white">
+              <span className="truncate font-bold text-sm text-slate-900 dark:text-white">
                 {user.name}
               </span>
-              <span className="truncate text-[10px] text-slate-500 dark:text-zinc-400 font-semibold tracking-wide uppercase">
+              <span className="truncate text-xs text-slate-500 dark:text-zinc-400 font-bold tracking-wide uppercase">
                 {user.role || user.email}
               </span>
             </div>
@@ -88,10 +88,10 @@ export function NavUser({
                     </AvatarFallback>
                   </Avatar>
                   <div className="grid flex-1 text-left text-sm leading-tight min-w-0">
-                    <span className="truncate font-bold text-xs text-slate-900 dark:text-white">
+                    <span className="truncate font-bold text-sm text-slate-900 dark:text-white">
                       {user.name}
                     </span>
-                    <span className="truncate text-[10px] text-slate-500 dark:text-zinc-400">
+                    <span className="truncate text-xs text-slate-500 dark:text-zinc-400 font-medium">
                       {user.email}
                     </span>
                   </div>
@@ -100,7 +100,7 @@ export function NavUser({
             </DropdownMenuGroup>
             <DropdownMenuSeparator />
             <DropdownMenuGroup>
-              <DropdownMenuItem onClick={handleProfile} className="cursor-pointer gap-2 text-xs font-medium">
+              <DropdownMenuItem onClick={handleProfile} className="cursor-pointer gap-2 text-sm font-semibold">
                 <UserIcon className="size-4 text-slate-500" />
                 View Profile
               </DropdownMenuItem>
@@ -108,7 +108,7 @@ export function NavUser({
             <DropdownMenuSeparator />
             <DropdownMenuItem 
               onClick={() => onLogout?.()} 
-              className="cursor-pointer gap-2 text-xs font-semibold text-rose-600 dark:text-rose-400 focus:text-rose-600 dark:focus:text-rose-400"
+              className="cursor-pointer gap-2 text-sm font-bold text-rose-600 dark:text-rose-400 focus:text-rose-600 dark:focus:text-rose-400"
             >
               <LogOutIcon className="size-4" />
               Log out
