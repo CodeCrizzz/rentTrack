@@ -14,7 +14,7 @@ import {
 import { AppSidebar } from '@/components/app-sidebar';
 import { FullscreenToggle } from '@/components/fullscreen-toggle';
 import { ThemeToggle } from '@/components/theme-toggle';
-import { Home, Building2, Users, Calculator, Wrench, MessageSquareMore, Bell, User, Calendar, Cctv, UserPlus, CheckCheck, Clock, Bed, Receipt, Activity, RefreshCw, Database } from 'lucide-react';
+import { Home, Building2, Users, Calculator, Wrench, MessageSquareMore, Bell, User, Calendar, Cctv, UserPlus, CheckCheck, Clock, Bed, Receipt, Activity, RefreshCw, Database, BarChart3 } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -399,6 +399,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         { name: 'Messages', path: '/admin/chat', icon: MessageSquareMore },
         { name: 'CCTV Monitoring', path: '/admin/cctv', icon: Cctv },
         { name: 'Activity Logs', path: '/admin/activity-logs', icon: Activity },
+        { name: 'Generate Report', path: '/admin/reports', icon: BarChart3 },
         { name: 'System Backup', path: '/admin/backup', icon: Database },
     ];
 
@@ -441,6 +442,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         if (path === 'requests') return 'Maintenance Requests';
         if (path === 'cctv') return 'CCTV Monitoring';
         if (path === 'activity-logs') return 'Activity Logs';
+        if (path === 'reports') return 'Generate Report';
         if (path === 'backup') return 'System Backup & Recovery';
         return path.split('-').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
     };
