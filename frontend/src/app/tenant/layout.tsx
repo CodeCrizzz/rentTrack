@@ -356,10 +356,10 @@ export default function TenantLayout({ children }: { children: React.ReactNode }
                     </header>
 
                     {/* Main Content Area */}
-                    <div className={`flex-1 flex flex-col ${pathname === '/tenant/dashboard' ? 'overflow-hidden h-full' : 'overflow-y-auto overflow-x-hidden custom-scrollbar'} bg-slate-950`}>
-                        <div className={`px-3 pt-2 pb-2 md:px-4 md:pt-2.5 md:pb-2.5 lg:px-5 lg:pt-2.5 lg:pb-2.5 relative z-10 flex-1 flex flex-col ${pathname === '/tenant/dashboard' ? 'overflow-hidden h-full max-h-full' : ''}`}>
+                    <div className={`flex-1 flex flex-col ${pathname === '/tenant/dashboard' || pathname === '/tenant/rooms' ? 'overflow-hidden h-full' : 'overflow-y-auto overflow-x-hidden custom-scrollbar'} bg-slate-950`}>
+                        <div className={`px-3 pt-2 pb-2 md:px-4 md:pt-2.5 md:pb-2.5 lg:px-5 lg:pt-2.5 lg:pb-2.5 relative z-10 flex-1 flex flex-col ${pathname === '/tenant/dashboard' || pathname === '/tenant/rooms' ? 'overflow-hidden h-full max-h-full' : ''}`}>
                             <AnimatePresence mode="wait">
-                                <div key={`${pathname}-${refreshKey}`} className={`w-full flex-1 flex flex-col ${pathname === '/tenant/dashboard' ? 'overflow-hidden h-full max-h-full' : ''}`}>
+                                <div key={`${pathname}-${refreshKey}`} className={`w-full flex-1 flex flex-col ${pathname === '/tenant/dashboard' || pathname === '/tenant/rooms' ? 'overflow-hidden h-full max-h-full' : ''}`}>
                                     {children}
                                 </div>
                             </AnimatePresence>
