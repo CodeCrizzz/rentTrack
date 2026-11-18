@@ -3,6 +3,19 @@ import { useEffect, useState, useRef } from 'react';
 import api from '@/lib/api';
 import { motion, AnimatePresence, type Variants } from 'framer-motion';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Wrench, ArrowRight, FileText, Download, Bell } from 'lucide-react';
+
+// Resolve relative upload paths against backend origin
+const resolveUploadUrl = (url?: string | null): string | undefined => {
+    if (!url) return undefined;
+    if (url.startsWith('http://') || url.startsWith('https://') || url.startsWith('data:')) return url;
+    const base = process.env.NEXT_PUBLIC_API_URL
+        ? process.env.NEXT_PUBLIC_API_URL.replace(/\/api\/?$/, '')
+        : typeof window !== 'undefined'
+            ? `http://${window.location.hostname}:5000`
+            : 'http://localhost:5000';
+    return `${base}${url.startsWith('/') ? '' : '/'}${url}`;
+};
 
 // --- MESSAGE DATA STRUCTURE ---
 interface ChatMessage {
@@ -11,12 +24,24 @@ interface ChatMessage {
     sender_type: 'tenant' | 'admin';
     created_at: string;
     status?: 'Sent' | 'Delivered' | 'Seen';
+    attachment_url?: string;
+    file_name?: string;
+    file_type?: string;
+}
+
+interface Announcement {
+    id?: number;
+    title: string;
+    content?: string;
+    created_at?: string;
+    created_by_name?: string;
 }
 
 export default function TenantChat() {
     const [messages, setMessages] = useState<ChatMessage[]>([]);
     const [newMessage, setNewMessage] = useState('');
     const [isLoading, setIsLoading] = useState(true);
+    const [latestAnnouncement, setLatestAnnouncement] = useState<Announcement | null>(null);
     
     const scrollRef = useRef<HTMLDivElement>(null);
     const isAtBottom = useRef(true);
@@ -109,6 +134,26 @@ export default function TenantChat() {
         fetchMessages();
         const interval = setInterval(fetchMessages, 3000); // Poll every 3 seconds
         return () => clearInterval(interval);
+    }, []);
+
+    // Latest community announcement pinned under the chat header
+    useEffect(() => {
+        let cancelled = false;
+        const fetchAnnouncement = async () => {
+            try {
+                const { data } = await api.get('/tenant/announcements');
+                if (cancelled) return;
+                setLatestAnnouncement(Array.isArray(data) && data.length > 0 ? data[0] : null);
+            } catch {
+                // Keep whatever announcement is already on screen
+            }
+        };
+        fetchAnnouncement();
+        const interval = setInterval(fetchAnnouncement, 60000);
+        return () => {
+            cancelled = true;
+            clearInterval(interval);
+        };
     }, []);
 
     // --- AUTO SCROLL TO BOTTOM ---
@@ -215,6 +260,36 @@ export default function TenantChat() {
                     </div>
                 </div>
 
+                {/* Pinned community announcement, shown under the chat header */}
+                {latestAnnouncement && (
+                    <div className="shrink-0 border-b border-slate-200 dark:border-zinc-800 bg-slate-50 dark:bg-zinc-900/60 px-4 py-2.5 flex items-start gap-2.5">
+                        <div className="w-7 h-7 rounded-lg bg-white dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 text-slate-500 dark:text-zinc-400 flex items-center justify-center shrink-0 mt-0.5">
+                            <Bell className="w-3.5 h-3.5" />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                            <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
+                                <span className="px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-wide bg-white dark:bg-zinc-800 text-slate-600 dark:text-zinc-300 border border-slate-200 dark:border-zinc-700">
+                                    Announcement
+                                </span>
+                                <span className="text-xs font-bold text-slate-900 dark:text-zinc-100 truncate max-w-full">
+                                    {latestAnnouncement.title}
+                                </span>
+                                {latestAnnouncement.created_at && (
+                                    <span className="text-[10px] text-slate-400 dark:text-zinc-500 font-mono">
+                                        {new Date(latestAnnouncement.created_at).toLocaleDateString()}
+                                    </span>
+                                )}
+                            </div>
+                            {latestAnnouncement.content &&
+                                latestAnnouncement.content.trim() !== latestAnnouncement.title?.trim() && (
+                                <p className="text-[11px] leading-snug text-slate-600 dark:text-zinc-400 mt-0.5 line-clamp-2 whitespace-pre-wrap break-words">
+                                    {latestAnnouncement.content}
+                                </p>
+                            )}
+                        </div>
+                    </div>
+                )}
+
                 {/* 2. CHAT WINDOW (Messages) */}
                 <div 
                     ref={scrollRef} 
@@ -257,20 +332,121 @@ export default function TenantChat() {
                                                     ? 'bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-950 rounded-2xl rounded-br-sm' 
                                                     : 'bg-secondary text-slate-900 dark:text-white rounded-2xl rounded-bl-sm border border-slate-200 dark:border-zinc-800'
                                             }`}>
-                                                {msg.message.startsWith('[MAINTENANCE_REQUEST') ? (
-                                                    <div className="flex flex-col gap-2 min-w-[200px]">
-                                                        <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider opacity-80 border-b border-white/20 pb-2 mb-1">
-                                                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
-                                                            Maintenance Request
+                                                {(() => {
+                                                    const raw = String(msg.message || '');
+                                                    const ticketIdx = raw.search(/\[MAINTENANCE_REQUEST/i);
+                                                    const attachmentUrl = resolveUploadUrl(msg.attachment_url);
+
+                                                    if (ticketIdx !== -1) {
+                                                        const prefix = raw.substring(0, ticketIdx).trim();
+                                                        const ticketSection = raw.substring(ticketIdx);
+                                                        const match = ticketSection.match(/\[MAINTENANCE_REQUEST(?:#(\d+))?\]\s*([^\n\r]*)/i);
+                                                        const reqId = match && match[1] ? match[1] : null;
+                                                        const reqTitle = match && match[2] ? match[2].trim() : 'Maintenance Request';
+                                                        const reqStatus = ticketSection.match(/^Status:\s*([^\n\r]+)/im)?.[1]?.trim() || null;
+                                                        const reqCategory = ticketSection.match(/^Category:\s*([^\n\r]+)/im)?.[1]?.trim() || null;
+                                                        const reqPriority = ticketSection.match(/^Priority:\s*([^\n\r]+)/im)?.[1]?.trim() || null;
+                                                        const reqAssigned = ticketSection.match(/^Assigned To:\s*([^\n\r]+)/im)?.[1]?.trim() || null;
+                                                        const reqNotes = ticketSection.match(/^Notes:\s*([^\n\r]+)/im)?.[1]?.trim() || null;
+
+                                                        return (
+                                                            <div className="flex flex-col gap-2.5 min-w-[220px]">
+                                                                {prefix && (
+                                                                    <p className="font-medium text-sm leading-relaxed whitespace-pre-wrap">{prefix}</p>
+                                                                )}
+                                                                <div className={`p-3 rounded-xl border ${
+                                                                    msg.sender_type === 'tenant'
+                                                                        ? 'bg-white/10 border-white/20 text-white'
+                                                                        : 'bg-white dark:bg-zinc-900 border-slate-200 dark:border-zinc-800 text-slate-900 dark:text-white shadow-2xs'
+                                                                }`}>
+                                                                    <div className="flex items-center justify-between gap-2 border-b pb-2 mb-2 border-current/15">
+                                                                        <div className="flex items-center gap-1.5 min-w-0">
+                                                                            <Wrench className="w-3.5 h-3.5 shrink-0 opacity-80" />
+                                                                            <span className="text-[11px] font-bold uppercase tracking-wider opacity-80 truncate">
+                                                                                Maintenance {reqId ? `#${reqId}` : 'Request'}
+                                                                            </span>
+                                                                        </div>
+                                                                        {reqStatus && (
+                                                                            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0 ${
+                                                                                reqStatus.toLowerCase() === 'resolved'
+                                                                                    ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/70 dark:text-emerald-400'
+                                                                                    : reqStatus.toLowerCase() === 'in progress'
+                                                                                    ? 'bg-blue-100 text-blue-700 dark:bg-blue-950/70 dark:text-blue-400'
+                                                                                    : reqStatus.toLowerCase() === 'cancelled'
+                                                                                    ? 'bg-rose-100 text-rose-700 dark:bg-rose-950/70 dark:text-rose-400'
+                                                                                    : 'bg-amber-100 text-amber-700 dark:bg-amber-950/70 dark:text-amber-400'
+                                                                            }`}>
+                                                                                {reqStatus}
+                                                                            </span>
+                                                                        )}
+                                                                    </div>
+                                                                    <span className="font-semibold text-sm block leading-snug">{reqTitle}</span>
+                                                                    {(reqCategory || reqPriority || reqAssigned || reqNotes) && (
+                                                                        <div className="mt-1.5 space-y-0.5 text-xs opacity-80">
+                                                                            {(reqCategory || reqPriority) && (
+                                                                                <p>
+                                                                                    {[reqCategory, reqPriority ? `${reqPriority} Priority` : null]
+                                                                                        .filter(Boolean)
+                                                                                        .join(' • ')}
+                                                                                </p>
+                                                                            )}
+                                                                            {reqAssigned && <p>Assigned To: {reqAssigned}</p>}
+                                                                            {reqNotes && <p className="italic">Notes: {reqNotes}</p>}
+                                                                        </div>
+                                                                    )}
+                                                                    <a
+                                                                        href="/tenant/rooms"
+                                                                        className="inline-flex items-center gap-1 text-xs font-semibold mt-2 hover:underline opacity-90 text-[#0062cc] dark:text-blue-400"
+                                                                    >
+                                                                        View in Rooms <ArrowRight className="w-3 h-3" />
+                                                                    </a>
+                                                                </div>
+
+                                                                {/* Optional attachment on message */}
+                                                                {msg.sender_type === 'tenant' && attachmentUrl && (
+                                                                    <div className="mt-1">
+                                                                        {attachmentUrl.match(/\.(png|jpe?g|gif|webp|svg)$/i) ? (
+                                                                            <a href={attachmentUrl} target="_blank" rel="noopener noreferrer" className="block overflow-hidden rounded-xl border border-white/20 hover:opacity-95 transition-opacity">
+                                                                                <img src={attachmentUrl} alt="Attachment" className="max-h-60 max-w-full rounded-xl object-contain bg-black/20" />
+                                                                            </a>
+                                                                        ) : (
+                                                                            <a href={attachmentUrl} download target="_blank" rel="noopener noreferrer" className="bg-white/10 hover:bg-white/20 text-current rounded-xl p-2 flex items-center justify-between gap-2 border border-white/20 transition-colors">
+                                                                                <div className="flex items-center gap-2 min-w-0">
+                                                                                    <FileText className="w-4 h-4 shrink-0" />
+                                                                                    <span className="truncate text-xs font-semibold">{msg.file_name || 'Attachment'}</span>
+                                                                                </div>
+                                                                                <Download className="w-3.5 h-3.5 opacity-80 shrink-0" />
+                                                                            </a>
+                                                                        )}
+                                                                    </div>
+                                                                )}
+                                                            </div>
+                                                        );
+                                                    }
+
+                                                    return (
+                                                        <div className="flex flex-col gap-2">
+                                                            <p className="whitespace-pre-wrap">{msg.message}</p>
+                                                            {attachmentUrl && (
+                                                                <div className="mt-1">
+                                                                    {attachmentUrl.match(/\.(png|jpe?g|gif|webp|svg)$/i) ? (
+                                                                        <a href={attachmentUrl} target="_blank" rel="noopener noreferrer" className="block overflow-hidden rounded-xl border border-white/20 hover:opacity-95 transition-opacity">
+                                                                            <img src={attachmentUrl} alt="Attachment" className="max-h-60 max-w-full rounded-xl object-contain bg-black/20" />
+                                                                        </a>
+                                                                    ) : (
+                                                                        <a href={attachmentUrl} download target="_blank" rel="noopener noreferrer" className="bg-white/10 hover:bg-white/20 text-current rounded-xl p-2 flex items-center justify-between gap-2 border border-white/20 transition-colors">
+                                                                            <div className="flex items-center gap-2 min-w-0">
+                                                                                <FileText className="w-4 h-4 shrink-0" />
+                                                                                <span className="truncate text-xs font-semibold">{msg.file_name || 'Attachment'}</span>
+                                                                            </div>
+                                                                            <Download className="w-3.5 h-3.5 opacity-80 shrink-0" />
+                                                                        </a>
+                                                                    )}
+                                                                </div>
+                                                            )}
                                                         </div>
-                                                        <span className="font-semibold text-base">{msg.message.replace(/^\[MAINTENANCE_REQUEST(#[0-9]+)?\]\s*/i, '')}</span>
-                                                        <a href="/tenant/rooms" className="inline-flex items-center gap-1 text-xs font-medium mt-1 hover:underline">
-                                                            View in Rooms <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7"></path></svg>
-                                                        </a>
-                                                    </div>
-                                                ) : (
-                                                    msg.message
-                                                )}
+                                                    );
+                                                })()}
                                             </div>
                                         </div>
 

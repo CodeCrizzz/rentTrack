@@ -39,10 +39,10 @@ export function AppSidebar({
 }: AppSidebarProps) {
   const router = useRouter()
   const currentUser = user || {
-    name: "Admin",
+    name: "Administrator",
     email: "admin@renttrack.com",
     avatar: "",
-    role: "Master Admin",
+    role: "Administrator",
   }
 
   const initials = currentUser.name
@@ -95,8 +95,8 @@ export function AppSidebar({
             <span
               className={
                 isTenant
-                  ? "text-[10.5px] font-medium text-slate-400 tracking-tight leading-none mt-0.5 whitespace-nowrap"
-                  : "text-[10.5px] font-medium text-blue-200/75 dark:text-zinc-400 tracking-tight leading-none mt-0.5 whitespace-nowrap"
+                  ? "text-xs sm:text-[12.5px] font-semibold text-slate-300 dark:text-zinc-300 tracking-tight leading-tight mt-0.5 whitespace-nowrap"
+                  : "text-xs sm:text-[12.5px] font-semibold text-blue-100/90 dark:text-zinc-300 tracking-tight leading-tight mt-0.5 whitespace-nowrap"
               }
             >
               Boarding House Management

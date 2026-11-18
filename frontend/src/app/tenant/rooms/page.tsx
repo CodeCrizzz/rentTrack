@@ -27,13 +27,21 @@ import {
   Zap,
   Sun,
   Tv,
+  Wallet,
 } from "lucide-react";
 import { toast } from "sonner";
 
 const getAttachmentUrl = (path: string | null | undefined) => {
   if (!path) return null;
-  if (path.startsWith("http://") || path.startsWith("https://") || path.startsWith("blob:") || path.startsWith("data:")) return path;
-  const host = typeof window !== "undefined" ? window.location.hostname : "localhost";
+  if (
+    path.startsWith("http://") ||
+    path.startsWith("https://") ||
+    path.startsWith("blob:") ||
+    path.startsWith("data:")
+  )
+    return path;
+  const host =
+    typeof window !== "undefined" ? window.location.hostname : "localhost";
   return `http://${host}:5000${path.startsWith("/") ? path : `/${path}`}`;
 };
 
@@ -95,6 +103,7 @@ export default function TenantRooms() {
   // Modal states
   const [selectedRoom, setSelectedRoom] = useState<any>(null);
   const [selectedMaintenance, setSelectedMaintenance] = useState<any>(null);
+  const [selectedBoardmate, setSelectedBoardmate] = useState<any>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
 
@@ -270,13 +279,12 @@ export default function TenantRooms() {
     );
 
     return (
-      <div className="w-full flex-1 flex flex-col space-y-4 sm:space-y-5 font-sans text-slate-900 dark:text-zinc-100 min-h-[calc(100vh-6.2rem)] justify-between pb-1">
+      <div className="w-full h-full flex-1 flex flex-col gap-3 sm:gap-3.5 font-sans text-slate-900 dark:text-zinc-100 overflow-hidden pb-1">
         {/* Header Strip */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-200/80 dark:border-zinc-800/80 shrink-0">
           <div>
             <div className="flex items-center gap-2.5">
               <h1 className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white tracking-tight flex items-center gap-2.5">
-                <DoorOpen className="w-6 h-6 text-teal-600 shrink-0" />
                 <span>Room {room.room_number || "Assigned"}</span>
               </h1>
             </div>
@@ -295,15 +303,15 @@ export default function TenantRooms() {
               <span className="text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-500">
                 Monthly Rent
               </span>
-              <div className="text-2xl sm:text-3xl font-black font-mono text-emerald-600 dark:text-emerald-400 mt-0.5 leading-tight">
+              <div className="text-2xl sm:text-3xl font-black font-mono text-slate-900 dark:text-white mt-0.5 leading-tight">
                 ₱{Number(room.price || 0).toLocaleString()}
               </div>
               <div className="text-xs font-semibold text-slate-500 dark:text-zinc-400 mt-1">
                 Due on 5th of each month
               </div>
             </div>
-            <div className="w-11 h-11 rounded-xl bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 flex items-center justify-center shrink-0">
-              <Sparkles className="w-5.5 h-5.5" />
+            <div className="w-11 h-11 rounded-xl bg-slate-100 dark:bg-zinc-800 text-slate-700 dark:text-zinc-300 flex items-center justify-center shrink-0">
+              <Wallet className="w-5.5 h-5.5" />
             </div>
           </div>
 
@@ -313,7 +321,7 @@ export default function TenantRooms() {
               <span className="text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-500">
                 Suite Capacity
               </span>
-              <div className="text-2xl sm:text-3xl font-black font-mono text-indigo-600 dark:text-indigo-400 mt-0.5 leading-tight">
+              <div className="text-2xl sm:text-3xl font-black font-mono text-slate-900 dark:text-white mt-0.5 leading-tight">
                 {room.current_occupants || 1} / {room.capacity || 1}{" "}
                 <span className="text-sm font-semibold text-slate-500">
                   Beds
@@ -325,7 +333,7 @@ export default function TenantRooms() {
                   : `${openBeds} vacant bed(s)`}
               </div>
             </div>
-            <div className="w-11 h-11 rounded-xl bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 flex items-center justify-center shrink-0">
+            <div className="w-11 h-11 rounded-xl bg-slate-100 dark:bg-zinc-800 text-slate-700 dark:text-zinc-300 flex items-center justify-center shrink-0">
               <BedDouble className="w-5.5 h-5.5" />
             </div>
           </div>
@@ -369,9 +377,9 @@ export default function TenantRooms() {
         </div>
 
         {/* Amenities & Maintenance Log (Left) and Suite Residents Roster (Right) */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 flex-1 items-stretch">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 flex-1 min-h-0 items-stretch overflow-hidden">
           {/* Left: Room Amenities & Suite Maintenance Log */}
-          <div className="lg:col-span-2 flex flex-col gap-2.5">
+          <div className="lg:col-span-2 flex flex-col gap-2.5 min-h-0 overflow-hidden">
             {/* Amenities Strip */}
             <div className="bg-card border border-slate-200 dark:border-zinc-800 rounded-xl p-4 sm:p-4.5 shadow-xs shrink-0">
               <div className="flex items-center justify-between mb-3">
@@ -386,7 +394,7 @@ export default function TenantRooms() {
                 )}
               </div>
 
-              <div className="overflow-x-auto custom-scrollbar pb-1 flex items-center gap-3 w-full">
+              <div className="overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden pb-1 flex items-center gap-3 w-full">
                 {realAmenities.map(
                   (
                     item: { icon: any; label: string; status: string },
@@ -433,9 +441,9 @@ export default function TenantRooms() {
             </div>
 
             {/* Maintenance History Log */}
-            <div className="bg-card border border-slate-200 dark:border-zinc-800 rounded-xl p-4 sm:p-5 shadow-xs flex-1 flex flex-col justify-between">
-              <div>
-                <div className="flex justify-between items-center mb-3">
+            <div className="bg-card border border-slate-200 dark:border-zinc-800 rounded-xl px-4 pt-3.5 pb-3 sm:px-5 sm:pt-4 sm:pb-3 shadow-xs flex-1 min-h-0 flex flex-col overflow-hidden">
+              <div className="flex-1 min-h-0 flex flex-col">
+                <div className="flex justify-between items-center mb-2.5 shrink-0">
                   <div>
                     <h2 className="text-base sm:text-lg font-extrabold text-slate-900 dark:text-white flex items-center gap-2">
                       <Wrench className="w-4.5 h-4.5 text-slate-500" />
@@ -448,12 +456,12 @@ export default function TenantRooms() {
                 </div>
 
                 {maintenance_history.length > 0 ? (
-                  <div className="h-[382px] overflow-y-auto custom-scrollbar pr-1 flex flex-col gap-2.5">
+                  <div className="flex-1 min-h-0 overflow-y-auto custom-scrollbar pr-1 flex flex-col gap-2">
                     {maintenance_history.map((reqItem: any, idx: number) => (
                       <div
                         key={idx}
                         onClick={() => setSelectedMaintenance(reqItem)}
-                        className="h-[68px] px-3.5 py-2.5 rounded-xl border border-slate-100 dark:border-zinc-800/80 bg-slate-50/50 dark:bg-zinc-900/30 hover:border-zinc-400 dark:hover:border-zinc-700 transition-all cursor-pointer flex items-center justify-between gap-3 group shrink-0"
+                        className="h-[60px] px-3.5 py-2 rounded-xl border border-slate-100 dark:border-zinc-800/80 bg-slate-50/50 dark:bg-zinc-900/30 hover:border-zinc-400 dark:hover:border-zinc-700 transition-all cursor-pointer flex items-center justify-between gap-3 group shrink-0"
                       >
                         <div className="min-w-0 pr-2">
                           <div className="flex items-center gap-2">
@@ -496,7 +504,7 @@ export default function TenantRooms() {
                     ))}
                   </div>
                 ) : (
-                  <div className="h-[382px] p-6 rounded-xl border border-dashed border-slate-200 dark:border-zinc-800 text-center flex flex-col items-center justify-center">
+                  <div className="flex-1 min-h-0 p-6 rounded-xl border border-dashed border-slate-200 dark:border-zinc-800 text-center flex flex-col items-center justify-center">
                     <CheckCircle2 className="w-9 h-9 text-slate-500 dark:text-zinc-400 mx-auto mb-2 opacity-80" />
                     <p className="text-sm font-bold text-slate-700 dark:text-zinc-300">
                       All Systems Functional
@@ -507,19 +515,12 @@ export default function TenantRooms() {
                   </div>
                 )}
               </div>
-
-              <div className="pt-2.5 border-t border-slate-100 dark:border-zinc-800/80 mt-3 flex items-center justify-between text-xs text-slate-400">
-                <span>Recent maintenance activity</span>
-                <span className="font-mono text-slate-900 dark:text-white font-semibold">
-                  Active Monitoring
-                </span>
-              </div>
             </div>
           </div>
 
-          {/* Right: Suite Residents Directory */}
-          <div className="lg:col-span-1 bg-card border border-slate-200 dark:border-zinc-800 rounded-xl p-4 sm:p-5 shadow-xs flex flex-col justify-between">
-            <div>
+          {/* ROOMMATE */}
+          <div className="lg:col-span-1 bg-card border border-slate-200 dark:border-zinc-800 rounded-xl p-4 sm:p-5 shadow-xs flex flex-col justify-between min-h-0 overflow-hidden">
+            <div className="flex-1 min-h-0 flex flex-col">
               <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-zinc-800">
                 <div>
                   <h2 className="text-base sm:text-lg font-extrabold text-slate-900 dark:text-white flex items-center gap-2">
@@ -531,13 +532,13 @@ export default function TenantRooms() {
                   </p>
                 </div>
                 <span className="text-xs font-mono font-bold px-2.5 py-1 rounded-full bg-slate-100 dark:bg-zinc-800 text-slate-600 dark:text-zinc-400">
-                  {actualRoommates.length} Member
+                  {actualRoommates.length} Occupant
                   {actualRoommates.length !== 1 ? "s" : ""}
                 </span>
               </div>
 
               {actualRoommates.length > 0 ? (
-                <div className="h-[382px] overflow-y-auto custom-scrollbar pr-1 flex flex-col gap-2.5 my-3">
+                <div className="flex-1 min-h-0 overflow-hidden flex flex-col gap-2.5 my-3">
                   {actualRoommates.map((mate: any, i: number) => (
                     <div
                       key={i}
@@ -570,11 +571,18 @@ export default function TenantRooms() {
                             : "Active Resident"}
                         </p>
                       </div>
+                      <button
+                        type="button"
+                        onClick={() => setSelectedBoardmate(mate)}
+                        className="text-xs font-semibold text-slate-600 dark:text-zinc-300 hover:text-slate-900 dark:hover:text-white hover:underline transition-colors bg-transparent border-0 outline-none cursor-pointer shrink-0"
+                      >
+                        View Profile
+                      </button>
                     </div>
                   ))}
                 </div>
               ) : (
-                <div className="h-[382px] p-8 text-center text-slate-400 flex flex-col items-center justify-center my-3 border border-dashed border-slate-200 dark:border-zinc-800 rounded-xl">
+                <div className="flex-1 min-h-0 p-8 text-center text-slate-400 flex flex-col items-center justify-center my-3 border border-dashed border-slate-200 dark:border-zinc-800 rounded-xl">
                   <Users className="w-9 h-9 mx-auto mb-2 opacity-30" />
                   <p className="text-sm font-semibold">No co-occupants</p>
                   <p className="text-xs text-slate-500 mt-1">
@@ -582,25 +590,6 @@ export default function TenantRooms() {
                   </p>
                 </div>
               )}
-            </div>
-
-            {/* Room Capacity & Inventory Status Footer */}
-            <div className="space-y-2.5 pt-1">
-              <div className="p-3 rounded-xl bg-slate-50/60 dark:bg-zinc-900/40 border border-slate-100 dark:border-zinc-800/80 flex items-center justify-between text-xs sm:text-sm">
-                <span className="text-slate-500 dark:text-zinc-400 font-medium">
-                  Occupancy Roster
-                </span>
-                <span className="font-mono font-bold text-slate-800 dark:text-zinc-200">
-                  {actualRoommates.length} / {room.capacity || 2} Beds Occupied
-                </span>
-              </div>
-
-              <div className="pt-2.5 border-t border-slate-100 dark:border-zinc-800 text-xs sm:text-sm text-slate-400 font-mono flex items-center justify-between">
-                <span>Bedspace Inventory</span>
-                <span className="text-zinc-900 dark:text-white font-bold">
-                  Good Standing
-                </span>
-              </div>
             </div>
           </div>
         </div>
@@ -664,25 +653,140 @@ export default function TenantRooms() {
                         "No description provided."}
                     </div>
 
-                    {(selectedMaintenance.attachment_url || selectedMaintenance.image_url) && (
+                    {(selectedMaintenance.attachment_url ||
+                      selectedMaintenance.image_url) && (
                       <div className="mt-3">
                         <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-500 block mb-1.5">
                           Damage Proof Photo
                         </span>
                         <a
-                          href={getAttachmentUrl(selectedMaintenance.attachment_url || selectedMaintenance.image_url) || "#"}
+                          href={
+                            getAttachmentUrl(
+                              selectedMaintenance.attachment_url ||
+                                selectedMaintenance.image_url,
+                            ) || "#"
+                          }
                           target="_blank"
                           rel="noopener noreferrer"
                           className="block rounded-xl overflow-hidden border border-slate-200 dark:border-zinc-800 bg-black/5 dark:bg-black/20 hover:opacity-95 transition-opacity"
                         >
                           <img
-                            src={getAttachmentUrl(selectedMaintenance.attachment_url || selectedMaintenance.image_url) || ""}
+                            src={
+                              getAttachmentUrl(
+                                selectedMaintenance.attachment_url ||
+                                  selectedMaintenance.image_url,
+                              ) || ""
+                            }
                             alt="Damage proof"
                             className="w-full max-h-52 object-contain bg-slate-100 dark:bg-zinc-900"
                           />
                         </a>
                       </div>
                     )}
+                  </div>
+                </div>
+              </div>
+            </>
+          )}
+        </AnimatePresence>
+
+        {/* Boardmate Profile Modal */}
+        <AnimatePresence>
+          {selectedBoardmate && (
+            <>
+              <div
+                className="fixed inset-0 bg-slate-900/40 dark:bg-black/60 backdrop-blur-xs z-50"
+                onClick={() => setSelectedBoardmate(null)}
+              />
+              <div className="fixed inset-0 z-50 flex items-center justify-center p-4 pointer-events-none">
+                <div className="w-full max-w-md bg-card rounded-2xl shadow-xl border border-slate-200 dark:border-zinc-800 overflow-hidden pointer-events-auto flex flex-col max-h-[85vh]">
+                  <div className="p-4 border-b border-slate-100 dark:border-zinc-800 flex justify-between items-center bg-slate-50/50 dark:bg-zinc-900/40">
+                    <h2 className="text-base font-extrabold text-slate-900 dark:text-white flex items-center gap-2">
+                      <User className="w-4.5 h-4.5 text-slate-500 dark:text-zinc-400" />
+                      <span>Boardmate Profile</span>
+                    </h2>
+                    <button
+                      type="button"
+                      onClick={() => setSelectedBoardmate(null)}
+                      className="p-1 rounded-lg hover:bg-slate-200 dark:hover:bg-zinc-800 text-slate-500"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+                  <div className="p-5 overflow-y-auto custom-scrollbar space-y-4">
+                    <div className="flex items-center gap-3.5">
+                      <div
+                        className={`w-12 h-12 rounded-full flex items-center justify-center font-bold text-base shrink-0 ${
+                          selectedBoardmate.is_me
+                            ? "bg-zinc-900 dark:bg-white text-white dark:text-zinc-950 shadow-xs"
+                            : "bg-slate-100 dark:bg-zinc-800 text-slate-700 dark:text-zinc-300"
+                        }`}
+                      >
+                        {selectedBoardmate.name?.charAt(0) || "R"}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2">
+                          <h3 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white truncate">
+                            {selectedBoardmate.name}
+                          </h3>
+                          {selectedBoardmate.is_me && (
+                            <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-zinc-200 border border-zinc-200 dark:border-zinc-700/60 shrink-0">
+                              You
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-xs sm:text-sm text-slate-500 dark:text-zinc-400 mt-0.5">
+                          Room {room.room_number} Occupant
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="rounded-xl bg-slate-50 dark:bg-zinc-900/50 border border-slate-100 dark:border-zinc-800/80 divide-y divide-slate-100 dark:divide-zinc-800/80 text-xs sm:text-sm">
+                      <div className="px-3.5 py-2.5 flex items-center justify-between gap-3">
+                        <span className="text-slate-500 dark:text-zinc-400 font-medium">
+                          Status
+                        </span>
+                        <span className="font-semibold text-slate-900 dark:text-white">
+                          {selectedBoardmate.status || "Active"}
+                        </span>
+                      </div>
+                      <div className="px-3.5 py-2.5 flex items-center justify-between gap-3">
+                        <span className="text-slate-500 dark:text-zinc-400 font-medium">
+                          Gender
+                        </span>
+                        <span className="font-semibold text-slate-900 dark:text-white">
+                          {selectedBoardmate.gender || "Not Specified"}
+                        </span>
+                      </div>
+                      <div className="px-3.5 py-2.5 flex items-center justify-between gap-3">
+                        <span className="text-slate-500 dark:text-zinc-400 font-medium shrink-0">
+                          Email
+                        </span>
+                        <span className="font-mono font-semibold text-slate-900 dark:text-white truncate">
+                          {selectedBoardmate.email || "Not Provided"}
+                        </span>
+                      </div>
+                      <div className="px-3.5 py-2.5 flex items-center justify-between gap-3">
+                        <span className="text-slate-500 dark:text-zinc-400 font-medium shrink-0">
+                          Contact
+                        </span>
+                        <span className="font-mono font-semibold text-slate-900 dark:text-white truncate">
+                          {selectedBoardmate.phone || "Not Provided"}
+                        </span>
+                      </div>
+                      <div className="px-3.5 py-2.5 flex items-center justify-between gap-3">
+                        <span className="text-slate-500 dark:text-zinc-400 font-medium shrink-0">
+                          Moved In
+                        </span>
+                        <span className="font-mono font-semibold text-slate-900 dark:text-white">
+                          {selectedBoardmate.date_moved_in
+                            ? new Date(
+                                selectedBoardmate.date_moved_in,
+                              ).toLocaleDateString()
+                            : "Active Resident"}
+                        </span>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -858,8 +962,8 @@ export default function TenantRooms() {
                     <strong className="text-slate-900 dark:text-white">
                       Room {selectedRoom.room_number}
                     </strong>
-                    . You will be assignethis room and and your profile will be
-                    activated.
+                    . You will be assigned to this room and and your profile
+                    will be activated.
                   </p>
                   <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-zinc-900/50 border border-slate-100 dark:border-zinc-800 space-y-2 text-xs sm:text-sm">
                     <div className="flex justify-between">

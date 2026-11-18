@@ -80,12 +80,12 @@ const Toaster = ({ ...props }: ToasterProps) => {
       expand={false}
       icons={{
         success: (
-          <div className="w-8 h-8 rounded-full bg-[#1ea750] flex items-center justify-center text-white shrink-0 shadow-xs">
+          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#34d399] to-[#059669] flex items-center justify-center text-white shrink-0 shadow-[0_0_12px_rgba(16,185,129,0.5)]">
             <Check className="w-4 h-4 text-white stroke-[3.2]" />
           </div>
         ),
         info: (
-          <div className="w-8 h-8 rounded-full bg-[#1d70e2] flex items-center justify-center text-white shrink-0 shadow-xs">
+          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#38bdf8] to-[#2563eb] flex items-center justify-center text-white shrink-0 shadow-[0_0_12px_rgba(59,130,246,0.5)]">
             <svg className="w-4 h-4 text-white fill-current" viewBox="0 0 24 24">
               <circle cx="12" cy="6.75" r="1.75" />
               <rect x="10.25" y="10.5" width="3.5" height="8.5" rx="1.5" />
@@ -93,7 +93,7 @@ const Toaster = ({ ...props }: ToasterProps) => {
           </div>
         ),
         warning: (
-          <div className="w-8 h-8 rounded-full bg-[#e68a00] flex items-center justify-center text-white shrink-0 shadow-xs">
+          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#fbbf24] to-[#ea580c] flex items-center justify-center text-white shrink-0 shadow-[0_0_12px_rgba(245,158,11,0.5)]">
             <svg className="w-4 h-4 text-white fill-current" viewBox="0 0 24 24">
               <rect x="10.25" y="5" width="3.5" height="9.5" rx="1.5" />
               <circle cx="12" cy="18.25" r="1.75" />
@@ -101,12 +101,12 @@ const Toaster = ({ ...props }: ToasterProps) => {
           </div>
         ),
         error: (
-          <div className="w-8 h-8 rounded-full bg-[#e02424] flex items-center justify-center text-white shrink-0 shadow-xs">
+          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#fb7185] to-[#e11d48] flex items-center justify-center text-white shrink-0 shadow-[0_0_12px_rgba(244,63,94,0.5)]">
             <X className="w-4 h-4 text-white stroke-[3.2]" />
           </div>
         ),
         loading: (
-          <div className="w-8 h-8 rounded-full bg-teal-600 flex items-center justify-center text-white shrink-0 shadow-xs">
+          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#2dd4bf] to-[#0d9488] flex items-center justify-center text-white shrink-0 shadow-[0_0_12px_rgba(20,184,166,0.5)]">
             <Loader2 className="w-4 h-4 animate-spin text-white stroke-[2.5]" />
           </div>
         ),
@@ -119,7 +119,7 @@ const Toaster = ({ ...props }: ToasterProps) => {
           title: "!text-[13.5px] !font-bold !leading-tight !m-0",
           description: "!text-[12px] !font-normal !leading-normal !mt-0.5",
           closeButton:
-            "!bg-transparent !border-none !shadow-none !top-1/2 !-translate-y-1/2 !right-3.5 !p-1 !h-auto !w-auto cursor-pointer transition-opacity",
+            "!bg-transparent !border-none !shadow-none !right-3.5 !p-0 flex items-center justify-center cursor-pointer transition-opacity",
         },
       }}
       {...props}

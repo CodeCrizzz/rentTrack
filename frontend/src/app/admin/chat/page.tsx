@@ -15,7 +15,7 @@ import {
     Phone, MoreVertical,
     Mail, ExternalLink, CreditCard,
     Flame, Zap, Clock, CheckCircle2, ArrowRight,
-    X, File
+    X, File, Bell
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -181,6 +181,20 @@ export default function AdminChat() {
     const [isLoadingConversations, setIsLoadingConversations] = useState(true);
     const [isLoadingMessages, setIsLoadingMessages] = useState(false);
 
+    // Latest community announcement pinned under the thread header name
+    const [latestAnnouncement, setLatestAnnouncement] = useState<{
+        id?: number | string;
+        title: string;
+        content?: string;
+        created_at?: string;
+        created_by_name?: string;
+    } | null>(null);
+
+    // Quick Action: post an announcement straight from the chat screen
+    const [showAnnouncementModal, setShowAnnouncementModal] = useState(false);
+    const [announcementText, setAnnouncementText] = useState('');
+    const [isPostingAnnouncement, setIsPostingAnnouncement] = useState(false);
+
     // Attachment file upload state
     const [selectedFile, setSelectedFile] = useState<File | null>(null);
     const [filePreviewUrl, setFilePreviewUrl] = useState<string | null>(null);
@@ -232,6 +246,26 @@ export default function AdminChat() {
             if (filePreviewUrl) URL.revokeObjectURL(filePreviewUrl);
         };
     }, [filePreviewUrl]);
+
+    // Keep the pinned announcement under the thread header up to date
+    useEffect(() => {
+        let cancelled = false;
+        const fetchLatestAnnouncement = async () => {
+            try {
+                const { data } = await api.get('/admin/announcements');
+                if (cancelled) return;
+                setLatestAnnouncement(Array.isArray(data) && data.length > 0 ? data[0] : null);
+            } catch {
+                // Keep whatever announcement is already on screen
+            }
+        };
+        fetchLatestAnnouncement();
+        const interval = setInterval(fetchLatestAnnouncement, 60000);
+        return () => {
+            cancelled = true;
+            clearInterval(interval);
+        };
+    }, []);
 
     const scrollRef = useRef<HTMLDivElement>(null);
     const prevMsgCountRef = useRef<number>(0);
@@ -642,9 +676,45 @@ export default function AdminChat() {
         }
     };
 
+    // --- PUBLISH ANNOUNCEMENT ---
+    const handlePostAnnouncement = async (e: React.FormEvent) => {
+        e.preventDefault();
+        const text = announcementText.trim();
+        if (!text) {
+            toast.warning('Empty Announcement', {
+                description: 'Please enter announcement text before submitting.'
+            });
+            return;
+        }
+
+        setIsPostingAnnouncement(true);
+        try {
+            const firstLine = text.split('\n')[0];
+            const title = firstLine.length > 60 ? `${firstLine.slice(0, 57)}...` : firstLine;
+            const { data } = await api.post('/admin/announcements', {
+                title,
+                content: text,
+                type: 'General'
+            });
+            const created = data.announcement || data;
+            setLatestAnnouncement(created);
+            setAnnouncementText('');
+            setShowAnnouncementModal(false);
+            toast.success('Announcement Published', {
+                description: 'Notice posted to the community bulletin board.'
+            });
+        } catch (err) {
+            console.error('Failed to post announcement:', err);
+            toast.error('Publishing Failed', {
+                description: 'Could not post the announcement to the community board.'
+            });
+        } finally {
+            setIsPostingAnnouncement(false);
+        }
+    };
+
     // Group messages by date for date separators
-    const groupedMessages = useMemo(() => {
-        if (!selectedTenant) return [];
+    const groupedMessages = useMemo(() => {        if (!selectedTenant) return [];
         const groups: { date: string; messages: ChatMessage[] }[] = [];
         let currentDate = '';
 
@@ -845,6 +915,36 @@ export default function AdminChat() {
                                     </button>
                                 </div>
                             </div>
+
+                            {/* Pinned community announcement, shown under the thread name */}
+                            {latestAnnouncement && (
+                                <div className="shrink-0 border-b border-slate-200/80 dark:border-zinc-800 bg-[#f6f8fb] dark:bg-zinc-900/60 px-4 sm:px-5 py-2.5 flex items-start gap-2.5">
+                                    <div className="w-7 h-7 rounded-lg bg-white dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 text-slate-500 dark:text-zinc-400 flex items-center justify-center shrink-0 mt-0.5">
+                                        <Bell className="w-3.5 h-3.5" />
+                                    </div>
+                                    <div className="min-w-0 flex-1">
+                                        <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
+                                            <span className="px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-wide bg-slate-200/80 dark:bg-zinc-800 text-slate-600 dark:text-zinc-300 border border-slate-300/60 dark:border-zinc-700">
+                                                Announcement
+                                            </span>
+                                            <span className="text-xs font-bold text-slate-800 dark:text-zinc-100 truncate max-w-full">
+                                                {latestAnnouncement.title}
+                                            </span>
+                                            {latestAnnouncement.created_at && (
+                                                <span className="text-[10px] text-slate-400 dark:text-zinc-500 font-mono">
+                                                    {new Date(latestAnnouncement.created_at).toLocaleDateString()}
+                                                </span>
+                                            )}
+                                        </div>
+                                        {latestAnnouncement.content &&
+                                            latestAnnouncement.content.trim() !== latestAnnouncement.title?.trim() && (
+                                            <p className="text-[11px] leading-snug text-slate-600 dark:text-zinc-400 mt-0.5 line-clamp-2 whitespace-pre-wrap break-words">
+                                                {latestAnnouncement.content}
+                                            </p>
+                                        )}
+                                    </div>
+                                </div>
+                            )}
 
                             {/* Messages Body */}
                             <div 
@@ -1382,6 +1482,21 @@ export default function AdminChat() {
                                         </div>
                                         <ChevronRight className="w-4 h-4 text-slate-400 group-hover:translate-x-0.5 transition-transform" />
                                     </button>
+
+                                    {/* Post Announcement */}
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowAnnouncementModal(true)}
+                                        className="w-full p-2.5 rounded-xl border border-slate-200/70 dark:border-zinc-800 hover:border-blue-300 hover:bg-blue-50/40 dark:hover:bg-zinc-900 flex items-center justify-between text-sm font-semibold text-slate-700 dark:text-zinc-200 transition-colors group cursor-pointer"
+                                    >
+                                        <div className="flex items-center gap-2.5">
+                                            <div className="w-8 h-8 rounded-lg bg-blue-50 dark:bg-blue-950/60 text-[#0062cc] dark:text-blue-400 flex items-center justify-center shrink-0">
+                                                <Bell className="w-4 h-4 stroke-[2.2]" />
+                                            </div>
+                                            <span>Post Announcement</span>
+                                        </div>
+                                        <ChevronRight className="w-4 h-4 text-slate-400 group-hover:translate-x-0.5 transition-transform" />
+                                    </button>
                                 </div>
                             </div>
                         </>
@@ -1390,6 +1505,65 @@ export default function AdminChat() {
                 </div>
 
             </div>
+
+            {/* Post Announcement Modal */}
+            {showAnnouncementModal && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+                    <div className="bg-white dark:bg-zinc-950 border border-slate-200 dark:border-zinc-800 rounded-2xl shadow-xl w-full max-w-md overflow-hidden">
+                        <div className="p-5 border-b border-slate-200 dark:border-zinc-800 flex items-center justify-between">
+                            <h3 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                                <Bell className="w-5 h-5 text-[#0062cc] dark:text-blue-400" />
+                                Post Announcement
+                            </h3>
+                            <button
+                                type="button"
+                                onClick={() => setShowAnnouncementModal(false)}
+                                className="text-slate-400 hover:text-slate-600 dark:hover:text-zinc-200 cursor-pointer"
+                                aria-label="Close"
+                            >
+                                <X className="w-5 h-5" />
+                            </button>
+                        </div>
+
+                        <form onSubmit={handlePostAnnouncement}>
+                            <div className="p-5">
+                                <label className="block text-sm font-semibold text-slate-700 dark:text-zinc-300 mb-1">
+                                    Message
+                                </label>
+                                <textarea
+                                    value={announcementText}
+                                    onChange={(e) => setAnnouncementText(e.target.value)}
+                                    rows={5}
+                                    placeholder="e.g. Water interruption on Saturday, 8:00 AM to 12:00 PM."
+                                    className="w-full px-4 py-2.5 bg-slate-50 dark:bg-zinc-900/50 border border-slate-200 dark:border-zinc-800 rounded-xl text-sm text-slate-900 dark:text-white outline-none focus:border-[#0062cc] dark:focus:border-blue-500 resize-none"
+                                    required
+                                />
+                                <p className="text-xs text-slate-500 dark:text-zinc-400 mt-2">
+                                    The first line becomes the headline every tenant sees.
+                                </p>
+                            </div>
+
+                            <div className="p-5 border-t border-slate-200 dark:border-zinc-800 flex justify-end gap-3">
+                                <button
+                                    type="button"
+                                    onClick={() => setShowAnnouncementModal(false)}
+                                    disabled={isPostingAnnouncement}
+                                    className="px-5 py-2.5 rounded-xl text-sm font-bold text-slate-600 dark:text-zinc-400 hover:bg-slate-100 dark:hover:bg-zinc-900 transition-colors cursor-pointer disabled:opacity-50"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    type="submit"
+                                    disabled={isPostingAnnouncement}
+                                    className="px-5 py-2.5 rounded-xl bg-[#0062cc] hover:bg-[#0052a8] text-white text-sm font-bold transition-colors cursor-pointer disabled:opacity-50"
+                                >
+                                    {isPostingAnnouncement ? 'Publishing...' : 'Publish'}
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

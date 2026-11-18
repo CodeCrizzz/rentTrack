@@ -7,7 +7,7 @@ export default function AdminProfilePage() {
     const [isLoading, setIsLoading] = useState(true);
     const [isEditing, setIsEditing] = useState(false);
     const [profile, setProfile] = useState({
-        name: 'Admin',
+        name: 'Administrator',
         email: 'admin@renttrack.com',
         phone: '+63 999 123 7654',
         address: '123 RentTrack HQ, Manila, Philippines',
@@ -21,7 +21,7 @@ export default function AdminProfilePage() {
             const user = JSON.parse(userStr);
             setProfile(prev => ({
                 ...prev,
-                name: user.name || prev.name,
+                name: (user.name && !user.name.toLowerCase().includes('master')) ? user.name : 'Administrator',
                 email: user.email || prev.email,
                 phone: formatPhoneNumber(user.phone, prev.phone),
                 address: user.address || prev.address
@@ -134,53 +134,53 @@ export default function AdminProfilePage() {
                     </div>
                     <div className="text-center sm:text-left flex-1">
                         <h2 className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white tracking-tight">{profile.name}</h2>
-                        <p className="text-sm font-bold text-slate-500 dark:text-zinc-400 mt-1 uppercase tracking-widest">Master Admin</p>
+                        <p className="text-sm sm:text-base font-bold text-slate-500 dark:text-zinc-400 mt-1 uppercase tracking-widest">Administrator</p>
                     </div>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8 relative z-10">
                     <div className="space-y-6">
                         <div>
-                            <label className="flex items-center gap-2 text-xs font-bold text-slate-500 dark:text-zinc-400 uppercase tracking-widest mb-2">
+                            <label className="flex items-center gap-2 text-sm font-bold text-slate-500 dark:text-zinc-400 uppercase tracking-wider mb-2">
                                 <User className="w-4 h-4" /> Full Name
                             </label>
                             {isEditing ? (
-                                <input type="text" value={editForm.name} onChange={(e) => setEditForm({...editForm, name: e.target.value})} className="w-full h-11 px-4 bg-background border border-slate-200 dark:border-zinc-800 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none transition-all dark:text-white" />
+                                <input type="text" value={editForm.name} onChange={(e) => setEditForm({...editForm, name: e.target.value})} className="w-full h-11 px-4 bg-background border border-slate-200 dark:border-zinc-800 rounded-xl text-base focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none transition-all dark:text-white" />
                             ) : (
-                                <p className="text-sm font-bold text-slate-800 dark:text-white px-1">{profile.name}</p>
+                                <p className="text-base sm:text-lg font-bold text-slate-800 dark:text-white px-1">{profile.name}</p>
                             )}
                         </div>
                         <div>
-                            <label className="flex items-center gap-2 text-xs font-bold text-slate-500 dark:text-zinc-400 uppercase tracking-widest mb-2">
+                            <label className="flex items-center gap-2 text-sm font-bold text-slate-500 dark:text-zinc-400 uppercase tracking-wider mb-2">
                                 <Mail className="w-4 h-4" /> Email Address
                             </label>
                             {isEditing ? (
-                                <input type="email" value={editForm.email} onChange={(e) => setEditForm({...editForm, email: e.target.value})} className="w-full h-11 px-4 bg-background border border-slate-200 dark:border-zinc-800 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none transition-all dark:text-white" />
+                                <input type="email" value={editForm.email} onChange={(e) => setEditForm({...editForm, email: e.target.value})} className="w-full h-11 px-4 bg-background border border-slate-200 dark:border-zinc-800 rounded-xl text-base focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none transition-all dark:text-white" />
                             ) : (
-                                <p className="text-sm font-bold text-slate-800 dark:text-white px-1">{profile.email}</p>
+                                <p className="text-base sm:text-lg font-bold text-slate-800 dark:text-white px-1">{profile.email}</p>
                             )}
                         </div>
                     </div>
                     
                     <div className="space-y-6">
                         <div>
-                            <label className="flex items-center gap-2 text-xs font-bold text-slate-500 dark:text-zinc-400 uppercase tracking-widest mb-2">
+                            <label className="flex items-center gap-2 text-sm font-bold text-slate-500 dark:text-zinc-400 uppercase tracking-wider mb-2">
                                 <Phone className="w-4 h-4" /> Contact Number
                             </label>
                             {isEditing ? (
-                                <input type="text" value={editForm.phone} onChange={(e) => setEditForm({...editForm, phone: formatPhoneInput(e.target.value)})} placeholder="+63 999 123 7654" className="w-full h-11 px-4 bg-background border border-slate-200 dark:border-zinc-800 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none transition-all dark:text-white font-mono" />
+                                <input type="text" value={editForm.phone} onChange={(e) => setEditForm({...editForm, phone: formatPhoneInput(e.target.value)})} placeholder="+63 999 123 7654" className="w-full h-11 px-4 bg-background border border-slate-200 dark:border-zinc-800 rounded-xl text-base focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none transition-all dark:text-white font-mono" />
                             ) : (
-                                <p className="text-sm font-bold text-slate-800 dark:text-white px-1 font-mono">{formatPhoneNumber(profile.phone)}</p>
+                                <p className="text-base sm:text-lg font-bold text-slate-800 dark:text-white px-1 font-mono">{formatPhoneNumber(profile.phone)}</p>
                             )}
                         </div>
                         <div>
-                            <label className="flex items-center gap-2 text-xs font-bold text-slate-500 dark:text-zinc-400 uppercase tracking-widest mb-2">
+                            <label className="flex items-center gap-2 text-sm font-bold text-slate-500 dark:text-zinc-400 uppercase tracking-wider mb-2">
                                 <MapPin className="w-4 h-4" /> Address
                             </label>
                             {isEditing ? (
-                                <textarea value={editForm.address} onChange={(e) => setEditForm({...editForm, address: e.target.value})} className="w-full h-24 p-4 bg-background border border-slate-200 dark:border-zinc-800 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none transition-all dark:text-white resize-none" />
+                                <textarea value={editForm.address} onChange={(e) => setEditForm({...editForm, address: e.target.value})} className="w-full h-24 p-4 bg-background border border-slate-200 dark:border-zinc-800 rounded-xl text-base focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none transition-all dark:text-white resize-none" />
                             ) : (
-                                <p className="text-sm font-bold text-slate-800 dark:text-white px-1 whitespace-pre-wrap">{profile.address}</p>
+                                <p className="text-base sm:text-lg font-bold text-slate-800 dark:text-white px-1 whitespace-pre-wrap">{profile.address}</p>
                             )}
                         </div>
                     </div>

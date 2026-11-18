@@ -360,17 +360,22 @@ export default function TenantChatPopup() {
             setIsMinimized(false);
             setUnreadCount(0);
           }}
-          className="fixed bottom-5 right-5 z-40 w-14 h-14 rounded-full bg-[#0084ff] hover:bg-[#0073e6] text-white shadow-2xl flex items-center justify-center cursor-pointer transition-shadow hover:shadow-[0_8px_30px_rgb(0,132,255,0.4)]"
+          className="fixed bottom-5 right-5 z-40 w-14 h-14 rounded-full bg-gradient-to-tr from-indigo-600 via-indigo-600 to-indigo-500 hover:from-indigo-500 hover:to-indigo-400 text-white shadow-xl shadow-indigo-950/60 border border-indigo-400/25 flex items-center justify-center cursor-pointer transition-all hover:scale-105 active:scale-95 hover:shadow-[0_8px_25px_rgba(99,102,241,0.45)]"
           title="Chat with Admin"
           aria-label="Open Chat with Admin"
         >
-          {/* Facebook Messenger Style Chat Glyph */}
+          {/* Bespoke Handcrafted Messages Icon */}
           <svg
-            className="w-7 h-7 fill-current"
-            viewBox="0 0 28 28"
+            className="w-7 h-7 text-white fill-current"
+            viewBox="0 0 24 24"
             xmlns="http://www.w3.org/2000/svg"
+            aria-hidden="true"
           >
-            <path d="M14 2C7.373 2 2 7.025 2 13.225C2 16.74 3.738 19.866 6.46 21.848V25.5C6.46 25.86 6.8 26.11 7.15 25.96L10.98 24.32C11.95 24.59 12.96 24.74 14 24.74C20.627 24.74 26 19.715 26 13.515C26 7.025 20.627 2 14 2ZM15.22 17.15L12.02 13.73L5.78 17.15L12.64 9.87L15.93 13.29L22.08 9.87L15.22 17.15Z" />
+            <path
+              fillRule="evenodd"
+              clipRule="evenodd"
+              d="M12 3C6.75 3 2.5 6.8 2.5 11.5c0 2.22.95 4.25 2.53 5.74-.16 1.34-.66 2.82-1.52 4.07-.17.25.03.58.33.53 2.35-.37 4.32-1.33 5.52-2.07.85.17 1.73.23 2.64.23 5.25 0 9.5-3.8 9.5-8.5S17.25 3 12 3ZM6.5 11.5a1.25 1.25 0 1 0 2.5 0 1.25 1.25 0 1 0-2.5 0ZM10.75 11.5a1.25 1.25 0 1 0 2.5 0 1.25 1.25 0 1 0-2.5 0ZM15 11.5a1.25 1.25 0 1 0 2.5 0 1.25 1.25 0 1 0-2.5 0Z"
+            />
           </svg>
 
           {/* Unread Message Counter Badge */}
@@ -392,7 +397,7 @@ export default function TenantChatPopup() {
           onClick={() => setIsMinimized(false)}
         >
           <div className="relative">
-            <div className="w-8 h-8 rounded-full bg-[#0084ff] text-white flex items-center justify-center text-xs font-bold shadow-xs">
+            <div className="w-8 h-8 rounded-full bg-indigo-600 text-white flex items-center justify-center text-xs font-bold shadow-xs">
               A
             </div>
             <span className="absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full bg-emerald-500 border-2 border-white dark:border-[#242526]" />
@@ -501,12 +506,12 @@ export default function TenantChatPopup() {
             >
               {isLoading ? (
                 <div className="h-full flex flex-col items-center justify-center text-center p-4 text-[#b0b3b8]">
-                  <div className="w-6 h-6 border-2 border-[#0084ff] border-t-transparent rounded-full animate-spin mb-2" />
+                  <div className="w-6 h-6 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin mb-2" />
                   <span className="text-xs font-medium">Loading conversation...</span>
                 </div>
               ) : messages.length === 0 ? (
                 <div className="h-full flex flex-col items-center justify-center text-center p-6 text-[#b0b3b8]">
-                  <div className="w-12 h-12 rounded-full bg-[#242526] flex items-center justify-center text-[#0084ff] mb-2 shadow-xs">
+                  <div className="w-12 h-12 rounded-full bg-[#242526] flex items-center justify-center text-indigo-400 mb-2 shadow-xs">
                     <MessageSquare className="w-6 h-6" />
                   </div>
                   <h4 className="text-sm font-bold text-[#e4e6eb]">Message Admin</h4>
@@ -517,7 +522,7 @@ export default function TenantChatPopup() {
               ) : (
                 messages.map((msg, idx) => {
                   const isTenant = msg.sender_type === "tenant";
-                  const isMaintenanceCard = msg.message?.startsWith("[MAINTENANCE_REQUEST");
+                  const isMaintenanceCard = /\[MAINTENANCE_REQUEST/i.test(msg.message || "");
 
                   return (
                     <div
@@ -542,42 +547,95 @@ export default function TenantChatPopup() {
                         <div
                           className={`px-3.5 py-2 text-[13px] leading-snug break-words rounded-[18px] ${
                             isTenant
-                              ? "bg-[#0084ff] text-white rounded-br-sm shadow-xs"
+                              ? "bg-indigo-600 text-white rounded-br-sm shadow-xs"
                               : "bg-[#3a3b3c] text-[#e4e6eb] rounded-bl-sm shadow-xs"
                           }`}
                         >
-                          {isMaintenanceCard ? (
-                            <div className="space-y-1.5 py-0.5">
-                              <div className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider opacity-85 border-b border-white/20 pb-1">
-                                <Wrench className="w-3 h-3" />
-                                <span>Maintenance Request</span>
+                          {isMaintenanceCard ? (() => {
+                            const raw = String(msg.message || "");
+                            const ticketIdx = raw.search(/\[MAINTENANCE_REQUEST/i);
+                            const prefix = ticketIdx > 0 ? raw.substring(0, ticketIdx).trim() : "";
+                            const ticketSection = ticketIdx >= 0 ? raw.substring(ticketIdx) : raw;
+                            const match = ticketSection.match(/\[MAINTENANCE_REQUEST(?:#(\d+))?\]\s*([^\n\r]*)/i);
+                            const reqId = match?.[1] || null;
+                            const reqTitle = match?.[2]?.trim() || "Maintenance Request";
+                            const reqStatus = ticketSection.match(/^Status:\s*([^\n\r]+)/im)?.[1]?.trim() || null;
+                            const reqCategory = ticketSection.match(/^Category:\s*([^\n\r]+)/im)?.[1]?.trim() || null;
+                            const reqPriority = ticketSection.match(/^Priority:\s*([^\n\r]+)/im)?.[1]?.trim() || null;
+                            const reqAssigned = ticketSection.match(/^Assigned To:\s*([^\n\r]+)/im)?.[1]?.trim() || null;
+                            const reqNotes = ticketSection.match(/^Notes:\s*([^\n\r]+)/im)?.[1]?.trim() || null;
+                            const statusLower = (reqStatus || "").toLowerCase();
+                            const statusBadgeClass =
+                              statusLower === "resolved"
+                                ? "bg-emerald-500/20 text-emerald-200 border border-emerald-400/30"
+                                : statusLower === "in progress"
+                                ? "bg-sky-500/20 text-sky-200 border border-sky-400/30"
+                                : statusLower === "cancelled"
+                                ? "bg-rose-500/20 text-rose-200 border border-rose-400/30"
+                                : "bg-amber-500/20 text-amber-200 border border-amber-400/30";
+
+                            return (
+                              <div className="space-y-2 py-0.5">
+                                {prefix && (
+                                  <p className="text-xs font-medium leading-relaxed whitespace-pre-wrap">
+                                    {prefix}
+                                  </p>
+                                )}
+                                <div className="rounded-xl bg-black/25 border border-white/15 p-2.5 space-y-1.5">
+                                  <div className="flex items-center justify-between gap-2 border-b border-white/15 pb-1.5">
+                                    <div className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider opacity-90 min-w-0">
+                                      <Wrench className="w-3 h-3 shrink-0" />
+                                      <span className="truncate">
+                                        {reqId ? `Request #${reqId}` : "Maintenance Request"}
+                                      </span>
+                                    </div>
+                                    {reqStatus && (
+                                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0 ${statusBadgeClass}`}>
+                                        {reqStatus}
+                                      </span>
+                                    )}
+                                  </div>
+                                  <p className="font-bold text-xs leading-snug">
+                                    {reqTitle}
+                                  </p>
+                                  {(reqCategory || reqPriority || reqAssigned || reqNotes) && (
+                                    <div className="space-y-0.5 text-[11px] opacity-85">
+                                      {(reqCategory || reqPriority) && (
+                                        <p>
+                                          {[reqCategory, reqPriority ? `${reqPriority} Priority` : null]
+                                            .filter(Boolean)
+                                            .join(" • ")}
+                                        </p>
+                                      )}
+                                      {reqAssigned && <p>Assigned: {reqAssigned}</p>}
+                                      {reqNotes && <p className="italic">Notes: {reqNotes}</p>}
+                                    </div>
+                                  )}
+                                  {isTenant && msg.attachment_url && (
+                                    <a
+                                      href={resolveUploadUrl(msg.attachment_url)}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="block mt-1.5 overflow-hidden rounded-lg border border-white/20 hover:opacity-95 transition-opacity"
+                                    >
+                                      <img
+                                        src={resolveUploadUrl(msg.attachment_url)}
+                                        alt="Damage proof"
+                                        className="w-full max-h-36 object-cover bg-black/30"
+                                      />
+                                    </a>
+                                  )}
+                                  <Link
+                                    href="/tenant/rooms"
+                                    className="inline-flex items-center gap-1 text-[11px] font-bold text-sky-200 hover:underline pt-0.5"
+                                  >
+                                    <span>Inspect in Rooms</span>
+                                    <ChevronRight className="w-3 h-3" />
+                                  </Link>
+                                </div>
                               </div>
-                              <p className="font-semibold text-xs leading-relaxed">
-                                {msg.message.replace(/^\[MAINTENANCE_REQUEST(#[0-9]+)?\]\s*/i, "")}
-                              </p>
-                              {msg.attachment_url && (
-                                <a
-                                  href={resolveUploadUrl(msg.attachment_url)}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="block mt-1.5 overflow-hidden rounded-lg border border-white/20 hover:opacity-95 transition-opacity"
-                                >
-                                  <img
-                                    src={resolveUploadUrl(msg.attachment_url)}
-                                    alt="Damage proof"
-                                    className="w-full max-h-36 object-cover bg-black/30"
-                                  />
-                                </a>
-                              )}
-                              <Link
-                                href="/tenant/rooms"
-                                className="inline-flex items-center gap-1 text-[11px] font-bold text-sky-200 hover:underline pt-0.5"
-                              >
-                                <span>Inspect in Rooms</span>
-                                <ChevronRight className="w-3 h-3" />
-                              </Link>
-                            </div>
-                          ) : (
+                            );
+                          })() : (
                             <div className="space-y-1.5">
                               {msg.attachment_url && (
                                 <div className="rounded-xl overflow-hidden">
@@ -656,7 +714,7 @@ export default function TenantChatPopup() {
                       className="w-10 h-10 rounded-lg object-cover border border-[#4e4f50] shrink-0"
                     />
                   ) : (
-                    <div className="w-10 h-10 rounded-lg bg-[#3a3b3c] flex items-center justify-center shrink-0 text-[#0084ff]">
+                    <div className="w-10 h-10 rounded-lg bg-[#3a3b3c] flex items-center justify-center shrink-0 text-indigo-400">
                       <FileText className="w-5 h-5" />
                     </div>
                   )}
@@ -688,15 +746,25 @@ export default function TenantChatPopup() {
               }}
               className="p-2.5 bg-[#242526] border-t border-[#393a3b] flex items-center gap-1.5 shrink-0"
             >
-              {/* Media / Utility Icons: Wrench for Maintenance Report */}
-              <button
-                type="button"
-                onClick={() => setShowMaintenanceModal(true)}
-                className="p-2 text-[#0084ff] hover:bg-white/10 rounded-full transition-colors cursor-pointer"
-                title="File Maintenance Ticket"
-              >
-                <Wrench className="w-4 h-4" />
-              </button>
+              {/* Media / Utility Icons: Wrench for Maintenance Report & Plus for Attachment */}
+              <div className="flex items-center gap-0.5 shrink-0">
+                <button
+                  type="button"
+                  onClick={() => setShowMaintenanceModal(true)}
+                  className="p-2 text-indigo-400 hover:bg-white/10 rounded-full transition-colors cursor-pointer"
+                  title="File Maintenance Ticket"
+                >
+                  <Wrench className="w-4 h-4" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  className="p-2 text-indigo-400 hover:scale-110 hover:bg-white/10 transition-all rounded-full cursor-pointer"
+                  title="Attach image or file"
+                >
+                  <Plus className="w-5 h-5 stroke-[2.5]" />
+                </button>
+              </div>
 
               {/* Pill Input Container */}
               <div className="flex-1 relative flex items-center bg-[#3a3b3c] rounded-full px-3 py-1.5">
@@ -711,31 +779,22 @@ export default function TenantChatPopup() {
                 <button
                   type="button"
                   onClick={() => setNewMessage((prev) => prev + " 😊")}
-                  className="text-[#0084ff] hover:scale-110 transition-transform p-0.5 cursor-pointer"
+                  className="text-indigo-400 hover:scale-110 transition-transform p-0.5 cursor-pointer"
                   title="Emoji"
                 >
                   <Smile className="w-4 h-4" />
                 </button>
               </div>
 
-              {/* Action Button: Plus if empty (file/media selector), Send icon if text entered or file attached */}
-              {newMessage.trim() || selectedFile ? (
+              {/* Send Button when text entered or file attached */}
+              {(newMessage.trim() || selectedFile) && (
                 <button
                   type="submit"
                   disabled={isSending}
-                  className="p-2 text-[#0084ff] hover:bg-white/10 rounded-full transition-colors cursor-pointer disabled:opacity-40"
+                  className="p-2 text-indigo-400 hover:bg-white/10 rounded-full transition-colors cursor-pointer disabled:opacity-40"
                   title="Send Message"
                 >
                   <Send className="w-4 h-4" />
-                </button>
-              ) : (
-                <button
-                  type="button"
-                  onClick={() => fileInputRef.current?.click()}
-                  className="p-2 text-[#0084ff] hover:scale-110 hover:bg-white/10 transition-all rounded-full cursor-pointer"
-                  title="Attach image or file"
-                >
-                  <Plus className="w-5 h-5 stroke-[2.5]" />
                 </button>
               )}
             </form>
@@ -745,7 +804,7 @@ export default function TenantChatPopup() {
               <div className="absolute inset-0 z-50 bg-[#18191a]/95 backdrop-blur-xs flex flex-col p-4 text-white overflow-y-auto custom-scrollbar">
                 <div className="flex items-center justify-between pb-3 border-b border-[#393a3b]">
                   <div className="flex items-center gap-2">
-                    <Wrench className="w-4 h-4 text-[#0084ff]" />
+                    <Wrench className="w-4 h-4 text-indigo-400" />
                     <h3 className="text-sm font-bold text-[#e4e6eb]">
                       Quick Maintenance Report
                     </h3>
@@ -773,7 +832,7 @@ export default function TenantChatPopup() {
                         value={maintTitle}
                         onChange={(e) => setMaintTitle(e.target.value)}
                         placeholder="e.g. Leaking faucet, broken light"
-                        className="w-full px-3 py-2 text-xs rounded-xl bg-[#3a3b3c] border border-[#4e4f50] text-[#e4e6eb] placeholder-[#b0b3b8] outline-none focus:border-[#0084ff]"
+                        className="w-full px-3 py-2 text-xs rounded-xl bg-[#3a3b3c] border border-[#4e4f50] text-[#e4e6eb] placeholder-[#b0b3b8] outline-none focus:border-indigo-500"
                       />
                     </div>
 
@@ -822,7 +881,7 @@ export default function TenantChatPopup() {
                         value={maintDesc}
                         onChange={(e) => setMaintDesc(e.target.value)}
                         placeholder="Describe the problem..."
-                        className="w-full px-3 py-2 text-xs rounded-xl bg-[#3a3b3c] border border-[#4e4f50] text-[#e4e6eb] placeholder-[#b0b3b8] outline-none focus:border-[#0084ff]"
+                        className="w-full px-3 py-2 text-xs rounded-xl bg-[#3a3b3c] border border-[#4e4f50] text-[#e4e6eb] placeholder-[#b0b3b8] outline-none focus:border-indigo-500"
                       />
                     </div>
 
@@ -830,7 +889,7 @@ export default function TenantChatPopup() {
                     <div>
                       <div className="flex items-center justify-between mb-1">
                         <label className="text-[11px] font-bold text-[#b0b3b8] flex items-center gap-1.5">
-                          <ImageIcon className="w-3.5 h-3.5 text-[#0084ff]" />
+                          <ImageIcon className="w-3.5 h-3.5 text-indigo-400" />
                           <span>Damage Proof Photo</span>
                         </label>
                         <span className="text-[10px] text-[#b0b3b8]/70">Required / Recommended</span>
@@ -876,9 +935,9 @@ export default function TenantChatPopup() {
                         <button
                           type="button"
                           onClick={() => maintFileInputRef.current?.click()}
-                          className="w-full py-2.5 px-3 rounded-xl border border-dashed border-[#4e4f50] hover:border-[#0084ff] bg-[#3a3b3c]/50 hover:bg-[#3a3b3c] text-center transition-all cursor-pointer flex flex-col items-center justify-center gap-1"
+                          className="w-full py-2.5 px-3 rounded-xl border border-dashed border-[#4e4f50] hover:border-indigo-500 bg-[#3a3b3c]/50 hover:bg-[#3a3b3c] text-center transition-all cursor-pointer flex flex-col items-center justify-center gap-1"
                         >
-                          <div className="w-7 h-7 rounded-full bg-[#242526] text-[#0084ff] flex items-center justify-center">
+                          <div className="w-7 h-7 rounded-full bg-[#242526] text-indigo-400 flex items-center justify-center">
                             <ImageIcon className="w-3.5 h-3.5" />
                           </div>
                           <span className="text-xs font-semibold text-[#e4e6eb]">
@@ -903,7 +962,7 @@ export default function TenantChatPopup() {
                     <button
                       type="submit"
                       disabled={isSubmittingMaint}
-                      className="flex-1 py-2 rounded-xl text-xs font-bold bg-[#0084ff] hover:bg-[#0073e6] text-white cursor-pointer disabled:opacity-50"
+                      className="flex-1 py-2 rounded-xl text-xs font-bold bg-indigo-600 hover:bg-indigo-500 text-white cursor-pointer disabled:opacity-50"
                     >
                       {isSubmittingMaint ? "Submitting..." : "Submit Ticket"}
                     </button>
