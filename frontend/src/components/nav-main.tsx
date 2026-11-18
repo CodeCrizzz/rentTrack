@@ -43,7 +43,7 @@ export function NavMain({
   return (
     <SidebarGroup className="p-0">
       {label && (
-        <SidebarGroupLabel className="text-slate-400 font-semibold tracking-wider uppercase text-[10px] px-3.5 mb-1 group-data-[collapsible=icon]:hidden">
+        <SidebarGroupLabel className="text-slate-400 font-bold tracking-wider uppercase text-xs px-3.5 mb-1 group-data-[collapsible=icon]:hidden">
           {label}
         </SidebarGroupLabel>
       )}
@@ -84,11 +84,11 @@ export function NavMain({
                       <span className="hidden group-data-[collapsible=icon]:block absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-rose-500 ring-2 ring-[#07152b] dark:ring-[#09090b] animate-pulse" />
                     )}
                   </div>
-                  <span className="flex-1 text-left text-sm group-data-[collapsible=icon]:hidden">
+                  <span className="flex-1 text-left text-sm sm:text-base font-semibold group-data-[collapsible=icon]:hidden">
                     {item.title}
                   </span>
                   {hasBadge && (
-                    <span className="px-1.5 py-0.5 text-[10px] font-bold rounded-full bg-rose-500 text-white leading-none mr-1 shadow-xs group-data-[collapsible=icon]:hidden animate-in fade-in duration-200">
+                    <span className="px-1.5 py-0.5 text-xs font-bold rounded-full bg-rose-500 text-white leading-none mr-1 shadow-xs group-data-[collapsible=icon]:hidden animate-in fade-in duration-200">
                       {item.badgeCount}
                     </span>
                   )}
@@ -100,7 +100,7 @@ export function NavMain({
                       <SidebarMenuSubItem key={subItem.title}>
                         <SidebarMenuSubButton
                           render={<Link href={subItem.url} />}
-                          className="text-slate-300 hover:text-white hover:bg-white/10 rounded-lg text-xs font-medium py-1.5"
+                          className="text-slate-300 hover:text-white hover:bg-white/10 rounded-lg text-xs sm:text-sm font-semibold py-1.5"
                         >
                           <span>{subItem.title}</span>
                         </SidebarMenuSubButton>
@@ -134,11 +134,11 @@ export function NavMain({
                     <span className="hidden group-data-[collapsible=icon]:block absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-rose-500 ring-2 ring-[#07152b] dark:ring-[#09090b] animate-pulse" />
                   )}
                 </div>
-                <span className="flex-1 truncate text-sm group-data-[collapsible=icon]:hidden">
+                <span className="flex-1 truncate text-sm sm:text-base font-semibold group-data-[collapsible=icon]:hidden">
                   {item.title}
                 </span>
                 {hasBadge && (
-                  <span className="ml-auto px-1.5 py-0.5 text-[10px] font-bold rounded-full bg-rose-500 text-white leading-none shadow-xs group-data-[collapsible=icon]:hidden animate-in fade-in duration-200">
+                  <span className="ml-auto px-1.5 py-0.5 text-xs font-bold rounded-full bg-rose-500 text-white leading-none shadow-xs group-data-[collapsible=icon]:hidden animate-in fade-in duration-200">
                     {item.badgeCount}
                   </span>
                 )}
