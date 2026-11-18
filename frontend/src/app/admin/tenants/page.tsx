@@ -40,7 +40,13 @@ import {
   ExternalLink,
 } from "lucide-react";
 import CustomSelect from "@/components/dropdown-select";
-import AdminReportModal from "@/components/admin-report-modal";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { formatPhoneNumber, formatPhoneInput } from "@/lib/phone-utils";
 
 interface Tenant {
@@ -96,7 +102,6 @@ function TenantsContent() {
 
   // Selection & Active Dossier
   const [selectedTenant, setSelectedTenant] = useState<Tenant | null>(null);
-  const [activeMenuTenantId, setActiveMenuTenantId] = useState<number | null>(null);
 
   // Tabs & Filters (Matching Mockup: All Tenants | Active | Pending | Moved Out)
   const [activeTab, setActiveTab] = useState<"all" | "active" | "pending" | "moved_out">("all");
@@ -108,7 +113,6 @@ function TenantsContent() {
   // Modals
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
-  const [showReportModal, setShowReportModal] = useState(false);
   const [editingTenant, setEditingTenant] = useState<Tenant | null>(null);
   const [confirmStatus, setConfirmStatus] = useState<{
     id: number;
@@ -252,13 +256,6 @@ function TenantsContent() {
       }
     }
   }, [searchParams, tenants]);
-
-  // Click outside to close action menu
-  useEffect(() => {
-    const handleCloseMenu = () => setActiveMenuTenantId(null);
-    window.addEventListener("click", handleCloseMenu);
-    return () => window.removeEventListener("click", handleCloseMenu);
-  }, []);
 
   // Compute Metrics matching the 4 Top KPI Cards
   const metrics = useMemo(() => {
@@ -586,7 +583,7 @@ function TenantsContent() {
         <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
           {/* Generate Report Button */}
           <button
-            onClick={() => setShowReportModal(true)}
+            onClick={() => router.push("/admin/reports")}
             className="px-4 py-2 rounded-xl bg-[#0055a5] hover:bg-[#00478f] text-white text-sm font-bold shadow-xs flex items-center gap-2 transition-colors cursor-pointer"
           >
             <BarChart3 className="w-4 h-4 text-white stroke-[2.2]" />
@@ -1046,111 +1043,101 @@ function TenantsContent() {
 
                         {/* Actions */}
                         <td className="py-3 px-3.5 text-right relative pr-4">
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setActiveMenuTenantId(
-                                activeMenuTenantId === tenant.id ? null : tenant.id
-                              );
-                            }}
-                            className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-zinc-800 transition-colors cursor-pointer"
-                          >
-                            <MoreHorizontal className="w-4 h-4" />
-                          </button>
-
-                          {/* Popover Action Menu */}
-                          {activeMenuTenantId === tenant.id && (
-                            <div
+                          <DropdownMenu>
+                            <DropdownMenuTrigger
+                              type="button"
                               onClick={(e) => e.stopPropagation()}
-                              className="absolute right-2 bottom-6 w-48 bg-white dark:bg-zinc-900 rounded-xl shadow-xl border border-slate-200 dark:border-zinc-800 py-1.5 z-30 text-xs sm:text-sm text-left"
+                              className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-zinc-800 transition-colors cursor-pointer"
+                              aria-label={`Actions for ${tenant.name}`}
                             >
-                              <button
+                              <MoreHorizontal className="w-4 h-4" />
+                            </DropdownMenuTrigger>
+
+                            <DropdownMenuContent
+                              align="end"
+                              side="bottom"
+                              sideOffset={6}
+                              onClick={(e) => e.stopPropagation()}
+                              className="w-48 min-w-48 bg-white dark:bg-zinc-900 rounded-xl shadow-xl border border-slate-200 dark:border-zinc-800 py-1.5 px-1 text-xs sm:text-sm text-left z-[100]"
+                            >
+                              <DropdownMenuItem
                                 onClick={() => {
-                                  setActiveMenuTenantId(null);
                                   setSelectedTenant(tenant);
                                   setIsViewModalOpen(true);
                                 }}
-                                className="w-full px-3.5 py-2 text-left hover:bg-slate-50 dark:hover:bg-zinc-800 flex items-center gap-2 font-medium"
+                                className="px-3 py-2 rounded-lg hover:bg-slate-50 dark:hover:bg-zinc-800 focus:bg-slate-50 dark:focus:bg-zinc-800 flex items-center gap-2 font-medium cursor-pointer"
                               >
                                 <Eye className="w-4 h-4 text-blue-500" />
                                 View Profile
-                              </button>
-                              <button
-                                onClick={() => {
-                                  setActiveMenuTenantId(null);
-                                  handleOpenEditModal(tenant);
-                                }}
-                                className="w-full px-3.5 py-2 text-left hover:bg-slate-50 dark:hover:bg-zinc-800 flex items-center gap-2 font-medium"
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                onClick={() => handleOpenEditModal(tenant)}
+                                className="px-3 py-2 rounded-lg hover:bg-slate-50 dark:hover:bg-zinc-800 focus:bg-slate-50 dark:focus:bg-zinc-800 flex items-center gap-2 font-medium cursor-pointer"
                               >
                                 <Edit className="w-4 h-4 text-slate-500" />
                                 Edit Details
-                              </button>
+                              </DropdownMenuItem>
                               {tenant.status === "Pending" && (
                                 <>
-                                  <button
-                                    onClick={() => {
-                                      setActiveMenuTenantId(null);
+                                  <DropdownMenuItem
+                                    onClick={() =>
                                       setConfirmStatus({
                                         id: tenant.id,
                                         name: tenant.name,
                                         action: "Approve",
-                                      });
-                                    }}
-                                    className="w-full px-3.5 py-2 text-left hover:bg-slate-50 dark:hover:bg-zinc-800 flex items-center gap-2 text-emerald-600 font-medium"
+                                      })
+                                    }
+                                    className="px-3 py-2 rounded-lg hover:bg-slate-50 dark:hover:bg-zinc-800 focus:bg-slate-50 dark:focus:bg-zinc-800 flex items-center gap-2 text-emerald-600 focus:text-emerald-600 font-medium cursor-pointer"
                                   >
                                     <Check className="w-4 h-4" />
                                     Approve Resident
-                                  </button>
-                                  <button
-                                    onClick={() => {
-                                      setActiveMenuTenantId(null);
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem
+                                    onClick={() =>
                                       setConfirmStatus({
                                         id: tenant.id,
                                         name: tenant.name,
                                         action: "Reject",
-                                      });
-                                    }}
-                                    className="w-full px-3.5 py-2 text-left hover:bg-slate-50 dark:hover:bg-zinc-800 flex items-center gap-2 text-rose-600 font-medium"
+                                      })
+                                    }
+                                    className="px-3 py-2 rounded-lg hover:bg-slate-50 dark:hover:bg-zinc-800 focus:bg-slate-50 dark:focus:bg-zinc-800 flex items-center gap-2 text-rose-600 focus:text-rose-600 font-medium cursor-pointer"
                                   >
                                     <X className="w-4 h-4" />
                                     Decline Application
-                                  </button>
+                                  </DropdownMenuItem>
                                 </>
                               )}
-                              <button
-                                onClick={() => {
-                                  setActiveMenuTenantId(null);
-                                  router.push(`/admin/chat?tenant_id=${tenant.id}`);
-                                }}
-                                className="w-full px-3.5 py-2 text-left hover:bg-slate-50 dark:hover:bg-zinc-800 flex items-center gap-2 font-medium"
+                              <DropdownMenuItem
+                                onClick={() =>
+                                  router.push(`/admin/chat?tenant_id=${tenant.id}`)
+                                }
+                                className="px-3 py-2 rounded-lg hover:bg-slate-50 dark:hover:bg-zinc-800 focus:bg-slate-50 dark:focus:bg-zinc-800 flex items-center gap-2 font-medium cursor-pointer"
                               >
                                 <MessageSquare className="w-4 h-4 text-teal-500" />
                                 Send Message
-                              </button>
-                              <button
-                                onClick={() => {
-                                  setActiveMenuTenantId(null);
-                                  router.push(`/admin/billing?action=create&tenant_id=${tenant.id}`);
-                                }}
-                                className="w-full px-3.5 py-2 text-left hover:bg-slate-50 dark:hover:bg-zinc-800 flex items-center gap-2 font-medium"
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                onClick={() =>
+                                  router.push(
+                                    `/admin/billing?action=create&tenant_id=${tenant.id}`,
+                                  )
+                                }
+                                className="px-3 py-2 rounded-lg hover:bg-slate-50 dark:hover:bg-zinc-800 focus:bg-slate-50 dark:focus:bg-zinc-800 flex items-center gap-2 font-medium cursor-pointer"
                               >
                                 <Receipt className="w-4 h-4 text-indigo-500" />
                                 Issue Bill
-                              </button>
-                              <div className="border-t border-slate-100 dark:border-zinc-800 my-1" />
-                              <button
-                                onClick={() => {
-                                  setActiveMenuTenantId(null);
-                                  handleDeleteTenant(tenant);
-                                }}
-                                className="w-full px-3.5 py-2 text-left hover:bg-slate-50 dark:hover:bg-zinc-800 flex items-center gap-2 text-rose-600 font-medium"
+                              </DropdownMenuItem>
+                              <DropdownMenuSeparator className="my-1 bg-slate-100 dark:bg-zinc-800" />
+                              <DropdownMenuItem
+                                variant="destructive"
+                                onClick={() => handleDeleteTenant(tenant)}
+                                className="px-3 py-2 rounded-lg hover:bg-rose-50 dark:hover:bg-rose-950/30 focus:bg-rose-50 dark:focus:bg-rose-950/30 flex items-center gap-2 text-rose-600 focus:text-rose-600 font-medium cursor-pointer"
                               >
                                 <Trash2 className="w-4 h-4" />
                                 Delete
-                              </button>
-                            </div>
-                          )}
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
                         </td>
                       </tr>
                     );
@@ -1775,9 +1762,6 @@ function TenantsContent() {
           </div>
         )}
       </AnimatePresence>
-
-      {/* MODAL 5: OPERATIONAL & FINANCIAL REPORT MODAL */}
-      <AdminReportModal isOpen={showReportModal} onClose={() => setShowReportModal(false)} />
     </div>
   );
 }
