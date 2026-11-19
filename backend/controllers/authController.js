@@ -1,4 +1,7 @@
 const crypto = require('crypto');
+const fs = require('fs');
+const path = require('path');
+const dotenv = require('dotenv');
 const jwt = require('jsonwebtoken');
 const db = require('../config/db');
 const { JWT_SECRET, JWT_ISSUER, JWT_AUDIENCE } = require('../middleware/authMiddleware');
@@ -6,6 +9,25 @@ const { hashPassword, comparePassword } = require('../utils/passwordUtils');
 const { formatPhoneNumber } = require('../utils/phoneUtils');
 const { revokeToken } = require('../utils/tokenBlacklist');
 const { getPermissionsForRole } = require('../middleware/rbacMiddleware');
+
+const resolveGoogleClientId = () => {
+    const envVal = (process.env.GOOGLE_CLIENT_ID || '').trim();
+    if (envVal) return envVal;
+    try {
+        const envPath = path.join(__dirname, '../.env');
+        if (fs.existsSync(envPath)) {
+            const parsed = dotenv.parse(fs.readFileSync(envPath, 'utf8'));
+            const parsedVal = (parsed.GOOGLE_CLIENT_ID || '').trim();
+            if (parsedVal) {
+                process.env.GOOGLE_CLIENT_ID = parsedVal;
+                return parsedVal;
+            }
+        }
+    } catch (e) {
+        // ignore fallback read errors
+    }
+    return '';
+};
 
 // @desc    Register a new user (Tenant only for public signups)
 // @route   POST /api/auth/register
@@ -163,6 +185,73 @@ const registerUser = async (req, res) => {
     }
 };
 
+const getAccountStatusRejection = (status) => {
+    if (status === 'Declined') {
+        return {
+            code: 'ACCOUNT_DECLINED',
+            message: 'Your account application was declined. Please contact the administrator.'
+        };
+    }
+    if (status === 'Pending') {
+        return {
+            code: 'ACCOUNT_PENDING',
+            message: 'Your account is pending administrator approval.'
+        };
+    }
+    if (status === 'Suspended' || status === 'Inactive') {
+        return {
+            code: 'ACCOUNT_DISABLED',
+            message: 'Your account is currently disabled or inactive. Please contact the administrator.'
+        };
+    }
+    return null;
+};
+
+const buildAuthSuccessPayload = (user, message, extraUserFields = {}) => {
+    const sessionExpiry = process.env.JWT_EXPIRES_IN || (user.role === 'admin' ? '8h' : '24h');
+    const jwtId = crypto.randomUUID();
+
+    const token = jwt.sign(
+        {
+            id: user.id,
+            sub: String(user.id),
+            role: user.role,
+            status: user.status,
+            jti: jwtId
+        },
+        JWT_SECRET,
+        {
+            expiresIn: sessionExpiry,
+            issuer: JWT_ISSUER,
+            audience: JWT_AUDIENCE
+        }
+    );
+
+    try {
+        const presenceService = require('../services/presenceService');
+        presenceService.recordActivity(user.id);
+    } catch (e) {
+        // non-blocking
+    }
+
+    const userPermissions = getPermissionsForRole(user.role);
+
+    return {
+        message,
+        token,
+        expiresIn: sessionExpiry,
+        user: {
+            id: user.id,
+            name: user.name,
+            email: user.email,
+            role: user.role,
+            status: user.status,
+            permissions: userPermissions,
+            ...extraUserFields
+        }
+    };
+};
+
 // @desc    Authenticate user & issue modern RFC 7519 compliant JWT
 // @route   POST /api/auth/login
 const loginUser = async (req, res) => {
@@ -170,7 +259,7 @@ const loginUser = async (req, res) => {
 
     try {
         // 1. Find the user by email
-        const result = await db.query('SELECT * FROM users WHERE email = $1', [email]);
+        const result = await db.query('SELECT * FROM users WHERE LOWER(TRIM(email)) = LOWER(TRIM($1))', [email || '']);
         
         if (result.rows.length === 0) {
             return res.status(404).json({ message: 'Account does not exist' });
@@ -190,72 +279,139 @@ const loginUser = async (req, res) => {
         }
 
         // 4. Lifecycle & Status Validation (Account Access Control)
-        if (user.status === 'Declined') {
-            return res.status(403).json({ 
-                code: 'ACCOUNT_DECLINED',
-                message: 'Your account application was declined. Please contact the administrator.' 
-            });
-        }
-        if (user.status === 'Pending') {
-            return res.status(403).json({ 
-                code: 'ACCOUNT_PENDING',
-                message: 'Your account is pending administrator approval.' 
-            });
-        }
-        if (user.status === 'Suspended' || user.status === 'Inactive') {
-            return res.status(403).json({ 
-                code: 'ACCOUNT_DISABLED',
-                message: 'Your account is currently disabled or inactive. Please contact the administrator.' 
-            });
+        const rejection = getAccountStatusRejection(user.status);
+        if (rejection) {
+            return res.status(403).json(rejection);
         }
 
         // 5. Generate Modern JWT Token with RFC 7519 standard claims
-        const sessionExpiry = process.env.JWT_EXPIRES_IN || (user.role === 'admin' ? '8h' : '24h');
-        const jwtId = crypto.randomUUID();
-
-        const token = jwt.sign(
-            {
-                id: user.id,
-                sub: String(user.id),
-                role: user.role,
-                status: user.status,
-                jti: jwtId
-            }, 
-            JWT_SECRET, 
-            { 
-                expiresIn: sessionExpiry,
-                issuer: JWT_ISSUER,
-                audience: JWT_AUDIENCE
-            } 
-        );
-
-        // Record active presence
-        try {
-            const presenceService = require('../services/presenceService');
-            presenceService.recordActivity(user.id);
-        } catch (e) {
-            // non-blocking
-        }
-
-        const userPermissions = getPermissionsForRole(user.role);
-
-        // 6. Return secure standardized payload
-        res.status(200).json({
-            message: 'Login successful',
-            token,
-            expiresIn: sessionExpiry,
-            user: {
-                id: user.id,
-                name: user.name,
-                email: user.email,
-                role: user.role,
-                status: user.status,
-                permissions: userPermissions
-            }
-        });
+        res.status(200).json(buildAuthSuccessPayload(user, 'Login successful'));
     } catch (error) {
         console.error('Login Error:', error);
         res.status(500).json({ message: 'Server error during login' });
+    }
+};
+
+// @desc    Expose configured Google OAuth Client ID to frontend
+// @route   GET /api/auth/google/config
+const getGoogleConfig = (req, res) => {
+    const clientId = resolveGoogleClientId();
+    res.status(200).json({ clientId });
+};
+
+// @desc    Authenticate with Google OAuth & issue modern RFC 7519 compliant JWT
+// @route   POST /api/auth/google
+const googleAuth = async (req, res) => {
+    const { credential, id_token, access_token } = req.body;
+
+    try {
+        let googleUser = null;
+        const configuredClientId = resolveGoogleClientId();
+
+        // 1. Verify official Google ID token if provided
+        const tokenToVerify = id_token || credential;
+        if (tokenToVerify) {
+            try {
+                const verifyUrl = `https://oauth2.googleapis.com/tokeninfo?id_token=${encodeURIComponent(tokenToVerify)}`;
+                const verifyRes = await fetch(verifyUrl);
+                if (verifyRes.ok) {
+                    const data = await verifyRes.json();
+                    const audienceMatches = !configuredClientId || data.aud === configuredClientId;
+                    if (audienceMatches && data.email) {
+                        googleUser = {
+                            sub: data.sub,
+                            email: data.email,
+                            name: data.name || data.given_name || 'Google User',
+                            picture: data.picture,
+                            email_verified: data.email_verified === 'true' || data.email_verified === true
+                        };
+                    }
+                }
+            } catch (vErr) {
+                console.error('[GoogleAuth] ID token verification error:', vErr.message);
+            }
+        }
+
+        // 2. Verify official Google OAuth2 access token if provided
+        if (!googleUser && access_token) {
+            try {
+                const userinfoRes = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+                    headers: { Authorization: `Bearer ${access_token}` }
+                });
+                if (userinfoRes.ok) {
+                    const data = await userinfoRes.json();
+                    if (data.email) {
+                        googleUser = {
+                            sub: data.sub,
+                            email: data.email,
+                            name: data.name || 'Google User',
+                            picture: data.picture,
+                            email_verified: data.email_verified === true || data.email_verified === 'true'
+                        };
+                    }
+                }
+            } catch (aErr) {
+                console.error('[GoogleAuth] Access token verification error:', aErr.message);
+            }
+        }
+
+        if (!googleUser || !googleUser.email) {
+            return res.status(401).json({
+                message: 'Google authentication failed. Unable to verify official Google credentials.'
+            });
+        }
+
+        const email = String(googleUser.email).trim().toLowerCase();
+        const name = (googleUser.name || 'Google Resident').trim();
+
+        // 4. Check if account already exists
+        const userQuery = await db.query('SELECT * FROM users WHERE LOWER(TRIM(email)) = LOWER($1)', [email]);
+
+        let user;
+        if (userQuery.rows.length > 0) {
+            user = userQuery.rows[0];
+            const rejection = getAccountStatusRejection(user.status);
+            if (rejection) {
+                return res.status(403).json(rejection);
+            }
+        } else {
+            // Register new tenant via Google in Pending approval state
+            const randomPassword = crypto.randomBytes(32).toString('hex');
+            const hashedPassword = await hashPassword(randomPassword);
+            const insertResult = await db.query(
+                `INSERT INTO users (name, email, password, role, gender, status)
+                 VALUES ($1, $2, $3, 'tenant', 'Not Specified', 'Pending')
+                 RETURNING id, name, email, role, status`,
+                [name, email, hashedPassword]
+            );
+            user = insertResult.rows[0];
+
+            try {
+                const adminNotificationService = require('../services/adminNotificationService');
+                adminNotificationService.notifyAdminsIfOffline({
+                    title: 'Account Approval Request',
+                    message: `Tenant ${name} (${email}) signed up via Google and is pending approval.`,
+                    type: 'account_approval',
+                    link: '/admin/tenants'
+                });
+            } catch (notifErr) {
+                console.error('[GoogleAuth] Notification error:', notifErr.message);
+            }
+
+            return res.status(403).json({
+                code: 'ACCOUNT_PENDING',
+                message: 'Your account application was submitted via Google and is pending administrator approval.'
+            });
+        }
+
+        res.status(200).json(
+            buildAuthSuccessPayload(user, 'Google login successful', {
+                picture: googleUser.picture || null
+            })
+        );
+    } catch (error) {
+        console.error('Google Auth Error:', error);
+        res.status(500).json({ message: 'Server error during Google authentication' });
     }
 };
 
@@ -283,4 +439,4 @@ const logoutUser = async (req, res) => {
     }
 };
 
-module.exports = { registerUser, loginUser, logoutUser };
+module.exports = { registerUser, loginUser, googleAuth, getGoogleConfig, logoutUser };
