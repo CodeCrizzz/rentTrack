@@ -637,51 +637,52 @@ export default function AdminReportsPage() {
 
       <div className="p-6 max-w-7xl mx-auto [.report-modal-container_&]:p-5 [.report-modal-container_&]:sm:p-6 [.report-modal-container_&]:max-w-none relative w-full flex flex-col font-sans text-slate-900 dark:text-zinc-100">
         {/* Header Bar */}
-        <div className="shrink-0 flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-5 px-0 border-b border-slate-200 dark:border-zinc-800 no-print">
-          <div>
+        <div className="shrink-0 pb-5 px-0 border-b border-slate-200 dark:border-zinc-800 no-print space-y-1.5">
+          <div className="flex flex-wrap items-center gap-3 sm:gap-4">
             <h1 className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white flex items-center gap-2">
               Operational &amp; Financial Reports
             </h1>
-            <p className="text-sm sm:text-base text-slate-500 dark:text-zinc-400 mt-1 font-medium">
-              Generate, filter, print, and export official executive property
-              statements and audits.
-            </p>
+
+            {/* Quick Actions - placed beside title text */}
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                onClick={() =>
+                  handleExportCSV(activeTab === "all" ? "all" : "active")
+                }
+                className="px-3.5 py-2 text-sm font-bold rounded-xl bg-white dark:bg-zinc-900 hover:bg-slate-50 dark:hover:bg-zinc-800 text-slate-700 dark:text-zinc-200 border border-slate-200 dark:border-zinc-700 shadow-xs transition-colors flex items-center gap-2 cursor-pointer"
+                title="Export active view as CSV"
+              >
+                <Download className="w-4 h-4 text-teal-600 dark:text-teal-400" />
+                <span>Export CSV</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => handleExportCSV("all")}
+                className="px-3.5 py-2 text-sm font-bold rounded-xl bg-white dark:bg-zinc-900 hover:bg-slate-50 dark:hover:bg-zinc-800 text-slate-700 dark:text-zinc-200 border border-slate-200 dark:border-zinc-700 shadow-xs transition-colors hidden sm:flex items-center gap-2 cursor-pointer"
+                title="Export complete master report with all sections"
+              >
+                <Layers className="w-4 h-4 text-indigo-500" />
+                <span>Full Audit CSV</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={handlePrint}
+                className="px-4 py-2 text-sm font-bold rounded-xl bg-teal-700 hover:bg-teal-800 text-white shadow-xs transition-colors flex items-center gap-2 cursor-pointer"
+                title="Print all report sections as an official master PDF or physical document"
+              >
+                <Printer className="w-4 h-4" />
+                <span>Print All Reports</span>
+              </button>
+            </div>
           </div>
 
-          {/* Quick Actions */}
-          <div className="flex flex-wrap items-center gap-2 shrink-0">
-            <button
-              type="button"
-              onClick={() =>
-                handleExportCSV(activeTab === "all" ? "all" : "active")
-              }
-              className="px-3.5 py-2 text-sm font-bold rounded-xl bg-white dark:bg-zinc-900 hover:bg-slate-50 dark:hover:bg-zinc-800 text-slate-700 dark:text-zinc-200 border border-slate-200 dark:border-zinc-700 shadow-xs transition-colors flex items-center gap-2 cursor-pointer"
-              title="Export active view as CSV"
-            >
-              <Download className="w-4 h-4 text-teal-600 dark:text-teal-400" />
-              <span>Export CSV</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => handleExportCSV("all")}
-              className="px-3.5 py-2 text-sm font-bold rounded-xl bg-white dark:bg-zinc-900 hover:bg-slate-50 dark:hover:bg-zinc-800 text-slate-700 dark:text-zinc-200 border border-slate-200 dark:border-zinc-700 shadow-xs transition-colors hidden sm:flex items-center gap-2 cursor-pointer"
-              title="Export complete master report with all sections"
-            >
-              <Layers className="w-4 h-4 text-indigo-500" />
-              <span>Full Audit CSV</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={handlePrint}
-              className="px-4 py-2 text-sm font-bold rounded-xl bg-teal-700 hover:bg-teal-800 text-white shadow-xs transition-colors flex items-center gap-2 cursor-pointer"
-              title="Print all report sections as an official master PDF or physical document"
-            >
-              <Printer className="w-4 h-4" />
-              <span>Print All Reports</span>
-            </button>
-          </div>
+          <p className="text-sm sm:text-base text-slate-500 dark:text-zinc-400 font-medium">
+            Generate, filter, print, and export official executive property
+            statements and audits.
+          </p>
         </div>
 
         {/* Controls Bar: Time Filter & Tabs */}

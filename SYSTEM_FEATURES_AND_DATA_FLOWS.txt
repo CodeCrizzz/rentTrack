@@ -1,0 +1,760 @@
+========================================================================================================================
+                              RENTTRACK PROPERTY MANAGEMENT SYSTEM
+                        SYSTEM FEATURES AND DATA FLOW SPECIFICATION
+========================================================================================================================
+PROJECT          : RentTrack (Rental & Boarding House Management Platform)
+STACK            : Next.js 15 (App Router) + Express.js + PostgreSQL 16
+DATABASE SCHEMA  : "rentTrack_schema"
+DIAGRAM          : RentTrack - Level-1 DFD (working copy)
+                   https://lucid.app/lucidchart/64533d20-ebc2-47a7-8428-97042e6298ae/edit
+DOCUMENT TYPE    : Feature inventory + Level-1 data flow register
+VERSION          : 1.0
+========================================================================================================================
+
+
+TABLE OF CONTENTS
+------------------------------------------------------------------------------------------------------------------------
+  1. Scope and Source of Truth
+  2. Actors and External Entities
+  3. Data Stores (Database Tables)
+  4. Feature Catalogue (10 Processes)
+       4.1 Authentication
+       4.2 Manage Room
+       4.3 Manage Tenants
+       4.4 Bills and Payments
+       4.5 Maintenance Request
+       4.6 Chat
+       4.7 Generate Report
+       4.8 CCTV Monitoring
+       4.9 Backup and Recovery
+       4.10 Activity Logs
+  5. Level-1 Data Flow Register (all directed flows)
+  6. End-to-End Data Flow Walkthroughs
+  7. Background Jobs and External Services
+  8. Data Held Outside the Database
+  9. DFD Conventions and Rules Applied
+ 10. Traceability Notes
+ 11. Use Case View (matches Chapter 3, Figure 5)
+
+
+========================================================================================================================
+1. SCOPE AND SOURCE OF TRUTH
+========================================================================================================================
+
+This document describes what the RentTrack system actually does and which data moves between
+the users, the processes and the database.
+
+Everything below is derived from the running source code:
+
+  backend/server.js                    Express application entry point
+  backend/routes/*.js                  Route definitions (auth, admin, billing, request,
+                                       tenant, cron, push)
+  backend/controllers/*.js             Feature logic (auth, admin, billing, request, tenant,
+                                       backup, cron, push)
+  backend/services/*.js                Email, reminders, admin notifications, presence, push
+  backend/cron/*.js                    Scheduled billing and scheduled backup
+  backend/uploads/                     File storage (payment proofs, request images,
+                                       chat attachments, QR config, backup archives)
+
+Only tables that exist in the database are shown as data stores. Files that live on disk are
+described in Section 8 and are deliberately NOT drawn as data stores in the DFD, because the
+DFD must reflect the real schema.
+
+
+========================================================================================================================
+2. ACTORS AND EXTERNAL ENTITIES
+========================================================================================================================
+
+  ID       ENTITY                          ROLE IN THE SYSTEM
+  ------   -----------------------------   ----------------------------------------------------------------
+  E1       Tenant                          Resident using the self-service portal (/tenant/*).
+                                           Registers an account, waits for approval, selects a room,
+                                           views bills, pays, files maintenance requests, chats, reads
+                                           announcements.
+
+  E2       Administrator                   Property owner/staff using the operations portal (/admin/*).
+                                           Approves tenants, manages rooms, generates and verifies
+                                           bills, dispatches maintenance, chats, posts announcements,
+                                           views reports, watches CCTV, runs backups.
+
+  E3       Xendit Payment Gateway          Payment channel for QR Ph / e-wallet checkout. Returns the
+                                           transaction result that the system records as a payment.
+
+  E4       CCTV Provider                   Camera/source side of the RTSP video streams consumed by
+                                           the CCTV monitoring screen.
+
+  E5       Email Service (SMTP)            Outbound mail relay used for account and billing notices
+                                           (due-date reminders).
+
+  E6       Scheduler (cron jobs)           Internal clock that triggers scheduled work: monthly bill
+                                           generation, reminder sweep, automatic backup.
+
+NOTE: E5 and E6 are drawn as external entities because they are outside the application's own
+      process control (SMTP relay, host cron). They are not database tables.
+
+
+========================================================================================================================
+3. DATA STORES (DATABASE TABLES)
+========================================================================================================================
+
+The schema "rentTrack_schema" contains exactly eight application tables. Each one is a data
+store in the DFD.
+
+  STORE   TABLE              PURPOSE                                                                     KEY CONTENT
+  -----   ----------------   -------------------------------------------------------------------------   ------------------------------
+  D1      users              Accounts for tenants and administrators.                                     id, name, email, password
+                                                                                                         hash, role, phone, gender,
+                                                                                                         address, status, timestamps
+  D2      rooms              Room inventory, capacity and occupancy.                                       room number, floor, capacity,
+                                                                                                         occupied slots, monthly rate,
+                                                                                                         status
+  D3      bills              Per-tenant billing statements for a billing period.                           reference, tenant, room,
+                                                                                                         amount, due date, status
+                                                                                                         (Unpaid/Overdue/Paid)
+  D4      payments           Payment transactions and submitted proofs.                                   bill reference, amount,
+                                                                                                         payment method (GCash / QR Ph
+                                                                                                         / E-Wallet / cash), reference
+                                                                                                         number, proof image, status
+  D5      requests           Maintenance work orders.                                                     title, description, category,
+                                                                                                         priority, attachment, status
+  D6      messages           Direct chat messages between tenant and administrator.                        sender, receiver, body,
+                                                                                                         attachment, read flag
+  D7      announcements      Admin broadcast notices shown to all tenants.                                title, body, author,
+                                                                                                         timestamps
+  D8      notifications      Per-user in-app notification feed (bills, status changes,                      user, title, message, type,
+                             approvals, chat and announcement alerts).                                     is_read
+
+RELATIONSHIP SUMMARY (logical, not drawn as arrows in the DFD):
+  users 1---N bills, payments, requests, messages, notifications
+  rooms 1---N bills (a bill belongs to a tenant's assigned room)
+
+
+========================================================================================================================
+4. FEATURE CATALOGUE
+========================================================================================================================
+
+Every feature below is one process in the Level-1 DFD, numbered 1.0 to 9.0.
+
+
+------------------------------------------------------------------------------------------------------------------------
+4.1  AUTHENTICATION                                                              PROCESS 1.0
+------------------------------------------------------------------------------------------------------------------------
+PURPOSE
+  Register tenant accounts, hold them in a pending state, let an administrator approve or
+  decline them, and authenticate every session with a JWT.
+
+ACTORS
+  Tenant, Administrator.
+
+INPUTS
+  - Registration form: name, email, password, phone, gender, address.
+  - Login credentials: email + password, or Google identity token.
+  - Administrator approval or rejection decision.
+
+PROCESSING
+  1. Registration validates the payload and rejects duplicate email, phone or name.
+  2. The new record is written with role = 'tenant' and status = 'Pending'.
+     Public registration never creates an administrator account.
+  3. An administrator notification is raised so the pending application is visible.
+  4. The administrator approves (status 'Active') or declines (status 'Declined').
+     Suspended and Inactive states also exist for later enforcement.
+  5. Login verifies the password hash, then inspects the account status:
+       Pending   -> refused, "account pending administrator approval"
+       Declined  -> refused, with the rejection reason
+       Suspended / Inactive -> refused
+       Active    -> JWT issued
+  6. Logout revokes the token through the blacklist.
+
+OUTPUTS
+  - Account record in D1.
+  - JWT session token and role/claims to the caller.
+  - Login result and in-app notifications.
+  - Approval or rejection notice to the tenant; pending-application alert to the administrator.
+
+DATA STORES
+  D1 users (read + write, including credential verification and status checks).
+
+
+------------------------------------------------------------------------------------------------------------------------
+4.2  MANAGE ROOM                                                                 PROCESS 2.0
+------------------------------------------------------------------------------------------------------------------------
+PURPOSE
+  Maintain the room/bedspace inventory and let tenants choose a room.
+
+ACTORS
+  Administrator, Tenant.
+
+INPUTS
+  - Room details from the administrator: room number, floor, capacity, monthly rate, status.
+  - Room selection from the tenant.
+
+PROCESSING
+  1. Administrator creates, updates or removes a room.
+  2. A room with an active tenant assigned cannot be deleted.
+  3. Duplicate room numbers are rejected.
+  4. The tenant portal renders the room matrix with live availability.
+  5. The tenant submits a room choice, which places the request against the room record.
+
+OUTPUTS
+  - Room inventory maintained in D2.
+  - Room list and availability shown to both actors.
+  - Occupancy/assignment state updated on the room record.
+
+DATA STORES
+  D2 rooms (read + write).
+
+
+------------------------------------------------------------------------------------------------------------------------
+4.3  MANAGE TENANTS                                                              PROCESS 3.0
+------------------------------------------------------------------------------------------------------------------------
+PURPOSE
+  Administer the tenant registry: review applications, assign rooms and maintain account data.
+
+ACTORS
+  Administrator.
+
+INPUTS
+  - Tenant applications (pending accounts).
+  - Administrative edits: role, room assignment, status.
+
+PROCESSING
+  1. Lists all tenants and the pending-application count.
+  2. Approval activates the account and can attach the tenant to a room.
+  3. Updates persist profile, status and assignment changes to the account record.
+  4. Deletion removes or deactivates a tenant record.
+
+OUTPUTS
+  - Updated tenant records (D1).
+  - Tenant list, pending count and approval outcomes returned to the administrator.
+  - Status change notifications to the tenant.
+
+DATA STORES
+  D1 users (read + write).
+
+
+------------------------------------------------------------------------------------------------------------------------
+4.4  BILLS AND PAYMENTS                                                          PROCESS 4.0
+------------------------------------------------------------------------------------------------------------------------
+PURPOSE
+  Generate monthly bills, collect payments, reconcile them against the payment gateway and send
+  billing reminders.
+
+ACTORS
+  Tenant, Administrator, Xendit Payment Gateway, Scheduler, Email Service.
+
+INPUTS
+  - Monthly billing trigger (manual action or scheduled job).
+  - Administrative billing input: amounts, due dates, adjustments.
+  - Tenant payment attempt: GCash, QR Ph / e-wallet checkout, or uploaded proof of payment.
+  - Gateway result for online payments.
+  - Reminder sweep for unpaid and overdue bills.
+
+PROCESSING
+  1. Monthly bill generation creates one bill per occupied room/tenant for the billing period,
+     with amount, due date and status 'Unpaid'.
+  2. A bill whose due date passes becomes 'Overdue'; unpaid items are flagged accordingly.
+  3. The tenant views the current bill and pays:
+       - GCash / QR Ph / e-wallet: the checkout result and reference number are recorded;
+       - proof of payment: image is uploaded and attached to the payment record.
+  4. The payment row is stored with status 'Pending Verification'.
+  5. The administrator verifies the payment; on approval the bill becomes 'Paid'.
+  6. The reminder engine checks unpaid bills:
+       - on the due date: email notice plus in-app notification (once);
+       - after the due date: in-app notification only, no further email.
+
+OUTPUTS
+  - Bill records (D3) and payment records (D4).
+  - Payment receipt/statement to the tenant.
+  - Charge request to the gateway and confirmation back from it.
+  - Reminder email to the SMTP relay.
+  - In-app billing notifications (D8) and notification read status.
+
+DATA STORES
+  D3 bills, D4 payments, D8 notifications (all read + write).
+
+
+------------------------------------------------------------------------------------------------------------------------
+4.5  MAINTENANCE REQUEST                                                         PROCESS 5.0
+------------------------------------------------------------------------------------------------------------------------
+PURPOSE
+  Let tenants report maintenance issues and let the administrator track them to completion.
+
+ACTORS
+  Tenant, Administrator.
+
+INPUTS
+  - Request from the tenant: title, description, category, priority, optional photo.
+  - Status decision from the administrator.
+
+PROCESSING
+  1. The tenant submits a request; it is stored with status 'Pending'.
+  2. The administrator reviews, dispatches and updates the status
+     (In Progress, Completed, Rejected).
+  3. Each status change raises a notification for the tenant.
+
+OUTPUTS
+  - Work order stored in D5.
+  - Request list and ticket detail for both actors.
+  - Status update to the tenant and an in-app notification (D8).
+
+DATA STORES
+  D5 requests, D8 notifications (read + write).
+
+
+------------------------------------------------------------------------------------------------------------------------
+4.6  CHAT                                                                        PROCESS 6.0
+------------------------------------------------------------------------------------------------------------------------
+PURPOSE
+  Direct messaging between tenant and administrator, plus broadcast announcements.
+
+ACTORS
+  Tenant, Administrator.
+
+INPUTS
+  - Chat messages, optionally with a file attachment.
+  - Announcement composed by the administrator.
+
+PROCESSING
+  1. Messages are stored with sender, receiver, body, attachment and read flag.
+  2. Conversation lists and unread counts are computed from the message store.
+  3. The administrator posts an announcement; it is stored in D7 and a broadcast notice is
+     written to the notification feed.
+  4. Tenants read announcements from the announcement feed.
+  5. Reading or receiving a message/announcement updates the notification feed.
+
+OUTPUTS
+  - Message history (D6) and read receipts.
+  - Announcement records (D7).
+  - Chat replies to the tenant.
+  - Notification entries (D8).
+
+DATA STORES
+  D6 messages, D7 announcements, D8 notifications (read + write).
+
+
+------------------------------------------------------------------------------------------------------------------------
+4.7  GENERATE REPORT                                                             PROCESS 7.0
+------------------------------------------------------------------------------------------------------------------------
+PURPOSE
+  Produce the administrative analytics: dashboard totals, cash flow and collection reports.
+
+ACTORS
+  Administrator.
+
+INPUTS
+  - Report request with report type and date range.
+
+PROCESSING
+  1. The request selects a report definition.
+  2. The process aggregates the operational data it needs from the transaction stores
+     (bill status, payment status, request status, tenant counts, room occupancy).
+  3. Figures are formatted into the requested report.
+
+OUTPUTS
+  - Generated report returned to the administrator.
+
+DATA STORES
+  Reads from D1, D2, D3, D4, D5 in aggregate form. No report table is written.
+
+
+------------------------------------------------------------------------------------------------------------------------
+4.8  CCTV MONITORING                                                             PROCESS 8.0
+------------------------------------------------------------------------------------------------------------------------
+PURPOSE
+  Show live camera feeds to the administrator for premises security monitoring.
+
+ACTORS
+  Administrator, CCTV Provider.
+
+INPUTS
+  - Camera access request from the administrator.
+  - RTSP stream from the camera source.
+
+PROCESSING
+  1. The administrator opens the CCTV monitoring screen and selects a channel.
+  2. The system requests the stream from the provider and renders it.
+  3. Stream state (online/offline) is shown per channel.
+  4. No video is persisted; the feature is a live monitor only.
+
+OUTPUTS
+  - Live video shown to the administrator.
+  - Per-channel stream status.
+
+DATA STORES
+  None. CCTV has no database table, by design.
+
+
+------------------------------------------------------------------------------------------------------------------------
+4.9  BACKUP AND RECOVERY                                                         PROCESS 9.0
+------------------------------------------------------------------------------------------------------------------------
+PURPOSE
+  Protect the property data with scheduled and manual backups, and allow restoration.
+
+ACTORS
+  Administrator, Scheduler.
+
+INPUTS
+  - Manual backup request, or the scheduled trigger.
+  - Backup settings: destination folder, schedule, retention count.
+  - Restore request with a chosen backup file.
+
+PROCESSING
+  1. A backup exports the database contents to a timestamped archive file.
+  2. Archives are written to the configured folder and shortened by the retention policy.
+  3. The administrator can export, download and delete archives.
+  4. A restore replays a chosen archive into the database.
+  5. Backup status (last run, size, result) is reported back to the administrator.
+
+OUTPUTS
+  - Archive file delivered to the administrator.
+  - Restored data written back into the live tables.
+  - Backup status report.
+
+DATA STORES
+  Indirectly covers all stores. The archive itself is file storage, not a database table.
+
+
+------------------------------------------------------------------------------------------------------------------------
+4.10  ACTIVITY LOGS                                                             PROCESS 10.0
+------------------------------------------------------------------------------------------------------------------------
+PURPOSE
+  Give the administrator a single chronological trail of data changes made by tenants and by
+  administrators across the property.
+
+ACTORS
+  Tenant (source of changes), Administrator (source of changes and reader of the log).
+
+INPUTS
+  - Activity log request from the administrator (optionally filtered by type).
+  - Change records produced by tenant and administrator actions across the operational tables.
+
+PROCESSING
+  1. The process reads the tenant-originated changes and the admin-originated changes from the
+     stores where they land.
+  2. Each row is normalised into a common activity record: type, title, description, reference
+     number, tenant, room, amount (payments only), status and timestamp.
+  3. Tenant changes are: payment submissions, maintenance requests and chat messages.
+  4. Administrator changes are: announcements, tenant approvals or declines, and chat replies.
+  5. Shared changes are: account records in users (registration, status changes, move-in and
+     contract data) and direct messages, which either party can create.
+  6. Payment activity combines payments with the parent bill, tenant and room.
+  7. All events are merged and sorted newest first before being returned.
+
+OUTPUTS
+  - Generated activity log returned to the administrator, with every event attributed to the
+    tenant or the administrator action that produced it.
+  - No log table is written; the trail is recomputed from live data on every request.
+
+DATA STORES
+  Reads from D1 users, D4 payments, D5 requests, D6 messages and D7 announcements.
+  D3 bills is joined in through payments. No store is written.
+
+NOTE
+  Activity logs intentionally have no data store of their own. A "D9 activity_logs" store would
+  not reflect the schema, so the process is shown reading the stores it actually queries.
+  Because the log is derived, it reports the current state of each changed record (for example a
+  payment's present status), not a field-by-field before/after history.
+
+
+========================================================================================================================
+5. LEVEL-1 DATA FLOW REGISTER
+========================================================================================================================
+
+Every arrow in the Level-1 DFD, listed by direction. Flows that carry data both ways are drawn
+as two separate one-way arrows, one per direction, and are listed as two entries here.
+
+Format:  SOURCE  >>  DESTINATION  ::  DATA CARRIED
+
+PROCESS 1.0  AUTHENTICATION
+  Tenant                                    >>  1.0 Authentication        ::  Sign-up / Login
+  1.0 Authentication                        >>  Tenant                    ::  Notification
+  Administrator                             >>  1.0 Authentication        ::  Login
+  1.0 Authentication                        >>  Administrator             ::  Notification
+  1.0 Authentication                        >>  D1 users                  ::  Verification
+  D1 users                                  >>  1.0 Authentication        ::  account credentials / status / role
+
+PROCESS 2.0  MANAGE ROOM
+  Administrator                             >>  2.0 Manage Room           ::  Room Information
+  2.0 Manage Room                           >>  Tenant                    ::  Room Information
+  Tenant                                    >>  2.0 Manage Room           ::  room selection / assignment
+  2.0 Manage Room                           >>  D2 rooms                  ::  Rooms List
+  D2 rooms                                  >>  2.0 Manage Room           ::  Room Information
+
+PROCESS 3.0  MANAGE TENANTS
+  Administrator                             >>  3.0 Manage Tenants        ::  tenant approval
+  3.0 Manage Tenants                        >>  Administrator             ::  tenant records
+  3.0 Manage Tenants                        >>  D1 users                  ::  tenant credentials
+  D1 users                                  >>  3.0 Manage Tenants        ::  tenant records
+
+PROCESS 4.0  BILLS AND PAYMENTS
+  Scheduler (cron jobs)                     >>  4.0 Bills and Payments    ::  monthly billing trigger
+  Administrator                             >>  4.0 Bills and Payments    ::  Billing Input
+  Tenant                                    >>  4.0 Bills and Payments    ::  bill
+  4.0 Bills and Payments                    >>  Tenant                    ::  payment receipt
+  4.0 Bills and Payments                    >>  D3 bills                  ::  generated bill
+  D3 bills                                  >>  4.0 Bills and Payments    ::  bill data
+  4.0 Bills and Payments                    >>  D4 payments               ::  payment record
+  D4 payments                               >>  4.0 Bills and Payments    ::  payment history
+  4.0 Bills and Payments                    >>  Xendit Payment Gateway    ::  Charge Request
+  Xendit Payment Gateway                    >>  4.0 Bills and Payments    ::  Payment Confirmation
+  4.0 Bills and Payments                    >>  Email Service (SMTP)      ::  reminder email
+  4.0 Bills and Payments                    >>  D8 notifications          ::  Due Date Reminder
+  D8 notifications                          >>  4.0 Bills and Payments    ::  notification status
+
+PROCESS 5.0  MAINTENANCE REQUEST
+  Tenant                                    >>  5.0 Maintenance Request   ::  request maintenance
+  5.0 Maintenance Request                   >>  Tenant                    ::  status update
+  Administrator                             >>  5.0 Maintenance Request   ::  Status Update
+  5.0 Maintenance Request                   >>  D5 requests               ::  ticket record
+  D5 requests                               >>  5.0 Maintenance Request   ::  request list
+  5.0 Maintenance Request                   >>  D8 notifications          ::  Status Update
+  D8 notifications                          >>  5.0 Maintenance Request   ::  read status
+
+PROCESS 6.0  CHAT
+  Tenant                                    >>  6.0 Chat                  ::  chat message
+  6.0 Chat                                  >>  Tenant                    ::  chat reply
+  Administrator                             >>  6.0 Chat                  ::  Chat Reply
+  Administrator                             >>  6.0 Chat                  ::  announcement post
+  6.0 Chat                                  >>  D6 messages               ::  message record
+  D6 messages                               >>  6.0 Chat                  ::  chat history
+  6.0 Chat                                  >>  D7 announcements          ::  announcement post
+  D7 announcements                          >>  6.0 Chat                  ::  announcement list
+  6.0 Chat                                  >>  D8 notifications          ::  message notice
+  D8 notifications                          >>  6.0 Chat                  ::  announcement notice
+
+PROCESS 7.0  GENERATE REPORT
+  Administrator                             >>  7.0 Generate Report       ::  report request
+  7.0 Generate Report                       >>  Administrator             ::  generated report
+
+PROCESS 8.0  CCTV MONITORING
+  Administrator                             >>  8.0 CCTV Monitoring       ::  camera access
+  8.0 CCTV Monitoring                       >>  Administrator             ::  live video
+  CCTV Provider                             >>  8.0 CCTV Monitoring       ::  stream request
+  8.0 CCTV Monitoring                       >>  CCTV Provider             ::  RTSP feed
+
+PROCESS 9.0  BACKUP AND RECOVERY
+  Administrator                             >>  9.0 Backup and Recovery   ::  backup request
+  9.0 Backup and Recovery                   >>  Administrator             ::  archive file
+
+PROCESS 10.0  ACTIVITY LOGS
+  Administrator                             >>  10.0 Activity Logs        ::  activity log request
+  10.0 Activity Logs                        >>  Administrator             ::  activity log report
+  D1 users                                  >>  10.0 Activity Logs        ::  tenant/admin account changes
+  D4 payments                               >>  10.0 Activity Logs        ::  tenant payment changes
+  D5 requests                               >>  10.0 Activity Logs        ::  tenant request changes
+  D6 messages                               >>  10.0 Activity Logs        ::  tenant/admin message changes
+  D7 announcements                          >>  10.0 Activity Logs        ::  admin announcement changes
+
+FLOW COUNTS
+  Directed arrows .................... 60
+  Processes ......................... 10
+  Data stores ....................... 8
+  External entities ................. 6
+  Invalid arrows (store-store, store-entity, entity-entity) ... 0
+
+
+========================================================================================================================
+6. END-TO-END DATA FLOW WALKTHROUGHS
+========================================================================================================================
+
+6.1  TENANT ONBOARDING
+  Tenant --Sign-up/Login--> 1.0 --Verification--> D1 users
+  1.0 reads D1 (account credentials / status / role)
+  D1 record written with status 'Pending'
+  1.0 --Notification--> Administrator     (pending application alert)
+  Administrator --tenant approval--> 3.0 --tenant credentials--> D1 users
+  3.0 --tenant records--> Administrator
+  1.0 --Notification--> Tenant            (approved / declined)
+  Tenant --Sign-up/Login--> 1.0           (login once status is Active)
+
+6.2  ROOM ASSIGNMENT
+  Administrator --Room Information--> 2.0 --Rooms List--> D2 rooms
+  D2 rooms --Room Information--> 2.0 --Room Information--> Tenant
+  Tenant --room selection/assignment--> 2.0 --> D2 rooms
+
+6.3  MONTHLY BILLING CYCLE
+  Scheduler --monthly billing trigger--> 4.0
+  4.0 reads D2 rooms (occupancy) and D1 users (active tenants)
+  4.0 --generated bill--> D3 bills
+  4.0 --Due Date Reminder--> D8 notifications
+  4.0 --reminder email--> Email Service (SMTP)
+  4.0 reads D8 notifications (notification status)
+  Tenant --bill--> 4.0 --bill data--> D3 bills
+
+6.4  PAYMENT AND RECONCILIATION
+  Tenant --bill--> 4.0 --Charge Request--> Xendit
+  Xendit --Payment Confirmation--> 4.0
+  4.0 --payment record--> D4 payments
+  4.0 updates the bill in D3 to 'Paid'
+  4.0 --payment receipt--> Tenant
+  Administrator --Billing Input--> 4.0 (verification of uploaded proofs)
+  D4 payments --payment history--> 4.0
+
+6.5  MAINTENANCE LIFECYCLE
+  Tenant --request maintenance--> 5.0 --ticket record--> D5 requests
+  D5 requests --request list--> 5.0
+  Administrator --Status Update--> 5.0 --> D5 requests
+  5.0 --Status Update--> D8 notifications --> 5.0 (read status)
+  5.0 --status update--> Tenant
+
+6.6  CHAT AND ANNOUNCEMENTS
+  Tenant --chat message--> 6.0 --message record--> D6 messages
+  D6 messages --chat history--> 6.0
+  Administrator --Chat Reply--> 6.0 --chat reply--> Tenant
+  Administrator --announcement post--> 6.0 --announcement post--> D7 announcements
+  D7 announcements --announcement list--> 6.0
+  6.0 --message notice--> D8 notifications
+  D8 notifications --announcement notice--> 6.0
+
+6.7  REPORTING
+  Administrator --report request--> 7.0
+  7.0 aggregates D1 users, D2 rooms, D3 bills, D4 payments, D5 requests
+  7.0 --generated report--> Administrator
+  No report is persisted; reporting is read-only.
+
+6.8  CCTV MONITORING
+  Administrator --camera access--> 8.0
+  8.0 --stream request--> CCTV Provider
+  CCTV Provider --RTSP feed--> 8.0
+  8.0 --live video--> Administrator
+
+6.9  BACKUP AND RECOVERY
+  Scheduler (or Administrator) --backup request--> 9.0
+  9.0 dumps the live tables to an archive
+  9.0 --archive file--> Administrator
+  Administrator imports an archive -> 9.0 restores the live tables
+
+6.10  ACTIVITY LOGS
+  Administrator --activity log request--> 10.0
+  10.0 reads the changes produced by both parties:
+       D1 users         -> tenant/admin account changes
+       D4 payments      -> tenant payment changes
+       D5 requests      -> tenant request changes
+       D6 messages      -> tenant/admin message changes
+       D7 announcements -> admin announcement changes
+  10.0 merges every change into one chronological trail, attributed to its author
+  10.0 --activity log report--> Administrator
+  Nothing is written: the trail is rebuilt from live data on each request.
+
+
+========================================================================================================================
+7. BACKGROUND JOBS AND EXTERNAL SERVICES
+========================================================================================================================
+
+  JOB / SERVICE             TRIGGER                         EFFECT
+  -----------------------   -----------------------------   ------------------------------------------------
+  Billing cycle daemon      Schedule (cron) or manual      Creates monthly bills in D3, raises reminders
+  Reminder engine           Schedule or manual             Due-date email via SMTP, in-app notification
+                                                           in D8, overdue notification without email
+  Automatic backup          Schedule or manual             Writes a timestamped archive to disk
+  Presence tracker          Request activity               Marks users online/offline for admin visibility
+  Push (web push)           Subscription registration      Delivers browser notifications
+  Admin notification        Domain events                  Inserts notification rows for administrators
+  Email sender (SMTP)       Billing events                 Sends due-date / account emails
+
+
+========================================================================================================================
+8. DATA HELD OUTSIDE THE DATABASE
+========================================================================================================================
+
+These artifacts are real, but they are files rather than tables, so they are not data stores in
+the DFD.
+
+  uploads/payments/           Uploaded payment proof images.
+  uploads/requests/           Uploaded maintenance request photos.
+  uploads/chat/               Chat attachments.
+  uploads/qrph-qr.json        Current QR Ph payment image reference.
+  uploads/backup-config.json  Backup destination, schedule, retention, last-run metadata.
+  uploads/backups/            Generated backup archives.
+  uploads/avatars/            Profile images.
+
+If a file-based store ever needs to appear in the DFD, the schema must gain a table for it first.
+
+
+========================================================================================================================
+9. DFD CONVENTIONS AND RULES APPLIED
+========================================================================================================================
+
+  1. Processes are rounded boxes labelled with "N.0" above the name.
+  2. Data stores are open-ended rectangles split into "D# | table name", and the name matches the
+     database table exactly (users, rooms, bills, payments, requests, messages, announcements,
+     notifications).
+  3. External entities are plain rectangles.
+  4. All connectors are orthogonal (elbow) with a single arrowhead.
+  5. Data stores never exchange data with each other or with an external entity. Those flows are
+     always routed through a process.
+  6. Where data moves both ways, two separate one-way arrows are used instead of one arrow with
+     two heads. Each direction carries its own label.
+  7. Every connector carries a text label describing the data it moves.
+  8. Monochrome styling only: black strokes, white fills.
+
+
+========================================================================================================================
+10. TRACEABILITY NOTES
+========================================================================================================================
+
+  - The eight data stores were confirmed against the schema and against the live queries used by
+    the controllers. No invented tables are present in the diagram.
+  - Feature 4.0 covers the billing routes, the payment verification routes and the cron billing
+    engine, because they operate on the same two stores.
+  - Feature 6.0 covers chat and announcements because both are message streams delivered through
+    the notification feed.
+  - Feature 9.0 has no archive table by design: backups are files on disk, so the archive is shown
+    as data exchanged with the administrator rather than as a store.
+  - CCTV is live-only; no footage is written to the database.
+  - Activity logs (10.0) is a genuine feature with its own admin page, but it has no table:
+     getActivityLogs() merges six live queries. It is drawn as a read-only process over the
+     stores it actually queries rather than as a store of its own.
+  - Activity logs and Generate Report (7.0) both aggregate, but they differ in shape: 7.0 returns
+     computed figures for dashboards and finance summaries, while 10.0 returns a flat list of
+     timestamped events. They are therefore kept as separate processes.
+
+========================================================================================================================
+11. USE CASE VIEW (MATCHES CHAPTER 3, FIGURE 5)
+========================================================================================================================
+
+The nine core features named in Chapter 1 are the use cases drawn inside the system boundary of
+the use case diagram. Log In or Log Out is drawn as a tenth use case because both actors use it.
+
+  USE CASE                     ACTOR(S)                                        CONTAINS
+  Manage Room                  Admin/Owner                                     Add or Update Room
+                                                                               View Room and Occupancy Status
+                                                                               Assign Tenant to Room and Bedspace
+  Manage Tenants               Admin/Owner, Tenant                             Manage Tenant Profiles
+                                                                               Approve or Decline Registration
+                                                                               Record Move-in or Move-out
+  Bills and Payments           Admin/Owner, Tenant,                            Generate Monthly Bills
+                               Xendit Payment Gateway, Email Service           View Bills and Payment History
+                                                                               Pay Bill via QR Ph
+                                                                               Record and Verify Payment
+  Maintenance Request          Tenant, Admin/Owner                             Submit Maintenance Request
+                                                                               Track Request Status
+                                                                               Assign and Resolve Request
+  Chat                         Tenant, Admin/Owner                             Message Administrator
+                                                                               Chat with Tenants
+                                                                               Publish Announcements
+                                                                               View Announcements and Notifications
+  Generate Report              Admin/Owner                                     Generate Report
+                                                                               Print or Export Report
+  CCTV Monitoring              Admin/Owner, CCTV Provider                      Monitor CCTV Live Feed
+  Backup and Recovery          Admin/Owner, Scheduler                          Create Backup
+                                                                               Download Backup
+                                                                               Restore Backup
+  Activity Logs                Admin/Owner                                     View Activity Logs
+  Log In or Log Out            Tenant, Admin/Owner                             Register Account
+                                                                               Manage Profile
+
+  Supporting actors never operate the interface. They participate only in the use case where
+  their service is called: Xendit confirms QR Ph payments, the CCTV provider supplies RTSP
+  streams, the email service sends SMTP notifications, and the scheduler fires the monthly
+  billing and automatic backup jobs.
+
+  Mapping to the DFD: every use case contains exactly one process from Section 4, and every
+  process in Section 4 is covered by exactly one use case.
+
+  Full write-up and the corrected Chapter 3 tables are in
+  docs/Chapter3_Corrected_Sections.docx.
+
+========================================================================================================================
+END OF DOCUMENT
+========================================================================================================================
