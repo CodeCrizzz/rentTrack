@@ -110,92 +110,58 @@ PR review, and issue tracking).
 ================================================================================
 
 ================================================================================
-4. READY-TO-USE GITHUB ISSUE TEMPLATES (FOR YOUR PROFILE)
+4. READY-TO-USE GITHUB ISSUE TEMPLATES (FOR THIS BRANCH)
 ================================================================================
-Copy and paste each of the following 5 issues into:
+Copy and paste each of the following issues into:
 https://github.com/CodeCrizzz/rentTrack/issues -> "New issue"
 
 --------------------------------------------------------------------------------
-ISSUE #1 (FRESH / NON-DUPLICATE)
+ISSUE #1
 --------------------------------------------------------------------------------
-Title: feat(rooms): enforce gender-segregated boarding policies and database column backfilling
-Labels: enhancement, backend, security
+Title: feat(auth): integrate Google OAuth2 sign-in flow and backend client configuration
+Labels: enhancement, authentication, fullstack
 
 Description:
 ### Summary
-Implement strict room gender policy governance across the property management platform. Ensure backend persistence with automated column migration, normalize room gender designations (Male Only / Female Only) based on existing occupant profiles, and enforce server-side validation preventing gender-mismatched room assignments during self-service move-in.
+Implement end-to-end Google OAuth2 authentication support by exposing Google client configuration and token verification endpoints on the backend and replacing the static login button with an interactive Google Sign-In component on the frontend.
 
 ### Acceptance Criteria
-- [x] Implemented `roomGenderUtils.js` with `normalizeRoomGender` algorithm and lazy `ensureRoomGenderColumn` migration.
-- [x] Updated `adminController.js` to return normalized room gender in dashboard occupancy statistics and room catalogs.
-- [x] Enforced gender validation in `tenantController.js` `chooseRoom` to block cross-gender room bookings.
-- [x] Inferred default resident gender from chosen room profile if unspecified during initial profile setup.
+- [x] Added `resolveGoogleClientId`, `getAccountStatusRejection`, `buildAuthSuccessPayload`, `getGoogleConfig`, and `googleAuth` handlers in `backend/controllers/authController.js`.
+- [x] Registered `GET /api/auth/google/config` and `POST /api/auth/google` endpoints in `backend/routes/authRoutes.js`.
+- [x] Created interactive `GoogleSignInButton` component (`frontend/src/components/google-sign-in-button.tsx`) with GSI script loading and pending-account modal handling.
+- [x] Wired `GoogleSignInButton` into `frontend/src/app/(auth)/login/page.tsx`.
 
 --------------------------------------------------------------------------------
-ISSUE #2 (FRESH / NON-DUPLICATE)
+ISSUE #2
 --------------------------------------------------------------------------------
-Title: feat(billing): digital payment audit logs and administrative GCash QR configuration
-Labels: billing, feature, admin
+Title: feat(payments): implement dynamic EMVCo QR Ph payload generation and tenant activity feed
+Labels: enhancement, billing, tenant-portal
 
 Description:
 ### Summary
-Enhance the financial management engine by implementing a comprehensive payment history audit endpoint with invoice and tenant association, alongside persistent GCash QR code management for streamlined digital tenant remittances.
+Introduce dynamic EMVCo QR Ph payload construction with CRC-16 checksum verification for tenant invoice settlements, add the verified payment receipt modal, expand the tenant dashboard with a scrollable account activity feed, and align export/print controls beside the admin report title.
 
 ### Acceptance Criteria
-- [x] Exposed `GET /api/admin/bills/payments/history` with optional tenant-specific filtering.
-- [x] Enriched payment queries with bill invoice numbers, total amounts, and remaining balances.
-- [x] Added `GET` and `PUT` endpoints for `/api/admin/settings/gcash-qr` with JSONB settings merging.
-- [x] Exposed `GET /api/tenant/gcash-qr` allowing active residents to view official payment QR codes.
-- [x] Configured sanitization and SQL injection whitelists for base64 image payloads (`gcashqrcode`, `logourl`).
+- [x] Added EMVCo TLV parser, CRC-16 calculator, and `buildDynamicQrPhPayload` utility in `frontend/src/lib/qrph.ts`.
+- [x] Integrated dynamic QRPh generation and verified receipt modal in `frontend/src/app/tenant/payments/page.tsx`.
+- [x] Added `jsqr` dependency (`^1.4.0`) to `frontend/package.json` and `frontend/package-lock.json`.
+- [x] Added scrollable recent account activity feed and refined utility chart layout in `frontend/src/app/tenant/dashboard/page.tsx`.
+- [x] Aligned export CSV and print action buttons beside the Operational & Financial Reports header title in `frontend/src/app/admin/reports/page.tsx`.
 
 --------------------------------------------------------------------------------
-ISSUE #3 (FRESH / NON-DUPLICATE)
+ISSUE #3
 --------------------------------------------------------------------------------
-Title: feat(messaging): automated maintenance ticket dispatching into tenant-admin chat channels
-Labels: automation, messaging, maintenance
+Title: docs(architecture): add Level-1 DFD specification and corrected Chapter 3 system documentation
+Labels: documentation, architecture
 
 Description:
 ### Summary
-Bridge the gap between facilities maintenance and tenant communication by automatically generating structured ticket reference dispatches in the real-time conversation thread whenever a resident reports a repair issue.
+Document the full 10-process RentTrack feature inventory, Level-1 Data Flow Diagram specification, corrected Chapter 3 requirements/DFD/use-case sections, and updated GitHub contribution templates.
 
 ### Acceptance Criteria
-- [x] Updated `requestController.js` to automatically insert `[MAINTENANCE_REQUEST#id]` into the `messages` table on ticket submission.
-- [x] Aggregated maintenance work orders into admin chat conversation previews alongside standard chat messages.
-- [x] Maintained message ordering by latest activity timestamp across direct chats and maintenance alerts.
-- [x] Ensured graceful degradation if notification messaging encounters database locks or exceptions.
-
---------------------------------------------------------------------------------
-ISSUE #4 (FRESH / NON-DUPLICATE)
---------------------------------------------------------------------------------
-Title: perf(api): optimize DDoS rate limiter thresholds and exclude high-frequency polling routes
-Labels: performance, security, infrastructure
-
-Description:
-### Summary
-Upgrade API rate limiting architecture to support active multi-tenant usage without false-positive rate limit locks, while selectively bypassing high-frequency polling heartbeats from strict request quotas.
-
-### Acceptance Criteria
-- [x] Expanded global window limit in `rateLimiter.js` from 300 to 2,500 requests per 15-minute window.
-- [x] Implemented conditional `skip` callback bypassing `/chat` and `/notifications` real-time polling loops.
-- [x] Consolidated role-based authorization hierarchies in `rbacMiddleware.js` strictly across `admin` and `tenant` boundaries.
-- [x] Streamlined JWT session expiration logic for administrative and resident tokens.
-
---------------------------------------------------------------------------------
-ISSUE #5 (FRESH / NON-DUPLICATE)
---------------------------------------------------------------------------------
-Title: style(ui): transition administrative status indicators and stage counters to borderless typography
-Labels: ui, design-system, frontend
-
-Description:
-### Summary
-Refactor user interface status elements across operational views to eliminate visual clutter caused by heavy badge borders and outlines, adopting clean, high-contrast, borderless colored typography.
-
-### Acceptance Criteria
-- [x] Updated CCTV monitor grid camera status indicators (`No Signal` / `REC`) to clean borderless typography.
-- [x] Modernized administrative activity logs event tags, category filters, and status badges.
-- [x] Refactored maintenance Kanban board column counters, live status badges, and ticket unit labels to borderless styling.
-- [x] Streamlined financial and occupancy metric chips in administrative reporting modals.
-- [x] Optimized tenant dashboard container heights to eliminate nested double-scrollbars on desktop viewports.
+- [x] Added comprehensive feature catalogue and Level-1 DFD data flow register in `SYSTEM_FEATURES_AND_DATA_FLOWS.txt`.
+- [x] Added Markdown and Word formats of corrected Chapter 3 sections (`docs/Chapter3_Corrected_Sections.md`, `docs/Chapter3_Corrected_Sections.docx`).
+- [x] Updated Issue and Pull Request templates in `github_contribution_guide.txt` for this 14-commit branch.
 
 ================================================================================
 5. PULL REQUEST DESCRIPTION TEMPLATE
@@ -203,30 +169,27 @@ Refactor user interface status elements across operational views to eliminate vi
 When creating your Pull Request on GitHub, use this description:
 
 Title:
-feat: Room gender governance, digital payments audit, and administrative UI refinement
+feat: Google OAuth2 sign-in, dynamic EMVCo QRPh payments, report header alignment, and system DFD docs
 
 Description:
 ### Summary
-Comprehensive platform enhancement delivering automated room gender policy enforcement, financial payment history audit trails, GCash QR configuration, automated maintenance ticket dispatching into tenant-admin chat, API rate limiting resilience, and borderless design system modernization.
+Delivers Google OAuth2 sign-in across backend and frontend, dynamic EMVCo QRPh payload generation and verified receipt presentation in the tenant payment flow, a scrollable account activity log on the tenant dashboard, inline header action alignment on Admin Reports, and full Level-1 DFD / Chapter 3 documentation across 14 file-specific commits.
 
 ### Linked Issues
-- Closes #1 (Room gender policy governance & database column backfill)
-- Closes #2 (Payment audit logs & administrative GCash QR configuration)
-- Closes #3 (Automated maintenance ticket dispatch to chat channels)
-- Closes #4 (API rate limiter optimization & polling route exclusion)
-- Closes #5 (Borderless status typography and viewport scrollbar polish)
+- Relates to Issue #1 (Google OAuth2 sign-in flow & backend configuration)
+- Relates to Issue #2 (Dynamic EMVCo QRPh payments, activity feed & report header alignment)
+- Relates to Issue #3 (Level-1 DFD specification & corrected Chapter 3 documentation)
 
 ### Key Changes
-- **Room Management & Gender Governance**: Added `roomGenderUtils.js` with automated column backfill, strict gender segregation validations in self-service move-in, and normalized gender metadata across dashboard counters.
-- **Financial & Payment Operations**: Built `GET /api/admin/bills/payments/history` audit endpoint with invoice and tenant association; implemented persistent GCash QR code storage and retrieval for online settlements.
-- **Maintenance & Chat Automation**: Auto-dispatched structured work order references (`[MAINTENANCE_REQUEST#id]`) into direct messaging channels upon ticket submission.
-- **API Infrastructure & Security**: Increased rate limiting threshold to 2,500 requests per 15 minutes, excluded polling routes (`/chat`, `/notifications`), and streamlined RBAC roles to clean `admin` and `tenant` boundaries.
-- **UI Modernization & Responsive Polish**: Modernized status indicators across CCTV camera feeds, Kanban stages, activity logs, and financial report modals with borderless colored typography; resolved nested double-scrollbars on tenant dashboard.
+- **Authentication**: `backend/controllers/authController.js`, `backend/routes/authRoutes.js`, `frontend/src/components/google-sign-in-button.tsx`, `frontend/src/app/(auth)/login/page.tsx`.
+- **Billing, Dashboard & Reports**: `frontend/src/lib/qrph.ts`, `frontend/src/app/tenant/payments/page.tsx`, `frontend/src/app/tenant/dashboard/page.tsx`, `frontend/src/app/admin/reports/page.tsx`, `frontend/package.json`, `frontend/package-lock.json`.
+- **Documentation**: `SYSTEM_FEATURES_AND_DATA_FLOWS.txt`, `docs/Chapter3_Corrected_Sections.md`, `docs/Chapter3_Corrected_Sections.docx`, `github_contribution_guide.txt`.
 
 ### Next Steps after Merge:
 ```bash
 git checkout main
 git pull origin main
 ```
+
 
 
