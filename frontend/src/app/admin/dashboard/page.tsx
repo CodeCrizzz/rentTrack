@@ -62,6 +62,8 @@ import {
   Search,
   Phone,
   Mail,
+  Mars,
+  Venus,
 } from "lucide-react";
 
 export interface RoomTenant {
@@ -74,8 +76,9 @@ export interface RoomTenant {
 export interface RoomMatrixItem {
   id: number;
   room_number: string;
-  type: string;
+  type?: string;
   rental_type?: string;
+  gender?: string | null;
   capacity: number;
   price: string | number;
   floor: string;
@@ -318,35 +321,17 @@ const BedIcon = ({ filled, status }: { filled: boolean; status: string }) => {
 const normalizeFloor = (floorStr?: string | null, roomNumber?: string) => {
   if (floorStr) {
     const clean = floorStr.toLowerCase();
-    if (clean.includes("1") || clean.includes("first") || clean.includes("1st"))
-      return "Floor 1";
-    if (
-      clean.includes("2") ||
-      clean.includes("second") ||
-      clean.includes("2nd")
-    )
-      return "Floor 2";
-    if (clean.includes("3") || clean.includes("third") || clean.includes("3rd"))
-      return "Floor 3";
-    if (
-      clean.includes("4") ||
-      clean.includes("fourth") ||
-      clean.includes("4th")
-    )
-      return "Floor 4";
-    if (clean.includes("5") || clean.includes("fifth") || clean.includes("5th"))
-      return "Floor 5";
-    if (clean.includes("6") || clean.includes("sixth") || clean.includes("6th"))
-      return "Floor 6";
-    if (
-      clean.includes("7") ||
-      clean.includes("seventh") ||
-      clean.includes("7th")
-    )
-      return "Floor 7";
+    const match = clean.match(/\d+/);
+    if (match) return `Floor ${match[0]}`;
+    if (clean.includes("first")) return "Floor 1";
+    if (clean.includes("second")) return "Floor 2";
+    if (clean.includes("third")) return "Floor 3";
   }
   if (roomNumber && roomNumber.length >= 3 && !isNaN(Number(roomNumber[0]))) {
-    return `Floor ${roomNumber[0]}`;
+    const floorDigit = Number(roomNumber[0]);
+    if (floorDigit >= 1) {
+      return `Floor ${floorDigit}`;
+    }
   }
   return "Floor 1";
 };
@@ -380,7 +365,9 @@ export default function AdminDashboard() {
   const router = useRouter();
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [cashflowData, setCashflowData] = useState<any[]>([]);
-  const [dateRange, setDateRange] = useState<"this_year" | "last_year">("this_year");
+  const [dateRange, setDateRange] = useState<"this_year" | "last_year">(
+    "this_year",
+  );
   const [isLoading, setIsLoading] = useState(true);
   const [adminName, setAdminName] = useState("Admin");
 
@@ -473,11 +460,12 @@ export default function AdminDashboard() {
       if (matrixSearchQuery.trim()) {
         const q = matrixSearchQuery.toLowerCase();
         const matchesNumber = room.room_number?.toLowerCase().includes(q);
-        const matchesType = room.type?.toLowerCase().includes(q);
+        const matchesGender = room.gender?.toLowerCase().includes(q);
+        const matchesRental = room.rental_type?.toLowerCase().includes(q);
         const matchesTenant = room.tenants?.some((t) =>
           t.name?.toLowerCase().includes(q),
         );
-        if (!matchesNumber && !matchesType && !matchesTenant) return false;
+        if (!matchesNumber && !matchesGender && !matchesRental && !matchesTenant) return false;
       }
       return true;
     });
@@ -524,7 +512,11 @@ export default function AdminDashboard() {
     const hasBedScroll = bedRows.length >= 3;
     const cardMinHeight = "min-h-[190px]";
 
-    const subType = `${room.type || "Single"} • ${room.rental_type || "Standard"}`;
+    const displayGender = room.gender || "Male Only";
+    const isMale =
+      displayGender.toLowerCase().includes("male") &&
+      !displayGender.toLowerCase().includes("female");
+    const isFemale = displayGender.toLowerCase().includes("female");
 
     return (
       <div
@@ -533,18 +525,27 @@ export default function AdminDashboard() {
         className={`bg-white dark:bg-zinc-900 border border-slate-200/90 dark:border-zinc-800 rounded-xl p-3.5 sm:p-4 flex flex-col justify-between shadow-2xs hover:shadow-md hover:border-blue-400 dark:hover:border-blue-600 transition-all cursor-pointer ${cardMinHeight}`}
       >
         <div>
-          <div className="mb-1">
+          <div className="flex items-center justify-between gap-1.5 mb-2">
             <span className="font-black text-base sm:text-lg font-mono text-slate-900 dark:text-white">
               {room.room_number}
             </span>
+            <div
+              title={displayGender}
+              className="flex items-center justify-center shrink-0"
+            >
+              {isFemale ? (
+                <Venus
+                  className="w-4.5 h-4.5 text-rose-600 dark:text-rose-400"
+                  strokeWidth={2.5}
+                />
+              ) : (
+                <Mars
+                  className="w-4.5 h-4.5 text-blue-600 dark:text-blue-400"
+                  strokeWidth={2.5}
+                />
+              )}
+            </div>
           </div>
-
-          <p
-            title={subType}
-            className="text-xs sm:text-sm text-slate-600 dark:text-zinc-300 font-semibold truncate mb-1.5"
-          >
-            {subType}
-          </p>
 
           <div
             className={`flex flex-col gap-1.5 my-1.5 min-h-[46px] max-h-[46px] ${
@@ -583,7 +584,8 @@ export default function AdminDashboard() {
                   ? "Full"
                   : effectiveStatus === "Available"
                     ? "Vacant"
-                    : "Maintenance"}
+                    : "Maintenance"
+            }
           >
             {effectiveStatus === "Full"
               ? "Full"
@@ -1320,7 +1322,7 @@ export default function AdminDashboard() {
                 href="/admin/billing"
                 className="text-sm text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-1 font-bold"
               >
-                View Billing Ledger →
+                View All Billing →
               </Link>
             </div>
           </div>
@@ -1439,7 +1441,7 @@ export default function AdminDashboard() {
           <div className="relative z-10 flex justify-between items-start mb-2">
             <div>
               <span className="text-sm font-bold uppercase tracking-wider text-slate-600 dark:text-zinc-300">
-                Outstanding Bills
+                Total Outstanding Bills
               </span>
               <div className="text-2xl sm:text-3xl font-black tracking-tight font-mono text-slate-900 dark:text-white mt-1">
                 ₱
@@ -1455,16 +1457,6 @@ export default function AdminDashboard() {
 
           <div className="relative z-10 pt-2.5 border-t border-slate-100 dark:border-zinc-800/80 space-y-1.5">
             <div className="flex items-center justify-between text-xs sm:text-sm font-bold">
-              <span className="text-slate-700 dark:text-zinc-200">
-                Overdue:{" "}
-                <span className="font-mono text-rose-600 dark:text-rose-400 font-bold">
-                  ₱
-                  {computedMetrics.overduePayments.toLocaleString("en-US", {
-                    minimumFractionDigits: 2,
-                  })}
-                </span>
-              </span>
-              <span className="text-slate-400 dark:text-zinc-600">|</span>
               <span className="text-slate-700 dark:text-zinc-200">
                 Unpaid Invoices: {computedMetrics.unpaidBillsCount}
               </span>
@@ -1503,7 +1495,7 @@ export default function AdminDashboard() {
           <div className="relative z-10 flex justify-between items-start mb-2">
             <div>
               <span className="text-sm font-bold uppercase tracking-wider text-slate-600 dark:text-zinc-300">
-                Open Maintenance Requests
+                Maintenance Requests
               </span>
               <div className="text-2xl sm:text-3xl font-black tracking-tight font-mono text-slate-900 dark:text-white mt-1">
                 {computedMetrics.openWorkOrders}{" "}
@@ -1537,14 +1529,14 @@ export default function AdminDashboard() {
                 href="/admin/requests"
                 className="text-sm text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-1 font-bold"
               >
-                View Request Desk →
+                View All Request →
               </Link>
             </div>
           </div>
         </motion.div>
       </div>
 
-      {/* CORE ANALYTICS, ACTION QUEUE & RECENT ACTIVITY */}
+      {/* CORE ANALYTICS, ACTION QUEUE & ACTIVITY */}
       <div
         className="grid grid-cols-1 xl:grid-cols-[var(--cashflow-col)_minmax(0,1.35fr)_minmax(0,1fr)] gap-4"
         style={{ ["--cashflow-col" as any]: "minmax(0, calc(50% + 40px))" }}
@@ -1563,11 +1555,13 @@ export default function AdminDashboard() {
                 </p>
               </div>
 
-              {/* Dropdown Menu (Only This Year and Last Year) */}
+              {/* Dropdown Menu */}
               <div className="w-36 sm:w-40">
                 <DropdownSelect
                   value={dateRange}
-                  onChange={(val) => setDateRange(val as "this_year" | "last_year")}
+                  onChange={(val) =>
+                    setDateRange(val as "this_year" | "last_year")
+                  }
                   options={[
                     { value: "this_year", label: "This Year" },
                     { value: "last_year", label: "Last Year" },
@@ -1577,8 +1571,8 @@ export default function AdminDashboard() {
               </div>
             </div>
 
-            {/* Chart Subpanel (Full Width) */}
-            <div className="w-full h-[330px] sm:h-[355px] min-h-[280px]">
+            {/* Chart Subpanel  */}
+            <div className="w-full h-[290px] sm:h-[310px] min-h-[260px]">
               <ResponsiveContainer width="100%" height="100%">
                 <ComposedChart
                   data={cashflowDataToRender}
@@ -1687,62 +1681,64 @@ export default function AdminDashboard() {
             </div>
 
             {/* 4 KPI Cards Below Chart */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 shrink-0 pt-2">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-2.5 shrink-0 pt-2">
               {/* Total Billed */}
-              <div className="p-2 sm:p-2.5 rounded-xl bg-slate-50 dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 flex items-center gap-2 hover:border-blue-300 dark:hover:border-blue-800/60 transition-colors shadow-2xs">
-                <div className="w-8 h-8 rounded-lg bg-blue-50 dark:bg-blue-500/10 text-blue-600 flex items-center justify-center shrink-0 border border-blue-200/50 dark:border-blue-500/20">
-                  <FileText className="w-4 h-4" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <span className="text-xs sm:text-sm font-bold uppercase tracking-wider text-slate-600 dark:text-zinc-300 block leading-tight truncate">
+              <div className="p-2 sm:p-2.5 rounded-xl bg-slate-50 dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 flex flex-col justify-between hover:border-blue-300 dark:hover:border-blue-800/60 transition-colors shadow-2xs">
+                <div className="flex items-center justify-between gap-1 mb-1">
+                  <span className="text-[10px] sm:text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-zinc-400 leading-tight block">
                     Total Due Amount
                   </span>
-                  <p className="font-mono font-extrabold text-sm sm:text-base text-slate-900 dark:text-white mt-0.5 truncate">
-                    ₱{cashflowTotals.billed.toLocaleString()}
-                  </p>
+                  <div className="w-6 h-6 rounded-md bg-blue-50 dark:bg-blue-500/10 text-blue-600 flex items-center justify-center shrink-0 border border-blue-200/50 dark:border-blue-500/20">
+                    <FileText className="w-3.5 h-3.5" />
+                  </div>
                 </div>
+                <p className="font-mono font-extrabold text-xs sm:text-sm lg:text-base text-slate-900 dark:text-white leading-tight mt-0.5">
+                  ₱{cashflowTotals.billed.toLocaleString()}
+                </p>
               </div>
 
               {/* Collected Amount */}
-              <div className="p-2 sm:p-2.5 rounded-xl bg-slate-50 dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 flex items-center gap-2 hover:border-emerald-300 dark:hover:border-emerald-800/60 transition-colors shadow-2xs">
-                <div className="w-8 h-8 rounded-lg bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 flex items-center justify-center shrink-0 border border-emerald-200/50 dark:border-emerald-500/20">
-                  <CheckCircle2 className="w-4 h-4" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <span className="text-xs sm:text-sm font-bold uppercase tracking-wider text-slate-600 dark:text-zinc-300 block leading-tight truncate">
+              <div className="p-2 sm:p-2.5 rounded-xl bg-slate-50 dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 flex flex-col justify-between hover:border-emerald-300 dark:hover:border-emerald-800/60 transition-colors shadow-2xs">
+                <div className="flex items-center justify-between gap-1 mb-1">
+                  <span className="text-[10px] sm:text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-zinc-400 leading-tight block">
                     Collected Amount
                   </span>
-                  <p className="font-mono font-extrabold text-sm sm:text-base text-emerald-600 dark:text-emerald-400 mt-0.5 truncate">
-                    ₱{cashflowTotals.collected.toLocaleString()}
-                  </p>
+                  <div className="w-6 h-6 rounded-md bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 flex items-center justify-center shrink-0 border border-emerald-200/50 dark:border-emerald-500/20">
+                    <CheckCircle2 className="w-3.5 h-3.5" />
+                  </div>
                 </div>
+                <p className="font-mono font-extrabold text-xs sm:text-sm lg:text-base text-emerald-600 dark:text-emerald-400 leading-tight mt-0.5">
+                  ₱{cashflowTotals.collected.toLocaleString()}
+                </p>
               </div>
 
               {/* Overdue Amount */}
-              <div className="p-2 sm:p-2.5 rounded-xl bg-slate-50 dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 flex items-center gap-2 hover:border-rose-300 dark:hover:border-rose-800/60 transition-colors shadow-2xs">
-                <div className="w-8 h-8 rounded-lg bg-rose-50 dark:bg-rose-500/10 text-rose-600 flex items-center justify-center shrink-0 border border-rose-200/50 dark:border-rose-500/20">
-                  <AlertTriangle className="w-4 h-4" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <span className="text-xs sm:text-sm font-bold uppercase tracking-wider text-slate-600 dark:text-zinc-300 block leading-tight truncate">
+              <div className="p-2 sm:p-2.5 rounded-xl bg-slate-50 dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 flex flex-col justify-between hover:border-rose-300 dark:hover:border-rose-800/60 transition-colors shadow-2xs">
+                <div className="flex items-center justify-between gap-1 mb-1">
+                  <span className="text-[10px] sm:text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-zinc-400 leading-tight block">
                     Overdue Amount
                   </span>
-                  <p className="font-mono font-extrabold text-sm sm:text-base text-rose-600 dark:text-rose-400 mt-0.5 truncate">
-                    ₱{cashflowTotals.outstanding.toLocaleString()}
-                  </p>
+                  <div className="w-6 h-6 rounded-md bg-rose-50 dark:bg-rose-500/10 text-rose-600 flex items-center justify-center shrink-0 border border-rose-200/50 dark:border-rose-500/20">
+                    <AlertTriangle className="w-3.5 h-3.5" />
+                  </div>
                 </div>
+                <p className="font-mono font-extrabold text-xs sm:text-sm lg:text-base text-rose-600 dark:text-rose-400 leading-tight mt-0.5">
+                  ₱{cashflowTotals.outstanding.toLocaleString()}
+                </p>
               </div>
 
               {/* Collection Rate */}
-              <div className="p-2 sm:p-2.5 rounded-xl bg-slate-50 dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 flex items-center gap-2 hover:border-teal-300 dark:hover:border-teal-800/60 transition-colors shadow-2xs">
-                <div className="w-8 h-8 rounded-lg bg-teal-50 dark:bg-teal-500/10 text-teal-600 flex items-center justify-center shrink-0 border border-teal-200/50 dark:border-teal-500/20">
-                  <Percent className="w-4 h-4" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <span className="text-xs sm:text-sm font-bold uppercase tracking-wider text-slate-600 dark:text-zinc-300 block leading-tight truncate">
+              <div className="p-2 sm:p-2.5 rounded-xl bg-slate-50 dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 flex flex-col justify-between hover:border-teal-300 dark:hover:border-teal-800/60 transition-colors shadow-2xs">
+                <div className="flex items-center justify-between gap-1 mb-1">
+                  <span className="text-[10px] sm:text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-zinc-400 leading-tight block">
                     Collection Rate
                   </span>
-                  <p className="font-mono font-extrabold text-sm sm:text-base text-teal-600 dark:text-teal-400 mt-0.5 truncate">
+                  <div className="w-6 h-6 rounded-md bg-teal-50 dark:bg-teal-500/10 text-teal-600 flex items-center justify-center shrink-0 border border-teal-200/50 dark:border-teal-500/20">
+                    <Percent className="w-3.5 h-3.5" />
+                  </div>
+                </div>
+                <div>
+                  <p className="font-mono font-extrabold text-xs sm:text-sm lg:text-base text-teal-600 dark:text-teal-400 leading-tight">
                     {cashflowTotals.rate}%
                   </p>
                   <div className="w-full bg-slate-200 dark:bg-zinc-700 h-1.5 rounded-full mt-1 overflow-hidden">
@@ -1765,7 +1761,7 @@ export default function AdminDashboard() {
           <div className="flex items-center justify-between mb-2.5 shrink-0">
             <div className="flex items-center gap-2">
               <h2 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white">
-                Urgent Action Center
+                Action Center
               </h2>
             </div>
           </div>
@@ -1908,7 +1904,7 @@ export default function AdminDashboard() {
           {/* Header */}
           <div className="flex items-center justify-between mb-2.5 shrink-0">
             <h2 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white">
-              Recent Activity
+              Activity
             </h2>
             <Link
               href="/admin/activity-logs"
@@ -2021,7 +2017,7 @@ export default function AdminDashboard() {
                 type="text"
                 value={matrixSearchQuery}
                 onChange={(e) => setMatrixSearchQuery(e.target.value)}
-                placeholder="Search room, tenant or room type..."
+                placeholder="Search room, tenant or gender..."
                 className="w-full bg-slate-50 dark:bg-zinc-800/60 border border-slate-200 dark:border-zinc-700/80 rounded-xl pl-9 pr-3 py-2 text-sm text-slate-900 dark:text-zinc-100 placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-blue-500"
               />
             </div>
@@ -2207,9 +2203,8 @@ export default function AdminDashboard() {
                         {normalizeFloor(
                           activeRoomModal.floor,
                           activeRoomModal.room_number,
-                        )}{" "}
-                        • {activeRoomModal.type} •{" "}
-                        {activeRoomModal.rental_type || "Whole Room"}
+                        )}
+                        {activeRoomModal.gender ? ` • ${activeRoomModal.gender}` : ""}
                       </p>
                     </div>
                   </div>
