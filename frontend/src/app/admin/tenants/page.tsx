@@ -22,12 +22,10 @@ import {
   Check,
   X,
   BedDouble,
-  CreditCard,
   MessageSquare,
   Send,
   Eye,
   Edit,
-  Trash2,
   DoorOpen,
   AlertCircle,
   ShieldCheck,
@@ -57,7 +55,6 @@ interface Tenant {
   created_at: string;
   room_number: string | null;
   room_id: number | null;
-  room_type?: string;
   rental_type?: string;
   floor?: string;
   gender?: string;
@@ -81,12 +78,12 @@ interface Tenant {
 interface Room {
   id: number;
   room_number: string;
-  type: string;
   rental_type: string;
   price: string | number;
   floor: string | null;
   capacity: number;
   status: string;
+  gender?: string | null;
 }
 
 function TenantsContent() {
@@ -98,16 +95,17 @@ function TenantsContent() {
   const [rooms, setRooms] = useState<Room[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [adminName, setAdminName] = useState("Admin");
-  const [pendingPaymentsCount, setPendingPaymentsCount] = useState(0);
 
   // Selection & Active Dossier
   const [selectedTenant, setSelectedTenant] = useState<Tenant | null>(null);
 
   // Tabs & Filters (Matching Mockup: All Tenants | Active | Pending | Moved Out)
-  const [activeTab, setActiveTab] = useState<"all" | "active" | "pending" | "moved_out">("all");
+  const [activeTab, setActiveTab] = useState<
+    "all" | "active" | "pending" | "moved_out"
+  >("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("All Statuses");
-  const [roomTypeFilter, setRoomTypeFilter] = useState("All Room Types");
+  const [genderFilter, setGenderFilter] = useState("All Genders");
   const [floorFilter, setFloorFilter] = useState("All Floors");
 
   // Modals
@@ -121,11 +119,12 @@ function TenantsContent() {
   } | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isStatusUpdating, setIsStatusUpdating] = useState<number | null>(null);
-  const [isDeletingTenantId, setIsDeletingTenantId] = useState<number | null>(null);
   const [error, setError] = useState("");
 
   const [formData, setFormData] = useState({
     name: "",
+    first_name: "",
+    last_name: "",
     email: "",
     phone: "",
     password: "",
@@ -220,19 +219,9 @@ function TenantsContent() {
     }
   };
 
-  const fetchPendingPayments = async () => {
-    try {
-      const { data } = await api.get("/admin/bills/payments/pending-count");
-      if (data && typeof data.pendingCount !== "undefined") {
-        setPendingPaymentsCount(data.pendingCount);
-      }
-    } catch (err) {}
-  };
-
   useEffect(() => {
     fetchTenants();
     fetchRooms();
-    fetchPendingPayments();
   }, []);
 
   // Handle URL search params
@@ -262,7 +251,9 @@ function TenantsContent() {
     const totalBeds = rooms.reduce((acc, r) => acc + (r.capacity || 0), 0);
     const activeCount = tenants.filter((t) => t.status === "Active").length;
     const pendingCount = tenants.filter((t) => t.status === "Pending").length;
-    const movedOutCount = tenants.filter((t) => t.status === "Moved Out").length;
+    const movedOutCount = tenants.filter(
+      (t) => t.status === "Moved Out",
+    ).length;
     const total = tenants.length;
 
     return {
@@ -274,50 +265,37 @@ function TenantsContent() {
     };
   }, [tenants, rooms]);
 
-  // Unique Room Types & Floors for Dropdowns
-  const uniqueRoomTypes = useMemo(() => {
-    const set = new Set<string>();
-    rooms.forEach((r) => {
-      if (r.type) set.add(r.type.includes("Room") ? r.type : `${r.type} Room`);
-    });
-    // Add default fallbacks if room inventory is small
-    ["Single Room", "Double Room", "Triple Room"].forEach((t) => set.add(t));
-    return Array.from(set).sort();
-  }, [rooms]);
-
   const uniqueFloors = useMemo(() => {
     const set = new Set<string>();
     rooms.forEach((r) => {
-      if (r.floor) {
-        const match = r.floor.match(/\d+/);
-        set.add(match ? `Floor ${match[0]}` : r.floor);
-      } else if (r.room_number && r.room_number.length >= 3 && !isNaN(Number(r.room_number[0]))) {
+      const match = (r.floor || "").match(/\d+/);
+      if (match) {
+        set.add(`Floor ${match[0]}`);
+      } else if (
+        r.room_number &&
+        r.room_number.length >= 3 &&
+        !isNaN(Number(r.room_number[0]))
+      ) {
         set.add(`Floor ${r.room_number[0]}`);
       }
     });
-    ["Floor 1", "Floor 2", "Floor 3"].forEach((f) => set.add(f));
+    if (set.size === 0) {
+      ["Floor 1", "Floor 2", "Floor 3"].forEach((f) => set.add(f));
+    }
     return Array.from(set).sort((a, b) => {
-      const numA = parseInt(a.replace(/\D/g, "")) || 0;
-      const numB = parseInt(b.replace(/\D/g, "")) || 0;
+      const numA = parseInt(a.replace(/\D/g, ""), 10) || 0;
+      const numB = parseInt(b.replace(/\D/g, ""), 10) || 0;
       return numA - numB;
     });
   }, [rooms]);
 
-  // Helper: Format Tenant Room Type & Rental Model
-  const getTenantRoomType = (t: Tenant) => {
-    if (t.room_type) {
-      return t.room_type.includes("Room") ? t.room_type : `${t.room_type} Room`;
-    }
-    const matchedRoom = rooms.find((r) => r.room_number === t.room_number);
-    if (matchedRoom?.type) {
-      return matchedRoom.type.includes("Room") ? matchedRoom.type : `${matchedRoom.type} Room`;
-    }
-    return "Single Room";
-  };
-
   const getTenantRentalModel = (t: Tenant) => {
     if (t.rental_type) return t.rental_type;
-    if (t.bed_space && t.bed_space !== "N/A" && t.bed_space.toLowerCase().includes("bed")) {
+    if (
+      t.bed_space &&
+      t.bed_space !== "N/A" &&
+      t.bed_space.toLowerCase().includes("bed")
+    ) {
       return "Bedspace";
     }
     const matchedRoom = rooms.find((r) => r.room_number === t.room_number);
@@ -329,7 +307,11 @@ function TenantsContent() {
     if (t.floor) return t.floor;
     const matchedRoom = rooms.find((r) => r.room_number === t.room_number);
     if (matchedRoom?.floor) return matchedRoom.floor;
-    if (t.room_number && t.room_number.length >= 3 && !isNaN(Number(t.room_number[0]))) {
+    if (
+      t.room_number &&
+      t.room_number.length >= 3 &&
+      !isNaN(Number(t.room_number[0]))
+    ) {
       return `Floor ${t.room_number[0]}`;
     }
     return "Floor 1";
@@ -344,19 +326,21 @@ function TenantsContent() {
       if (activeTab === "moved_out" && t.status !== "Moved Out") return false;
 
       // 2. Status Dropdown Filter
-      if (statusFilter !== "All Statuses" && t.status !== statusFilter) return false;
+      if (statusFilter !== "All Statuses" && t.status !== statusFilter)
+        return false;
 
-      // 3. Room Type Dropdown Filter
-      if (roomTypeFilter !== "All Room Types") {
-        const effectiveType = getTenantRoomType(t);
-        if (effectiveType.toLowerCase() !== roomTypeFilter.toLowerCase()) return false;
+      // 3. Gender Dropdown Filter
+      if (genderFilter !== "All Genders") {
+        if ((t.gender || "").toLowerCase() !== genderFilter.toLowerCase())
+          return false;
       }
 
       // 4. Floor Dropdown Filter
       if (floorFilter !== "All Floors") {
         const effectiveFloor = getTenantFloor(t);
         const matchNumber = floorFilter.match(/\d+/);
-        if (matchNumber && !effectiveFloor.includes(matchNumber[0])) return false;
+        if (matchNumber && !effectiveFloor.includes(matchNumber[0]))
+          return false;
       }
 
       // 5. Search Bar Query (name, email, phone, room number)
@@ -366,12 +350,21 @@ function TenantsContent() {
         const emailMatch = (t.email || "").toLowerCase().includes(q);
         const phoneMatch = (t.phone || "").toLowerCase().includes(q);
         const roomMatch = (t.room_number || "").toLowerCase().includes(q);
-        if (!nameMatch && !emailMatch && !phoneMatch && !roomMatch) return false;
+        if (!nameMatch && !emailMatch && !phoneMatch && !roomMatch)
+          return false;
       }
 
       return true;
     });
-  }, [tenants, activeTab, statusFilter, roomTypeFilter, floorFilter, searchQuery, rooms]);
+  }, [
+    tenants,
+    activeTab,
+    statusFilter,
+    genderFilter,
+    floorFilter,
+    searchQuery,
+    rooms,
+  ]);
 
   // Handle Tab Switch
   const handleTabChange = (tab: "all" | "active" | "pending" | "moved_out") => {
@@ -387,6 +380,8 @@ function TenantsContent() {
     setEditingTenant(null);
     setFormData({
       name: "",
+      first_name: "",
+      last_name: "",
       email: "",
       phone: "",
       password: "",
@@ -404,8 +399,15 @@ function TenantsContent() {
 
   const handleOpenEditModal = (tenant: Tenant) => {
     setEditingTenant(tenant);
+    const parts = (tenant.name || "").trim().split(/\s+/);
+    const firstName =
+      parts.length > 1 ? parts.slice(0, -1).join(" ") : parts[0] || "";
+    const lastName = parts.length > 1 ? parts[parts.length - 1] : "";
+
     setFormData({
       name: tenant.name,
+      first_name: firstName,
+      last_name: lastName,
       email: tenant.email,
       phone: formatPhoneNumber(tenant.phone, ""),
       password: "",
@@ -421,38 +423,105 @@ function TenantsContent() {
     setIsModalOpen(true);
   };
 
+  const handleRoomSelect = (roomIdStr: string) => {
+    if (!roomIdStr) {
+      setFormData((prev) => ({
+        ...prev,
+        room_id: "",
+        monthly_rent: "",
+      }));
+      return;
+    }
+    const matchedRoom = rooms.find((r) => String(r.id) === String(roomIdStr));
+    setFormData((prev) => ({
+      ...prev,
+      room_id: roomIdStr,
+      monthly_rent: matchedRoom
+        ? String(matchedRoom.price || "")
+        : prev.monthly_rent,
+    }));
+  };
+
   const handleSubmitTenant = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.name || !formData.phone) {
+    const fullName =
+      `${formData.first_name.trim()} ${formData.last_name.trim()}`.trim() ||
+      formData.name.trim();
+
+    if (
+      !formData.first_name.trim() ||
+      !formData.last_name.trim() ||
+      !formData.phone
+    ) {
       toast.warning("Incomplete Resident Profile", {
-        description: "Please fill in the resident's full name and contact number.",
+        description:
+          "Please fill in the resident's first name, last name, and contact number.",
       });
       return;
+    }
+
+    if (formData.room_id) {
+      const targetRoom = rooms.find((r) => String(r.id) === String(formData.room_id));
+      if (targetRoom) {
+        const isMaleResident = formData.gender === "Male";
+        const isFemaleResident = formData.gender === "Female";
+        const rGender = (targetRoom.gender || "").toLowerCase();
+        const isMaleRoom = rGender.includes("male") && !rGender.includes("female");
+        const isFemaleRoom = rGender.includes("female");
+
+        if (isMaleResident && isFemaleRoom) {
+          setError("Cannot assign a male boarder to a Female Only room. Male and female boarders must be in separate rooms.");
+          toast.error("Gender Mismatch", {
+            description: "Cannot assign a male boarder to a Female Only room.",
+          });
+          return;
+        }
+        if (isFemaleResident && isMaleRoom) {
+          setError("Cannot assign a female boarder to a Male Only room. Male and female boarders must be in separate rooms.");
+          toast.error("Gender Mismatch", {
+            description: "Cannot assign a female boarder to a Male Only room.",
+          });
+          return;
+        }
+      }
     }
 
     setIsSubmitting(true);
     setError("");
 
+    const payload = {
+      ...formData,
+      name: fullName,
+      first_name: formData.first_name.trim(),
+      last_name: formData.last_name.trim(),
+    };
+
     try {
       if (editingTenant) {
-        await api.put(`/admin/tenants/${editingTenant.id}`, formData);
+        await api.put(`/admin/tenants/${editingTenant.id}`, payload);
         toast.success("Resident Profile Updated", {
-          description: `${formData.name}'s profile and lease details have been saved.`,
+          description: `${fullName}'s profile and lease details have been saved.`,
         });
       } else {
-        await api.post("/admin/tenants", formData);
+        await api.post("/admin/tenants", payload);
         toast.success("Resident Registered Successfully", {
-          description: `${formData.name} has been enrolled in the directory.`,
+          description: `${fullName} has been enrolled in the directory.`,
         });
       }
       setIsModalOpen(false);
       fetchTenants(true);
     } catch (err: any) {
-      const errMsg = err.response?.data?.message || "Failed to save tenant information.";
+      const errMsg =
+        err.response?.data?.message || "Failed to save tenant information.";
       setError(errMsg);
-      toast.error(editingTenant ? "Failed to Update Resident" : "Failed to Register Resident", {
-        description: errMsg,
-      });
+      toast.error(
+        editingTenant
+          ? "Failed to Update Resident"
+          : "Failed to Register Resident",
+        {
+          description: errMsg,
+        },
+      );
     } finally {
       setIsSubmitting(false);
     }
@@ -466,10 +535,12 @@ function TenantsContent() {
       const status = confirmStatus.action === "Approve" ? "Active" : "Declined";
       await api.put(`/admin/tenants/${confirmStatus.id}`, { status });
       toast.success(
-        confirmStatus.action === "Approve" ? "Application Approved" : "Application Declined",
+        confirmStatus.action === "Approve"
+          ? "Account Approved"
+          : "Account Rejected",
         {
-          description: `Resident application for ${confirmStatus.name} was ${confirmStatus.action === "Approve" ? "approved" : "declined"}.`,
-        }
+          description: `Account for ${confirmStatus.name} was ${confirmStatus.action === "Approve" ? "approved" : "rejected"}.`,
+        },
       );
       fetchTenants(true);
       if (selectedTenant?.id === confirmStatus.id) {
@@ -485,32 +556,6 @@ function TenantsContent() {
       setConfirmStatus(null);
     }
   };
-
-  // Delete Tenant
-  const handleDeleteTenant = async (tenant: Tenant) => {
-    if (!window.confirm(`Permanently remove ${tenant.name} from residents directory?`)) {
-      return;
-    }
-    setIsDeletingTenantId(tenant.id);
-    try {
-      await api.delete(`/admin/tenants/${tenant.id}`);
-      toast.success("Resident Record Removed", {
-        description: `Resident ${tenant.name} has been deleted from the directory.`,
-      });
-      fetchTenants(true);
-      if (selectedTenant?.id === tenant.id) {
-        setSelectedTenant(null);
-      }
-    } catch (err: any) {
-      toast.error("Deletion Failed", {
-        description: err.response?.data?.message || "Could not delete resident record.",
-      });
-    } finally {
-      setIsDeletingTenantId(null);
-    }
-  };
-
-
 
   // Helper for Initials / Avatar: Default profile picture for all tenants is a single letter
   const getInitials = (name?: string) => {
@@ -545,13 +590,21 @@ function TenantsContent() {
       return {
         relation: tenant.emergency_contact_relation || "Mother",
         name: tenant.emergency_contact_name || "Maria Dela Cruz",
-        phone: formatPhoneNumber(tenant.emergency_contact_phone, "+63 905 111 2233"),
+        phone: formatPhoneNumber(
+          tenant.emergency_contact_phone,
+          "+63 905 111 2233",
+        ),
       };
     }
 
     const phoneMatch = raw.match(/\+?\d[\d\s-]{8,}/);
-    const rawPhone = phoneMatch ? phoneMatch[0] : (tenant.emergency_contact_phone || "+63 905 111 2233");
-    let clean = raw.replace(/\(?\+?\d[\d\s-]{8,}\)?/, "").replace(/[()]/g, "").trim();
+    const rawPhone = phoneMatch
+      ? phoneMatch[0]
+      : tenant.emergency_contact_phone || "+63 905 111 2233";
+    let clean = raw
+      .replace(/\(?\+?\d[\d\s-]{8,}\)?/, "")
+      .replace(/[()]/g, "")
+      .trim();
     let relation = tenant.emergency_contact_relation || "Mother";
     if (clean.includes(":")) {
       const parts = clean.split(":");
@@ -575,7 +628,8 @@ function TenantsContent() {
             Manage Tenants
           </h1>
           <p className="text-sm sm:text-base text-slate-500 dark:text-zinc-400 font-medium mt-1">
-            Real-time directory overview of active residents, pending applications, and lease statuses.
+            Real-time directory overview of active residents, pending
+            applications, and lease statuses.
           </p>
         </div>
 
@@ -592,12 +646,15 @@ function TenantsContent() {
         </div>
       </div>
 
-      {/* 2. FOUR KPI CARDS RIBBON (Exact match to Mockup UI) */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5 shrink-0">
+      {/* 2. THREE KPI CARDS RIBBON (Exact match to Mockup UI) */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 shrink-0">
         {/* Card 1: Total Active Tenants */}
         <div className="bg-white dark:bg-zinc-900 border border-slate-200/90 dark:border-zinc-800 rounded-xl pl-4 pr-3 py-3 shadow-2xs flex items-start justify-between relative overflow-hidden">
           {/* Editorial Dossier Spine & Swiss Registry Tab */}
-          <div className="pointer-events-none select-none absolute inset-0 overflow-hidden" aria-hidden="true">
+          <div
+            className="pointer-events-none select-none absolute inset-0 overflow-hidden"
+            aria-hidden="true"
+          >
             <div className="absolute inset-y-0 left-0 w-24 bg-gradient-to-r from-blue-50/75 via-blue-50/20 to-transparent dark:from-blue-500/[0.08] dark:via-blue-500/[0.02] dark:to-transparent" />
             <div className="absolute left-0 inset-y-2 w-[3.5px] rounded-r-full bg-blue-500 dark:bg-blue-400" />
             <div className="absolute top-3 right-12 left-28 h-px bg-gradient-to-r from-transparent via-blue-500/15 to-blue-500/25 dark:via-blue-400/15 dark:to-blue-400/25" />
@@ -639,7 +696,10 @@ function TenantsContent() {
         {/* Card 2: Pending Applications */}
         <div className="bg-white dark:bg-zinc-900 border border-slate-200/90 dark:border-zinc-800 rounded-xl pl-4 pr-3 py-3 shadow-2xs flex items-start justify-between relative overflow-hidden">
           {/* Editorial Dossier Spine & Swiss Registry Tab */}
-          <div className="pointer-events-none select-none absolute inset-0 overflow-hidden" aria-hidden="true">
+          <div
+            className="pointer-events-none select-none absolute inset-0 overflow-hidden"
+            aria-hidden="true"
+          >
             <div className="absolute inset-y-0 left-0 w-24 bg-gradient-to-r from-amber-50/75 via-amber-50/20 to-transparent dark:from-amber-500/[0.08] dark:via-amber-500/[0.02] dark:to-transparent" />
             <div className="absolute left-0 inset-y-2 w-[3.5px] rounded-r-full bg-amber-500 dark:bg-amber-400" />
             <div className="absolute top-3 right-12 left-28 h-px bg-gradient-to-r from-transparent via-amber-500/15 to-amber-500/25 dark:via-amber-400/15 dark:to-amber-400/25" />
@@ -667,41 +727,13 @@ function TenantsContent() {
           </div>
         </div>
 
-        {/* Card 3: Payment Receipts (Pending Verification) */}
-        <div className="bg-white dark:bg-zinc-900 border border-slate-200/90 dark:border-zinc-800 rounded-xl pl-4 pr-3 py-3 shadow-2xs flex items-start justify-between relative overflow-hidden">
-          {/* Editorial Dossier Spine & Swiss Registry Tab */}
-          <div className="pointer-events-none select-none absolute inset-0 overflow-hidden" aria-hidden="true">
-            <div className="absolute inset-y-0 left-0 w-24 bg-gradient-to-r from-blue-50/75 via-blue-50/20 to-transparent dark:from-blue-500/[0.08] dark:via-blue-500/[0.02] dark:to-transparent" />
-            <div className="absolute left-0 inset-y-2 w-[3.5px] rounded-r-full bg-blue-500 dark:bg-blue-400" />
-            <div className="absolute top-3 right-12 left-28 h-px bg-gradient-to-r from-transparent via-blue-500/15 to-blue-500/25 dark:via-blue-400/15 dark:to-blue-400/25" />
-            <div className="absolute bottom-2.5 right-3 grid grid-cols-2 gap-1 opacity-30 dark:opacity-35">
-              <span className="w-1.5 h-1.5 rounded-[1px] bg-blue-500 dark:bg-blue-400" />
-              <span className="w-1.5 h-1.5 rounded-[1px] bg-blue-500 dark:bg-blue-400" />
-              <span className="w-1.5 h-1.5 rounded-[1px] bg-blue-500/40 dark:bg-blue-400/40" />
-              <span className="w-1.5 h-1.5 rounded-[1px] bg-blue-500 dark:bg-blue-400" />
-            </div>
-          </div>
-          <div className="relative z-10">
-            <span className="text-sm font-bold text-slate-500 dark:text-zinc-400 block uppercase tracking-wider">
-              Payment Receipts
-            </span>
-            <div className="text-2xl sm:text-3xl font-black text-slate-950 dark:text-white mt-0.5">
-              {pendingPaymentsCount}
-            </div>
-            <div className="flex items-center gap-1.5 mt-1.5 text-sm font-bold text-blue-600 dark:text-blue-400">
-              <span>🔷</span>
-              <span>{pendingPaymentsCount} awaiting review</span>
-            </div>
-          </div>
-          <div className="relative z-10 w-10 h-10 rounded-xl bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0 border border-blue-100 dark:border-blue-800/40">
-            <Receipt className="w-5 h-5 stroke-[2.2]" />
-          </div>
-        </div>
-
         {/* Card 4: Moved Out (This Month) */}
         <div className="bg-white dark:bg-zinc-900 border border-slate-200/90 dark:border-zinc-800 rounded-xl pl-4 pr-3 py-3 shadow-2xs flex items-start justify-between relative overflow-hidden">
           {/* Editorial Dossier Spine & Swiss Registry Tab */}
-          <div className="pointer-events-none select-none absolute inset-0 overflow-hidden" aria-hidden="true">
+          <div
+            className="pointer-events-none select-none absolute inset-0 overflow-hidden"
+            aria-hidden="true"
+          >
             <div className="absolute inset-y-0 left-0 w-24 bg-gradient-to-r from-purple-50/75 via-purple-50/20 to-transparent dark:from-purple-500/[0.08] dark:via-purple-500/[0.02] dark:to-transparent" />
             <div className="absolute left-0 inset-y-2 w-[3.5px] rounded-r-full bg-purple-500 dark:bg-purple-400" />
             <div className="absolute top-3 right-12 left-28 h-px bg-gradient-to-r from-transparent via-purple-500/15 to-purple-500/25 dark:via-purple-400/15 dark:to-purple-400/25" />
@@ -784,12 +816,12 @@ function TenantsContent() {
               />
             </div>
 
-            {/* Room Types Dropdown */}
-            <div className="w-40 sm:w-48">
+            {/* Gender Dropdown */}
+            <div className="w-36 sm:w-44">
               <CustomSelect
-                value={roomTypeFilter}
-                onChange={(val) => setRoomTypeFilter(val)}
-                options={["All Room Types", ...uniqueRoomTypes]}
+                value={genderFilter}
+                onChange={(val) => setGenderFilter(val)}
+                options={["All Genders", "Male", "Female"]}
                 className="w-full px-3 py-2 text-sm sm:text-base font-semibold rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-slate-800 dark:text-zinc-200 outline-none"
               />
             </div>
@@ -917,7 +949,7 @@ function TenantsContent() {
                 <tr className="text-sm font-bold text-slate-800 dark:text-zinc-200">
                   <th className="py-3 px-3.5 pl-4">Tenant</th>
                   <th className="py-3 px-3.5">Room</th>
-                  <th className="py-3 px-3.5">Room Type</th>
+                  <th className="py-3 px-3.5">Gender</th>
                   <th className="py-3 px-3.5">Rental Model</th>
                   <th className="py-3 px-3.5">Status</th>
                   <th className="py-3 px-3.5">Monthly Rent</th>
@@ -936,7 +968,10 @@ function TenantsContent() {
                   ))
                 ) : filteredTenants.length === 0 ? (
                   <tr>
-                    <td colSpan={8} className="py-12 text-center text-sm sm:text-base font-medium text-slate-400">
+                    <td
+                      colSpan={8}
+                      className="py-12 text-center text-sm sm:text-base font-medium text-slate-400"
+                    >
                       No tenants found matching your filter criteria.
                     </td>
                   </tr>
@@ -971,7 +1006,7 @@ function TenantsContent() {
                               return (
                                 <div
                                   className={`w-10 h-10 rounded-full font-bold text-sm flex items-center justify-center shrink-0 shadow-2xs ${getAvatarBgClass(
-                                    tenant.name
+                                    tenant.name,
                                   )}`}
                                 >
                                   {getInitials(tenant.name)}
@@ -994,9 +1029,9 @@ function TenantsContent() {
                           {tenant.room_number ? tenant.room_number : "—"}
                         </td>
 
-                        {/* Room Type */}
+                        {/* Gender */}
                         <td className="py-3 px-3.5 text-sm sm:text-[15px] font-medium text-slate-700 dark:text-zinc-300">
-                          {getTenantRoomType(tenant)}
+                          {tenant.gender || "Not Specified"}
                         </td>
 
                         {/* Rental Model */}
@@ -1007,25 +1042,23 @@ function TenantsContent() {
                         {/* Status Badge */}
                         <td className="py-3 px-3.5">
                           {tenant.status === "Active" && (
-                            <span className="px-3 py-1 rounded-full text-xs sm:text-sm font-bold bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300 border border-emerald-200/70 dark:border-emerald-800/70 inline-flex items-center gap-1.5">
-                              <span className="w-2 h-2 rounded-full bg-emerald-500" />
+                            <span className="text-xs sm:text-sm font-bold text-emerald-600 dark:text-emerald-400">
                               Active
                             </span>
                           )}
                           {tenant.status === "Pending" && (
-                            <span className="px-3 py-1 rounded-full text-xs sm:text-sm font-bold bg-amber-50 text-amber-700 dark:bg-amber-950/60 dark:text-amber-300 border border-amber-200/70 dark:border-amber-800/70 inline-flex items-center gap-1.5">
-                              <span className="w-2 h-2 rounded-full bg-amber-500" />
+                            <span className="text-xs sm:text-sm font-bold text-amber-600 dark:text-amber-400">
                               Pending
                             </span>
                           )}
-                          {(tenant.status === "Moved Out" || tenant.status === "Inactive") && (
-                            <span className="px-3 py-1 rounded-full text-xs sm:text-sm font-bold bg-slate-100 text-slate-700 dark:bg-zinc-800 dark:text-zinc-300 border border-slate-200 dark:border-zinc-700 inline-flex items-center gap-1.5">
-                              <DoorOpen className="w-4 h-4" />
+                          {(tenant.status === "Moved Out" ||
+                            tenant.status === "Inactive") && (
+                            <span className="text-xs sm:text-sm font-bold text-slate-500 dark:text-zinc-400">
                               Moved Out
                             </span>
                           )}
                           {tenant.status === "Declined" && (
-                            <span className="px-3 py-1 rounded-full text-xs sm:text-sm font-bold bg-rose-50 text-rose-700 dark:bg-rose-950/60 dark:text-rose-300 border border-rose-200/70 inline-flex items-center gap-1.5">
+                            <span className="text-xs sm:text-sm font-bold text-rose-600 dark:text-rose-400">
                               Declined
                             </span>
                           )}
@@ -1060,24 +1093,7 @@ function TenantsContent() {
                               onClick={(e) => e.stopPropagation()}
                               className="w-48 min-w-48 bg-white dark:bg-zinc-900 rounded-xl shadow-xl border border-slate-200 dark:border-zinc-800 py-1.5 px-1 text-xs sm:text-sm text-left z-[100]"
                             >
-                              <DropdownMenuItem
-                                onClick={() => {
-                                  setSelectedTenant(tenant);
-                                  setIsViewModalOpen(true);
-                                }}
-                                className="px-3 py-2 rounded-lg hover:bg-slate-50 dark:hover:bg-zinc-800 focus:bg-slate-50 dark:focus:bg-zinc-800 flex items-center gap-2 font-medium cursor-pointer"
-                              >
-                                <Eye className="w-4 h-4 text-blue-500" />
-                                View Profile
-                              </DropdownMenuItem>
-                              <DropdownMenuItem
-                                onClick={() => handleOpenEditModal(tenant)}
-                                className="px-3 py-2 rounded-lg hover:bg-slate-50 dark:hover:bg-zinc-800 focus:bg-slate-50 dark:focus:bg-zinc-800 flex items-center gap-2 font-medium cursor-pointer"
-                              >
-                                <Edit className="w-4 h-4 text-slate-500" />
-                                Edit Details
-                              </DropdownMenuItem>
-                              {tenant.status === "Pending" && (
+                              {tenant.status === "Pending" ? (
                                 <>
                                   <DropdownMenuItem
                                     onClick={() =>
@@ -1087,10 +1103,10 @@ function TenantsContent() {
                                         action: "Approve",
                                       })
                                     }
-                                    className="px-3 py-2 rounded-lg hover:bg-slate-50 dark:hover:bg-zinc-800 focus:bg-slate-50 dark:focus:bg-zinc-800 flex items-center gap-2 text-emerald-600 focus:text-emerald-600 font-medium cursor-pointer"
+                                    className="px-3 py-2 rounded-lg hover:bg-emerald-50 dark:hover:bg-emerald-950/40 focus:bg-emerald-50 dark:focus:bg-emerald-950/40 flex items-center gap-2 text-emerald-600 focus:text-emerald-600 font-medium cursor-pointer"
                                   >
                                     <Check className="w-4 h-4" />
-                                    Approve Resident
+                                    Approve Account
                                   </DropdownMenuItem>
                                   <DropdownMenuItem
                                     onClick={() =>
@@ -1100,42 +1116,55 @@ function TenantsContent() {
                                         action: "Reject",
                                       })
                                     }
-                                    className="px-3 py-2 rounded-lg hover:bg-slate-50 dark:hover:bg-zinc-800 focus:bg-slate-50 dark:focus:bg-zinc-800 flex items-center gap-2 text-rose-600 focus:text-rose-600 font-medium cursor-pointer"
+                                    className="px-3 py-2 rounded-lg hover:bg-rose-50 dark:hover:bg-rose-950/40 focus:bg-rose-50 dark:focus:bg-rose-950/40 flex items-center gap-2 text-rose-600 focus:text-rose-600 font-medium cursor-pointer"
                                   >
                                     <X className="w-4 h-4" />
-                                    Decline Application
+                                    Reject Account
+                                  </DropdownMenuItem>
+                                </>
+                              ) : (
+                                <>
+                                  <DropdownMenuItem
+                                    onClick={() => {
+                                      setSelectedTenant(tenant);
+                                      setIsViewModalOpen(true);
+                                    }}
+                                    className="px-3 py-2 rounded-lg hover:bg-slate-50 dark:hover:bg-zinc-800 focus:bg-slate-50 dark:focus:bg-zinc-800 flex items-center gap-2 font-medium cursor-pointer"
+                                  >
+                                    <Eye className="w-4 h-4 text-blue-500" />
+                                    View Profile
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem
+                                    onClick={() => handleOpenEditModal(tenant)}
+                                    className="px-3 py-2 rounded-lg hover:bg-slate-50 dark:hover:bg-zinc-800 focus:bg-slate-50 dark:focus:bg-zinc-800 flex items-center gap-2 font-medium cursor-pointer"
+                                  >
+                                    <Edit className="w-4 h-4 text-slate-500" />
+                                    Edit Details
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem
+                                    onClick={() =>
+                                      router.push(
+                                        `/admin/chat?tenant_id=${tenant.id}`,
+                                      )
+                                    }
+                                    className="px-3 py-2 rounded-lg hover:bg-slate-50 dark:hover:bg-zinc-800 focus:bg-slate-50 dark:focus:bg-zinc-800 flex items-center gap-2 font-medium cursor-pointer"
+                                  >
+                                    <MessageSquare className="w-4 h-4 text-teal-500" />
+                                    Send Message
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem
+                                    onClick={() =>
+                                      router.push(
+                                        `/admin/billing?action=create&tenant_id=${tenant.id}`,
+                                      )
+                                    }
+                                    className="px-3 py-2 rounded-lg hover:bg-slate-50 dark:hover:bg-zinc-800 focus:bg-slate-50 dark:focus:bg-zinc-800 flex items-center gap-2 font-medium cursor-pointer"
+                                  >
+                                    <Receipt className="w-4 h-4 text-indigo-500" />
+                                    Issue Bill
                                   </DropdownMenuItem>
                                 </>
                               )}
-                              <DropdownMenuItem
-                                onClick={() =>
-                                  router.push(`/admin/chat?tenant_id=${tenant.id}`)
-                                }
-                                className="px-3 py-2 rounded-lg hover:bg-slate-50 dark:hover:bg-zinc-800 focus:bg-slate-50 dark:focus:bg-zinc-800 flex items-center gap-2 font-medium cursor-pointer"
-                              >
-                                <MessageSquare className="w-4 h-4 text-teal-500" />
-                                Send Message
-                              </DropdownMenuItem>
-                              <DropdownMenuItem
-                                onClick={() =>
-                                  router.push(
-                                    `/admin/billing?action=create&tenant_id=${tenant.id}`,
-                                  )
-                                }
-                                className="px-3 py-2 rounded-lg hover:bg-slate-50 dark:hover:bg-zinc-800 focus:bg-slate-50 dark:focus:bg-zinc-800 flex items-center gap-2 font-medium cursor-pointer"
-                              >
-                                <Receipt className="w-4 h-4 text-indigo-500" />
-                                Issue Bill
-                              </DropdownMenuItem>
-                              <DropdownMenuSeparator className="my-1 bg-slate-100 dark:bg-zinc-800" />
-                              <DropdownMenuItem
-                                variant="destructive"
-                                onClick={() => handleDeleteTenant(tenant)}
-                                className="px-3 py-2 rounded-lg hover:bg-rose-50 dark:hover:bg-rose-950/30 focus:bg-rose-50 dark:focus:bg-rose-950/30 flex items-center gap-2 text-rose-600 focus:text-rose-600 font-medium cursor-pointer"
-                              >
-                                <Trash2 className="w-4 h-4" />
-                                Delete
-                              </DropdownMenuItem>
                             </DropdownMenuContent>
                           </DropdownMenu>
                         </td>
@@ -1169,223 +1198,241 @@ function TenantsContent() {
             <div className="flex-1 min-h-0 overflow-y-auto custom-scrollbar pr-0.5 space-y-3 mt-2.5">
               {/* Profile Overview Card */}
               <div className="flex items-center gap-3">
-              {(() => {
-                const photo = getTenantPhoto(selectedTenant);
-                if (photo) {
+                {(() => {
+                  const photo = getTenantPhoto(selectedTenant);
+                  if (photo) {
+                    return (
+                      <img
+                        src={photo}
+                        alt={selectedTenant.name}
+                        className="w-14 h-14 rounded-full object-cover shrink-0 border-2 border-white dark:border-zinc-700 shadow-md"
+                      />
+                    );
+                  }
                   return (
-                    <img
-                      src={photo}
-                      alt={selectedTenant.name}
-                      className="w-14 h-14 rounded-full object-cover shrink-0 border-2 border-white dark:border-zinc-700 shadow-md"
-                    />
-                  );
-                }
-                return (
-                  <div
-                    className={`w-14 h-14 rounded-full font-extrabold text-lg flex items-center justify-center shrink-0 border-2 border-white dark:border-zinc-700 shadow-md ${getAvatarBgClass(
-                      selectedTenant.name
-                    )}`}
-                  >
-                    {getInitials(selectedTenant.name)}
-                  </div>
-                );
-              })()}
-              <div className="min-w-0 flex-1">
-                <div className="flex items-center gap-2">
-                  <h4 className="font-extrabold text-base sm:text-lg text-slate-950 dark:text-white truncate">
-                    {selectedTenant.name}
-                  </h4>
-                  {selectedTenant.status === "Active" && (
-                    <span className="px-2.5 py-0.5 rounded-full text-xs sm:text-sm font-bold bg-emerald-50 text-emerald-600 dark:bg-emerald-950/50 dark:text-emerald-400 border border-emerald-200/60 inline-flex items-center gap-1.5">
-                      <span className="w-2 h-2 rounded-full bg-emerald-500" />
-                      Active
-                    </span>
-                  )}
-                  {selectedTenant.status === "Pending" && (
-                    <span className="px-2.5 py-0.5 rounded-full text-xs sm:text-sm font-bold bg-amber-50 text-amber-600 dark:bg-amber-950/50 dark:text-amber-400 border border-amber-200/60 inline-flex items-center gap-1.5">
-                      <span className="w-2 h-2 rounded-full bg-amber-500" />
-                      Pending
-                    </span>
-                  )}
-                  {(selectedTenant.status === "Moved Out" || selectedTenant.status === "Inactive") && (
-                    <span className="px-2.5 py-0.5 rounded-full text-xs sm:text-sm font-bold bg-slate-100 text-slate-600 dark:bg-zinc-800 dark:text-zinc-400 border border-slate-200 inline-flex items-center gap-1.5">
-                      Moved Out
-                    </span>
-                  )}
-                </div>
-                <p className="text-sm text-slate-500 dark:text-zinc-400 truncate mt-0.5">
-                  {selectedTenant.email}
-                </p>
-                <p className="text-sm font-mono font-medium text-slate-600 dark:text-zinc-300 truncate mt-0.5">
-                  📞 {formatPhoneNumber(selectedTenant.phone, "+63 999 123 7654")}
-                </p>
-              </div>
-            </div>
-
-            {/* 3 Metric Tiles (Room, Since, Tenant ID) */}
-            <div className="grid grid-cols-3 gap-2">
-              <div className="p-2.5 rounded-xl border border-slate-200/90 dark:border-zinc-800 bg-slate-50/50 dark:bg-zinc-900/40 flex items-start gap-2">
-                <DoorOpen className="w-4 h-4 text-blue-600 dark:text-blue-400 shrink-0 mt-0.5" />
-                <div className="min-w-0">
-                  <span className="text-sm font-bold text-slate-900 dark:text-white block truncate leading-tight">
-                    Room {selectedTenant.room_number || "101"}
-                  </span>
-                  <span className="text-xs sm:text-sm text-slate-500 dark:text-zinc-400 block truncate mt-0.5">
-                    {getTenantRoomType(selectedTenant)}
-                  </span>
-                </div>
-              </div>
-
-              <div className="p-2.5 rounded-xl border border-slate-200/90 dark:border-zinc-800 bg-slate-50/50 dark:bg-zinc-900/40 flex items-start gap-2">
-                <Calendar className="w-4 h-4 text-blue-600 dark:text-blue-400 shrink-0 mt-0.5" />
-                <div className="min-w-0">
-                  <span className="text-sm font-bold text-slate-900 dark:text-white block truncate leading-tight">
-                    Since
-                  </span>
-                  <span className="text-xs sm:text-sm text-slate-500 dark:text-zinc-400 block truncate mt-0.5 font-mono">
-                    {selectedTenant.date_moved_in
-                      ? new Date(selectedTenant.date_moved_in).toLocaleDateString("en-US", {
-                          month: "short",
-                          day: "numeric",
-                          year: "numeric",
-                        })
-                      : "Aug 15, 2026"}
-                  </span>
-                </div>
-              </div>
-
-              <div className="p-2.5 rounded-xl border border-slate-200/90 dark:border-zinc-800 bg-slate-50/50 dark:bg-zinc-900/40 flex items-start gap-2">
-                <CreditCard className="w-4 h-4 text-blue-600 dark:text-blue-400 shrink-0 mt-0.5" />
-                <div className="min-w-0">
-                  <span className="text-sm font-bold text-slate-900 dark:text-white block truncate leading-tight">
-                    Tenant ID
-                  </span>
-                  <span className="text-xs sm:text-sm text-slate-500 dark:text-zinc-400 block truncate mt-0.5 font-mono font-bold">
-                    TR-{String(selectedTenant.id).padStart(4, "0")}
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            {/* Room & Billing Information Section */}
-            <div className="space-y-2.5 pt-2 border-t border-slate-100 dark:border-zinc-800/80">
-              <h5 className="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-wider">
-                Room & Billing Information
-              </h5>
-              <div className="space-y-2 text-sm sm:text-base">
-                <div className="flex items-center justify-between text-slate-600 dark:text-zinc-400">
-                  <span>Rental Model</span>
-                  <span className="font-bold text-slate-900 dark:text-white">
-                    {getTenantRentalModel(selectedTenant)}
-                  </span>
-                </div>
-                <div className="flex items-center justify-between text-slate-600 dark:text-zinc-400">
-                  <span>Monthly Rent</span>
-                  <span className="font-mono font-black text-slate-900 dark:text-white text-sm sm:text-base">
-                    ₱ {Number(selectedTenant.monthly_rent || 0).toLocaleString()}
-                  </span>
-                </div>
-                <div className="flex items-center justify-between text-slate-600 dark:text-zinc-400">
-                  <span>Next Due Date</span>
-                  <span className="font-medium text-slate-700 dark:text-zinc-300 font-mono">
-                    {selectedTenant.next_due_date
-                      ? new Date(selectedTenant.next_due_date).toLocaleDateString("en-US", {
-                          month: "short",
-                          day: "numeric",
-                          year: "numeric",
-                        })
-                      : "Nov 5, 2026"}
-                  </span>
-                </div>
-                <div className="flex items-center justify-between text-slate-600 dark:text-zinc-400">
-                  <span>Current Balance</span>
-                  <div className="flex items-center gap-2">
-                    <span
-                      className={`font-mono font-black text-sm sm:text-base ${
-                        (Number(selectedTenant.balance) || 0) > 0
-                          ? "text-rose-600 dark:text-rose-400"
-                          : "text-slate-900 dark:text-white"
-                      }`}
+                    <div
+                      className={`w-14 h-14 rounded-full font-extrabold text-lg flex items-center justify-center shrink-0 border-2 border-white dark:border-zinc-700 shadow-md ${getAvatarBgClass(
+                        selectedTenant.name,
+                      )}`}
                     >
-                      ₱ {Number(selectedTenant.balance || 0).toLocaleString()}
-                    </span>
-                    {(Number(selectedTenant.balance) || 0) <= 0 ? (
+                      {getInitials(selectedTenant.name)}
+                    </div>
+                  );
+                })()}
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2">
+                    <h4 className="font-extrabold text-base sm:text-lg text-slate-950 dark:text-white truncate">
+                      {selectedTenant.name}
+                    </h4>
+                    {selectedTenant.status === "Active" && (
                       <span className="text-xs sm:text-sm font-bold text-emerald-600 dark:text-emerald-400">
-                        Paid
+                        Active
                       </span>
-                    ) : (
-                      <span className="text-xs sm:text-sm font-bold text-rose-600 dark:text-rose-400">
-                        Overdue
+                    )}
+                    {selectedTenant.status === "Pending" && (
+                      <span className="text-xs sm:text-sm font-bold text-amber-600 dark:text-amber-400">
+                        Pending
+                      </span>
+                    )}
+                    {(selectedTenant.status === "Moved Out" ||
+                      selectedTenant.status === "Inactive") && (
+                      <span className="text-xs sm:text-sm font-bold text-slate-500 dark:text-zinc-400">
+                        Moved Out
                       </span>
                     )}
                   </div>
+                  <p className="text-sm text-slate-500 dark:text-zinc-400 truncate mt-0.5">
+                    {selectedTenant.email}
+                  </p>
+                  <p className="text-sm font-mono font-medium text-slate-600 dark:text-zinc-300 truncate mt-0.5">
+                    📞{" "}
+                    {formatPhoneNumber(
+                      selectedTenant.phone,
+                      "+63 999 123 7654",
+                    )}
+                  </p>
+                </div>
+              </div>
+
+              {/* 2 Metric Tiles (Room, Since) */}
+              <div className="grid grid-cols-2 gap-2">
+                <div className="p-2.5 rounded-xl border border-slate-200/90 dark:border-zinc-800 bg-slate-50/50 dark:bg-zinc-900/40 flex items-start gap-2">
+                  <DoorOpen className={`w-4 h-4 shrink-0 mt-0.5 ${selectedTenant.room_number ? "text-blue-600 dark:text-blue-400" : "text-slate-400 dark:text-zinc-500"}`} />
+                  <div className="min-w-0">
+                    <span className="text-sm font-bold text-slate-900 dark:text-white block truncate leading-tight">
+                      {selectedTenant.room_number ? `Room ${selectedTenant.room_number}` : "No Room"}
+                    </span>
+                    <span className="text-xs sm:text-sm text-slate-500 dark:text-zinc-400 block truncate mt-0.5">
+                      {selectedTenant.room_number ? (selectedTenant.rental_type || "Rental Unit") : "Unassigned"}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="p-2.5 rounded-xl border border-slate-200/90 dark:border-zinc-800 bg-slate-50/50 dark:bg-zinc-900/40 flex items-start gap-2">
+                  <Calendar className="w-4 h-4 text-blue-600 dark:text-blue-400 shrink-0 mt-0.5" />
+                  <div className="min-w-0">
+                    <span className="text-sm font-bold text-slate-900 dark:text-white block truncate leading-tight">
+                      Since
+                    </span>
+                    <span className="text-xs sm:text-sm text-slate-500 dark:text-zinc-400 block truncate mt-0.5 font-mono">
+                      {selectedTenant.date_moved_in
+                        ? new Date(
+                            selectedTenant.date_moved_in,
+                          ).toLocaleDateString("en-US", {
+                            month: "short",
+                            day: "numeric",
+                            year: "numeric",
+                          })
+                        : selectedTenant.created_at
+                          ? new Date(
+                              selectedTenant.created_at,
+                            ).toLocaleDateString("en-US", {
+                              month: "short",
+                              day: "numeric",
+                              year: "numeric",
+                            })
+                          : "—"}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Room & Billing Information Section */}
+              <div className="space-y-2.5 pt-2 border-t border-slate-100 dark:border-zinc-800/80">
+                <h5 className="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-wider">
+                  Room & Billing Information
+                </h5>
+                <div className="space-y-2 text-sm sm:text-base">
+                  <div className="flex items-center justify-between text-slate-600 dark:text-zinc-400">
+                    <span>Rental Model</span>
+                    <span className="font-bold text-slate-900 dark:text-white">
+                      {selectedTenant.room_number ? getTenantRentalModel(selectedTenant) : "Unassigned"}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between text-slate-600 dark:text-zinc-400">
+                    <span>Monthly Rent</span>
+                    <span className="font-mono font-black text-slate-900 dark:text-white text-sm sm:text-base">
+                      ₱{" "}
+                      {Number(
+                        selectedTenant.monthly_rent || 0,
+                      ).toLocaleString()}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between text-slate-600 dark:text-zinc-400">
+                    <span>Next Due Date</span>
+                    <span className="font-medium text-slate-700 dark:text-zinc-300 font-mono">
+                      {selectedTenant.next_due_date
+                        ? new Date(
+                            selectedTenant.next_due_date,
+                          ).toLocaleDateString("en-US", {
+                            month: "short",
+                            day: "numeric",
+                            year: "numeric",
+                          })
+                        : selectedTenant.room_number
+                          ? "Nov 5, 2026"
+                          : "—"}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between text-slate-600 dark:text-zinc-400">
+                    <span>Current Balance</span>
+                    <div className="flex items-center gap-2">
+                      <span
+                        className={`font-mono font-black text-sm sm:text-base ${
+                          (Number(selectedTenant.balance) || 0) > 0
+                            ? "text-rose-600 dark:text-rose-400"
+                            : "text-slate-900 dark:text-white"
+                        }`}
+                      >
+                        ₱ {Number(selectedTenant.balance || 0).toLocaleString()}
+                      </span>
+                      {(Number(selectedTenant.balance) || 0) <= 0 ? (
+                        <span className="text-xs sm:text-sm font-bold text-emerald-600 dark:text-emerald-400">
+                          Paid
+                        </span>
+                      ) : (
+                        <span className="text-xs sm:text-sm font-bold text-rose-600 dark:text-rose-400">
+                          Overdue
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Emergency Contact Section */}
+              <div className="space-y-2.5 pt-2 border-t border-slate-100 dark:border-zinc-800/80">
+                <h5 className="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-wider">
+                  Emergency Contact
+                </h5>
+                {(() => {
+                  const ec = parseEmergencyContact(selectedTenant);
+                  return (
+                    <div className="flex items-start justify-between text-sm sm:text-base">
+                      <div>
+                        <span className="text-slate-500 dark:text-zinc-400 font-medium block">
+                          {ec.relation}
+                        </span>
+                        <span className="text-xs sm:text-sm text-slate-400 dark:text-zinc-500 font-medium block mt-0.5">
+                          Contact #
+                        </span>
+                      </div>
+                      <div className="text-right">
+                        <span className="font-bold text-slate-900 dark:text-white block">
+                          {ec.name}
+                        </span>
+                        <span className="text-xs sm:text-sm text-slate-500 dark:text-zinc-400 font-mono block mt-0.5">
+                          {ec.phone}
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })()}
+              </div>
+
+              {/* Quick Actions Section */}
+              <div className="space-y-2.5 pt-2 border-t border-slate-100 dark:border-zinc-800/80">
+                <h5 className="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-wider">
+                  Quick Actions
+                </h5>
+                <div className="space-y-2">
+                  {/* 1. Solid Blue Button: View Tenant Profile */}
+                  <button
+                    onClick={() => setIsViewModalOpen(true)}
+                    className="w-full py-2.5 rounded-xl bg-[#0055a5] hover:bg-[#00478f] text-white text-sm font-bold shadow-xs flex items-center justify-center gap-2 transition-colors cursor-pointer"
+                  >
+                    <User className="w-4 h-4 stroke-[2.2]" />
+                    <span>View Tenant Profile</span>
+                  </button>
+
+                  {/* 2. Outlined Button: Send Message */}
+                  <button
+                    onClick={() =>
+                      router.push(`/admin/chat?tenant_id=${selectedTenant.id}`)
+                    }
+                    className="w-full py-2.5 rounded-xl bg-white dark:bg-zinc-900 border border-slate-200/90 dark:border-zinc-800 hover:bg-slate-50 dark:hover:bg-zinc-800 text-slate-700 dark:text-zinc-200 text-sm font-bold shadow-2xs flex items-center justify-center gap-2 transition-colors cursor-pointer"
+                  >
+                    <MessageSquare className="w-4 h-4 text-blue-600 stroke-[2.2]" />
+                    <span>Send Message</span>
+                  </button>
+
+                  {/* 3. Outlined Button: Issue Bill */}
+                  <button
+                    onClick={() =>
+                      router.push(
+                        `/admin/billing?action=create&tenant_id=${selectedTenant.id}`,
+                      )
+                    }
+                    className="w-full py-2.5 rounded-xl bg-white dark:bg-zinc-900 border border-slate-200/90 dark:border-zinc-800 hover:bg-slate-50 dark:hover:bg-zinc-800 text-slate-700 dark:text-zinc-200 text-sm font-bold shadow-2xs flex items-center justify-center gap-2 transition-colors cursor-pointer"
+                  >
+                    <Receipt className="w-4 h-4 text-blue-600 stroke-[2.2]" />
+                    <span>Issue Bill</span>
+                  </button>
                 </div>
               </div>
             </div>
-
-            {/* Emergency Contact Section */}
-            <div className="space-y-2.5 pt-2 border-t border-slate-100 dark:border-zinc-800/80">
-              <h5 className="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-wider">
-                Emergency Contact
-              </h5>
-              {(() => {
-                const ec = parseEmergencyContact(selectedTenant);
-                return (
-                  <div className="flex items-start justify-between text-sm sm:text-base">
-                    <span className="text-slate-500 dark:text-zinc-400 font-medium">
-                      {ec.relation}
-                    </span>
-                    <div className="text-right">
-                      <span className="font-bold text-slate-900 dark:text-white block">
-                        {ec.name}
-                      </span>
-                      <span className="text-xs sm:text-sm text-slate-500 dark:text-zinc-400 font-mono block mt-0.5">
-                        📞 {ec.phone}
-                      </span>
-                    </div>
-                  </div>
-                );
-              })()}
-            </div>
-
-
-            {/* Quick Actions Section */}
-            <div className="space-y-2.5 pt-2 border-t border-slate-100 dark:border-zinc-800/80">
-              <h5 className="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-wider">
-                Quick Actions
-              </h5>
-              <div className="space-y-2">
-                {/* 1. Solid Blue Button: View Tenant Profile */}
-                <button
-                  onClick={() => setIsViewModalOpen(true)}
-                  className="w-full py-2.5 rounded-xl bg-[#0055a5] hover:bg-[#00478f] text-white text-sm font-bold shadow-xs flex items-center justify-center gap-2 transition-colors cursor-pointer"
-                >
-                  <User className="w-4 h-4 stroke-[2.2]" />
-                  <span>View Tenant Profile</span>
-                </button>
-
-                {/* 2. Outlined Button: Send Message */}
-                <button
-                  onClick={() => router.push(`/admin/chat?tenant_id=${selectedTenant.id}`)}
-                  className="w-full py-2.5 rounded-xl bg-white dark:bg-zinc-900 border border-slate-200/90 dark:border-zinc-800 hover:bg-slate-50 dark:hover:bg-zinc-800 text-slate-700 dark:text-zinc-200 text-sm font-bold shadow-2xs flex items-center justify-center gap-2 transition-colors cursor-pointer"
-                >
-                  <MessageSquare className="w-4 h-4 text-blue-600 stroke-[2.2]" />
-                  <span>Send Message</span>
-                </button>
-
-                {/* 3. Outlined Button: Issue Bill */}
-                <button
-                  onClick={() => router.push(`/admin/billing?action=create&tenant_id=${selectedTenant.id}`)}
-                  className="w-full py-2.5 rounded-xl bg-white dark:bg-zinc-900 border border-slate-200/90 dark:border-zinc-800 hover:bg-slate-50 dark:hover:bg-zinc-800 text-slate-700 dark:text-zinc-200 text-sm font-bold shadow-2xs flex items-center justify-center gap-2 transition-colors cursor-pointer"
-                >
-                  <Receipt className="w-4 h-4 text-blue-600 stroke-[2.2]" />
-                  <span>Issue Bill</span>
-                </button>
-              </div>
-            </div>
           </div>
-        </div>
-      )}
+        )}
       </div>
 
       {/* MODAL 1: ADD / EDIT TENANT */}
@@ -1401,10 +1448,13 @@ function TenantsContent() {
               <div className="px-5 py-4 border-b border-slate-200 dark:border-zinc-800 flex justify-between items-center shrink-0">
                 <div>
                   <h3 className="text-lg sm:text-xl font-bold text-slate-900 dark:text-white">
-                    {editingTenant ? `Edit Resident: ${editingTenant.name}` : "Register New Resident"}
+                    {editingTenant
+                      ? `Edit Resident: ${editingTenant.name}`
+                      : "Register New Resident"}
                   </h3>
                   <p className="text-sm text-slate-500 dark:text-zinc-400 mt-0.5">
-                    Configure resident profile, room assignment, and lease terms.
+                    Configure resident profile, room assignment, and lease
+                    terms.
                   </p>
                 </div>
                 <button
@@ -1415,7 +1465,10 @@ function TenantsContent() {
                 </button>
               </div>
 
-              <form onSubmit={handleSubmitTenant} className="p-5 overflow-y-auto custom-scrollbar space-y-4">
+              <form
+                onSubmit={handleSubmitTenant}
+                className="p-5 overflow-y-auto custom-scrollbar space-y-4"
+              >
                 {error && (
                   <div className="p-3 rounded-xl bg-rose-50 text-rose-600 text-sm sm:text-base font-bold flex items-center gap-2 border border-rose-200">
                     <AlertTriangle className="w-5 h-5 shrink-0" />
@@ -1426,18 +1479,38 @@ function TenantsContent() {
                 <div className="grid grid-cols-2 gap-3.5">
                   <div className="space-y-1.5">
                     <label className="text-sm font-bold text-slate-700 dark:text-zinc-300 uppercase tracking-wide">
-                      Full Name *
+                      First Name *
                     </label>
                     <input
                       type="text"
                       required
-                      value={formData.name}
-                      onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                      placeholder="e.g. Juan Dela Cruz"
+                      value={formData.first_name}
+                      onChange={(e) =>
+                        setFormData({ ...formData, first_name: e.target.value })
+                      }
+                      placeholder="e.g. Juan"
                       className="w-full px-3.5 py-2.5 text-sm sm:text-base rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-slate-900 dark:text-white outline-none focus:ring-1 focus:ring-blue-500"
                     />
                   </div>
 
+                  <div className="space-y-1.5">
+                    <label className="text-sm font-bold text-slate-700 dark:text-zinc-300 uppercase tracking-wide">
+                      Last Name *
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      value={formData.last_name}
+                      onChange={(e) =>
+                        setFormData({ ...formData, last_name: e.target.value })
+                      }
+                      placeholder="e.g. Dela Cruz"
+                      className="w-full px-3.5 py-2.5 text-sm sm:text-base rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-slate-900 dark:text-white outline-none focus:ring-1 focus:ring-blue-500"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3.5">
                   <div className="space-y-1.5">
                     <label className="text-sm font-bold text-slate-700 dark:text-zinc-300 uppercase tracking-wide">
                       Email Address *
@@ -1446,14 +1519,14 @@ function TenantsContent() {
                       type="email"
                       required
                       value={formData.email}
-                      onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                      onChange={(e) =>
+                        setFormData({ ...formData, email: e.target.value })
+                      }
                       placeholder="e.g. juan@email.com"
                       className="w-full px-3.5 py-2.5 text-sm sm:text-base rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-slate-900 dark:text-white outline-none focus:ring-1 focus:ring-blue-500"
                     />
                   </div>
-                </div>
 
-                <div className="grid grid-cols-2 gap-3.5">
                   <div className="space-y-1.5">
                     <label className="text-sm font-bold text-slate-700 dark:text-zinc-300 uppercase tracking-wide">
                       Phone Number *
@@ -1463,14 +1536,19 @@ function TenantsContent() {
                       required
                       value={formData.phone}
                       onChange={(e) =>
-                        setFormData({ ...formData, phone: formatPhoneInput(e.target.value) })
+                        setFormData({
+                          ...formData,
+                          phone: formatPhoneInput(e.target.value),
+                        })
                       }
                       placeholder="+63 999 123 7654"
                       className="w-full px-3.5 py-2.5 text-sm sm:text-base rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-slate-900 dark:text-white outline-none focus:ring-1 focus:ring-blue-500 font-mono"
                     />
                   </div>
+                </div>
 
-                  {!editingTenant && (
+                <div className="grid grid-cols-2 gap-3.5">
+                  {!editingTenant ? (
                     <div className="space-y-1.5">
                       <label className="text-sm font-bold text-slate-700 dark:text-zinc-300 uppercase tracking-wide">
                         Account Password *
@@ -1479,31 +1557,63 @@ function TenantsContent() {
                         type="password"
                         required={!editingTenant}
                         value={formData.password}
-                        onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                        onChange={(e) =>
+                          setFormData({ ...formData, password: e.target.value })
+                        }
                         placeholder="••••••••"
                         className="w-full px-3.5 py-2.5 text-sm sm:text-base rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-slate-900 dark:text-white outline-none focus:ring-1 focus:ring-blue-500"
                       />
                     </div>
-                  )}
-
-                  {editingTenant && (
+                  ) : (
                     <div className="space-y-1.5">
                       <label className="text-sm font-bold text-slate-700 dark:text-zinc-300 uppercase tracking-wide">
                         Account Status
                       </label>
                       <CustomSelect
                         value={formData.status}
-                        onChange={(val) => setFormData({ ...formData, status: val })}
+                        onChange={(val) =>
+                          setFormData({ ...formData, status: val })
+                        }
                         options={[
-                          { value: "Active", label: "Active", dotColor: "bg-emerald-500" },
-                          { value: "Pending", label: "Pending", dotColor: "bg-amber-500" },
-                          { value: "Moved Out", label: "Moved Out", dotColor: "bg-slate-400" },
-                          { value: "Declined", label: "Declined", dotColor: "bg-rose-500" },
+                          {
+                            value: "Active",
+                            label: "Active",
+                            dotColor: "bg-emerald-500",
+                          },
+                          {
+                            value: "Pending",
+                            label: "Pending",
+                            dotColor: "bg-amber-500",
+                          },
+                          {
+                            value: "Moved Out",
+                            label: "Moved Out",
+                            dotColor: "bg-slate-400",
+                          },
+                          {
+                            value: "Declined",
+                            label: "Declined",
+                            dotColor: "bg-rose-500",
+                          },
                         ]}
                         className="w-full px-3.5 py-2.5 text-sm sm:text-base rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-slate-900 dark:text-white outline-none"
                       />
                     </div>
                   )}
+
+                  <div className="space-y-1.5">
+                    <label className="text-sm font-bold text-slate-700 dark:text-zinc-300 uppercase tracking-wide">
+                      Gender
+                    </label>
+                    <CustomSelect
+                      value={formData.gender}
+                      onChange={(val) =>
+                        setFormData({ ...formData, gender: val })
+                      }
+                      options={["Male", "Female", "Other"]}
+                      className="w-full px-3.5 py-2.5 text-sm sm:text-base rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-slate-900 dark:text-white outline-none"
+                    />
+                  </div>
                 </div>
 
                 <div className="grid grid-cols-2 gap-3.5">
@@ -1513,13 +1623,25 @@ function TenantsContent() {
                     </label>
                     <CustomSelect
                       value={String(formData.room_id || "")}
-                      onChange={(val) => setFormData({ ...formData, room_id: val })}
+                      onChange={handleRoomSelect}
                       options={[
                         { value: "", label: "No Room Assigned (Pending)" },
-                        ...rooms.map((r) => ({
-                          value: String(r.id),
-                          label: `Room ${r.room_number} (${r.type}) — ₱${Number(r.price).toLocaleString()}`,
-                        })),
+                        ...rooms.map((r) => {
+                          const isFemaleTenant = formData.gender === "Female";
+                          const isMaleTenant = formData.gender === "Male";
+                          const rGender = (r.gender || "").toLowerCase();
+                          const isFemaleRoom = rGender.includes("female");
+                          const isMaleRoom = rGender.includes("male") && !rGender.includes("female");
+                          const isConflict =
+                            (isFemaleTenant && isMaleRoom) || (isMaleTenant && isFemaleRoom);
+
+                          return {
+                            value: String(r.id),
+                            label: `Room ${r.room_number} - ${r.gender || "Male Only"}${
+                              isConflict ? " ⚠️ (Mismatched Gender)" : ""
+                            }`,
+                          };
+                        }),
                       ]}
                       className="w-full px-3.5 py-2.5 text-sm sm:text-base rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-slate-900 dark:text-white outline-none"
                     />
@@ -1532,7 +1654,12 @@ function TenantsContent() {
                     <input
                       type="number"
                       value={formData.monthly_rent}
-                      onChange={(e) => setFormData({ ...formData, monthly_rent: e.target.value })}
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          monthly_rent: e.target.value,
+                        })
+                      }
                       placeholder="e.g. 4500"
                       className="w-full px-3.5 py-2.5 text-sm sm:text-base rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-slate-900 dark:text-white outline-none font-mono"
                     />
@@ -1547,19 +1674,12 @@ function TenantsContent() {
                     <input
                       type="date"
                       value={formData.date_moved_in}
-                      onChange={(e) => setFormData({ ...formData, date_moved_in: e.target.value })}
-                      className="w-full px-3.5 py-2.5 text-sm sm:text-base rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-slate-900 dark:text-white outline-none"
-                    />
-                  </div>
-
-                  <div className="space-y-1.5">
-                    <label className="text-sm font-bold text-slate-700 dark:text-zinc-300 uppercase tracking-wide">
-                      Gender
-                    </label>
-                    <CustomSelect
-                      value={formData.gender}
-                      onChange={(val) => setFormData({ ...formData, gender: val })}
-                      options={["Male", "Female", "Other"]}
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          date_moved_in: e.target.value,
+                        })
+                      }
                       className="w-full px-3.5 py-2.5 text-sm sm:text-base rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-slate-900 dark:text-white outline-none"
                     />
                   </div>
@@ -1612,7 +1732,9 @@ function TenantsContent() {
                       {selectedTenant.name}
                     </h3>
                     <p className="text-sm text-slate-500 font-mono mt-0.5">
-                      Tenant ID: TR-{String(selectedTenant.id).padStart(4, "0")} • Room {selectedTenant.room_number || "Unassigned"}
+                      {selectedTenant.room_number
+                        ? `Room ${selectedTenant.room_number}`
+                        : "No Room Assigned"}
                     </p>
                   </div>
                 </div>
@@ -1628,23 +1750,34 @@ function TenantsContent() {
                 {/* 3 Top Financial Stats */}
                 <div className="grid grid-cols-3 gap-2.5">
                   <div className="p-3.5 rounded-xl border border-slate-200 dark:border-zinc-800 bg-slate-50 dark:bg-zinc-900/40">
-                    <span className="text-xs sm:text-sm font-bold text-slate-500 uppercase tracking-wider block">Monthly Rent</span>
+                    <span className="text-xs sm:text-sm font-bold text-slate-500 uppercase tracking-wider block">
+                      Monthly Rent
+                    </span>
                     <span className="text-xl sm:text-2xl font-black font-mono text-slate-900 dark:text-white mt-1 block">
-                      ₱ {Number(selectedTenant.monthly_rent || 0).toLocaleString()}
+                      ₱{" "}
+                      {Number(
+                        selectedTenant.monthly_rent || 0,
+                      ).toLocaleString()}
                     </span>
                   </div>
                   <div className="p-3.5 rounded-xl border border-slate-200 dark:border-zinc-800 bg-slate-50 dark:bg-zinc-900/40">
-                    <span className="text-xs sm:text-sm font-bold text-slate-500 uppercase tracking-wider block">Current Balance</span>
+                    <span className="text-xs sm:text-sm font-bold text-slate-500 uppercase tracking-wider block">
+                      Current Balance
+                    </span>
                     <span
                       className={`text-xl sm:text-2xl font-black font-mono mt-1 block ${
-                        (Number(selectedTenant.balance) || 0) > 0 ? "text-rose-600" : "text-emerald-600"
+                        (Number(selectedTenant.balance) || 0) > 0
+                          ? "text-rose-600"
+                          : "text-emerald-600"
                       }`}
                     >
                       ₱ {Number(selectedTenant.balance || 0).toLocaleString()}
                     </span>
                   </div>
                   <div className="p-3.5 rounded-xl border border-slate-200 dark:border-zinc-800 bg-slate-50 dark:bg-zinc-900/40">
-                    <span className="text-xs sm:text-sm font-bold text-slate-500 uppercase tracking-wider block">Last Payment</span>
+                    <span className="text-xs sm:text-sm font-bold text-slate-500 uppercase tracking-wider block">
+                      Last Payment
+                    </span>
                     <span className="text-sm sm:text-base font-bold text-slate-800 dark:text-zinc-200 mt-1 block font-mono">
                       {selectedTenant.last_payment_date || "No payment record"}
                     </span>
@@ -1658,17 +1791,25 @@ function TenantsContent() {
                       Contact Details
                     </h5>
                     <div>
-                      <span className="text-slate-400 block text-xs sm:text-sm font-semibold">Email</span>
-                      <span className="font-bold text-slate-800 dark:text-zinc-200 text-sm sm:text-base mt-0.5 block">{selectedTenant.email}</span>
+                      <span className="text-slate-400 block text-xs sm:text-sm font-semibold">
+                        Email
+                      </span>
+                      <span className="font-bold text-slate-800 dark:text-zinc-200 text-sm sm:text-base mt-0.5 block">
+                        {selectedTenant.email}
+                      </span>
                     </div>
                     <div>
-                      <span className="text-slate-400 block text-xs sm:text-sm font-semibold">Phone</span>
+                      <span className="text-slate-400 block text-xs sm:text-sm font-semibold">
+                        Phone
+                      </span>
                       <span className="font-mono font-bold text-slate-800 dark:text-zinc-200 text-sm sm:text-base mt-0.5 block">
                         {formatPhoneNumber(selectedTenant.phone)}
                       </span>
                     </div>
                     <div>
-                      <span className="text-slate-400 block text-xs sm:text-sm font-semibold">Address</span>
+                      <span className="text-slate-400 block text-xs sm:text-sm font-semibold">
+                        Address
+                      </span>
                       <span className="font-medium text-slate-700 dark:text-zinc-300 text-sm sm:text-base mt-0.5 block">
                         {selectedTenant.address || "Riverside Boarding House"}
                       </span>
@@ -1680,19 +1821,27 @@ function TenantsContent() {
                       Lease Information
                     </h5>
                     <div>
-                      <span className="text-slate-400 block text-xs sm:text-sm font-semibold">Room Number</span>
+                      <span className="text-slate-400 block text-xs sm:text-sm font-semibold">
+                        Room Number
+                      </span>
                       <span className="font-bold text-slate-800 dark:text-zinc-200 text-sm sm:text-base mt-0.5 block">
-                        {selectedTenant.room_number ? `Room ${selectedTenant.room_number}` : "Unassigned"}
+                        {selectedTenant.room_number
+                          ? `Room ${selectedTenant.room_number}`
+                          : "Unassigned"}
                       </span>
                     </div>
                     <div>
-                      <span className="text-slate-400 block text-xs sm:text-sm font-semibold">Rental Model</span>
+                      <span className="text-slate-400 block text-xs sm:text-sm font-semibold">
+                        Rental Model
+                      </span>
                       <span className="font-bold text-slate-800 dark:text-zinc-200 text-sm sm:text-base mt-0.5 block">
                         {getTenantRentalModel(selectedTenant)}
                       </span>
                     </div>
                     <div>
-                      <span className="text-slate-400 block text-xs sm:text-sm font-semibold">Move-In Date</span>
+                      <span className="text-slate-400 block text-xs sm:text-sm font-semibold">
+                        Move-In Date
+                      </span>
                       <span className="font-mono font-medium text-slate-700 dark:text-zinc-300 text-sm sm:text-base mt-0.5 block">
                         {selectedTenant.date_moved_in || "Aug 15, 2026"}
                       </span>
@@ -1729,12 +1878,14 @@ function TenantsContent() {
               className="bg-white dark:bg-zinc-900 rounded-2xl w-full max-w-sm overflow-hidden shadow-2xl border border-slate-200 dark:border-zinc-800 p-5"
             >
               <h3 className="text-base sm:text-lg font-extrabold text-slate-950 dark:text-white">
-                {confirmStatus.action === "Approve" ? "Approve Resident" : "Decline Application"}
+                {confirmStatus.action === "Approve"
+                  ? "Approve Account"
+                  : "Reject Account"}
               </h3>
               <p className="text-sm sm:text-base text-slate-600 dark:text-zinc-300 mt-1.5 leading-relaxed">
                 {confirmStatus.action === "Approve"
-                  ? `Confirm onboarding approval for ${confirmStatus.name}? Their status will become Active.`
-                  : `Decline application for ${confirmStatus.name}? Their record will be flagged as Declined.`}
+                  ? `Confirm approval for ${confirmStatus.name}? Their status will become Active.`
+                  : `Reject account for ${confirmStatus.name}? Their record will be flagged as Declined.`}
               </p>
 
               <div className="mt-5 flex items-center justify-end gap-2.5">
@@ -1748,7 +1899,9 @@ function TenantsContent() {
                   onClick={executeStatusUpdate}
                   disabled={isStatusUpdating !== null}
                   className={`px-5 py-2 text-sm font-bold rounded-xl text-white transition-colors cursor-pointer ${
-                    confirmStatus.action === "Approve" ? "bg-emerald-600 hover:bg-emerald-700" : "bg-rose-600 hover:bg-rose-700"
+                    confirmStatus.action === "Approve"
+                      ? "bg-emerald-600 hover:bg-emerald-700"
+                      : "bg-rose-600 hover:bg-rose-700"
                   }`}
                 >
                   {isStatusUpdating !== null ? (
