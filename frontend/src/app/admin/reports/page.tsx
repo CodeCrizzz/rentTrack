@@ -80,8 +80,8 @@ interface OccupancyData {
   rooms: Array<{
     id: number;
     room_number: string;
-    type: string;
     rental_type: string;
+    gender?: string;
     capacity: number;
     price: number;
     floor: number;
@@ -156,7 +156,7 @@ export default function AdminReportsPage() {
   const [searchFilter, setSearchFilter] = useState("");
   const [propertyProfile, setPropertyProfile] = useState({
     propertyName: "RentTrack Elite Residences & Dormitory",
-    propertyAddress: "123 Katipunan Ave, Loyola Heights, Quezon City",
+    propertyAddress: "Dapitan City, Zamboanga Del Norte",
     contactPhone: "+63 917 123 4567",
     landlordName: "Property Management Office",
     taxId: "TIN: 432-891-002-000",
@@ -289,7 +289,7 @@ export default function AdminReportsPage() {
       ]);
       reportData.financials.ledger.forEach((p) => {
         rows.push([
-          p.reference_number || `TXN-${p.id}`,
+          p.reference_number || `REF-${p.id}`,
           p.payment_date ? new Date(p.payment_date).toLocaleDateString() : "-",
           p.tenant_name || "-",
           p.room_number || "-",
@@ -343,8 +343,8 @@ export default function AdminReportsPage() {
       rows.push(["--- ROOM INVENTORY DETAILS ---"]);
       rows.push([
         "Room #",
-        "Type",
         "Rental Type",
+        "Gender",
         "Floor",
         "Capacity",
         "Occupants Count",
@@ -355,8 +355,8 @@ export default function AdminReportsPage() {
       reportData.occupancy.rooms.forEach((r) => {
         rows.push([
           r.room_number,
-          r.type,
           r.rental_type,
+          r.gender || "N/A",
           String(r.floor),
           String(r.capacity),
           String(r.current_occupants),
@@ -515,7 +515,8 @@ export default function AdminReportsPage() {
     return reportData.occupancy.rooms.filter(
       (r) =>
         r.room_number?.toLowerCase().includes(q) ||
-        r.type?.toLowerCase().includes(q) ||
+        r.rental_type?.toLowerCase().includes(q) ||
+        r.gender?.toLowerCase().includes(q) ||
         r.occupants_list?.toLowerCase().includes(q) ||
         r.status?.toLowerCase().includes(q),
     );
@@ -1221,7 +1222,7 @@ export default function AdminReportsPage() {
                               className="hover:bg-slate-50/50 dark:hover:bg-zinc-800/30"
                             >
                               <td className="py-2.5 px-3 font-mono font-medium text-slate-700 dark:text-zinc-300">
-                                {p.reference_number || `TXN-${p.id}`}
+                                {p.reference_number || `REF-${p.id}`}
                               </td>
                               <td className="py-2.5 px-3 text-slate-600 dark:text-zinc-300 font-medium">
                                 {p.payment_date
@@ -1319,7 +1320,7 @@ export default function AdminReportsPage() {
                             <th className="py-2.5 px-3 font-semibold">
                               Room #
                             </th>
-                            <th className="py-2.5 px-3 font-semibold">Type</th>
+                            <th className="py-2.5 px-3 font-semibold">Rental Model & Gender</th>
                             <th className="py-2.5 px-3 font-semibold">Floor</th>
                             <th className="py-2.5 px-3 font-semibold">
                               Capacity
@@ -1348,7 +1349,7 @@ export default function AdminReportsPage() {
                                   {r.room_number}
                                 </td>
                                 <td className="py-2.5 px-3 text-slate-700 dark:text-zinc-200 font-medium">
-                                  {r.type}
+                                  {r.rental_type} {r.gender ? `• ${r.gender}` : ""}
                                 </td>
                                 <td className="py-2.5 px-3 font-mono text-slate-600 dark:text-zinc-300 font-medium">
                                   Floor {r.floor}

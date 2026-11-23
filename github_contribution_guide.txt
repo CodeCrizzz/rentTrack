@@ -110,7 +110,7 @@ PR review, and issue tracking).
 ================================================================================
 
 ================================================================================
-4. READY-TO-USE GITHUB ISSUE TEMPLATES (FOR THIS BRANCH)
+4. READY-TO-USE GITHUB ISSUE TEMPLATES (FOR THIS 28-COMMIT BRANCH)
 ================================================================================
 Copy and paste each of the following issues into:
 https://github.com/CodeCrizzz/rentTrack/issues -> "New issue"
@@ -118,50 +118,66 @@ https://github.com/CodeCrizzz/rentTrack/issues -> "New issue"
 --------------------------------------------------------------------------------
 ISSUE #1
 --------------------------------------------------------------------------------
-Title: feat(auth): integrate Google OAuth2 sign-in flow and backend client configuration
-Labels: enhancement, authentication, fullstack
+Title: feat(rooms): enforce strict boarder gender separation and multi-layer validation
+Labels: enhancement, backend, database
 
 Description:
 ### Summary
-Implement end-to-end Google OAuth2 authentication support by exposing Google client configuration and token verification endpoints on the backend and replacing the static login button with an interactive Google Sign-In component on the frontend.
+Enforce strict separation of male and female boarders across all boarding house rooms so that each room is exclusively single-gender (Male Only or Female Only) with zero cross-gender room occupancy.
 
 ### Acceptance Criteria
-- [x] Added `resolveGoogleClientId`, `getAccountStatusRejection`, `buildAuthSuccessPayload`, `getGoogleConfig`, and `googleAuth` handlers in `backend/controllers/authController.js`.
-- [x] Registered `GET /api/auth/google/config` and `POST /api/auth/google` endpoints in `backend/routes/authRoutes.js`.
-- [x] Created interactive `GoogleSignInButton` component (`frontend/src/components/google-sign-in-button.tsx`) with GSI script loading and pending-account modal handling.
-- [x] Wired `GoogleSignInButton` into `frontend/src/app/(auth)/login/page.tsx`.
+- [x] Implemented `validateTenantRoomGender` helper in `backend/utils/roomGenderUtils.js` verifying tenant gender against room designation and current room occupants.
+- [x] Added validation guards in `createTenant`, `updateTenant`, and `updateRoom` within `backend/controllers/adminController.js`.
+- [x] Integrated gender compatibility checks in `chooseRoom` within `backend/controllers/tenantController.js`.
+- [x] Migrated existing tenant assignments in PostgreSQL database so all boarders occupy single-gender rooms.
 
 --------------------------------------------------------------------------------
 ISSUE #2
 --------------------------------------------------------------------------------
-Title: feat(payments): implement dynamic EMVCo QR Ph payload generation and tenant activity feed
-Labels: enhancement, billing, tenant-portal
+Title: feat(tenant-portal): redesign portal navigation and implement gender-filtered room selection
+Labels: enhancement, frontend, tenant-portal
 
 Description:
 ### Summary
-Introduce dynamic EMVCo QR Ph payload construction with CRC-16 checksum verification for tenant invoice settlements, add the verified payment receipt modal, expand the tenant dashboard with a scrollable account activity feed, and align export/print controls beside the admin report title.
+Refactor tenant portal navigation header with updated "My Home" tab, hide rules & regulations until room assignment, and filter available rooms strictly by tenant gender.
 
 ### Acceptance Criteria
-- [x] Added EMVCo TLV parser, CRC-16 calculator, and `buildDynamicQrPhPayload` utility in `frontend/src/lib/qrph.ts`.
-- [x] Integrated dynamic QRPh generation and verified receipt modal in `frontend/src/app/tenant/payments/page.tsx`.
-- [x] Added `jsqr` dependency (`^1.4.0`) to `frontend/package.json` and `frontend/package-lock.json`.
-- [x] Added scrollable recent account activity feed and refined utility chart layout in `frontend/src/app/tenant/dashboard/page.tsx`.
-- [x] Aligned export CSV and print action buttons beside the Operational & Financial Reports header title in `frontend/src/app/admin/reports/page.tsx`.
+- [x] Updated tenant portal navigation in `frontend/src/app/tenant/layout.tsx` to display "My Home" with Lucide Home icon.
+- [x] Partitioned tenant portal views into App Router pages: `overview/page.tsx`, `my_room/page.tsx`, and `bill_and_payment/page.tsx`.
+- [x] Enforced strict gender matching for room inventory display in `frontend/src/app/tenant/my_room/page.tsx`.
+- [x] Relocated house rules so they are displayed only after a room has been assigned to the resident.
 
 --------------------------------------------------------------------------------
 ISSUE #3
 --------------------------------------------------------------------------------
-Title: docs(architecture): add Level-1 DFD specification and corrected Chapter 3 system documentation
-Labels: documentation, architecture
+Title: feat(billing): integrate automated bill generation email dispatch via Gmail SMTP
+Labels: enhancement, backend, notifications
 
 Description:
 ### Summary
-Document the full 10-process RentTrack feature inventory, Level-1 Data Flow Diagram specification, corrected Chapter 3 requirements/DFD/use-case sections, and updated GitHub contribution templates.
+Implement automated billing statement email notifications dispatched directly to tenant sign-up Gmail addresses upon manual or scheduled bill generation.
 
 ### Acceptance Criteria
-- [x] Added comprehensive feature catalogue and Level-1 DFD data flow register in `SYSTEM_FEATURES_AND_DATA_FLOWS.txt`.
-- [x] Added Markdown and Word formats of corrected Chapter 3 sections (`docs/Chapter3_Corrected_Sections.md`, `docs/Chapter3_Corrected_Sections.docx`).
-- [x] Updated Issue and Pull Request templates in `github_contribution_guide.txt` for this 14-commit branch.
+- [x] Added `sendBillGeneratedEmail` in `backend/services/emailService.js` with formatted financial summaries and payment due instructions.
+- [x] Integrated automated email trigger upon bill issuance in `backend/controllers/billingController.js`.
+- [x] Wired automated bill dispatch into scheduled billing routine in `backend/cron/billingCron.js`.
+- [x] Added reference and billing synchronization utilities in `backend/utils/billingUtils.js` and `backend/utils/referenceNumberGenerator.js`.
+
+--------------------------------------------------------------------------------
+ISSUE #4
+--------------------------------------------------------------------------------
+Title: feat(admin-profile): modernize executive identity banner and update headquarters address
+Labels: enhancement, frontend, admin
+
+Description:
+### Summary
+Modernize Admin Profile header layout for complete name visibility, replace security tier badge with live requests counter, and update official headquarters address to Dapitan City, Zamboanga Del Norte.
+
+### Acceptance Criteria
+- [x] Restructured avatar and metadata layout in `frontend/src/app/admin/profile/page.tsx` ensuring high contrast and zero overlap.
+- [x] Removed "Master System Control" badge and "Reload Profile" action button.
+- [x] Replaced "Security Tier 1" metric card with live "Request" counter.
+- [x] Updated official headquarters address to "Dapitan City, Zamboanga Del Norte" across profile, reports, and database records.
 
 ================================================================================
 5. PULL REQUEST DESCRIPTION TEMPLATE
@@ -169,21 +185,24 @@ Document the full 10-process RentTrack feature inventory, Level-1 Data Flow Diag
 When creating your Pull Request on GitHub, use this description:
 
 Title:
-feat: Google OAuth2 sign-in, dynamic EMVCo QRPh payments, report header alignment, and system DFD docs
+feat: boarder gender separation, tenant portal refactor, automated billing email dispatch, and admin profile updates
 
 Description:
 ### Summary
-Delivers Google OAuth2 sign-in across backend and frontend, dynamic EMVCo QRPh payload generation and verified receipt presentation in the tenant payment flow, a scrollable account activity log on the tenant dashboard, inline header action alignment on Admin Reports, and full Level-1 DFD / Chapter 3 documentation across 14 file-specific commits.
+Delivers strict boarder gender separation across rooms and assignments, full tenant portal navigation refactoring ("My Home" tab and App Router subroutes), automated bill generation email dispatch via Gmail SMTP, Visual Room Matrix Lucide gender icon badges, and Admin Profile executive layout modernizations across 28 focused, atomic commits.
 
 ### Linked Issues
-- Relates to Issue #1 (Google OAuth2 sign-in flow & backend configuration)
-- Relates to Issue #2 (Dynamic EMVCo QRPh payments, activity feed & report header alignment)
-- Relates to Issue #3 (Level-1 DFD specification & corrected Chapter 3 documentation)
+- Relates to Issue #1 (Boarder gender separation and multi-layer validation)
+- Relates to Issue #2 (Tenant portal redesign and gender-filtered room selection)
+- Relates to Issue #3 (Automated bill generation email dispatch via Gmail SMTP)
+- Relates to Issue #4 (Admin profile modernization and headquarters address update)
 
 ### Key Changes
-- **Authentication**: `backend/controllers/authController.js`, `backend/routes/authRoutes.js`, `frontend/src/components/google-sign-in-button.tsx`, `frontend/src/app/(auth)/login/page.tsx`.
-- **Billing, Dashboard & Reports**: `frontend/src/lib/qrph.ts`, `frontend/src/app/tenant/payments/page.tsx`, `frontend/src/app/tenant/dashboard/page.tsx`, `frontend/src/app/admin/reports/page.tsx`, `frontend/package.json`, `frontend/package-lock.json`.
-- **Documentation**: `SYSTEM_FEATURES_AND_DATA_FLOWS.txt`, `docs/Chapter3_Corrected_Sections.md`, `docs/Chapter3_Corrected_Sections.docx`, `github_contribution_guide.txt`.
+- **Gender Separation & Room Matrix**: `backend/utils/roomGenderUtils.js`, `backend/controllers/adminController.js`, `backend/controllers/tenantController.js`, `frontend/src/components/visual-room-matrix.tsx`, `frontend/src/app/admin/rooms/page.tsx`, `frontend/src/app/admin/tenants/page.tsx`.
+- **Tenant Portal Subroutes**: `frontend/src/app/tenant/layout.tsx`, `frontend/src/app/tenant/overview/page.tsx`, `frontend/src/app/tenant/my_room/page.tsx`, `frontend/src/app/tenant/bill_and_payment/page.tsx`.
+- **Billing & Email Notifications**: `backend/services/emailService.js`, `backend/controllers/billingController.js`, `backend/cron/billingCron.js`, `backend/utils/billingUtils.js`, `backend/utils/referenceNumberGenerator.js`, `frontend/src/app/admin/billing/page.tsx`, `frontend/src/lib/official-receipt-docx.ts`.
+- **Executive Profile & Administration**: `frontend/src/app/admin/profile/page.tsx`, `frontend/src/app/admin/dashboard/page.tsx`, `frontend/src/app/admin/reports/page.tsx`, `frontend/src/app/admin/requests/page.tsx`, `frontend/src/app/admin/layout.tsx`, `backend/services/adminNotificationService.js`, `backend/controllers/authController.js`, `backend/routes/adminRoutes.js`, `backend/routes/tenantRoutes.js`.
+- **Documentation & Changelogs**: `functions_added_and_fixed_nov22_nov23.txt`, `github_contribution_guide.txt`.
 
 ### Next Steps after Merge:
 ```bash

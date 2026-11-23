@@ -200,7 +200,6 @@ function MaintenanceRequestsContent() {
     if (!room) return "Floor 1";
     const num = parseInt(room.replace(/\D/g, ""), 10);
     if (!isNaN(num)) {
-      if (num >= 400) return "Floor 4";
       if (num >= 300) return "Floor 3";
       if (num >= 200) return "Floor 2";
       if (num >= 100) return "Floor 1";
@@ -839,7 +838,6 @@ function MaintenanceRequestsContent() {
                       "Floor 1",
                       "Floor 2",
                       "Floor 3",
-                      "Floor 4",
                     ]}
                     className="w-full bg-slate-50 dark:bg-zinc-800/50 border border-slate-200/90 dark:border-zinc-700/80 rounded-xl pl-3.5 pr-8 py-2 text-sm sm:text-base font-semibold text-slate-700 dark:text-zinc-300 focus:outline-none focus:ring-1 focus:ring-blue-500 shadow-2xs"
                   />

@@ -51,30 +51,16 @@ interface Tenant {
 interface Room {
   id: number;
   room_number: string;
-  type: string;
   rental_type: string;
   price: string;
   floor: string | null;
-  description: string | null;
-  amenities: string | null;
   capacity: number;
   current_occupants: number;
   available_slots: number;
   status: string;
   occupants: Tenant[];
+  gender?: string;
 }
-
-const AMENITY_PRESETS = [
-  "Air Conditioning",
-  "Free High-Speed Wi-Fi",
-  "Private Bathroom",
-  "Hot Shower",
-  "Study Desk & Chair",
-  "Built-in Wardrobe",
-  "Balcony / Window View",
-  "Refrigerator",
-  "Individual Submeter",
-];
 
 function RoomsContent() {
   const router = useRouter();
@@ -97,19 +83,17 @@ function RoomsContent() {
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("All Statuses");
   const [selectedFloorTab, setSelectedFloorTab] = useState("All Floors");
-  const [typeFilter, setTypeFilter] = useState("All Room Types");
+  const [genderFilter, setGenderFilter] = useState("All Genders");
   const [rentalTypeFilter, setRentalTypeFilter] = useState("All Rental Models");
   const [error, setError] = useState("");
 
   const [formData, setFormData] = useState({
     room_number: "",
-    type: "Single",
     rental_type: "Whole Room",
+    gender: "Male Only",
     capacity: "1" as string | number,
     price: "",
     floor: "",
-    description: "",
-    amenities: "",
     status: "Available",
   });
 
@@ -193,7 +177,7 @@ function RoomsContent() {
       // Ensure room card is not hidden by active filters
       setSelectedFloorTab("All Floors");
       setStatusFilter("All Statuses");
-      setTypeFilter("All Room Types");
+      setGenderFilter("All Genders");
       setRentalTypeFilter("All Rental Models");
       setSearchQuery("");
 
@@ -235,28 +219,25 @@ function RoomsContent() {
         : room.room_number
           ? room.room_number.replace(/\D/g, "").charAt(0)
           : "1";
+      const isWholeRoom = (room.rental_type || "Whole Room") === "Whole Room";
       setFormData({
         room_number: room.room_number,
-        type: room.type || "Single",
         rental_type: room.rental_type || "Whole Room",
-        capacity: room.capacity !== undefined && room.capacity !== null ? String(room.capacity) : "1",
+        gender: room.gender || "Male Only",
+        capacity: isWholeRoom ? "1" : (room.capacity !== undefined && room.capacity !== null ? String(room.capacity) : "1"),
         price: room.price || "",
         floor: floorDigits || "1",
-        description: room.description || "",
-        amenities: room.amenities || "",
         status: room.status || "Available",
       });
     } else {
       setEditingRoom(null);
       setFormData({
         room_number: "",
-        type: "Single",
         rental_type: "Whole Room",
+        gender: "Male Only",
         capacity: "1",
         price: "",
         floor: "1",
-        description: "",
-        amenities: "",
         status: "Available",
       });
     }
@@ -264,33 +245,19 @@ function RoomsContent() {
     setIsModalOpen(true);
   };
 
-  const handleToggleAmenity = (amenity: string) => {
-    const current = formData.amenities
-      ? formData.amenities
-          .split(",")
-          .map((s) => s.trim())
-          .filter(Boolean)
-      : [];
-    let updated: string[];
-    if (current.includes(amenity)) {
-      updated = current.filter((a) => a !== amenity);
-    } else {
-      updated = [...current, amenity];
-    }
-    setFormData({ ...formData, amenities: updated.join(", ") });
-  };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.room_number || !formData.price) {
+    const cleanRoomNumber = formData.room_number.replace(/\D/g, "");
+    if (!cleanRoomNumber || !formData.price) {
       toast.warning("Incomplete Room Details", {
-        description: "Please enter a valid room number and monthly tariff.",
+        description: "Please enter a valid numeric room number and monthly tariff.",
       });
       return;
     }
 
-    const parsedCapacity = parseInt(String(formData.capacity), 10);
-    if (!formData.capacity || isNaN(parsedCapacity) || parsedCapacity < 1) {
+    const isWholeRoom = formData.rental_type === "Whole Room";
+    const parsedCapacity = isWholeRoom ? 1 : parseInt(String(formData.capacity), 10);
+    if (!isWholeRoom && (!formData.capacity || isNaN(parsedCapacity) || parsedCapacity < 1)) {
       toast.warning("Invalid Capacity", {
         description: "Please specify a valid capacity of at least 1 bed.",
       });
@@ -304,15 +271,39 @@ function RoomsContent() {
       return;
     }
 
+    // Validate that floor input counts consecutively
+    const floorDigits = formData.floor.toString().replace(/\D/g, "");
+    if (!floorDigits) {
+      toast.warning("Floor Required", {
+        description: "Please specify a floor number for the room.",
+      });
+      return;
+    }
+    const parsedFloor = parseInt(floorDigits, 10);
+    if (parsedFloor < 1) {
+      toast.warning("Invalid Floor Number", {
+        description: "Floor number must be at least 1.",
+      });
+      return;
+    }
+    if (parsedFloor > nextAllowedFloor) {
+      toast.warning("Floor Must Be Consecutive", {
+        description: `Cannot skip floors. Existing floors are ${existingFloorsText}. You entered Floor ${parsedFloor}, but the next consecutive floor is Floor ${nextAllowedFloor}.`,
+      });
+      setError(
+        `Floor numbers must count consecutively. Existing floors: ${existingFloorsText}. The next consecutive floor is Floor ${nextAllowedFloor}.`
+      );
+      return;
+    }
+
     setIsSubmitting(true);
     setError("");
     try {
-      // Standardize floor format to "Floor X"
-      const floorDigits = formData.floor.toString().replace(/\D/g, "") || "1";
       const payload = {
         ...formData,
-        capacity: parsedCapacity,
-        floor: `Floor ${floorDigits}`,
+        room_number: cleanRoomNumber,
+        capacity: isWholeRoom ? 1 : parsedCapacity,
+        floor: `Floor ${parsedFloor}`,
       };
 
       if (editingRoom) {
@@ -323,7 +314,7 @@ function RoomsContent() {
       } else {
         await api.post("/admin/rooms", payload);
         toast.success("Room Created Successfully", {
-          description: `Room ${formData.room_number} (${formData.type}) added to inventory.`,
+          description: `Room ${formData.room_number} added to inventory.`,
         });
       }
       setIsModalOpen(false);
@@ -506,20 +497,64 @@ function RoomsContent() {
     if (floorStr) {
       const clean = floorStr.toLowerCase().trim();
       const match = clean.match(/\d+/);
-      if (match) return `Floor ${match[0]}`;
+      if (match) {
+        const num = parseInt(match[0], 10);
+        if (num >= 1) return `Floor ${num}`;
+      }
       if (clean.includes("first")) return "Floor 1";
       if (clean.includes("second")) return "Floor 2";
       if (clean.includes("third")) return "Floor 3";
-      if (clean.includes("fourth")) return "Floor 4";
-      if (clean.includes("fifth")) return "Floor 5";
-      if (clean.includes("sixth")) return "Floor 6";
-      if (clean.includes("seventh")) return "Floor 7";
     }
     if (roomNumber && roomNumber.length >= 3 && !isNaN(Number(roomNumber[0]))) {
-      return `Floor ${roomNumber[0]}`;
+      const floorDigit = Number(roomNumber[0]);
+      if (floorDigit >= 1) {
+        return `Floor ${floorDigit}`;
+      }
     }
     return "Floor 1";
   };
+
+  // Existing floors and next consecutive allowed floor
+  const existingFloorNumbers = useMemo(() => {
+    const set = new Set<number>();
+    rooms.forEach((r) => {
+      const match = (r.floor || "").match(/\d+/);
+      if (match) {
+        set.add(parseInt(match[0], 10));
+      } else if (
+        r.room_number &&
+        r.room_number.length >= 3 &&
+        !isNaN(Number(r.room_number[0]))
+      ) {
+        set.add(Number(r.room_number[0]));
+      }
+    });
+    return Array.from(set)
+      .filter((n) => n > 0)
+      .sort((a, b) => a - b);
+  }, [rooms]);
+
+  const maxExistingFloor = useMemo(() => {
+    return existingFloorNumbers.length > 0
+      ? Math.max(...existingFloorNumbers)
+      : 0;
+  }, [existingFloorNumbers]);
+
+  const nextAllowedFloor = maxExistingFloor > 0 ? maxExistingFloor + 1 : 1;
+  const existingFloorsText =
+    existingFloorNumbers.length > 0
+      ? `Floor ${existingFloorNumbers.join(", Floor ")}`
+      : "None";
+
+  const enteredFloorNum = formData.floor
+    ? parseInt(formData.floor.toString().replace(/\D/g, ""), 10)
+    : 0;
+  const isFloorSkipped =
+    formData.floor !== "" &&
+    enteredFloorNum > nextAllowedFloor &&
+    !isNaN(enteredFloorNum);
+  const isFloorInvalidZero =
+    formData.floor !== "" && enteredFloorNum === 0;
 
   // Unique floors and types
   const uniqueFloors = useMemo(() => {
@@ -532,14 +567,6 @@ function RoomsContent() {
       const numB = parseInt(b.replace(/\D/g, "")) || 0;
       return numA - numB;
     });
-  }, [rooms]);
-
-  const uniqueTypes = useMemo(() => {
-    const set = new Set<string>();
-    rooms.forEach((r) => {
-      if (r.type) set.add(r.type);
-    });
-    return Array.from(set).sort();
   }, [rooms]);
 
   // Filtered rooms
@@ -557,7 +584,6 @@ function RoomsContent() {
         r.room_number.toLowerCase().includes(q) ||
         `room ${r.room_number}`.toLowerCase().includes(q) ||
         floorStr.includes(q) ||
-        r.type.toLowerCase().includes(q) ||
         tenantMatch;
 
       // Status Filter
@@ -580,9 +606,9 @@ function RoomsContent() {
       const matchesFloorTab =
         selectedFloorTab === "All Floors" || effectiveFloor === selectedFloorTab;
 
-      // Type Filter
-      const matchesType =
-        typeFilter === "All Room Types" || r.type === typeFilter;
+      // Gender Filter
+      const matchesGender =
+        genderFilter === "All Genders" || r.gender === genderFilter;
 
       // Rental Model Filter
       const matchesRentalType =
@@ -593,7 +619,7 @@ function RoomsContent() {
         matchesSearch &&
         matchesStatus &&
         matchesFloorTab &&
-        matchesType &&
+        matchesGender &&
         matchesRentalType
       );
     });
@@ -602,7 +628,7 @@ function RoomsContent() {
     searchQuery,
     statusFilter,
     selectedFloorTab,
-    typeFilter,
+    genderFilter,
     rentalTypeFilter,
   ]);
 
@@ -910,12 +936,12 @@ function RoomsContent() {
           />
         </div>
 
-        {/* 4. Room Types Dropdown */}
+        {/* 4. Gender Filter Dropdown */}
         <div className="w-36 sm:w-44">
           <CustomSelect
-            value={typeFilter}
-            onChange={(val) => setTypeFilter(val)}
-            options={["All Room Types", ...uniqueTypes]}
+            value={genderFilter}
+            onChange={(val) => setGenderFilter(val)}
+            options={["All Genders", "Male Only", "Female Only"]}
             className="w-full px-3 py-2 text-sm sm:text-base font-semibold rounded-lg border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-slate-800 dark:text-zinc-200 outline-none"
           />
         </div>
@@ -1041,16 +1067,30 @@ function RoomsContent() {
                           }`}
                         >
                           <div>
-                            {/* Top Line: Room Number */}
-                            <div className="mb-0.5">
-                              <span className="font-black text-base sm:text-lg font-mono text-slate-900 dark:text-white truncate">
+                            {/* Top Line: Room Number & Gender Badge */}
+                            <div className="flex items-center justify-between gap-1.5 mb-0.5">
+                              <span className="font-black text-base sm:text-lg font-mono text-slate-900 dark:text-white whitespace-nowrap truncate">
                                 Room {room.room_number}
                               </span>
+                              {room.gender && (
+                                <span
+                                  className={`text-xs font-bold shrink-0 whitespace-nowrap ${
+                                    room.gender.toLowerCase().includes("male") &&
+                                    !room.gender.toLowerCase().includes("female")
+                                      ? "text-blue-600 dark:text-blue-400"
+                                      : room.gender.toLowerCase().includes("female")
+                                        ? "text-rose-600 dark:text-rose-400"
+                                        : "text-slate-600 dark:text-zinc-400"
+                                  }`}
+                                >
+                                  {room.gender}
+                                </span>
+                              )}
                             </div>
 
-                            {/* Room Subtitle: Type & Tier */}
+                            {/* Room Subtitle: Rental Model */}
                             <p className="text-xs sm:text-sm text-slate-600 dark:text-zinc-300 font-semibold mt-0.5 truncate">
-                              {room.type} • {room.rental_type === "Per Bed / Bedspace" ? "Per Bed / Bedspace" : "Whole Room"}
+                              {room.rental_type === "Per Bed / Bedspace" ? "Per Bed / Bedspace" : "Whole Room"}
                             </p>
 
                             {/* Bed Capacity & Occupancy Visualization (5 columns, min 2 rows, scrollable if >= 3 rows) */}
@@ -1130,13 +1170,6 @@ function RoomsContent() {
                             </div>
 
                             <div className="flex items-center gap-2">
-                              {/* Amenity Icons */}
-                              <div className="flex items-center gap-1.5 text-slate-400 dark:text-zinc-500">
-                                <span title="Wi-Fi"><Wifi className="w-3.5 h-3.5" /></span>
-                                <span title="Air Conditioning"><Wind className="w-3.5 h-3.5" /></span>
-                                <span title="Desk / Work Area"><Monitor className="w-3.5 h-3.5" /></span>
-                              </div>
-
                               <div className="relative">
                                 <button
                                   type="button"
@@ -1209,35 +1242,46 @@ function RoomsContent() {
 
         {/* RIGHT COLUMN: DETAILED ROOM DOSSIER (Matches Mockup Right Sidebar) */}
         {selectedRoom && (
-          <div className="w-full lg:w-[285px] 2xl:w-[325px] shrink-0 h-full overflow-y-auto pr-1 custom-scrollbar">
+          <div className="w-full lg:w-[320px] 2xl:w-[350px] shrink-0 h-full overflow-y-auto pr-1 custom-scrollbar">
             <div className="bg-white dark:bg-zinc-900 border border-slate-200/90 dark:border-zinc-800 rounded-xl p-3.5 sm:p-4 shadow-xs space-y-3">
               {/* Header: Room Number, Badge & Close */}
               <div>
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <h2 className="text-lg font-black text-slate-900 dark:text-white">
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2 flex-nowrap min-w-0">
+                    <h2 className="text-base sm:text-lg font-black text-slate-900 dark:text-white whitespace-nowrap shrink-0">
                       Room {selectedRoom.room_number}
                     </h2>
+                    {selectedRoom.gender && (
+                      <span
+                        className={`text-xs font-bold whitespace-nowrap shrink-0 ${
+                          selectedRoom.gender.toLowerCase().includes("male") &&
+                          !selectedRoom.gender.toLowerCase().includes("female")
+                            ? "text-blue-600 dark:text-blue-400"
+                            : selectedRoom.gender.toLowerCase().includes("female")
+                              ? "text-rose-600 dark:text-rose-400"
+                              : "text-slate-600 dark:text-zinc-400"
+                        }`}
+                      >
+                        {selectedRoom.gender}
+                      </span>
+                    )}
                     {getRoomCategory(selectedRoom) === "Full" && (
-                      <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400">
+                      <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400 whitespace-nowrap shrink-0">
                         Full
                       </span>
                     )}
                     {getRoomCategory(selectedRoom) === "OccupiedWithBeds" && (
-                      <span className="text-xs font-bold text-amber-600 dark:text-amber-400">
-                        Occupied with {getAvailableBeds(selectedRoom)}{" "}
-                        {getAvailableBeds(selectedRoom) === 1
-                          ? "available bed"
-                          : "available beds"}
+                      <span className="text-xs font-bold text-amber-600 dark:text-amber-400 whitespace-nowrap shrink-0">
+                        Occupied w/ Beds
                       </span>
                     )}
                     {getRoomCategory(selectedRoom) === "Vacant" && (
-                      <span className="text-xs font-bold text-blue-600 dark:text-blue-400">
+                      <span className="text-xs font-bold text-blue-600 dark:text-blue-400 whitespace-nowrap shrink-0">
                         Vacant
                       </span>
                     )}
                     {getRoomCategory(selectedRoom) === "Maintenance" && (
-                      <span className="text-xs font-bold text-rose-600 dark:text-rose-400">
+                      <span className="text-xs font-bold text-rose-600 dark:text-rose-400 whitespace-nowrap shrink-0">
                         Maintenance
                       </span>
                     )}
@@ -1246,7 +1290,7 @@ function RoomsContent() {
                   <button
                     type="button"
                     onClick={() => setSelectedRoom(null)}
-                    className="p-1 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-zinc-800 transition-colors cursor-pointer"
+                    className="p-1 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-zinc-800 transition-colors cursor-pointer shrink-0 ml-auto"
                     title="Close"
                   >
                     <X className="w-4 h-4" />
@@ -1258,7 +1302,7 @@ function RoomsContent() {
                     selectedRoom.floor,
                     selectedRoom.room_number,
                   )}{" "}
-                  • {selectedRoom.type} Room • Standard
+                  • {selectedRoom.rental_type === "Per Bed / Bedspace" ? "Per Bed / Bedspace" : "Whole Room"}
                 </p>
               </div>
 
@@ -1272,47 +1316,22 @@ function RoomsContent() {
                     / month
                   </span>
                 </div>
-                <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-blue-50 dark:bg-blue-950/50 text-blue-600 dark:text-blue-400 border border-blue-200/60 dark:border-blue-900/40">
+                <span className="text-xs font-bold text-blue-600 dark:text-blue-400">
                   {selectedRoom.rental_type || "Whole Room"}
                 </span>
               </div>
 
-              {/* Photo & Amenities Mini Grid */}
-              <div className="grid grid-cols-2 gap-3 pt-1">
-                {/* Visual Thumbnail */}
-                <div className="relative aspect-4/3 rounded-xl overflow-hidden border border-slate-200 dark:border-zinc-800 bg-slate-100 dark:bg-zinc-800">
+              {/* Photo Preview */}
+              <div className="pt-1">
+                <div className="relative aspect-16/9 rounded-xl overflow-hidden border border-slate-200 dark:border-zinc-800 bg-slate-100 dark:bg-zinc-800">
                   <img
                     src="/images/room_sample.jpg"
                     alt="Room sample"
                     className="w-full h-full object-cover"
                     onError={(e) => {
-                      // Fallback gradient if file missing
                       (e.target as HTMLElement).style.display = "none";
                     }}
                   />
-                </div>
-
-                {/* Amenities List */}
-                <div className="space-y-1 flex flex-col justify-center">
-                  <span className="text-xs font-bold text-slate-900 dark:text-white block mb-0.5">
-                    Amenities
-                  </span>
-                  <div className="flex items-center gap-1.5 text-xs text-slate-600 dark:text-zinc-300 font-medium">
-                    <Wifi className="w-3.5 h-3.5 text-slate-400" />
-                    <span>Wi-Fi</span>
-                  </div>
-                  <div className="flex items-center gap-1.5 text-xs text-slate-600 dark:text-zinc-300 font-medium">
-                    <Wind className="w-3.5 h-3.5 text-slate-400" />
-                    <span>Aircon</span>
-                  </div>
-                  <div className="flex items-center gap-1.5 text-xs text-slate-600 dark:text-zinc-300 font-medium">
-                    <Monitor className="w-3.5 h-3.5 text-slate-400" />
-                    <span>Study Desk</span>
-                  </div>
-                  <div className="flex items-center gap-1.5 text-xs text-slate-600 dark:text-zinc-300 font-medium">
-                    <Box className="w-3.5 h-3.5 text-slate-400" />
-                    <span>Wardrobe</span>
-                  </div>
                 </div>
               </div>
 
@@ -1506,31 +1525,33 @@ function RoomsContent() {
                 {/* Room Number & Floor */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-1.5">
-                    <label className="text-xs font-bold text-slate-700 dark:text-zinc-300">
-                      Room Number <span className="text-rose-500">*</span>
+                    <label className="text-xs font-bold text-slate-700 dark:text-zinc-300 flex items-center justify-between">
+                      <span>
+                        Room Number <span className="text-rose-500">*</span>
+                      </span>
+                      <span className="text-[10px] text-slate-500 dark:text-zinc-400 font-normal">
+                        Numbers only
+                      </span>
                     </label>
                     <input
                       required
                       type="text"
+                      inputMode="numeric"
+                      pattern="[0-9]*"
                       value={formData.room_number}
                       onChange={(e) =>
                         setFormData({
                           ...formData,
-                          room_number: e.target.value,
+                          room_number: e.target.value.replace(/\D/g, ""),
                         })
                       }
                       className="w-full px-3.5 py-2 text-xs font-medium rounded-lg bg-slate-50/50 dark:bg-zinc-900/50 border border-slate-200 dark:border-zinc-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-slate-400/20 dark:focus:ring-zinc-600/30 outline-none"
-                      placeholder="e.g. 101, 202-A"
+                      placeholder="e.g. 101, 202"
                     />
                   </div>
                   <div className="space-y-1.5">
-                    <label className="text-xs font-bold text-slate-700 dark:text-zinc-300 flex items-center justify-between">
-                      <span>
-                        Floor Number <span className="text-rose-500">*</span>
-                      </span>
-                      <span className="text-[10px] text-slate-500 dark:text-zinc-400 font-normal">
-                        Number only (e.g. 1, 2)
-                      </span>
+                    <label className="text-xs font-bold text-slate-700 dark:text-zinc-300">
+                      Floor Number <span className="text-rose-500">*</span>
                     </label>
                     <div className="relative">
                       <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-500 dark:text-zinc-400 select-none">
@@ -1540,39 +1561,62 @@ function RoomsContent() {
                         required
                         type="text"
                         inputMode="numeric"
-                        pattern="[0-9]*"
                         value={formData.floor}
                         onChange={(e) => {
                           const val = e.target.value.replace(/\D/g, "");
                           setFormData({ ...formData, floor: val });
                         }}
-                        className="w-full pl-14 pr-3.5 py-2 text-xs font-bold rounded-lg bg-slate-50/50 dark:bg-zinc-900/50 border border-slate-200 dark:border-zinc-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-slate-400/20 dark:focus:ring-zinc-600/30 outline-none"
+                        className={`w-full pl-14 pr-3.5 py-2 text-xs font-bold rounded-lg bg-slate-50/50 dark:bg-zinc-900/50 border text-slate-900 dark:text-white focus:ring-2 outline-none transition-colors ${
+                          isFloorSkipped
+                            ? "border-amber-500 dark:border-amber-500/80 focus:ring-amber-400/20"
+                            : "border-slate-200 dark:border-zinc-800 focus:ring-slate-400/20 dark:focus:ring-zinc-600/30"
+                        }`}
                         placeholder="1"
                       />
                     </div>
+
+                    {/* Consecutive Floor Warning Alert */}
+                    {isFloorSkipped && (
+                      <div className="flex items-start gap-2 p-2.5 rounded-lg bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/60 text-amber-800 dark:text-amber-300 text-xs font-medium mt-1.5 animate-in fade-in duration-200">
+                        <AlertTriangle className="w-4 h-4 shrink-0 text-amber-600 dark:text-amber-400 mt-0.5" />
+                        <div>
+                          <span className="font-bold block">Floor numbers must be consecutive:</span>
+                          <span>
+                            Existing floors are {existingFloorsText}. You entered Floor {enteredFloorNum}. The next consecutive floor is Floor {nextAllowedFloor}.
+                          </span>
+                        </div>
+                      </div>
+                    )}
+
+                    {isFloorInvalidZero && (
+                      <p className="text-[11px] text-rose-500 font-semibold mt-1">
+                        Floor number must be at least 1.
+                      </p>
+                    )}
+
+                    {!isFloorSkipped && !isFloorInvalidZero && (
+                      <p className="text-[11px] text-slate-400 font-medium mt-1">
+                        Allowed: {existingFloorsText}{" "}
+                        {maxExistingFloor > 0
+                          ? `(or next Floor ${nextAllowedFloor})`
+                          : "(Floor 1)"}
+                      </p>
+                    )}
                   </div>
                 </div>
 
-                {/* Room Type & Rental Mode */}
+                {/* Gender Designation & Rental Mode */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-1.5">
                     <label className="text-xs font-bold text-slate-700 dark:text-zinc-300">
-                      Room Type <span className="text-rose-500">*</span>
+                      Gender Designation <span className="text-rose-500">*</span>
                     </label>
                     <CustomSelect
-                      value={formData.type}
+                      value={formData.gender}
                       onChange={(val) =>
-                        setFormData({ ...formData, type: val })
+                        setFormData({ ...formData, gender: val })
                       }
-                      options={[
-                        "Single",
-                        "Double",
-                        "Triple",
-                        "Quadruple",
-                        "Dormitory",
-                        "Solo Standard",
-                        "Aircon Deluxe",
-                      ]}
+                      options={["Male Only", "Female Only"]}
                       className="w-full px-3.5 py-2 text-xs font-medium rounded-lg bg-slate-50/50 dark:bg-zinc-900/50 border border-slate-200 dark:border-zinc-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-slate-400/20 dark:focus:ring-zinc-600/30 outline-none"
                     />
                   </div>
@@ -1582,9 +1626,17 @@ function RoomsContent() {
                     </label>
                     <CustomSelect
                       value={formData.rental_type}
-                      onChange={(val) =>
-                        setFormData({ ...formData, rental_type: val })
-                      }
+                      onChange={(val) => {
+                        if (val === "Whole Room") {
+                          setFormData({ ...formData, rental_type: val, capacity: "1" });
+                        } else {
+                          setFormData({
+                            ...formData,
+                            rental_type: val,
+                            capacity: formData.capacity && String(formData.capacity) !== "1" ? formData.capacity : "2",
+                          });
+                        }
+                      }}
                       options={["Whole Room", "Per Bed / Bedspace"]}
                       className="w-full px-3.5 py-2 text-xs font-medium rounded-lg bg-slate-50/50 dark:bg-zinc-900/50 border border-slate-200 dark:border-zinc-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-slate-400/20 dark:focus:ring-zinc-600/30 outline-none"
                     />
@@ -1594,22 +1646,34 @@ function RoomsContent() {
                 {/* Capacity & Pricing */}
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                   <div className="space-y-1.5">
-                    <label className="text-xs font-bold text-slate-700 dark:text-zinc-300">
-                      Max Capacity (Beds){" "}
-                      <span className="text-rose-500">*</span>
-                    </label>
+                    <div className="flex items-center justify-between">
+                      <label className="text-xs font-bold text-slate-700 dark:text-zinc-300">
+                        Max Capacity (Beds){" "}
+                        <span className="text-rose-500">*</span>
+                      </label>
+                      {formData.rental_type === "Whole Room" && (
+                        <span className="text-[10px] font-semibold text-slate-400 dark:text-zinc-500">
+                          Fixed to 1 for Whole Room
+                        </span>
+                      )}
+                    </div>
                     <input
                       required
                       type="number"
                       min="1"
-                      value={formData.capacity}
+                      disabled={formData.rental_type === "Whole Room"}
+                      value={formData.rental_type === "Whole Room" ? "1" : formData.capacity}
                       onChange={(e) =>
                         setFormData({
                           ...formData,
                           capacity: e.target.value,
                         })
                       }
-                      className="w-full px-3.5 py-2 text-xs font-medium rounded-lg bg-slate-50/50 dark:bg-zinc-900/50 border border-slate-200 dark:border-zinc-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-slate-400/20 dark:focus:ring-zinc-600/30 outline-none"
+                      className={`w-full px-3.5 py-2 text-xs font-medium rounded-lg border outline-none ${
+                        formData.rental_type === "Whole Room"
+                          ? "bg-slate-100 dark:bg-zinc-800/60 border-slate-200 dark:border-zinc-800 text-slate-500 dark:text-zinc-400 cursor-not-allowed select-none"
+                          : "bg-slate-50/50 dark:bg-zinc-900/50 border-slate-200 dark:border-zinc-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-slate-400/20 dark:focus:ring-zinc-600/30"
+                      }`}
                     />
                   </div>
                   <div className="space-y-1.5">
@@ -1646,60 +1710,6 @@ function RoomsContent() {
                       className="w-full px-3.5 py-2 text-xs font-medium rounded-lg bg-slate-50/50 dark:bg-zinc-900/50 border border-slate-200 dark:border-zinc-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-slate-400/20 dark:focus:ring-zinc-600/30 outline-none"
                     />
                   </div>
-                </div>
-
-                {/* One-Click Amenity Presets */}
-                <div className="space-y-2">
-                  <label className="text-xs font-bold text-slate-700 dark:text-zinc-300">
-                    Included Amenities
-                  </label>
-                  <div className="flex flex-wrap gap-1.5">
-                    {AMENITY_PRESETS.map((preset) => {
-                      const isSelected = formData.amenities?.includes(preset);
-                      return (
-                        <button
-                          key={preset}
-                          type="button"
-                          onClick={() => handleToggleAmenity(preset)}
-                          className={`px-2.5 py-1 text-[11px] rounded-md font-medium border transition-colors ${
-                            isSelected
-                              ? "bg-blue-600 border-blue-600 text-white font-bold"
-                              : "bg-slate-50 dark:bg-zinc-900 border-slate-200 dark:border-zinc-800 text-slate-600 dark:text-zinc-400 hover:bg-slate-100 dark:hover:bg-zinc-800"
-                          }`}
-                        >
-                          {isSelected && (
-                            <Check className="w-3 h-3 inline mr-1" />
-                          )}
-                          {preset}
-                        </button>
-                      );
-                    })}
-                  </div>
-                  <input
-                    type="text"
-                    value={formData.amenities}
-                    onChange={(e) =>
-                      setFormData({ ...formData, amenities: e.target.value })
-                    }
-                    className="w-full px-3.5 py-2 text-xs font-medium rounded-lg bg-slate-50/50 dark:bg-zinc-900/50 border border-slate-200 dark:border-zinc-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-slate-400/20 dark:focus:ring-zinc-600/30 outline-none mt-1"
-                    placeholder="Or type custom amenities separated by comma..."
-                  />
-                </div>
-
-                {/* Description */}
-                <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-slate-700 dark:text-zinc-300">
-                    Description & Notes
-                  </label>
-                  <textarea
-                    value={formData.description}
-                    onChange={(e) =>
-                      setFormData({ ...formData, description: e.target.value })
-                    }
-                    rows={3}
-                    className="w-full px-3.5 py-2 text-xs font-medium rounded-lg bg-slate-50/50 dark:bg-zinc-900/50 border border-slate-200 dark:border-zinc-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-slate-400/20 dark:focus:ring-zinc-600/30 outline-none resize-none"
-                    placeholder="Add unit notes, bed arrangements, or leasing terms..."
-                  />
                 </div>
 
                 {/* Modal Footer */}

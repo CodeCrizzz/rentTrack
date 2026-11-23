@@ -7,7 +7,8 @@ const {
     getTenantPayments, getCurrentBill, getTenantGcashQr, completeGcashPayment,
     getTenantMessages, sendTenantMessage, getUnreadCount,
     getTenantRooms, chooseRoom, getAnnouncements,
-    getTenantNotifications, markNotificationRead, markAllNotificationsRead
+    getTenantNotifications, markNotificationRead, markAllNotificationsRead,
+    sendTenantPaymentReceipt
 } = require('../controllers/tenantController');
 
 const multer = require('multer');
@@ -48,6 +49,7 @@ router.get('/gcash-qr', getTenantGcashQr);
 router.get('/qrph-qr', getTenantGcashQr);
 router.post('/pay/gcash', completeGcashPayment);
 router.post('/pay/qrph', completeGcashPayment);
+router.post('/payments/receipt/email', sanitizeInput, sendTenantPaymentReceipt);
 
 router.get('/profile', getTenantProfile);
 router.put('/profile', updateTenantProfile);

@@ -4,7 +4,7 @@ const db = require('../config/db');
 const { hashPassword, comparePassword } = require('../utils/passwordUtils');
 const presenceService = require('../services/presenceService');
 const { formatPhoneNumber } = require('../utils/phoneUtils');
-const { normalizeRoomGender, ensureRoomGenderColumn } = require('../utils/roomGenderUtils');
+const { normalizeRoomGender, ensureRoomGenderColumn, validateTenantRoomGender } = require('../utils/roomGenderUtils');
 
 // Normalize online / QRPh / GCash payment method names to "E-Wallet"
 const normalizeOnlinePaymentMethod = (method, fallback = 'Cash') => {
@@ -42,7 +42,7 @@ const getDashboardStats = async (req, res) => {
             db.query('SELECT COUNT(*) FROM rooms'),
             db.query(`
                 SELECT 
-                    r.id, r.room_number, r.type, r.rental_type, r.gender, r.capacity, r.price, r.floor, r.status,
+                    r.id, r.room_number, r.rental_type, r.gender, r.capacity, r.price, r.floor, r.status,
                     CAST(COUNT(u.id) AS INTEGER) as current_occupants,
                     COALESCE(
                         json_agg(
@@ -83,7 +83,7 @@ const getDashboardStats = async (req, res) => {
             
             // Recent Payments & Requests for Activity Feed
             db.query(`
-                SELECT p.id, u.name as tenant_name, p.amount_paid, p.payment_date, p.transaction_number, p.transaction_number AS reference_number 
+                SELECT p.id, u.name as tenant_name, p.amount_paid, p.payment_date, p.reference_number 
                 FROM payments p 
                 JOIN bills b ON p.bill_id = b.id 
                 JOIN users u ON b.tenant_id = u.id 
@@ -170,27 +170,8 @@ const getDashboardStats = async (req, res) => {
                 ORDER BY u.created_at DESC LIMIT 25
             `),
 
-            // Pending Payment Verifications (from payments table where status is Pending Verification)
-            db.query(`
-                SELECT 
-                    p.id as payment_id,
-                    p.id as id,
-                    p.bill_id,
-                    b.tenant_id,
-                    u.name as tenant_name,
-                    r.room_number,
-                    p.amount_paid as total_amount,
-                    p.payment_date as created_at,
-                    p.transaction_number,
-                    p.transaction_number AS reference_number,
-                    p.payment_method
-                FROM payments p
-                JOIN bills b ON p.bill_id = b.id
-                JOIN users u ON b.tenant_id = u.id
-                LEFT JOIN rooms r ON u.room_id = r.id
-                WHERE p.status = 'Pending Verification' AND (p.payment_method IS NULL OR (p.payment_method NOT ILIKE '%gcash%' AND p.payment_method NOT ILIKE '%qrph%' AND p.payment_method NOT ILIKE '%qr ph%' AND p.payment_method NOT ILIKE '%e-wallet%' AND p.payment_method NOT ILIKE '%ewallet%'))
-                ORDER BY p.payment_date ASC
-            `),
+            // Pending Payment Verifications (legacy workflow removed - automatic record)
+            Promise.resolve({ rows: [] }),
             
             // Last Month Income (verified/approved payments only)
             db.query("SELECT COALESCE(SUM(amount_paid), 0) as sum FROM payments WHERE EXTRACT(MONTH FROM payment_date) = EXTRACT(MONTH FROM CURRENT_DATE - INTERVAL '1 month') AND EXTRACT(YEAR FROM payment_date) = EXTRACT(YEAR FROM CURRENT_DATE - INTERVAL '1 month') AND status IN ('Verified', 'Approved')"),
@@ -322,7 +303,7 @@ const getDashboardStats = async (req, res) => {
         // 3. Recent Payments (e.g. Maria Santos paid ₱ 3,500.00 / (Ref: #PAY-2026-104))
         recentPaymentsResult.rows.forEach(p => {
             const formattedAmount = parseFloat(p.amount_paid).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-            const rawRef = p.transaction_number || p.reference_number;
+            const rawRef = p.reference_number;
             const refNo = rawRef 
                 ? (rawRef.startsWith('#') ? rawRef : `#${rawRef}`) 
                 : `#PAY-2026-${String(p.id).padStart(3, '0')}`;
@@ -517,7 +498,7 @@ const getAllRooms = async (req, res) => {
         const query = `
             SELECT 
                 r.id, r.room_number, r.capacity, r.price, r.status,
-                r.type, r.rental_type, r.gender, r.amenities, r.floor, r.description,
+                r.rental_type, r.gender, r.floor,
                 CAST(COUNT(u.id) AS INTEGER) as current_occupants,
                 CAST((r.capacity - COUNT(u.id)) AS INTEGER) as available_slots,
                 COALESCE(
@@ -572,47 +553,90 @@ const getAllRooms = async (req, res) => {
     }
 };
 
+// Helper: Validate that a room's floor counts consecutively
+async function validateConsecutiveFloor(db, floorInput, cleanRoomNumber) {
+    let targetFloorNum = 1;
+    if (floorInput) {
+        const match = String(floorInput).match(/\d+/);
+        targetFloorNum = match ? parseInt(match[0], 10) : 1;
+    } else if (cleanRoomNumber) {
+        const firstDigit = parseInt(cleanRoomNumber.charAt(0), 10);
+        targetFloorNum = firstDigit || 1;
+    }
+
+    if (targetFloorNum < 1) {
+        return { isValid: false, message: 'Floor number must be at least 1.' };
+    }
+
+    const existingFloorsRes = await db.query(
+        `SELECT DISTINCT floor, room_number FROM rooms WHERE floor IS NOT NULL OR room_number IS NOT NULL`
+    );
+    const existingFloorsSet = new Set();
+    existingFloorsRes.rows.forEach(r => {
+        const match = (r.floor || '').match(/\d+/);
+        if (match) {
+            existingFloorsSet.add(parseInt(match[0], 10));
+        } else if (r.room_number && r.room_number.length >= 3 && !isNaN(Number(r.room_number[0]))) {
+            existingFloorsSet.add(parseInt(r.room_number[0], 10));
+        }
+    });
+    const existingFloorsArr = Array.from(existingFloorsSet).filter(f => f > 0).sort((a, b) => a - b);
+    const maxFloor = existingFloorsArr.length > 0 ? Math.max(...existingFloorsArr) : 0;
+    const nextAllowedFloor = maxFloor > 0 ? maxFloor + 1 : 1;
+
+    if (targetFloorNum > nextAllowedFloor) {
+        const listStr = existingFloorsArr.length > 0 ? `Floor ${existingFloorsArr.join(', Floor ')}` : 'None';
+        return {
+            isValid: false,
+            message: `Floor numbers must count consecutively. Existing floors are ${listStr}. The next consecutive floor is Floor ${nextAllowedFloor}.`
+        };
+    }
+
+    return { isValid: true, cleanFloor: `Floor ${targetFloorNum}`, floorNum: targetFloorNum };
+}
+
 // @desc    Create a new Room
 // @route   POST /api/admin/rooms
 const createRoom = async (req, res) => {
-    const { room_number, type, rental_type, gender, capacity, price, floor, description, amenities, status } = req.body;
+    const { room_number, rental_type, gender, capacity, price, floor, status } = req.body;
     try {
         await ensureRoomGenderColumn();
 
+        const cleanRoomNumber = String(room_number || '').replace(/\D/g, '');
+        if (!cleanRoomNumber) {
+            return res.status(400).json({ message: 'Room number must contain numbers only.' });
+        }
+
         // Check if room number already exists to prevent duplicates
-        const roomExists = await db.query('SELECT * FROM rooms WHERE room_number = $1', [room_number]);
+        const roomExists = await db.query('SELECT * FROM rooms WHERE room_number = $1', [cleanRoomNumber]);
         if (roomExists.rows.length > 0) {
             return res.status(400).json({ message: 'Room number already exists' });
         }
 
-        // Normalize floor to standard "Floor X" format
-        let cleanFloor = null;
-        if (floor) {
-            const match = String(floor).match(/\d+/);
-            cleanFloor = match ? `Floor ${match[0]}` : 'Floor 1';
-        } else if (room_number) {
-            const match = String(room_number).match(/\d+/);
-            cleanFloor = match ? `Floor ${match[0].charAt(0)}` : 'Floor 1';
+        // Validate floor numbers count consecutively
+        const floorValidation = await validateConsecutiveFloor(db, floor, cleanRoomNumber);
+        if (!floorValidation.isValid) {
+            return res.status(400).json({ message: floorValidation.message });
         }
+        const cleanFloor = floorValidation.cleanFloor;
 
         const normalizedGender = normalizeRoomGender(gender);
+        const effectiveRentalType = rental_type || 'Whole Room';
+        const effectiveCapacity = effectiveRentalType === 'Whole Room' ? 1 : (parseInt(capacity, 10) || 1);
 
         // Insert the new room
         const query = `
-            INSERT INTO rooms (room_number, type, rental_type, gender, capacity, price, floor, description, amenities, status) 
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) 
+            INSERT INTO rooms (room_number, rental_type, gender, capacity, price, floor, status) 
+            VALUES ($1, $2, $3, $4, $5, $6, $7) 
             RETURNING *
         `;
         const newRoom = await db.query(query, [
-            room_number, 
-            type || 'Single', 
-            rental_type || 'Whole Room',
+            cleanRoomNumber, 
+            effectiveRentalType, 
             normalizedGender,
-            capacity, 
+            effectiveCapacity, 
             price, 
             cleanFloor, 
-            description || null, 
-            amenities || null,
             status || 'Available'
         ]);
         
@@ -627,45 +651,84 @@ const createRoom = async (req, res) => {
 // @route   PUT /api/admin/rooms/:id
 const updateRoom = async (req, res) => {
     const { id } = req.params;
-    const { room_number, type, rental_type, gender, capacity, price, floor, description, amenities, status } = req.body;
+    const { room_number, rental_type, gender, capacity, price, floor, status } = req.body;
     
     try {
         await ensureRoomGenderColumn();
 
-        // Normalize floor to standard "Floor X" format
-        let cleanFloor = null;
-        if (floor) {
-            const match = String(floor).match(/\d+/);
-            cleanFloor = match ? `Floor ${match[0]}` : 'Floor 1';
-        } else if (room_number) {
-            const match = String(room_number).match(/\d+/);
-            cleanFloor = match ? `Floor ${match[0].charAt(0)}` : 'Floor 1';
+        const cleanRoomNumber = String(room_number || '').replace(/\D/g, '');
+        if (!cleanRoomNumber) {
+            return res.status(400).json({ message: 'Room number must contain numbers only.' });
         }
 
+        // Check if room number is taken by another room
+        const roomExists = await db.query('SELECT * FROM rooms WHERE room_number = $1 AND id != $2', [cleanRoomNumber, id]);
+        if (roomExists.rows.length > 0) {
+            return res.status(400).json({ message: 'Room number already exists' });
+        }
+
+        // Validate floor numbers count consecutively
+        const floorValidation = await validateConsecutiveFloor(db, floor, cleanRoomNumber);
+        if (!floorValidation.isValid) {
+            return res.status(400).json({ message: floorValidation.message });
+        }
+        const cleanFloor = floorValidation.cleanFloor;
+
         const normalizedGender = gender ? normalizeRoomGender(gender) : null;
+        if (normalizedGender) {
+            const existingOccupants = await db.query(
+                "SELECT id, name, gender FROM users WHERE room_id = $1 AND role = 'tenant' AND status != 'Moved Out'",
+                [id]
+            );
+            const isNewFemale = normalizedGender === 'Female Only';
+            const isNewMale = normalizedGender === 'Male Only';
+            for (const occ of existingOccupants.rows) {
+                const occG = (occ.gender || '').trim().toLowerCase();
+                if (isNewFemale && (occG === 'male' || occG === 'm')) {
+                    return res.status(400).json({ message: `Cannot change room to Female Only while male boarder (${occ.name}) is currently occupying it. Male and female boarders must be in separate rooms.` });
+                }
+                if (isNewMale && (occG === 'female' || occG === 'f')) {
+                    return res.status(400).json({ message: `Cannot change room to Male Only while female boarder (${occ.name}) is currently occupying it. Male and female boarders must be in separate rooms.` });
+                }
+            }
+        }
+        const effectiveRentalType = rental_type || 'Whole Room';
+        const effectiveCapacity = effectiveRentalType === 'Whole Room' ? 1 : (parseInt(capacity, 10) || 1);
 
         const query = `
             UPDATE rooms 
-            SET room_number = $1, type = $2, rental_type = $3, gender = COALESCE($4, gender), capacity = $5, price = $6, floor = $7, description = $8, amenities = $9, status = $10 
-            WHERE id = $11 
+            SET room_number = $1, rental_type = $2, gender = COALESCE($3, gender), capacity = $4, price = $5, floor = $6, status = $7 
+            WHERE id = $8 
             RETURNING *
         `;
         const updatedRoom = await db.query(query, [
-            room_number, 
-            type || 'Single', 
-            rental_type || 'Whole Room',
+            cleanRoomNumber, 
+            effectiveRentalType, 
             normalizedGender,
-            capacity, 
+            effectiveCapacity, 
             price, 
             cleanFloor, 
-            description || null, 
-            amenities || null,
             status, 
             id
         ]);
         
         if (updatedRoom.rows.length === 0) {
             return res.status(404).json({ message: 'Room not found' });
+        }
+
+        if (price !== undefined) {
+            try {
+                const { syncTenantBillsWithNewRoom } = require('../utils/billingUtils');
+                const tenantsInRoom = await db.query(
+                    "SELECT id FROM users WHERE room_id = $1 AND role = 'tenant' AND status = 'Active'",
+                    [id]
+                );
+                for (const t of tenantsInRoom.rows) {
+                    await syncTenantBillsWithNewRoom(db, t.id, id, price);
+                }
+            } catch (syncErr) {
+                console.error('[updateRoom] Error syncing tenant bills for room update:', syncErr);
+            }
         }
 
         res.status(200).json({ message: 'Room updated successfully', room: updatedRoom.rows[0] });
@@ -772,7 +835,6 @@ const getAllTenants = async (req, res) => {
             SELECT 
                 u.*, 
                 r.room_number,
-                r.type as room_type,
                 r.rental_type,
                 r.floor,
                 COALESCE(r.price, 0) as monthly_rent,
@@ -809,6 +871,74 @@ const getAllTenants = async (req, res) => {
 };
 
 
+// @desc    Register a new Tenant by Admin
+// @route   POST /api/admin/tenants
+const createTenant = async (req, res) => {
+    try {
+        const { name, first_name, last_name, email, phone, password, room_id, gender, address, date_moved_in, contract_end_date, status } = req.body;
+        const resolvedName = (first_name && last_name ? `${first_name.trim()} ${last_name.trim()}` : name || '').trim();
+        
+        if (!resolvedName || !email || !phone) {
+            return res.status(400).json({ message: 'First name, last name, email, and phone number are required.' });
+        }
+
+        const cleanEmail = email.trim().toLowerCase();
+        const existingUser = await db.query('SELECT id FROM users WHERE LOWER(email) = LOWER($1)', [cleanEmail]);
+        if (existingUser.rows.length > 0) {
+            return res.status(400).json({ message: 'A user with this email address already exists.' });
+        }
+
+        const formattedPhone = formatPhoneNumber(phone);
+        const { hashPassword } = require('../utils/authUtils');
+        const hashedPassword = await hashPassword(password || 'RentTrack@2026');
+
+        if (room_id) {
+            const roomQuery = `
+                SELECT r.id, r.room_number, r.gender, r.capacity,
+                COALESCE(json_agg(u.gender) FILTER (WHERE u.id IS NOT NULL AND u.gender IS NOT NULL), '[]'::json) as occupant_genders
+                FROM rooms r
+                LEFT JOIN users u ON r.id = u.room_id AND u.role = 'tenant' AND u.status != 'Moved Out'
+                WHERE r.id = $1
+                GROUP BY r.id
+            `;
+            const roomRes = await db.query(roomQuery, [room_id]);
+            if (roomRes.rows.length === 0) {
+                return res.status(404).json({ message: 'Selected room not found' });
+            }
+            const roomData = roomRes.rows[0];
+            const genderCheck = validateTenantRoomGender(gender, roomData.gender, roomData.occupant_genders);
+            if (!genderCheck.valid) {
+                return res.status(400).json({ message: genderCheck.message });
+            }
+        }
+
+        const insertQuery = `
+            INSERT INTO users (
+                name, email, phone, password, role, room_id, gender, address, date_moved_in, contract_end_date, status
+            ) VALUES ($1, $2, $3, $4, 'tenant', $5, $6, $7, $8, $9, $10)
+            RETURNING *
+        `;
+
+        const result = await db.query(insertQuery, [
+            resolvedName,
+            cleanEmail,
+            formattedPhone,
+            hashedPassword,
+            room_id || null,
+            gender || 'Not Specified',
+            address || null,
+            date_moved_in || null,
+            contract_end_date || null,
+            status || 'Active'
+        ]);
+
+        res.status(201).json({ message: 'Tenant created successfully', tenant: result.rows[0] });
+    } catch (error) {
+        console.error('Create Tenant Error:', error);
+        res.status(500).json({ message: 'Server error registering tenant' });
+    }
+};
+
 // @desc    Update Tenant details or Status
 // @route   PUT /api/admin/tenants/:id
 const updateTenant = async (req, res) => {
@@ -824,8 +954,34 @@ const updateTenant = async (req, res) => {
             return res.status(200).json({ message: 'Status updated', tenant: result.rows[0] });
         }
 
-        const { name, email, phone, room_id, gender, address, date_moved_in, contract_end_date, status } = req.body;
+        const { name, first_name, last_name, email, phone, room_id, gender, address, date_moved_in, contract_end_date, status } = req.body;
+        const resolvedName = (first_name && last_name ? `${first_name.trim()} ${last_name.trim()}` : name || '').trim();
         const formattedPhone = phone ? formatPhoneNumber(phone) : null;
+
+        // Check if room transfer is occurring
+        const currentTenantResult = await db.query("SELECT room_id, gender FROM users WHERE id = $1", [id]);
+        const oldRoomId = currentTenantResult.rows[0]?.room_id;
+
+        if (room_id) {
+            const roomQuery = `
+                SELECT r.id, r.room_number, r.gender, r.capacity,
+                COALESCE(json_agg(u.gender) FILTER (WHERE u.id IS NOT NULL AND u.gender IS NOT NULL AND u.id != $2), '[]'::json) as occupant_genders
+                FROM rooms r
+                LEFT JOIN users u ON r.id = u.room_id AND u.role = 'tenant' AND u.status != 'Moved Out'
+                WHERE r.id = $1
+                GROUP BY r.id
+            `;
+            const roomRes = await db.query(roomQuery, [room_id, id]);
+            if (roomRes.rows.length === 0) {
+                return res.status(404).json({ message: 'Selected room not found' });
+            }
+            const roomData = roomRes.rows[0];
+            const targetGender = gender || currentTenantResult.rows[0]?.gender;
+            const genderCheck = validateTenantRoomGender(targetGender, roomData.gender, roomData.occupant_genders);
+            if (!genderCheck.valid) {
+                return res.status(400).json({ message: genderCheck.message });
+            }
+        }
 
         const query = `
             UPDATE users 
@@ -844,7 +1000,7 @@ const updateTenant = async (req, res) => {
         `;
         
         const result = await db.query(query, [
-            name, 
+            resolvedName || name, 
             email, 
             formattedPhone, 
             room_id || null, 
@@ -858,6 +1014,31 @@ const updateTenant = async (req, res) => {
 
         if (result.rows.length === 0) {
             return res.status(404).json({ message: 'Tenant not found' });
+        }
+
+        if (room_id) {
+            try {
+                const { syncTenantBillsWithNewRoom } = require('../utils/billingUtils');
+                await syncTenantBillsWithNewRoom(db, id, room_id, req.body.monthly_rent);
+            } catch (syncErr) {
+                console.error('[updateTenant] Error syncing tenant bills for room update:', syncErr);
+            }
+        }
+
+        if (room_id && oldRoomId && String(room_id) !== String(oldRoomId)) {
+            try {
+                const roomInfo = await db.query("SELECT room_number FROM rooms WHERE id = $1", [room_id]);
+                const newRoomNum = roomInfo.rows[0]?.room_number || room_id;
+                const adminNotificationService = require('../services/adminNotificationService');
+                adminNotificationService.notifyAdminsIfOffline({
+                    title: 'Resident Room Transfer',
+                    message: `Resident ${name || 'Tenant'} has been reassigned to Room ${newRoomNum}.`,
+                    type: 'room_transfer',
+                    link: '/admin/tenants'
+                });
+            } catch (notifErr) {
+                // non-blocking
+            }
         }
 
         res.status(200).json({ message: 'Tenant updated successfully', tenant: result.rows[0] });
@@ -893,7 +1074,7 @@ const getConversations = async (req, res) => {
         const query = `
             SELECT 
                 u.id, u.name, u.email, u.phone, u.status as user_status, u.last_active_at,
-                r.room_number, r.type as room_type, r.rental_type,
+                r.room_number, r.rental_type,
                 latest.last_message,
                 latest.last_message_time,
                 (
@@ -1349,7 +1530,7 @@ const getReportData = async (req, res) => {
 
             // Individual Payment Ledger
             db.query(`
-                SELECT p.id, p.transaction_number, p.transaction_number AS reference_number, p.payment_date, p.payment_method, p.amount_paid, p.status,
+                SELECT p.id, p.reference_number, p.payment_date, p.payment_method, p.amount_paid, p.status,
                        u.name as tenant_name, r.room_number, b.billing_month
                 FROM payments p
                 JOIN bills b ON p.bill_id = b.id
@@ -1363,7 +1544,7 @@ const getReportData = async (req, res) => {
             // Room Occupancy & Rent Roll
             db.query(`
                 SELECT 
-                    r.id, r.room_number, r.type, r.rental_type, r.capacity, r.price, r.floor, r.status,
+                    r.id, r.room_number, r.rental_type, r.gender, r.capacity, r.price, r.floor, r.status,
                     CAST(COUNT(u.id) AS INTEGER) as current_occupants,
                     COALESCE(string_agg(u.name, ', '), 'Vacant') as occupants_list
                 FROM rooms r
@@ -1495,7 +1676,7 @@ const getActivityLogs = async (req, res) => {
         ] = await Promise.all([
             // Payments
             db.query(`
-                SELECT p.id, p.amount_paid, p.payment_date, p.payment_method, p.status, p.transaction_number, p.transaction_number AS reference_number,
+                SELECT p.id, p.amount_paid, p.payment_date, p.payment_method, p.status, p.reference_number,
                        u.name as tenant_name, rm.room_number
                 FROM payments p
                 JOIN bills b ON p.bill_id = b.id
@@ -1556,7 +1737,7 @@ const getActivityLogs = async (req, res) => {
         // 1. Payments
         paymentsResult.rows.forEach(p => {
             const formattedAmount = parseFloat(p.amount_paid).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-            const rawRef = p.transaction_number || p.reference_number;
+            const rawRef = p.reference_number;
             const refNo = rawRef 
                 ? (rawRef.startsWith('#') ? rawRef : `#${rawRef}`) 
                 : `#PAY-2026-${String(p.id).padStart(3, '0')}`;
@@ -1752,6 +1933,143 @@ const updateGcashQrCode = async (req, res) => {
     }
 };
 
+// @desc    Get Admin Profile & System Overview Stats
+// @route   GET /api/admin/profile
+// @access  Private/Admin
+const getAdminProfile = async (req, res) => {
+    try {
+        const adminId = req.user?.id || 1;
+        const userResult = await db.query(
+            `SELECT id, name, email, role, phone, address, gender, created_at, last_active_at, status 
+             FROM users 
+             WHERE id = $1 OR role = 'admin' 
+             ORDER BY CASE WHEN id = $1 THEN 0 ELSE 1 END 
+             LIMIT 1`,
+            [adminId]
+        );
+
+        if (userResult.rows.length === 0) {
+            return res.status(404).json({ message: 'Administrator profile not found' });
+        }
+
+        const admin = userResult.rows[0];
+
+        // Fetch quick summary stats for the admin profile badge
+        const [roomsCount, tenantsCount, maintenanceCount, totalRequestsCount] = await Promise.all([
+            db.query('SELECT COUNT(*) as count FROM rooms'),
+            db.query("SELECT COUNT(*) as count FROM users WHERE role = 'tenant' AND status = 'Active'"),
+            db.query("SELECT COUNT(*) as count FROM requests WHERE status != 'Resolved'"),
+            db.query('SELECT COUNT(*) as count FROM requests')
+        ]);
+
+        res.status(200).json({
+            ...admin,
+            phone: admin.phone || '',
+            address: admin.address || 'Dapitan City, Zamboanga Del Norte',
+            gender: admin.gender || 'Not Specified',
+            stats: {
+                totalRooms: parseInt(roomsCount.rows[0]?.count || 0, 10),
+                activeTenants: parseInt(tenantsCount.rows[0]?.count || 0, 10),
+                activeMaintenance: parseInt(maintenanceCount.rows[0]?.count || 0, 10),
+                totalRequests: parseInt(totalRequestsCount.rows[0]?.count || 0, 10),
+            }
+        });
+    } catch (error) {
+        console.error('Get Admin Profile Error:', error);
+        res.status(500).json({ message: 'Server error retrieving admin profile' });
+    }
+};
+
+// @desc    Update Admin Profile
+// @route   PUT /api/admin/profile
+// @access  Private/Admin
+const updateAdminProfile = async (req, res) => {
+    try {
+        const adminId = req.user?.id || 1;
+        const { name, email, phone, address, gender } = req.body;
+
+        const cleanName = (name && typeof name === 'string' && name.trim()) ? name.trim() : null;
+        const cleanEmail = (email && typeof email === 'string' && email.trim()) ? email.trim().toLowerCase() : null;
+        const cleanPhone = (phone && typeof phone === 'string' && phone.trim()) ? formatPhoneNumber(phone) : null;
+        const cleanAddress = (address && typeof address === 'string' && address.trim()) ? address.trim() : null;
+        const cleanGender = (gender && typeof gender === 'string' && gender.trim()) ? gender.trim() : null;
+
+        if (cleanEmail) {
+            const conflict = await db.query(
+                'SELECT id FROM users WHERE email = $1 AND id != $2',
+                [cleanEmail, adminId]
+            );
+            if (conflict.rows.length > 0) {
+                return res.status(400).json({ message: 'The provided email is already in use by another account' });
+            }
+        }
+
+        const result = await db.query(
+            `UPDATE users 
+             SET name = COALESCE($1, name), 
+                 email = COALESCE($2, email), 
+                 phone = COALESCE($3, phone),
+                 address = COALESCE($4, address),
+                 gender = COALESCE($5, gender),
+                 last_active_at = CURRENT_TIMESTAMP
+             WHERE id = $6 
+             RETURNING id, name, email, phone, address, gender, role, status, created_at, last_active_at`,
+            [cleanName, cleanEmail, cleanPhone, cleanAddress, cleanGender, adminId]
+        );
+
+        if (result.rows.length === 0) {
+            return res.status(404).json({ message: 'Administrator account not found' });
+        }
+
+        res.status(200).json({
+            message: 'Admin profile updated successfully',
+            user: result.rows[0]
+        });
+    } catch (error) {
+        console.error('Update Admin Profile Error:', error);
+        res.status(500).json({ message: error.message || 'Server error updating admin profile' });
+    }
+};
+
+// @desc    Update Admin Password
+// @route   PUT /api/admin/profile/password
+// @access  Private/Admin
+const updateAdminPassword = async (req, res) => {
+    try {
+        const adminId = req.user?.id || 1;
+        const { currentPassword, newPassword } = req.body;
+
+        if (!currentPassword) {
+            return res.status(400).json({ message: 'Current password is required' });
+        }
+        if (!newPassword || typeof newPassword !== 'string' || newPassword.trim().length < 6) {
+            return res.status(400).json({ message: 'New password must be at least 6 characters long' });
+        }
+
+        const userResult = await db.query('SELECT id, password FROM users WHERE id = $1', [adminId]);
+        if (userResult.rows.length === 0) {
+            return res.status(404).json({ message: 'Administrator account not found' });
+        }
+        const user = userResult.rows[0];
+
+        const isMatch = await comparePassword(currentPassword, user.password);
+        if (!isMatch) {
+            return res.status(401).json({ message: 'Current password does not match' });
+        }
+
+        const hashedPassword = await hashPassword(newPassword.trim());
+        await db.query(
+            'UPDATE users SET password = $1, last_active_at = CURRENT_TIMESTAMP WHERE id = $2',
+            [hashedPassword, adminId]
+        );
+
+        res.status(200).json({ message: 'Password updated successfully' });
+    } catch (error) {
+        console.error('Update Admin Password Error:', error);
+        res.status(500).json({ message: error.message || 'Server error updating password' });
+    }
+};
+
 module.exports = { 
     getDashboardStats, 
     getAllRooms, 
@@ -1759,6 +2077,7 @@ module.exports = {
     updateRoom, 
     deleteRoom,
     getAllTenants, 
+    createTenant,
     getAllPayments, 
     getAllRequests, 
     createAdminRequest,
@@ -1781,4 +2100,7 @@ module.exports = {
     getActivityLogs,
     getGcashQrCode,
     updateGcashQrCode,
+    getAdminProfile,
+    updateAdminProfile,
+    updateAdminPassword,
 };

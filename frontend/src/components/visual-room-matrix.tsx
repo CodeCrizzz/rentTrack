@@ -18,6 +18,8 @@ import {
   CreditCard,
   Wrench,
   CheckCircle2,
+  Mars,
+  Venus,
 } from "lucide-react";
 
 export interface RoomTenant {
@@ -105,51 +107,17 @@ export default function VisualRoomMatrix({
   const normalizeFloor = (floorStr?: string | null, roomNumber?: string) => {
     if (floorStr) {
       const clean = floorStr.toLowerCase();
-      if (
-        clean.includes("1") ||
-        clean.includes("first") ||
-        clean.includes("1st")
-      )
-        return "Floor 1";
-      if (
-        clean.includes("2") ||
-        clean.includes("second") ||
-        clean.includes("2nd")
-      )
-        return "Floor 2";
-      if (
-        clean.includes("3") ||
-        clean.includes("third") ||
-        clean.includes("3rd")
-      )
-        return "Floor 3";
-      if (
-        clean.includes("4") ||
-        clean.includes("fourth") ||
-        clean.includes("4th")
-      )
-        return "Floor 4";
-      if (
-        clean.includes("5") ||
-        clean.includes("fifth") ||
-        clean.includes("5th")
-      )
-        return "Floor 5";
-      if (
-        clean.includes("6") ||
-        clean.includes("sixth") ||
-        clean.includes("6th")
-      )
-        return "Floor 6";
-      if (
-        clean.includes("7") ||
-        clean.includes("seventh") ||
-        clean.includes("7th")
-      )
-        return "Floor 7";
+      const match = clean.match(/\d+/);
+      if (match) return `Floor ${match[0]}`;
+      if (clean.includes("first")) return "Floor 1";
+      if (clean.includes("second")) return "Floor 2";
+      if (clean.includes("third")) return "Floor 3";
     }
     if (roomNumber && roomNumber.length >= 3 && !isNaN(Number(roomNumber[0]))) {
-      return `Floor ${roomNumber[0]}`;
+      const floorDigit = Number(roomNumber[0]);
+      if (floorDigit >= 1) {
+        return `Floor ${floorDigit}`;
+      }
     }
     return "Floor 1";
   };
@@ -237,7 +205,7 @@ export default function VisualRoomMatrix({
         )
           return false;
         if (
-          (statusFilter === "occupied") &&
+          statusFilter === "occupied" &&
           effectiveSt !== "Full" &&
           effectiveSt !== "OccupiedWithBeds"
         )
@@ -253,11 +221,18 @@ export default function VisualRoomMatrix({
       if (searchQuery.trim()) {
         const q = searchQuery.toLowerCase();
         const matchesNumber = room.room_number?.toLowerCase().includes(q);
-        const matchesType = room.type?.toLowerCase().includes(q);
+        const matchesGender = room.gender?.toLowerCase().includes(q);
+        const matchesRental = room.rental_type?.toLowerCase().includes(q);
         const matchesTenant = room.tenants?.some((t) =>
           t.name?.toLowerCase().includes(q),
         );
-        if (!matchesNumber && !matchesType && !matchesTenant) return false;
+        if (
+          !matchesNumber &&
+          !matchesGender &&
+          !matchesRental &&
+          !matchesTenant
+        )
+          return false;
       }
       return true;
     });
@@ -292,7 +267,8 @@ export default function VisualRoomMatrix({
     const bedSlots = Array.from({ length: totalBeds }).map((_, slotIdx) => {
       let isFilled = false;
       if (effectiveStatus === "Full") isFilled = true;
-      else if (effectiveStatus === "OccupiedWithBeds") isFilled = slotIdx < occupants;
+      else if (effectiveStatus === "OccupiedWithBeds")
+        isFilled = slotIdx < occupants;
       else if (effectiveStatus === "Maintenance") isFilled = true;
       return { slotIdx, isFilled };
     });
@@ -305,14 +281,11 @@ export default function VisualRoomMatrix({
     const hasBedScroll = bedRows.length >= 3;
     const cardMinHeight = "min-h-[190px]";
 
-    // Subtitle type string (e.g., "Single • Standard")
-    const subType = `${room.type || "Single"} • ${room.rental_type || "Standard"}`;
-
-    // Tenant name string
-    const residentString =
-      room.tenants && room.tenants.length > 0
-        ? room.tenants.map((t) => t.name).join(", ")
-        : "-";
+    const displayGender = room.gender || "Male Only";
+    const isMale =
+      displayGender.toLowerCase().includes("male") &&
+      !displayGender.toLowerCase().includes("female");
+    const isFemale = displayGender.toLowerCase().includes("female");
 
     return (
       <div
@@ -322,29 +295,27 @@ export default function VisualRoomMatrix({
       >
         <div>
           {/* Room Number & Gender Restriction Label */}
-          <div className="flex items-center justify-between gap-1.5 mb-1">
+          <div className="flex items-center justify-between gap-1.5 mb-2">
             <span className="font-extrabold text-sm sm:text-base font-mono text-slate-900 dark:text-white truncate">
               {room.room_number}
             </span>
-            <span
-              className={`text-[11px] font-bold shrink-0 inline-flex items-center gap-0.5 ${
-                isFemaleRoom(room)
-                  ? "text-pink-600 dark:text-pink-400"
-                  : "text-sky-600 dark:text-sky-400"
-              }`}
+            <div
+              title={displayGender}
+              className="flex items-center justify-center shrink-0"
             >
-              <span aria-hidden="true">{isFemaleRoom(room) ? "♀" : "♂"}</span>
-              <span>{getRoomGenderLabel(room)}</span>
-            </span>
+              {isFemale ? (
+                <Venus
+                  className="w-4.5 h-4.5 text-rose-600 dark:text-rose-400"
+                  strokeWidth={2.5}
+                />
+              ) : (
+                <Mars
+                  className="w-4.5 h-4.5 text-blue-600 dark:text-blue-400"
+                  strokeWidth={2.5}
+                />
+              )}
+            </div>
           </div>
-
-          {/* Room Subtype */}
-          <p
-            title={subType}
-            className="text-xs text-slate-600 dark:text-zinc-300 font-semibold truncate mb-2"
-          >
-            {subType}
-          </p>
 
           {/* Visual Bed Slot Icons (5 columns only, minimum 2 rows display, scrollable if >= 3 rows) */}
           <div
@@ -426,7 +397,7 @@ export default function VisualRoomMatrix({
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search room, tenant or room type..."
+              placeholder="Search room, tenant or gender..."
               className="w-full bg-slate-50 dark:bg-zinc-800/60 border border-slate-200 dark:border-zinc-700/80 rounded-lg pl-8 pr-2.5 py-1.5 text-xs text-slate-900 dark:text-zinc-100 placeholder:text-slate-500 dark:placeholder:text-zinc-400 focus:outline-none focus:ring-1 focus:ring-blue-500"
             />
           </div>
@@ -604,28 +575,43 @@ export default function VisualRoomMatrix({
                     <h3 className="text-base font-bold text-slate-900 dark:text-white">
                       Room {activeRoomModal.room_number} Details
                     </h3>
-                    <p className="text-xs text-slate-600 dark:text-zinc-300 font-medium flex flex-wrap items-center gap-1.5">
+                    <p className="text-xs text-slate-600 dark:text-zinc-300 font-medium flex items-center gap-1.5">
                       <span>
                         {normalizeFloor(
                           activeRoomModal.floor,
                           activeRoomModal.room_number,
-                        )}{" "}
-                        • {activeRoomModal.type} •{" "}
-                        {activeRoomModal.rental_type || "Whole Room"}
+                        )}
                       </span>
-                      <span>•</span>
-                      <span
-                        className={`font-bold inline-flex items-center gap-1 ${
-                          isFemaleRoom(activeRoomModal)
-                            ? "text-pink-600 dark:text-pink-400"
-                            : "text-sky-600 dark:text-sky-400"
-                        }`}
-                      >
-                        <span aria-hidden="true">
-                          {isFemaleRoom(activeRoomModal) ? "♀" : "♂"}
-                        </span>
-                        <span>{getRoomGenderLabel(activeRoomModal)}</span>
-                      </span>
+                      {activeRoomModal.gender && (
+                        <>
+                          <span>•</span>
+                          <span
+                            className={`font-bold inline-flex items-center gap-1 ${
+                              activeRoomModal.gender
+                                .toLowerCase()
+                                .includes("male") &&
+                              !activeRoomModal.gender
+                                .toLowerCase()
+                                .includes("female")
+                                ? "text-blue-600 dark:text-blue-400"
+                                : activeRoomModal.gender
+                                      .toLowerCase()
+                                      .includes("female")
+                                  ? "text-pink-600 dark:text-pink-400"
+                                  : "text-slate-600 dark:text-zinc-400"
+                            }`}
+                          >
+                            {activeRoomModal.gender
+                              .toLowerCase()
+                              .includes("female") ? (
+                              <Venus className="w-3.5 h-3.5" />
+                            ) : (
+                              <Mars className="w-3.5 h-3.5" />
+                            )}
+                            <span>{activeRoomModal.gender}</span>
+                          </span>
+                        </>
+                      )}
                     </p>
                   </div>
                 </div>

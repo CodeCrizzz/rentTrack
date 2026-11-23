@@ -245,6 +245,7 @@ const buildAuthSuccessPayload = (user, message, extraUserFields = {}) => {
             name: user.name,
             email: user.email,
             role: user.role,
+            gender: user.gender || 'Not Specified',
             status: user.status,
             permissions: userPermissions,
             ...extraUserFields

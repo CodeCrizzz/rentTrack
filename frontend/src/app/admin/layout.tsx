@@ -14,7 +14,7 @@ import {
 import { AppSidebar } from '@/components/app-sidebar';
 import { FullscreenToggle } from '@/components/fullscreen-toggle';
 import { ThemeToggle } from '@/components/theme-toggle';
-import { Home, Building2, Users, Calculator, Wrench, MessageSquareMore, Bell, User, Calendar, Cctv, UserPlus, CheckCheck, Clock, Bed, Receipt, Activity, RefreshCw, Database, BarChart3 } from 'lucide-react';
+import { Home, Building2, Users, Calculator, Wrench, MessageSquareMore, Bell, User, UserPlus, CheckCheck, Clock, Bed, Receipt, Activity, RefreshCw, Database, BarChart3 } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -198,7 +198,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             const user = JSON.parse(userStr);
             if (user.role !== 'admin') {
                 toast.error("Access restricted: Administrator privileges required.");
-                router.replace('/tenant/dashboard');
+                router.replace('/tenant');
                 return;
             }
             const normalizedName =
@@ -392,12 +392,11 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
     const rawNavItems = [
         { name: 'Dashboard', path: '/admin/dashboard', icon: Home },
-        { name: 'Rooms', path: '/admin/rooms', icon: Bed },
+        { name: 'Manage Rooms', path: '/admin/rooms', icon: Bed },
         { name: 'Manage Tenants', path: '/admin/tenants', icon: Users },
         { name: 'Bills and Payments', path: '/admin/billing', icon: Calculator },
         { name: 'Maintenance Requests', path: '/admin/requests', icon: Wrench },
         { name: 'Messages', path: '/admin/chat', icon: MessageSquareMore },
-        { name: 'CCTV Monitoring', path: '/admin/cctv', icon: Cctv },
         { name: 'Activity Logs', path: '/admin/activity-logs', icon: Activity },
         { name: 'Generate Report', path: '/admin/reports', icon: BarChart3 },
         { name: 'System Backup', path: '/admin/backup', icon: Database },
@@ -414,7 +413,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             if (item.name === 'Manage Tenants' || item.name === 'Tenants') {
                 badgeCount = Math.max(0, pendingTenantsCount - seenTenantsCount);
             } else if (item.name === 'Bills and Payments') {
-                badgeCount = Math.max(0, pendingPaymentsCount - seenPaymentsCount);
+                badgeCount = 0;
             } else if (item.name === 'Maintenance Requests' || item.name === 'Maintenance Request') {
                 badgeCount = Math.max(0, pendingRequestsCount - seenRequestsCount);
             } else if (item.name === 'Messages') {
@@ -437,10 +436,10 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     const getPageTitle = () => {
         const path = pathname.split('/').pop();
         if (!path) return 'Dashboard';
+        if (path === 'rooms') return 'Manage Rooms';
         if (path === 'tenants') return 'Manage Tenants';
         if (path === 'billing') return 'Bills and Payments';
         if (path === 'requests') return 'Maintenance Requests';
-        if (path === 'cctv') return 'CCTV Monitoring';
         if (path === 'activity-logs') return 'Activity Logs';
         if (path === 'reports') return 'Generate Report';
         if (path === 'backup') return 'System Backup & Recovery';
@@ -480,8 +479,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
                         <div className="flex items-center gap-2">
                             {currentDate && (
-                                <div className="hidden md:flex items-center gap-2 px-3 py-1.5 mr-2 bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-zinc-800 rounded-lg text-sm font-semibold text-slate-700 dark:text-zinc-200">
-                                    <Calendar className="w-4 h-4 text-slate-500 dark:text-zinc-400" />
+                                <div className="hidden md:flex items-center px-3 py-1.5 mr-2 bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-zinc-800 rounded-lg text-sm font-semibold text-slate-700 dark:text-zinc-200">
                                     {currentDate}
                                 </div>
                             )}
