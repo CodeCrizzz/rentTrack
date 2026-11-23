@@ -1,5 +1,12 @@
 "use client";
-import { useEffect, useState, useMemo, useRef, Suspense, useCallback } from "react";
+import {
+  useEffect,
+  useState,
+  useMemo,
+  useRef,
+  Suspense,
+  useCallback,
+} from "react";
 import { useSearchParams } from "next/navigation";
 import api from "@/lib/api";
 import { motion, AnimatePresence, type Variants } from "framer-motion";
@@ -39,7 +46,6 @@ import {
   Droplets,
   Home,
   Layers,
-  ShieldCheck,
   TrendingUp,
   ExternalLink,
   Wallet,
@@ -55,6 +61,11 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 
+export interface AdditionalChargeItem {
+  label: string;
+  amount: number;
+}
+
 export interface Bill {
   id: number;
   tenant_id: number;
@@ -67,6 +78,7 @@ export interface Bill {
   water_charges: number;
   electricity_charges: number;
   other_fees: number;
+  additional_charges?: AdditionalChargeItem[];
   total_amount: number;
   amount_paid: number;
   balance: number;
@@ -86,6 +98,7 @@ export interface BillFormData {
   water_charges: number;
   electricity_charges: number;
   other_fees: number;
+  additional_charges: AdditionalChargeItem[];
   notes: string;
 }
 
@@ -107,24 +120,7 @@ interface Room {
   id: number;
   room_number: string;
   price: number;
-}
-
-interface PendingPayment {
-  id: number;
-  bill_id: number;
-  amount_paid: string;
-  payment_date: string;
-  payment_method: string;
-  notes: string;
-  reference_number?: string;
-  referenceNumber?: string;
-  receipt_url?: string;
-  status: string;
-  billing_month: string;
-  bill_total: string;
-  bill_balance: string;
-  tenant_name: string;
-  room_number: string;
+  floor?: string | null;
 }
 
 interface DetailedBill extends Bill {
@@ -170,7 +166,11 @@ const CustomChartTooltip = ({ active, payload, label }: any) => {
                   </span>
                 </div>
                 <span className="font-mono font-bold text-slate-900 dark:text-white">
-                  ₱{Number(entry.value).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  ₱
+                  {Number(entry.value).toLocaleString("en-US", {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2,
+                  })}
                 </span>
               </div>
             );
@@ -200,7 +200,11 @@ const getTenantAvatarColor = (name: string) => {
 
 const resolveReceiptUrl = (url?: string | null): string | null => {
   if (!url) return null;
-  if (url.startsWith("http://") || url.startsWith("https://") || url.startsWith("data:")) {
+  if (
+    url.startsWith("http://") ||
+    url.startsWith("https://") ||
+    url.startsWith("data:")
+  ) {
     return url;
   }
   const base = process.env.NEXT_PUBLIC_API_URL
@@ -211,7 +215,10 @@ const resolveReceiptUrl = (url?: string | null): string | null => {
   return `${base}${url.startsWith("/") ? "" : "/"}${url}`;
 };
 
-const normalizeAdminPaymentMethod = (method?: string | null, fallback = "Cash"): string => {
+const normalizeAdminPaymentMethod = (
+  method?: string | null,
+  fallback = "Cash",
+): string => {
   const raw = (method || "").trim();
   if (!raw) return fallback;
   const lower = raw.toLowerCase();
@@ -234,9 +241,10 @@ function BillingContent() {
   const [bills, setBills] = useState<Bill[]>([]);
   const [tenants, setTenants] = useState<Tenant[]>([]);
   const [rooms, setRooms] = useState<Room[]>([]);
-  const [pendingPayments, setPendingPayments] = useState<PendingPayment[]>([]);
   const [allPayments, setAllPayments] = useState<any[]>([]);
-  const [paymentHistoryList, setPaymentHistoryList] = useState<any[] | null>(null);
+  const [paymentHistoryList, setPaymentHistoryList] = useState<any[] | null>(
+    null,
+  );
   const [isLoading, setIsLoading] = useState(true);
 
   // Active Tab
@@ -247,7 +255,7 @@ function BillingContent() {
   // Filters
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<
-    "All Invoices" | "Verification" | "Overdue" | "Partial" | "Unpaid" | "All" | "Pending Verification"
+    "All Invoices" | "Overdue" | "Partial" | "Unpaid" | "All"
   >("All Invoices");
   const [monthFilter, setMonthFilter] = useState("All");
   const [roomFilter, setRoomFilter] = useState("All Rooms");
@@ -300,10 +308,7 @@ function BillingContent() {
     const tabParam = searchParams.get("tab");
 
     if (statusParam) {
-      if (statusParam === "Pending Verification" || statusParam === "Verification") {
-        setStatusFilter("Verification");
-        setActiveTableTab("pending");
-      } else if (statusParam === "All" || statusParam === "All Invoices") {
+      if (statusParam === "All" || statusParam === "All Invoices") {
         setStatusFilter("All Invoices");
         setActiveTableTab("all");
       } else if (statusParam === "Overdue") {
@@ -414,43 +419,11 @@ function BillingContent() {
     return () => clearTimeout(scrollTimer);
   }, [searchParams, isLoading, bills, tenants]);
 
-  // Automatically target and open verification modal if requested via URL
-  useEffect(() => {
-    if (!searchParams || pendingPayments.length === 0) return;
-    const shouldVerify = searchParams.get("verify") === "true";
-    const billIdParam = searchParams.get("billId");
-    const tenantParam =
-      searchParams.get("tenant") || searchParams.get("search");
-
-    if (shouldVerify || billIdParam) {
-      let matchIdx = -1;
-      if (billIdParam) {
-        matchIdx = pendingPayments.findIndex(
-          (p) => p.bill_id === Number(billIdParam),
-        );
-      }
-      if (matchIdx === -1 && tenantParam) {
-        matchIdx = pendingPayments.findIndex((p) =>
-          p.tenant_name.toLowerCase().includes(tenantParam.toLowerCase()),
-        );
-      }
-
-      if (matchIdx !== -1) {
-        setCurrentVerifyIndex(matchIdx);
-        setIsVerifyModalOpen(true);
-      } else if (shouldVerify && pendingPayments.length > 0) {
-        setCurrentVerifyIndex(0);
-        setIsVerifyModalOpen(true);
-      }
-    }
-  }, [searchParams, pendingPayments]);
-
   // Modals
   const [isViewOpen, setIsViewOpen] = useState(false);
   const [isPayOpen, setIsPayOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
-  const [isVerifyModalOpen, setIsVerifyModalOpen] = useState(false);
   const [isGenerateConfirmOpen, setIsGenerateConfirmOpen] = useState(false);
   const [showReportModal, setShowReportModal] = useState(false);
   const [isGcashQrModalOpen, setIsGcashQrModalOpen] = useState(false);
@@ -468,8 +441,7 @@ function BillingContent() {
           setGcashQrImage(qr || "");
         }
       })
-      .catch(() => {
-      });
+      .catch(() => {});
   }, []);
 
   const handleGcashQrFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -500,18 +472,21 @@ function BillingContent() {
     try {
       setIsSavingGcashQr(true);
       await api
-      .put("/admin/qrph-qr", { qrphQrCode: gcashQrImage, gcashQrCode: gcashQrImage })
-      .catch(() => api.put("/admin/gcash-qr", { qrphQrCode: gcashQrImage, gcashQrCode: gcashQrImage }));
-      toast.success(
-        gcashQrImage
-          ? "QR Ph Code Saved"
-          : "QR Ph Code Removed",
-        {
-          description: gcashQrImage
-            ? "Tenants can now scan this single interoperable QR Ph code using GCash, Maya, BPI, BDO, etc."
-            : "QR Ph code screenshot has been cleared.",
-        },
-      );
+        .put("/admin/qrph-qr", {
+          qrphQrCode: gcashQrImage,
+          gcashQrCode: gcashQrImage,
+        })
+        .catch(() =>
+          api.put("/admin/gcash-qr", {
+            qrphQrCode: gcashQrImage,
+            gcashQrCode: gcashQrImage,
+          }),
+        );
+      toast.success(gcashQrImage ? "QR Ph Code Saved" : "QR Ph Code Removed", {
+        description: gcashQrImage
+          ? "Tenants can now scan this single interoperable QR Ph code using GCash, Maya, BPI, BDO, etc."
+          : "QR Ph code screenshot has been cleared.",
+      });
       setIsGcashQrModalOpen(false);
     } catch (error: any) {
       toast.error("Failed to save QR Ph Code", {
@@ -524,19 +499,35 @@ function BillingContent() {
   };
 
   // Quick Action & Filter Controls (Matching Mockup UI)
-  const [quickActionPeriod, setQuickActionPeriod] = useState<"This Year" | "Last Year">("This Year");
-  const [chartPeriod, setChartPeriod] = useState<"This Year" | "Last Year">("This Year");
+  const [quickActionPeriod, setQuickActionPeriod] = useState<
+    "This Year" | "Last Year"
+  >("This Year");
+  const [chartPeriod, setChartPeriod] = useState<"This Year" | "Last Year">(
+    "This Year",
+  );
   const [cashflowMap, setCashflowMap] = useState<Record<string, any[]>>({});
   const [activeTableTab, setActiveTableTab] = useState<
-    "all" | "unpaid" | "overdue" | "pending" | "paid"
+    "all" | "unpaid" | "overdue" | "paid"
   >("all");
   const [tableSearchQuery, setTableSearchQuery] = useState("");
   const [tableFloorFilter, setTableFloorFilter] = useState("All Floors");
-  const [tableRoomTypeFilter, setTableRoomTypeFilter] = useState("All Room Types");
+  const [tableRoomTypeFilter, setTableRoomTypeFilter] =
+    useState("All Room Types");
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedInvoiceIds, setSelectedInvoiceIds] = useState<number[]>([]);
   const [activeMenuBillId, setActiveMenuBillId] = useState<number | null>(null);
-  const [hoveredMonthIndex, setHoveredMonthIndex] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (!activeMenuBillId) return;
+    const handleOutsideClick = () => {
+      setActiveMenuBillId(null);
+    };
+    window.addEventListener("click", handleOutsideClick);
+    return () => window.removeEventListener("click", handleOutsideClick);
+  }, [activeMenuBillId]);
+  const [hoveredMonthIndex, setHoveredMonthIndex] = useState<number | null>(
+    null,
+  );
   const [sortField, setSortField] = useState<
     "period" | "amount" | "status" | "due_date" | "none"
   >("none");
@@ -545,7 +536,6 @@ function BillingContent() {
   // Selected items & forms
   const [selectedBill, setSelectedBill] = useState<Bill | null>(null);
   const [billDetails, setBillDetails] = useState<DetailedBill | null>(null);
-  const [currentVerifyIndex, setCurrentVerifyIndex] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const initialBillForm: BillFormData = {
@@ -554,9 +544,10 @@ function BillingContent() {
     billing_month: "",
     due_date: new Date().toISOString().split("T")[0],
     rent_amount: 0,
-    water_charges: 0,
-    electricity_charges: 0,
+    water_charges: 300,
+    electricity_charges: 700,
     other_fees: 0,
+    additional_charges: [],
     notes: "",
   };
   const [billForm, setBillForm] = useState<BillFormData>(initialBillForm);
@@ -591,7 +582,6 @@ function BillingContent() {
         billsRes,
         tenantsRes,
         roomsRes,
-        pendingRes,
         paymentsRes,
         historyRes,
         thisYearCf,
@@ -600,7 +590,6 @@ function BillingContent() {
         api.get("/admin/bills"),
         api.get("/admin/tenants"),
         api.get("/admin/rooms"),
-        api.get("/admin/bills/payments/pending"),
         api.get("/admin/bills/payments"),
         api.get("/admin/bills/payments/history").catch(() => ({ data: null })),
         api.get("/admin/cashflow?range=this_year"),
@@ -609,19 +598,6 @@ function BillingContent() {
       setBills(billsRes.data);
       setTenants(tenantsRes.data);
       setRooms(roomsRes.data);
-      setPendingPayments(
-        Array.isArray(pendingRes.data)
-          ? pendingRes.data.filter(
-              (p: any) =>
-                !p.payment_method ||
-                (!p.payment_method.toLowerCase().includes('gcash') &&
-                 !p.payment_method.toLowerCase().includes('qrph') &&
-                 !p.payment_method.toLowerCase().includes('qr ph') &&
-                 !p.payment_method.toLowerCase().includes('e-wallet') &&
-                 !p.payment_method.toLowerCase().includes('ewallet')),
-            )
-          : [],
-      );
       setAllPayments(paymentsRes.data);
       if (Array.isArray(historyRes?.data)) {
         setPaymentHistoryList(historyRes.data);
@@ -639,7 +615,8 @@ function BillingContent() {
 
   useEffect(() => {
     fetchData();
-      if (typeof window !== 'undefined') window.dispatchEvent(new CustomEvent('renttrack-refresh-counts'));
+    if (typeof window !== "undefined")
+      window.dispatchEvent(new CustomEvent("renttrack-refresh-counts"));
   }, []);
 
   useEffect(() => {
@@ -700,7 +677,6 @@ function BillingContent() {
     );
     const overdueCount = overdueBills.length;
 
-    const pendingVerificationCount = pendingPayments.length;
     const paidCount = bills.filter((b) => b.status === "Paid").length;
     const partialCount = bills.filter((b) => b.status === "Partial").length;
     const unpaidCount = bills.filter((b) => b.status === "Unpaid").length;
@@ -712,12 +688,11 @@ function BillingContent() {
       collectionRate,
       overdueAmount,
       overdueCount,
-      pendingVerificationCount,
       paidCount,
       partialCount,
       unpaidCount,
     };
-  }, [bills, pendingPayments]);
+  }, [bills]);
 
   // --- INVOICE HELPERS (Random Collision-Proof Invoice Numbers INV-XXXXXX) ---
   const formatInvoiceNumber = (bill: Bill) => {
@@ -728,27 +703,57 @@ function BillingContent() {
   };
 
   const monthNamesShort = [
-    "Jan", "Feb", "Mar", "Apr", "May", "Jun",
-    "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"
+    "Jan",
+    "Feb",
+    "Mar",
+    "Apr",
+    "May",
+    "Jun",
+    "Jul",
+    "Aug",
+    "Sep",
+    "Oct",
+    "Nov",
+    "Dec",
   ];
   const monthNamesFull = [
-    "January", "February", "March", "April", "May", "June",
-    "July", "August", "September", "October", "November", "December"
+    "January",
+    "February",
+    "March",
+    "April",
+    "May",
+    "June",
+    "July",
+    "August",
+    "September",
+    "October",
+    "November",
+    "December",
   ];
 
-  const parseBillMonthYear = (monthStr: string | null | undefined): { monthIndex: number; year: number } | null => {
+  const parseBillMonthYear = (
+    monthStr: string | null | undefined,
+  ): { monthIndex: number; year: number } | null => {
     if (!monthStr) return null;
     const str = monthStr.trim();
     const ymMatch = str.match(/^(\d{4})-(\d{1,2})/);
     if (ymMatch) {
-      return { year: parseInt(ymMatch[1], 10), monthIndex: parseInt(ymMatch[2], 10) - 1 };
+      return {
+        year: parseInt(ymMatch[1], 10),
+        monthIndex: parseInt(ymMatch[2], 10) - 1,
+      };
     }
     const yearMatch = str.match(/\d{4}/);
-    const year = yearMatch ? parseInt(yearMatch[0], 10) : new Date().getFullYear();
-    
+    const year = yearMatch
+      ? parseInt(yearMatch[0], 10)
+      : new Date().getFullYear();
+
     const lower = str.toLowerCase();
     for (let i = 0; i < 12; i++) {
-      if (lower.includes(monthNamesFull[i].toLowerCase()) || lower.includes(monthNamesShort[i].toLowerCase())) {
+      if (
+        lower.includes(monthNamesFull[i].toLowerCase()) ||
+        lower.includes(monthNamesShort[i].toLowerCase())
+      ) {
         return { monthIndex: i, year };
       }
     }
@@ -759,61 +764,89 @@ function BillingContent() {
     const room = rooms.find(
       (r) => r.id === bill.room_id || r.room_number === bill.room_number,
     );
-    const type = (room as any)?.type || (room as any)?.rental_type || "Standard";
+    const type =
+      (room as any)?.type || (room as any)?.rental_type || "Standard";
     return bill.room_number ? `${bill.room_number} (${type})` : "Unassigned";
   };
 
   // 100% Real bills from database
   const allTableBills = bills;
 
-  // Real Top Section Metrics matching Cash Flow Overview
+  // Real Top Section Metrics strictly for Current Month (Monthly Calculation)
   const displayMetrics = useMemo(() => {
-    const periodData = cashflowMap[quickActionPeriod] || [];
+    const now = new Date();
+    const currentMonth = now.getMonth();
+    const currentYear = now.getFullYear();
+    const curMonthName = now.toLocaleString("default", { month: "short" });
+    const currentMonthLabel = now.toLocaleString("default", { month: "long" });
+
+    // Filter bills to current month only
+    const currentMonthBills = bills.filter((b) => {
+      const parsed = parseBillMonthYear(b.billing_month);
+      if (parsed) {
+        return parsed.monthIndex === currentMonth && parsed.year === currentYear;
+      }
+      if (b.due_date) {
+        const d = new Date(b.due_date);
+        return d.getMonth() === currentMonth && d.getFullYear() === currentYear;
+      }
+      return false;
+    });
+
+    const thisYearData = cashflowMap["This Year"] || [];
+    const curMonthCf = thisYearData.find((d: any) => d.month === curMonthName);
+
+    // Previous month for month-over-month rate comparison
+    const prevMonthDate = new Date(currentYear, currentMonth - 1, 1);
+    const prevMonthName = prevMonthDate.toLocaleString("default", { month: "short" });
+    const prevMonthCf = thisYearData.find((d: any) => d.month === prevMonthName);
+
     let totalInvoiced = 0;
     let totalCollected = 0;
 
-    periodData.forEach((d: any) => {
-      totalInvoiced += Number(d.billed) || 0;
-      totalCollected += Number(d.collected) || 0;
-    });
+    if (
+      curMonthCf &&
+      (Number(curMonthCf.billed) > 0 ||
+        Number(curMonthCf.collected) > 0 ||
+        Number(curMonthCf.outstanding) > 0)
+    ) {
+      totalInvoiced = Number(curMonthCf.billed) || 0;
+      totalCollected = Number(curMonthCf.collected) || 0;
+    } else {
+      currentMonthBills.forEach((b) => {
+        totalInvoiced += Number(b.total_amount) || 0;
+        totalCollected += Number(b.amount_paid) || 0;
+      });
+    }
 
-    // Perfectly accurate balance and rates ensuring 100% mathematical consistency
     const totalBalance = Math.max(0, totalInvoiced - totalCollected);
     const collectionRate =
       totalInvoiced > 0
         ? Math.min(100, Math.round((totalCollected / totalInvoiced) * 100))
         : 0;
     const outstandingRate =
-      totalInvoiced > 0
-        ? Math.max(0, 100 - collectionRate)
-        : 0;
+      totalInvoiced > 0 ? Math.max(0, 100 - collectionRate) : 0;
 
-    // Previous year comparison from cashflowMap
-    const prevYearData = cashflowMap["Last Year"] || [];
+    // Previous month collection rate comparison
     let prevInvoiced = 0;
     let prevCollected = 0;
-    prevYearData.forEach((d: any) => {
-      prevInvoiced += Number(d.billed) || 0;
-      prevCollected += Number(d.collected) || 0;
-    });
+    if (prevMonthCf) {
+      prevInvoiced = Number(prevMonthCf.billed) || 0;
+      prevCollected = Number(prevMonthCf.collected) || 0;
+    }
     const prevCollectionRate =
       prevInvoiced > 0
         ? Math.min(100, Math.round((prevCollected / prevInvoiced) * 100))
         : 0;
     const rateDiff = collectionRate - prevCollectionRate;
 
-    // Pending Payments from DB
-    const pendingCount = pendingPayments.length;
-    const pendingAmount = pendingPayments.reduce(
-      (acc, p) => acc + (Number(p.amount_paid) || 0),
-      0,
-    );
-
     // Overdue Accounts from DB
     const overdueBills = bills.filter(
       (b) =>
         b.status === "Overdue" ||
-        (Number(b.balance) > 0 && b.due_date && new Date(b.due_date) < new Date()),
+        (Number(b.balance) > 0 &&
+          b.due_date &&
+          new Date(b.due_date) < now),
     );
     const overdueCount = overdueBills.length;
     const overdueAmount = overdueBills.reduce(
@@ -822,18 +855,17 @@ function BillingContent() {
     );
 
     return {
+      monthLabel: currentMonthLabel,
       totalCollected,
       totalInvoiced,
       outstanding: totalBalance,
       collectionRate,
       outstandingRate,
       rateDiff,
-      pendingVerificationAmount: pendingAmount,
-      pendingVerificationCount: pendingCount,
       overdueAmount,
       overdueCount,
     };
-  }, [cashflowMap, quickActionPeriod, pendingPayments, bills]);
+  }, [cashflowMap, bills]);
 
   // Real Monthly Chart Data from Cash Flow API (Exact same amounts as Admin Dashboard)
   const monthlyChartData = useMemo(() => {
@@ -923,32 +955,17 @@ function BillingContent() {
 
   // Real Recent Payment Activities
   const recentActivities = useMemo(() => {
-    const combined = [
-      ...pendingPayments.map((p) => ({
-        id: `pending-${p.id}`,
-        type: "pending" as const,
-        title: "Payment Pending Verification",
-        tenant: p.tenant_name || "Tenant",
-        room: p.room_number ? `Room ${p.room_number}` : "No Room",
-        amount: `₱ ${Number(p.amount_paid || 0).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
-        method: normalizeAdminPaymentMethod(p.payment_method, "E-Wallet"),
-        badge: "Pending",
-        rawDate: p.payment_date || (p as any).created_at,
-      })),
-      ...allPayments.map((p) => ({
-        id: `payment-${p.id}`,
-        type: (p.status === "Approved" || p.status === "Verified" || p.status === "Paid"
-          ? "verified"
-          : "pending") as "verified" | "pending",
-        title: "Payment Received",
-        tenant: p.tenant_name || "Tenant",
-        room: p.room_number ? `Room ${p.room_number}` : "No Room",
-        amount: `₱ ${Number(p.amount_paid || 0).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
-        method: normalizeAdminPaymentMethod(p.payment_method, "Cash"),
-        badge: p.status || "Verified",
-        rawDate: p.payment_date || (p as any).created_at,
-      })),
-    ];
+    const combined = allPayments.map((p) => ({
+      id: `payment-${p.id}`,
+      type: "verified" as const,
+      title: "Payment Received",
+      tenant: p.tenant_name || "Tenant",
+      room: p.room_number ? `Room ${p.room_number}` : "No Room",
+      amount: `₱ ${Number(p.amount_paid || 0).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+      method: normalizeAdminPaymentMethod(p.payment_method, "Cash"),
+      badge: p.status || "Verified",
+      rawDate: p.payment_date || (p as any).created_at,
+    }));
 
     combined.sort((a, b) => {
       const timeA = a.rawDate ? new Date(a.rawDate).getTime() : 0;
@@ -974,7 +991,7 @@ function BillingContent() {
         time: formattedTime,
       };
     });
-  }, [allPayments, pendingPayments]);
+  }, [allPayments]);
 
   // Real Billing Summary & Donut Gauge Metrics strictly for Current Month
   const billingSummary = useMemo(() => {
@@ -986,7 +1003,9 @@ function BillingContent() {
     const currentMonthBills = bills.filter((b) => {
       const parsed = parseBillMonthYear(b.billing_month);
       if (parsed) {
-        return parsed.monthIndex === currentMonth && parsed.year === currentYear;
+        return (
+          parsed.monthIndex === currentMonth && parsed.year === currentYear
+        );
       }
       if (b.due_date) {
         const d = new Date(b.due_date);
@@ -1021,22 +1040,6 @@ function BillingContent() {
     // Mathematically exact: Total Invoices = Total Collected + Outstanding Balance
     outstandingBalance = Math.max(0, totalInvoices - totalCollected);
 
-    // Pending verification for current month only
-    const pendingAmount = pendingPayments
-      .filter((p) => {
-        if (p.bill_id && currentMonthBillIds.has(p.bill_id)) return true;
-        const parsed = parseBillMonthYear(p.billing_month);
-        if (parsed) {
-          return parsed.monthIndex === currentMonth && parsed.year === currentYear;
-        }
-        if (p.payment_date) {
-          const d = new Date(p.payment_date);
-          return d.getMonth() === currentMonth && d.getFullYear() === currentYear;
-        }
-        return false;
-      })
-      .reduce((sum, p) => sum + (Number(p.amount_paid) || 0), 0);
-
     // Overdue balance for current month bills only
     const overdueBalance = currentMonthBills
       .filter(
@@ -1047,48 +1050,61 @@ function BillingContent() {
       .reduce((sum, b) => sum + (Number(b.balance) || 0), 0);
 
     const collectionRate =
-      totalInvoices > 0 ? Math.min(100, Math.round((totalCollected / totalInvoices) * 100)) : 0;
-    const pendingRate =
-      totalInvoices > 0 ? Math.min(100 - collectionRate, Math.round((pendingAmount / totalInvoices) * 100)) : 0;
+      totalInvoices > 0
+        ? Math.min(100, Math.round((totalCollected / totalInvoices) * 100))
+        : 0;
     const outstandingRate =
-      totalInvoices > 0 ? Math.max(0, 100 - collectionRate - pendingRate) : 0;
+      totalInvoices > 0 ? Math.max(0, 100 - collectionRate) : 0;
 
     const circ = 226.2;
     const collectedOffset = circ - (Math.min(100, collectionRate) / 100) * circ;
-    const pendingOffset = circ - (Math.min(100, pendingRate) / 100) * circ;
 
     return {
       totalInvoices,
       totalCollected,
-      pendingVerification: pendingAmount,
       outstandingBalance,
       overdueBalance,
       collectionRate,
-      pendingRate,
       outstandingRate,
       collectedOffset,
-      pendingOffset,
     };
-  }, [cashflowMap, bills, pendingPayments]);
+  }, [cashflowMap, bills]);
 
   const availableRoomTypes = useMemo(() => {
-    const set = new Set(rooms.map((r: any) => r.type || "Standard"));
+    const set = new Set(rooms.map((r: any) => r.rental_type || "Whole Room"));
     return [
       "All Room Types",
-      "Standard",
-      "Bedspace",
-      "Single",
-      "Deluxe",
+      "Whole Room",
+      "Per Bed / Bedspace",
       ...Array.from(set).filter(
-        (t) => !["Standard", "Bedspace", "Single", "Deluxe"].includes(t),
+        (t) => !["Whole Room", "Per Bed / Bedspace"].includes(t),
       ),
     ];
   }, [rooms]);
 
-  const availableFloors = useMemo(
-    () => ["All Floors", "Floor 1", "Floor 2", "Floor 3", "Floor 4"],
-    [],
-  );
+  const availableFloors = useMemo(() => {
+    const set = new Set<string>();
+    rooms.forEach((r) => {
+      const match = (r.floor || "").match(/\d+/);
+      if (match) set.add(`Floor ${match[0]}`);
+      else if (
+        r.room_number &&
+        r.room_number.length >= 3 &&
+        !isNaN(Number(r.room_number[0]))
+      ) {
+        set.add(`Floor ${r.room_number[0]}`);
+      }
+    });
+    if (set.size === 0) {
+      ["Floor 1", "Floor 2", "Floor 3"].forEach((f) => set.add(f));
+    }
+    const sorted = Array.from(set).sort((a, b) => {
+      const numA = parseInt(a.replace(/\D/g, ""), 10) || 0;
+      const numB = parseInt(b.replace(/\D/g, ""), 10) || 0;
+      return numA - numB;
+    });
+    return ["All Floors", ...sorted];
+  }, [rooms]);
 
   const filteredTableBills = useMemo(() => {
     return allTableBills
@@ -1103,13 +1119,6 @@ function BillingContent() {
           return false;
         }
         if (activeTableTab === "overdue" && bill.status !== "Overdue") {
-          return false;
-        }
-        if (
-          activeTableTab === "pending" &&
-          bill.status !== "Pending Verification" &&
-          bill.status !== "Verification"
-        ) {
           return false;
         }
         if (activeTableTab === "paid" && bill.status !== "Paid") {
@@ -1129,10 +1138,10 @@ function BillingContent() {
             (r) => r.id === bill.room_id || r.room_number === bill.room_number,
           );
           const type =
-            (room as any)?.type ||
+            (room as any)?.rental_type ||
             (bill.room_number === "203" || bill.room_number === "301"
-              ? "Bedspace"
-              : "Standard");
+              ? "Per Bed / Bedspace"
+              : "Whole Room");
           if (type.toLowerCase() !== tableRoomTypeFilter.toLowerCase())
             return false;
         }
@@ -1144,7 +1153,9 @@ function BillingContent() {
           const matchTenant = bill.tenant_name?.toLowerCase().includes(q);
           const matchInv =
             invNum.includes(q) ||
-            (bill.invoice_number ? bill.invoice_number.toLowerCase().includes(q) : false) ||
+            (bill.invoice_number
+              ? bill.invoice_number.toLowerCase().includes(q)
+              : false) ||
             bill.id.toString().includes(q);
           if (!matchTenant && !matchInv) return false;
         }
@@ -1229,9 +1240,7 @@ function BillingContent() {
       .filter((bill) => {
         // Status Category
         if (statusFilter !== "All" && statusFilter !== "All Invoices") {
-          if (statusFilter === "Verification" || statusFilter === "Pending Verification") {
-            if (bill.status !== "Pending Verification") return false;
-          } else if (bill.status !== statusFilter) {
+          if (bill.status !== statusFilter) {
             return false;
           }
         }
@@ -1297,9 +1306,7 @@ function BillingContent() {
         payment.status === "Verified" ||
         !payment.status;
       const isPendingOrRejected =
-        payment.status === "Pending" ||
-        payment.status === "Pending Verification" ||
-        payment.status === "Rejected";
+        payment.status === "Pending" || payment.status === "Rejected";
       if (!isApproved || isPendingOrRejected) return false;
 
       if (searchQuery.trim()) {
@@ -1309,9 +1316,14 @@ function BillingContent() {
           ?.toString()
           .toLowerCase()
           .includes(q);
-        const matchMethod = normalizeAdminPaymentMethod(payment.payment_method, "Cash").toLowerCase().includes(q) || payment.payment_method?.toLowerCase().includes(q);
+        const matchMethod =
+          normalizeAdminPaymentMethod(payment.payment_method, "Cash")
+            .toLowerCase()
+            .includes(q) || payment.payment_method?.toLowerCase().includes(q);
         const matchMonth = payment.billing_month?.toLowerCase().includes(q);
         const matchRef = (
+          payment.reference_number ||
+          payment.referenceNumber ||
           payment.reference_number ||
           payment.referenceNumber ||
           payment.notes
@@ -1339,9 +1351,7 @@ function BillingContent() {
         p.status === "Verified" ||
         !p.status;
       const isPendingOrRejected =
-        p.status === "Pending" ||
-        p.status === "Pending Verification" ||
-        p.status === "Rejected";
+        p.status === "Pending" || p.status === "Rejected";
       return isApproved && !isPendingOrRejected;
     }).length;
   }, [allPayments]);
@@ -1393,7 +1403,7 @@ function BillingContent() {
       rawPool = paymentHistoryList;
     } else {
       const seenIds = new Set<number>();
-      for (const p of [...pendingPayments, ...allPayments]) {
+      for (const p of allPayments) {
         const pid = Number(p.id);
         if (!seenIds.has(pid)) {
           seenIds.add(pid);
@@ -1406,23 +1416,19 @@ function BillingContent() {
       .filter((p) => {
         const linkedBill = billsById.get(Number(p.bill_id));
         const resolvedTenantId = p.tenant_id ?? linkedBill?.tenant_id ?? null;
-        const resolvedTenantName = p.tenant_name || linkedBill?.tenant_name || "";
+        const resolvedTenantName =
+          p.tenant_name || linkedBill?.tenant_name || "";
         return matchesSelectedTenant(resolvedTenantId, resolvedTenantName);
       })
       .map((p) => {
         const linkedBill = billsById.get(Number(p.bill_id));
         const rawStatus = String(p.status || "Paid");
-        let normalizedStatus: "Paid" | "Pending Verification" | "Rejected" = "Paid";
-        if (
-          rawStatus === "Pending Verification" ||
-          rawStatus === "Pending"
-        ) {
-          normalizedStatus = "Pending Verification";
-        } else if (rawStatus === "Rejected") {
-          normalizedStatus = "Rejected";
-        }
+        let normalizedStatus: "Paid" | "Rejected" =
+          rawStatus === "Rejected" ? "Rejected" : "Paid";
 
         const refNo =
+          p.reference_number ||
+          p.referenceNumber ||
           p.reference_number ||
           p.referenceNumber ||
           (p.notes ? String(p.notes).replace(/^Ref[:#]?\s*/i, "") : "") ||
@@ -1493,14 +1499,15 @@ function BillingContent() {
         totalInvoiced,
         totalPaid,
         totalBalance,
-        roomDisplay: resolvedRoomNum ? `Room ${resolvedRoomNum}` : "No Room Assigned",
+        roomDisplay: resolvedRoomNum
+          ? `Room ${resolvedRoomNum}`
+          : "No Room Assigned",
       },
     };
   }, [
     selectedHistoryTenant,
     bills,
     paymentHistoryList,
-    pendingPayments,
     allPayments,
     tenants,
     rooms,
@@ -1540,7 +1547,8 @@ function BillingContent() {
     } catch (error: any) {
       console.error("Create bill error:", error);
       toast.error("Failed to Issue Invoice", {
-        description: error.response?.data?.message || "Could not generate invoice.",
+        description:
+          error.response?.data?.message || "Could not generate invoice.",
       });
     } finally {
       setIsSubmitting(false);
@@ -1604,37 +1612,11 @@ function BillingContent() {
     } catch (error: any) {
       console.error("Auto generate bills error:", error);
       toast.error("Generation Failed", {
-        description: error.response?.data?.message || "Failed to generate monthly bills.",
+        description:
+          error.response?.data?.message || "Failed to generate monthly bills.",
       });
     } finally {
       setIsSubmitting(false);
-    }
-  };
-
-  const handleVerifyPayment = async (
-    paymentId: number,
-    action: "approve" | "reject",
-  ) => {
-    try {
-      await api.post(`/admin/bills/payments/${paymentId}/verify`, { action });
-      toast.success(
-        action === "approve" ? "Payment Approved" : "Payment Rejected",
-        {
-          description:
-            action === "approve"
-              ? "Payment proof verified and receipt acknowledged."
-              : "Payment proof marked as rejected.",
-        }
-      );
-      fetchData();
-      if (pendingPayments.length <= 1) {
-        setIsVerifyModalOpen(false);
-      }
-    } catch (error) {
-      console.error("Verification error:", error);
-      toast.error("Verification Failed", {
-        description: `Failed to ${action} payment verification.`,
-      });
     }
   };
 
@@ -1654,6 +1636,24 @@ function BillingContent() {
 
   const openEditModal = (bill: Bill) => {
     setSelectedBill(bill);
+    const existingCharges: AdditionalChargeItem[] =
+      Array.isArray(bill.additional_charges) &&
+      bill.additional_charges.length > 0
+        ? bill.additional_charges.map((c) => ({
+            label: c.label || "",
+            amount: Number(c.amount) || 0,
+          }))
+        : (Number(bill.other_fees) || 0) > 0
+          ? [
+              {
+                label:
+                  bill.notes && bill.notes !== "Auto-generated bill"
+                    ? bill.notes
+                    : "Room Damage",
+                amount: Number(bill.other_fees) || 0,
+              },
+            ]
+          : [];
     setBillForm({
       tenant_id: bill.tenant_id,
       room_id: bill.room_id || "",
@@ -1664,7 +1664,11 @@ function BillingContent() {
       rent_amount: Number(bill.rent_amount) || 0,
       water_charges: Number(bill.water_charges) || 0,
       electricity_charges: Number(bill.electricity_charges) || 0,
-      other_fees: Number(bill.other_fees) || 0,
+      other_fees: existingCharges.reduce(
+        (sum, c) => sum + (Number(c.amount) || 0),
+        0,
+      ),
+      additional_charges: existingCharges,
       notes: bill.notes || "",
     });
     setIsEditOpen(true);
@@ -1693,11 +1697,6 @@ function BillingContent() {
         return {
           label: "Partial",
           className: "text-blue-600 dark:text-blue-400 font-bold",
-        };
-      case "Pending Verification":
-        return {
-          label: "Pending Verification",
-          className: "text-amber-600 dark:text-amber-400 font-bold",
         };
       case "Overdue":
         return {
@@ -1749,7 +1748,10 @@ function BillingContent() {
             <div className="h-6 w-40 bg-slate-200 dark:bg-zinc-800 rounded" />
             <div className="space-y-3 flex-1 pt-3">
               {[...Array(5)].map((_, i) => (
-                <div key={i} className="h-8 w-full bg-slate-100 dark:bg-zinc-800/60 rounded" />
+                <div
+                  key={i}
+                  className="h-8 w-full bg-slate-100 dark:bg-zinc-800/60 rounded"
+                />
               ))}
             </div>
           </div>
@@ -1757,7 +1759,10 @@ function BillingContent() {
             <div className="h-6 w-36 bg-slate-200 dark:bg-zinc-800 rounded" />
             <div className="space-y-2 flex-1 pt-3">
               {[...Array(5)].map((_, i) => (
-                <div key={i} className="h-5 w-full bg-slate-100 dark:bg-zinc-800/60 rounded" />
+                <div
+                  key={i}
+                  className="h-5 w-full bg-slate-100 dark:bg-zinc-800/60 rounded"
+                />
               ))}
             </div>
             <div className="h-16 w-full bg-slate-100 dark:bg-zinc-800/60 rounded-xl" />
@@ -1783,43 +1788,37 @@ function BillingContent() {
             Bills and Payments
           </h1>
           <p className="text-sm sm:text-base text-slate-500 dark:text-zinc-400 font-medium mt-1">
-            Real-time billing overview, invoice management, and collection tracking.
+            Real-time billing overview, invoice management, and collection
+            tracking.
           </p>
-        </div>
-
-        {/* QR Ph Code & Period Selector */}
-        <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={() => setIsGcashQrModalOpen(true)}
-            className="px-3.5 py-2 rounded-xl border border-slate-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 hover:bg-slate-50 dark:hover:bg-zinc-800 text-sm font-bold text-slate-700 dark:text-zinc-200 shadow-xs flex items-center gap-1.5 transition-colors cursor-pointer"
-          >
-            <QrCode className="w-4 h-4 text-[#0066FF]" />
-            <span>QR Ph Code</span>
-          </button>
-
-          <div className="w-36 sm:w-44">
-            <CustomSelect
-              value={quickActionPeriod}
-              onChange={(val) => setQuickActionPeriod(val as "This Year" | "Last Year")}
-              options={["This Year", "Last Year"]}
-              className="w-full bg-white dark:bg-zinc-900 pl-3.5 pr-8 py-2 border border-slate-200 dark:border-zinc-700 rounded-xl text-sm font-semibold text-slate-700 dark:text-zinc-300 shadow-xs"
-            />
-          </div>
         </div>
       </div>
 
-      {/* ========================================================= */}
-      {/* 2. SUMMARY CARDS RIBBON (4 KPI CARDS)                     */}
-      {/* ========================================================= */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
+      {/* 3 KPI CARDS                 */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3.5">
         {/* Card 1: Total Collected */}
         <div className="relative overflow-hidden bg-white dark:bg-zinc-900 border border-slate-200/90 dark:border-zinc-800 rounded-xl p-3.5 sm:p-4 shadow-xs flex flex-col justify-between hover:border-slate-300 dark:hover:border-zinc-700 transition-colors">
           {/* Treasury Voucher Diagonal Facet & Perforated Ledger Rule */}
-          <div className="pointer-events-none select-none absolute inset-0 overflow-hidden" aria-hidden="true">
+          <div
+            className="pointer-events-none select-none absolute inset-0 overflow-hidden"
+            aria-hidden="true"
+          >
             <div className="absolute inset-0 bg-emerald-50/75 dark:bg-emerald-500/[0.065] [clip-path:polygon(64%_0,100%_0,100%_100%,42%_100%)]" />
-            <svg className="absolute inset-0 w-full h-full text-emerald-500/20 dark:text-emerald-400/20" viewBox="0 0 100 100" preserveAspectRatio="none" fill="none">
-              <line x1="64%" y1="0%" x2="42%" y2="100%" stroke="currentColor" strokeWidth="1" vectorEffect="non-scaling-stroke" />
+            <svg
+              className="absolute inset-0 w-full h-full text-emerald-500/20 dark:text-emerald-400/20"
+              viewBox="0 0 100 100"
+              preserveAspectRatio="none"
+              fill="none"
+            >
+              <line
+                x1="64%"
+                y1="0%"
+                x2="42%"
+                y2="100%"
+                stroke="currentColor"
+                strokeWidth="1"
+                vectorEffect="non-scaling-stroke"
+              />
             </svg>
             <div className="absolute inset-x-3 bottom-1.5 h-px opacity-45 dark:opacity-35 bg-[repeating-linear-gradient(to_right,currentColor_0_4px,transparent_4px_9px)] text-emerald-400/40 dark:text-emerald-400/30" />
             <div className="absolute inset-0 rounded-xl ring-1 ring-inset ring-emerald-500/[0.06] dark:ring-emerald-400/[0.07]" />
@@ -1830,10 +1829,14 @@ function BillingContent() {
             </div>
             <div>
               <span className="text-sm font-bold text-slate-500 dark:text-zinc-400 uppercase tracking-wider">
-                Total Collected ({quickActionPeriod})
+                Total Collected (This Month)
               </span>
               <div className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white mt-0.5 tracking-tight font-sans">
-                ₱ {displayMetrics.totalCollected.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                ₱{" "}
+                {displayMetrics.totalCollected.toLocaleString("en-US", {
+                  minimumFractionDigits: 2,
+                  maximumFractionDigits: 2,
+                })}
               </div>
             </div>
           </div>
@@ -1841,22 +1844,35 @@ function BillingContent() {
           <div className="relative z-10 mt-3.5 pt-1">
             <div className="flex items-center justify-between text-sm mb-1.5">
               <span className="font-semibold text-slate-600 dark:text-zinc-300">
-                Collection Rate <span className="font-bold text-slate-900 dark:text-white">{displayMetrics.collectionRate}%</span>
+                Collection Rate{" "}
+                <span className="font-bold text-slate-900 dark:text-white">
+                  {displayMetrics.collectionRate}%
+                </span>
               </span>
-              <span className={`font-bold flex items-center gap-1 ${
-                displayMetrics.rateDiff >= 0
-                  ? "text-emerald-600 dark:text-emerald-400"
-                  : "text-rose-500 dark:text-rose-400"
-              }`}>
-                {displayMetrics.rateDiff >= 0 ? <TrendingUp className="w-3.5 h-3.5" /> : <AlertTriangle className="w-3.5 h-3.5" />}
-                {displayMetrics.rateDiff >= 0 ? `+${displayMetrics.rateDiff}%` : `${displayMetrics.rateDiff}%`}
+              <span
+                className={`font-bold flex items-center gap-1 ${
+                  displayMetrics.rateDiff >= 0
+                    ? "text-emerald-600 dark:text-emerald-400"
+                    : "text-rose-500 dark:text-rose-400"
+                }`}
+              >
+                {displayMetrics.rateDiff >= 0 ? (
+                  <TrendingUp className="w-3.5 h-3.5" />
+                ) : (
+                  <AlertTriangle className="w-3.5 h-3.5" />
+                )}
+                {displayMetrics.rateDiff >= 0
+                  ? `+${displayMetrics.rateDiff}%`
+                  : `${displayMetrics.rateDiff}%`}
               </span>
             </div>
             <div className="flex items-center gap-2">
               <div className="flex-1 bg-slate-100 dark:bg-zinc-800 h-2.5 rounded-full overflow-hidden">
                 <div
                   className="bg-emerald-500 h-full rounded-full transition-all duration-500"
-                  style={{ width: `${Math.min(100, displayMetrics.collectionRate)}%` }}
+                  style={{
+                    width: `${Math.min(100, displayMetrics.collectionRate)}%`,
+                  }}
                 />
               </div>
               <span className="text-xs sm:text-sm text-slate-400 dark:text-zinc-500 shrink-0 font-medium">
@@ -1868,7 +1884,9 @@ function BillingContent() {
           <button
             onClick={() => {
               setActiveTableTab("all");
-              document.getElementById("bills-table-section")?.scrollIntoView({ behavior: "smooth" });
+              document
+                .getElementById("bills-table-section")
+                ?.scrollIntoView({ behavior: "smooth" });
             }}
             className="relative z-10 text-sm font-bold text-blue-600 hover:text-blue-700 dark:text-blue-400 flex items-center gap-1 cursor-pointer mt-3.5 pt-1 group"
           >
@@ -1880,10 +1898,26 @@ function BillingContent() {
         {/* Card 2: Total Invoiced */}
         <div className="relative overflow-hidden bg-white dark:bg-zinc-900 border border-slate-200/90 dark:border-zinc-800 rounded-xl p-3.5 sm:p-4 shadow-xs flex flex-col justify-between hover:border-slate-300 dark:hover:border-zinc-700 transition-colors">
           {/* Treasury Voucher Diagonal Facet & Perforated Ledger Rule */}
-          <div className="pointer-events-none select-none absolute inset-0 overflow-hidden" aria-hidden="true">
+          <div
+            className="pointer-events-none select-none absolute inset-0 overflow-hidden"
+            aria-hidden="true"
+          >
             <div className="absolute inset-0 bg-blue-50/75 dark:bg-blue-500/[0.065] [clip-path:polygon(64%_0,100%_0,100%_100%,42%_100%)]" />
-            <svg className="absolute inset-0 w-full h-full text-blue-500/20 dark:text-blue-400/20" viewBox="0 0 100 100" preserveAspectRatio="none" fill="none">
-              <line x1="64%" y1="0%" x2="42%" y2="100%" stroke="currentColor" strokeWidth="1" vectorEffect="non-scaling-stroke" />
+            <svg
+              className="absolute inset-0 w-full h-full text-blue-500/20 dark:text-blue-400/20"
+              viewBox="0 0 100 100"
+              preserveAspectRatio="none"
+              fill="none"
+            >
+              <line
+                x1="64%"
+                y1="0%"
+                x2="42%"
+                y2="100%"
+                stroke="currentColor"
+                strokeWidth="1"
+                vectorEffect="non-scaling-stroke"
+              />
             </svg>
             <div className="absolute inset-x-3 bottom-1.5 h-px opacity-45 dark:opacity-35 bg-[repeating-linear-gradient(to_right,currentColor_0_4px,transparent_4px_9px)] text-blue-400/40 dark:text-blue-400/30" />
             <div className="absolute inset-0 rounded-xl ring-1 ring-inset ring-blue-500/[0.06] dark:ring-blue-400/[0.07]" />
@@ -1894,10 +1928,14 @@ function BillingContent() {
             </div>
             <div>
               <span className="text-sm font-bold text-slate-500 dark:text-zinc-400 uppercase tracking-wider">
-                Total Invoiced ({quickActionPeriod})
+                Total Invoiced (This Month)
               </span>
               <div className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white mt-0.5 tracking-tight font-sans">
-                ₱ {displayMetrics.totalInvoiced.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                ₱{" "}
+                {displayMetrics.totalInvoiced.toLocaleString("en-US", {
+                  minimumFractionDigits: 2,
+                  maximumFractionDigits: 2,
+                })}
               </div>
             </div>
           </div>
@@ -1908,7 +1946,11 @@ function BillingContent() {
                 Outstanding
               </div>
               <div className="text-base sm:text-lg font-black text-slate-800 dark:text-zinc-200 font-sans mt-0.5">
-                ₱ {displayMetrics.outstanding.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                ₱{" "}
+                {displayMetrics.outstanding.toLocaleString("en-US", {
+                  minimumFractionDigits: 2,
+                  maximumFractionDigits: 2,
+                })}
               </div>
             </div>
             <span className="text-sm font-bold text-slate-600 dark:text-zinc-300">
@@ -1919,7 +1961,9 @@ function BillingContent() {
           <button
             onClick={() => {
               setActiveTableTab("unpaid");
-              document.getElementById("bills-table-section")?.scrollIntoView({ behavior: "smooth" });
+              document
+                .getElementById("bills-table-section")
+                ?.scrollIntoView({ behavior: "smooth" });
             }}
             className="relative z-10 text-sm font-bold text-blue-600 hover:text-blue-700 dark:text-blue-400 flex items-center gap-1 cursor-pointer mt-3.5 pt-1 group"
           >
@@ -1928,59 +1972,29 @@ function BillingContent() {
           </button>
         </div>
 
-        {/* Card 3: Pending Verification */}
+        {/* Card 3: Overdue Accounts */}
         <div className="relative overflow-hidden bg-white dark:bg-zinc-900 border border-slate-200/90 dark:border-zinc-800 rounded-xl p-3.5 sm:p-4 shadow-xs flex flex-col justify-between hover:border-slate-300 dark:hover:border-zinc-700 transition-colors">
           {/* Treasury Voucher Diagonal Facet & Perforated Ledger Rule */}
-          <div className="pointer-events-none select-none absolute inset-0 overflow-hidden" aria-hidden="true">
-            <div className="absolute inset-0 bg-rose-50/75 dark:bg-rose-500/[0.065] [clip-path:polygon(64%_0,100%_0,100%_100%,42%_100%)]" />
-            <svg className="absolute inset-0 w-full h-full text-rose-500/20 dark:text-rose-400/20" viewBox="0 0 100 100" preserveAspectRatio="none" fill="none">
-              <line x1="64%" y1="0%" x2="42%" y2="100%" stroke="currentColor" strokeWidth="1" vectorEffect="non-scaling-stroke" />
-            </svg>
-            <div className="absolute inset-x-3 bottom-1.5 h-px opacity-45 dark:opacity-35 bg-[repeating-linear-gradient(to_right,currentColor_0_4px,transparent_4px_9px)] text-rose-400/40 dark:text-rose-400/30" />
-            <div className="absolute inset-0 rounded-xl ring-1 ring-inset ring-rose-500/[0.06] dark:ring-rose-400/[0.07]" />
-          </div>
-          <div className="relative z-10 flex items-start gap-3">
-            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-rose-50 dark:bg-rose-950/40 text-rose-500 dark:text-rose-400 flex items-center justify-center shrink-0 border border-rose-100 dark:border-rose-800/40">
-              <Clock className="w-4.5 h-4.5 sm:w-5 sm:h-5 stroke-[2]" />
-            </div>
-            <div>
-              <span className="text-sm font-bold text-slate-500 dark:text-zinc-400 uppercase tracking-wider">
-                Pending Verification
-              </span>
-              <div className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white mt-0.5 tracking-tight font-sans">
-                ₱ {displayMetrics.pendingVerificationAmount.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-              </div>
-            </div>
-          </div>
-
-          <div className="relative z-10 mt-3.5 pt-1">
-            <div className="text-xs sm:text-sm uppercase font-bold text-slate-400 dark:text-zinc-500 tracking-wider">
-              Receipts
-            </div>
-            <div className="text-base sm:text-lg font-black text-slate-800 dark:text-zinc-200 mt-0.5">
-              {displayMetrics.pendingVerificationCount}
-            </div>
-          </div>
-
-          <button
-            onClick={() => {
-              setActiveTableTab("pending");
-              document.getElementById("bills-table-section")?.scrollIntoView({ behavior: "smooth" });
-            }}
-            className="relative z-10 text-sm font-bold text-blue-600 hover:text-blue-700 dark:text-blue-400 flex items-center gap-1 cursor-pointer mt-3.5 pt-1 group"
+          <div
+            className="pointer-events-none select-none absolute inset-0 overflow-hidden"
+            aria-hidden="true"
           >
-            <span>View Payment Verifications</span>
-            <ArrowRight className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
-          </button>
-        </div>
-
-        {/* Card 4: Overdue Accounts */}
-        <div className="relative overflow-hidden bg-white dark:bg-zinc-900 border border-slate-200/90 dark:border-zinc-800 rounded-xl p-3.5 sm:p-4 shadow-xs flex flex-col justify-between hover:border-slate-300 dark:hover:border-zinc-700 transition-colors">
-          {/* Treasury Voucher Diagonal Facet & Perforated Ledger Rule */}
-          <div className="pointer-events-none select-none absolute inset-0 overflow-hidden" aria-hidden="true">
             <div className="absolute inset-0 bg-amber-50/75 dark:bg-amber-500/[0.065] [clip-path:polygon(64%_0,100%_0,100%_100%,42%_100%)]" />
-            <svg className="absolute inset-0 w-full h-full text-amber-500/20 dark:text-amber-400/20" viewBox="0 0 100 100" preserveAspectRatio="none" fill="none">
-              <line x1="64%" y1="0%" x2="42%" y2="100%" stroke="currentColor" strokeWidth="1" vectorEffect="non-scaling-stroke" />
+            <svg
+              className="absolute inset-0 w-full h-full text-amber-500/20 dark:text-amber-400/20"
+              viewBox="0 0 100 100"
+              preserveAspectRatio="none"
+              fill="none"
+            >
+              <line
+                x1="64%"
+                y1="0%"
+                x2="42%"
+                y2="100%"
+                stroke="currentColor"
+                strokeWidth="1"
+                vectorEffect="non-scaling-stroke"
+              />
             </svg>
             <div className="absolute inset-x-3 bottom-1.5 h-px opacity-45 dark:opacity-35 bg-[repeating-linear-gradient(to_right,currentColor_0_4px,transparent_4px_9px)] text-amber-400/40 dark:text-amber-400/30" />
             <div className="absolute inset-0 rounded-xl ring-1 ring-inset ring-amber-500/[0.06] dark:ring-amber-400/[0.07]" />
@@ -1994,7 +2008,11 @@ function BillingContent() {
                 Overdue Accounts
               </span>
               <div className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white mt-0.5 tracking-tight font-sans">
-                ₱ {displayMetrics.overdueAmount.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                ₱{" "}
+                {displayMetrics.overdueAmount.toLocaleString("en-US", {
+                  minimumFractionDigits: 2,
+                  maximumFractionDigits: 2,
+                })}
               </div>
             </div>
           </div>
@@ -2011,7 +2029,9 @@ function BillingContent() {
           <button
             onClick={() => {
               setActiveTableTab("overdue");
-              document.getElementById("bills-table-section")?.scrollIntoView({ behavior: "smooth" });
+              document
+                .getElementById("bills-table-section")
+                ?.scrollIntoView({ behavior: "smooth" });
             }}
             className="relative z-10 text-sm font-bold text-blue-600 hover:text-blue-700 dark:text-blue-400 flex items-center gap-1 cursor-pointer mt-3.5 pt-1 group"
           >
@@ -2173,7 +2193,11 @@ function BillingContent() {
                   Total Invoiced
                 </div>
                 <div className="text-sm sm:text-base font-extrabold text-slate-900 dark:text-white font-mono">
-                  ₱ {chartSummary.totalInvoiced.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  ₱{" "}
+                  {chartSummary.totalInvoiced.toLocaleString("en-US", {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2,
+                  })}
                 </div>
               </div>
             </div>
@@ -2188,7 +2212,11 @@ function BillingContent() {
                   Total Collected
                 </div>
                 <div className="text-sm sm:text-base font-extrabold text-slate-900 dark:text-white font-mono">
-                  ₱ {chartSummary.totalCollected.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  ₱{" "}
+                  {chartSummary.totalCollected.toLocaleString("en-US", {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2,
+                  })}
                 </div>
               </div>
             </div>
@@ -2203,7 +2231,11 @@ function BillingContent() {
                   Outstanding Balance
                 </div>
                 <div className="text-sm sm:text-base font-extrabold text-slate-900 dark:text-white font-mono">
-                  ₱ {chartSummary.totalOutstanding.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  ₱{" "}
+                  {chartSummary.totalOutstanding.toLocaleString("en-US", {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2,
+                  })}
                 </div>
               </div>
             </div>
@@ -2235,7 +2267,9 @@ function BillingContent() {
               <button
                 onClick={() => {
                   setActiveTableTab("paid");
-                  document.getElementById("bills-table-section")?.scrollIntoView({ behavior: "smooth" });
+                  document
+                    .getElementById("bills-table-section")
+                    ?.scrollIntoView({ behavior: "smooth" });
                 }}
                 className="text-sm font-bold text-blue-600 hover:text-blue-700 dark:text-blue-400 flex items-center gap-1 cursor-pointer"
               >
@@ -2252,7 +2286,10 @@ function BillingContent() {
                 </div>
               ) : (
                 recentActivities.map((act) => (
-                  <div key={act.id} className="py-2.5 first:pt-0 last:pb-0 flex items-start gap-2.5">
+                  <div
+                    key={act.id}
+                    className="py-2.5 first:pt-0 last:pb-0 flex items-start gap-2.5"
+                  >
                     {/* Status icon */}
                     <div className="shrink-0 mt-0.5">
                       {act.type === "verified" ? (
@@ -2275,21 +2312,18 @@ function BillingContent() {
                         {act.tenant} · {act.room}
                       </div>
                       <div className="text-xs sm:text-sm font-bold text-slate-700 dark:text-zinc-300 mt-0.5 font-mono">
-                        {act.amount} <span className="font-normal text-slate-400 font-sans">· {act.method}</span>
+                        {act.amount}{" "}
+                        <span className="font-normal text-slate-400 font-sans">
+                          · {act.method}
+                        </span>
                       </div>
                     </div>
 
                     {/* Badge & timestamp */}
                     <div className="shrink-0 text-right">
-                      {act.badge === "Verified" || act.badge === "Approved" || act.badge === "Paid" ? (
-                        <span className="inline-flex items-center gap-1 text-xs sm:text-sm font-bold text-emerald-600 dark:text-emerald-400">
-                          <Check className="w-3.5 h-3.5 stroke-[2.5]" /> Verified
-                        </span>
-                      ) : (
-                        <span className="inline-flex items-center gap-1 text-xs sm:text-sm font-bold text-amber-600 dark:text-amber-400">
-                          <Clock className="w-3.5 h-3.5 stroke-[2]" /> Pending
-                        </span>
-                      )}
+                      <span className="inline-flex items-center gap-1 text-xs sm:text-sm font-bold text-emerald-600 dark:text-emerald-400">
+                        <Check className="w-3.5 h-3.5 stroke-[2.5]" /> Verified
+                      </span>
                       <div className="text-xs text-slate-400 dark:text-zinc-500 mt-1">
                         {act.time}
                       </div>
@@ -2316,33 +2350,51 @@ function BillingContent() {
             {/* Key-Value Breakdown */}
             <div className="space-y-2 text-xs sm:text-sm">
               <div className="flex items-center justify-between">
-                <span className="text-slate-500 dark:text-zinc-400 font-semibold">Total Invoices</span>
+                <span className="text-slate-500 dark:text-zinc-400 font-semibold">
+                  Total Invoices
+                </span>
                 <span className="font-bold text-slate-900 dark:text-white font-mono text-sm sm:text-base">
-                  ₱ {billingSummary.totalInvoices.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  ₱{" "}
+                  {billingSummary.totalInvoices.toLocaleString("en-US", {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2,
+                  })}
                 </span>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-slate-500 dark:text-zinc-400 font-semibold">Total Collected (Verified)</span>
+                <span className="text-slate-500 dark:text-zinc-400 font-semibold">
+                  Total Collected (Verified)
+                </span>
                 <span className="font-bold text-slate-900 dark:text-white font-mono text-sm sm:text-base">
-                  ₱ {billingSummary.totalCollected.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  ₱{" "}
+                  {billingSummary.totalCollected.toLocaleString("en-US", {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2,
+                  })}
                 </span>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-slate-500 dark:text-zinc-400 font-semibold">Pending Verification</span>
+                <span className="text-slate-500 dark:text-zinc-400 font-semibold">
+                  Outstanding Balance
+                </span>
                 <span className="font-bold text-slate-900 dark:text-white font-mono text-sm sm:text-base">
-                  ₱ {billingSummary.pendingVerification.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  ₱{" "}
+                  {billingSummary.outstandingBalance.toLocaleString("en-US", {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2,
+                  })}
                 </span>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-slate-500 dark:text-zinc-400 font-semibold">Outstanding Balance</span>
-                <span className="font-bold text-slate-900 dark:text-white font-mono text-sm sm:text-base">
-                  ₱ {billingSummary.outstandingBalance.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                <span className="text-slate-500 dark:text-zinc-400 font-semibold">
+                  Overdue Balance
                 </span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-slate-500 dark:text-zinc-400 font-semibold">Overdue Balance</span>
                 <span className="font-bold text-slate-900 dark:text-white font-mono text-sm sm:text-base">
-                  ₱ {billingSummary.overdueBalance.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  ₱{" "}
+                  {billingSummary.overdueBalance.toLocaleString("en-US", {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2,
+                  })}
                 </span>
               </div>
             </div>
@@ -2384,24 +2436,6 @@ function BillingContent() {
                   strokeDashoffset={billingSummary.collectedOffset}
                   strokeLinecap="round"
                 />
-                {/* Pending */}
-                {billingSummary.pendingVerification > 0 && (
-                  <circle
-                    cx="50"
-                    cy="50"
-                    r="36"
-                    fill="transparent"
-                    stroke="#f59e0b"
-                    strokeWidth="9"
-                    strokeDasharray="226.2"
-                    strokeDashoffset={billingSummary.pendingOffset}
-                    strokeLinecap="round"
-                    style={{
-                      transform: `rotate(${-90 + (billingSummary.collectionRate / 100) * 360}deg)`,
-                      transformOrigin: "50px 50px"
-                    }}
-                  />
-                )}
               </svg>
               <div className="absolute inset-0 flex items-center justify-center text-center">
                 <span className="text-lg sm:text-xl font-black text-slate-900 dark:text-white leading-none font-mono">
@@ -2414,26 +2448,28 @@ function BillingContent() {
             <div className="space-y-1.5 text-xs sm:text-sm flex-1">
               <div className="flex items-center justify-between">
                 <span className="flex items-center gap-1.5 text-slate-600 dark:text-zinc-400 font-semibold">
-                  <span className="w-2 h-2 rounded-full bg-emerald-500" /> Collected
+                  <span className="w-2 h-2 rounded-full bg-emerald-500" />{" "}
+                  Collected
                 </span>
                 <span className="font-bold text-slate-900 dark:text-white font-mono">
-                  ₱ {billingSummary.totalCollected.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  ₱{" "}
+                  {billingSummary.totalCollected.toLocaleString("en-US", {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2,
+                  })}
                 </span>
               </div>
               <div className="flex items-center justify-between">
                 <span className="flex items-center gap-1.5 text-slate-600 dark:text-zinc-400 font-semibold">
-                  <span className="w-2 h-2 rounded-full bg-amber-500" /> Pending
+                  <span className="w-2 h-2 rounded-full bg-rose-400" />{" "}
+                  Outstanding
                 </span>
                 <span className="font-bold text-slate-900 dark:text-white font-mono">
-                  ₱ {billingSummary.pendingVerification.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                </span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="flex items-center gap-1.5 text-slate-600 dark:text-zinc-400 font-semibold">
-                  <span className="w-2 h-2 rounded-full bg-rose-400" /> Outstanding
-                </span>
-                <span className="font-bold text-slate-900 dark:text-white font-mono">
-                  ₱ {billingSummary.outstandingBalance.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  ₱{" "}
+                  {billingSummary.outstandingBalance.toLocaleString("en-US", {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2,
+                  })}
                 </span>
               </div>
             </div>
@@ -2444,7 +2480,10 @@ function BillingContent() {
       {/* ========================================================= */}
       {/* 3. BOTTOM SECTION: BILLS & PAYMENTS TABLE                 */}
       {/* ========================================================= */}
-      <div id="bills-table-section" className="bg-white dark:bg-zinc-900 border border-slate-200/90 dark:border-zinc-800 rounded-xl shadow-xs overflow-hidden">
+      <div
+        id="bills-table-section"
+        className="bg-white dark:bg-zinc-900 border border-slate-200/90 dark:border-zinc-800 rounded-xl shadow-xs overflow-hidden"
+      >
         {/* Header & Controls */}
         <div className="p-3.5 sm:p-4 border-b border-slate-200/80 dark:border-zinc-800 flex flex-col gap-3 relative z-20">
           {/* Top: Title */}
@@ -2484,14 +2523,23 @@ function BillingContent() {
               <CustomSelect
                 value={activeTableTab}
                 onChange={(val) => {
-                  setActiveTableTab(val as "all" | "unpaid" | "overdue" | "pending" | "paid");
+                  setActiveTableTab(
+                    val as "all" | "unpaid" | "overdue" | "paid",
+                  );
                   setCurrentPage(1);
                 }}
                 options={[
-                  { value: "all", label: "All Bills", dotColor: "bg-slate-400" },
+                  {
+                    value: "all",
+                    label: "All Bills",
+                    dotColor: "bg-slate-400",
+                  },
                   { value: "unpaid", label: "Unpaid", dotColor: "bg-blue-500" },
-                  { value: "overdue", label: "Overdue", dotColor: "bg-rose-500" },
-                  { value: "pending", label: "Pending Verification", dotColor: "bg-amber-500" },
+                  {
+                    value: "overdue",
+                    label: "Overdue",
+                    dotColor: "bg-rose-500",
+                  },
                   { value: "paid", label: "Paid", dotColor: "bg-emerald-500" },
                 ]}
                 className="w-full bg-slate-50/50 dark:bg-zinc-800/50 pl-3.5 pr-8 py-2 border border-slate-200 dark:border-zinc-700 rounded-xl text-sm font-semibold text-slate-700 dark:text-zinc-300 shadow-2xs"
@@ -2505,16 +2553,36 @@ function BillingContent() {
           <table className="w-full text-sm sm:text-base border-collapse">
             <thead>
               <tr className="border-b border-slate-200 dark:border-zinc-800 bg-slate-50/70 dark:bg-zinc-900/80 text-slate-700 dark:text-zinc-300 text-xs sm:text-sm font-black uppercase tracking-wider select-none">
-                <th className="py-3 pl-4 pr-3 text-left whitespace-nowrap">Invoice #</th>
-                <th className="py-3 px-3 text-center whitespace-nowrap">Tenant</th>
-                <th className="py-3 px-3 text-center whitespace-nowrap">Room</th>
-                <th className="py-3 px-3 text-center whitespace-nowrap">Bill Period</th>
-                <th className="py-3 px-3 text-center whitespace-nowrap">Amount</th>
-                <th className="py-3 px-3 text-center whitespace-nowrap">Status</th>
-                <th className="py-3 px-3 text-center whitespace-nowrap">Due Date</th>
-                <th className="py-3 px-3 text-center whitespace-nowrap">Paid Amount</th>
-                <th className="py-3 px-3 text-center whitespace-nowrap">Balance</th>
-                <th className="py-3 px-4 text-center whitespace-nowrap">Actions</th>
+                <th className="py-3 pl-4 pr-3 text-left whitespace-nowrap">
+                  Invoice #
+                </th>
+                <th className="py-3 px-3 text-center whitespace-nowrap">
+                  Tenant
+                </th>
+                <th className="py-3 px-3 text-center whitespace-nowrap">
+                  Room
+                </th>
+                <th className="py-3 px-3 text-center whitespace-nowrap">
+                  Bill Period
+                </th>
+                <th className="py-3 px-3 text-center whitespace-nowrap">
+                  Amount
+                </th>
+                <th className="py-3 px-3 text-center whitespace-nowrap">
+                  Status
+                </th>
+                <th className="py-3 px-3 text-center whitespace-nowrap">
+                  Due Date
+                </th>
+                <th className="py-3 px-3 text-center whitespace-nowrap">
+                  Paid Amount
+                </th>
+                <th className="py-3 px-3 text-center whitespace-nowrap">
+                  Balance
+                </th>
+                <th className="py-3 px-4 text-center whitespace-nowrap">
+                  Actions
+                </th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-zinc-800">
@@ -2531,24 +2599,27 @@ function BillingContent() {
                 </tr>
               ) : (
                 <>
-                  {paginatedBills.map((bill) => {
+                  {paginatedBills.map((bill, index) => {
                     const formattedInv = formatInvoiceNumber(bill);
                     const roomDisplay = getBillRoomDisplay(bill);
+                    // Rows from the third onward open their action menu upward
+                    // so the card stays fully visible without scrolling.
+                    const isDropup = index >= 2;
                     const isRowSelected =
                       selectedBillRowId !== null
                         ? selectedBillRowId === bill.id
                         : Boolean(
                             selectedHistoryTenant &&
-                              ((selectedHistoryTenant.id !== null &&
-                                Number(bill.tenant_id) ===
-                                  Number(selectedHistoryTenant.id)) ||
-                                (selectedHistoryTenant.name &&
-                                  (bill.tenant_name || "")
+                            ((selectedHistoryTenant.id !== null &&
+                              Number(bill.tenant_id) ===
+                                Number(selectedHistoryTenant.id)) ||
+                              (selectedHistoryTenant.name &&
+                                (bill.tenant_name || "")
+                                  .trim()
+                                  .toLowerCase() ===
+                                  selectedHistoryTenant.name
                                     .trim()
-                                    .toLowerCase() ===
-                                    selectedHistoryTenant.name
-                                      .trim()
-                                      .toLowerCase())),
+                                    .toLowerCase())),
                           );
 
                     return (
@@ -2562,216 +2633,216 @@ function BillingContent() {
                             : "hover:bg-slate-50/80 dark:hover:bg-zinc-800/40"
                         }`}
                       >
-                      {/* Invoice # */}
-                      <td
-                        onClick={(e) => e.stopPropagation()}
-                        className="py-2.5 sm:py-3.5 pl-4 pr-3 text-left whitespace-nowrap font-mono font-bold text-sm sm:text-base text-slate-800 dark:text-zinc-200 cursor-default select-text"
-                      >
-                        <span>{formattedInv}</span>
-                      </td>
+                        {/* Invoice # */}
+                        <td
+                          onClick={(e) => e.stopPropagation()}
+                          className="py-2.5 sm:py-3.5 pl-4 pr-3 text-left whitespace-nowrap font-mono font-bold text-sm sm:text-base text-slate-800 dark:text-zinc-200 cursor-default select-text"
+                        >
+                          <span>{formattedInv}</span>
+                        </td>
 
-                      {/* Tenant */}
-                      <td className={`py-2.5 sm:py-3.5 px-3 text-center whitespace-nowrap text-sm sm:text-base ${
-                        isRowSelected
-                          ? "font-extrabold text-[#0062cc] dark:text-blue-400"
-                          : "font-bold text-slate-900 dark:text-white"
-                      }`}>
-                        {bill.tenant_name}
-                      </td>
+                        {/* Tenant */}
+                        <td
+                          className={`py-2.5 sm:py-3.5 px-3 text-center whitespace-nowrap text-sm sm:text-base ${
+                            isRowSelected
+                              ? "font-extrabold text-[#0062cc] dark:text-blue-400"
+                              : "font-bold text-slate-900 dark:text-white"
+                          }`}
+                        >
+                          {bill.tenant_name}
+                        </td>
 
-                      {/* Room */}
-                      <td className="py-2.5 sm:py-3.5 px-3 text-center whitespace-nowrap text-sm sm:text-base font-medium text-slate-600 dark:text-zinc-300">
-                        {roomDisplay}
-                      </td>
+                        {/* Room */}
+                        <td className="py-2.5 sm:py-3.5 px-3 text-center whitespace-nowrap text-sm sm:text-base font-medium text-slate-600 dark:text-zinc-300">
+                          {roomDisplay}
+                        </td>
 
-                      {/* Bill Period */}
-                      <td className="py-2.5 sm:py-3.5 px-3 text-center whitespace-nowrap text-sm sm:text-base font-medium text-slate-600 dark:text-zinc-400">
-                        {bill.billing_month}
-                      </td>
+                        {/* Bill Period */}
+                        <td className="py-2.5 sm:py-3.5 px-3 text-center whitespace-nowrap text-sm sm:text-base font-medium text-slate-600 dark:text-zinc-400">
+                          {bill.billing_month}
+                        </td>
 
-                      {/* Amount */}
-                      <td className="py-2.5 sm:py-3.5 px-3 text-center whitespace-nowrap font-bold text-sm sm:text-base font-mono text-slate-900 dark:text-white">
-                        ₱ {Number(bill.total_amount).toLocaleString("en-US", { minimumFractionDigits: 2 })}
-                      </td>
+                        {/* Amount */}
+                        <td className="py-2.5 sm:py-3.5 px-3 text-center whitespace-nowrap font-bold text-sm sm:text-base font-mono text-slate-900 dark:text-white">
+                          ₱{" "}
+                          {Number(bill.total_amount).toLocaleString("en-US", {
+                            minimumFractionDigits: 2,
+                          })}
+                        </td>
 
-                      {/* Status Badge */}
-                      <td className="py-2.5 sm:py-3.5 px-3 text-center whitespace-nowrap">
-                        {bill.status === "Paid" && (
-                          <span className="inline-flex items-center justify-center gap-1.5 text-xs sm:text-sm font-bold text-emerald-600 dark:text-emerald-400">
-                            <Check className="w-4 h-4 stroke-[2.5]" /> Paid
-                          </span>
-                        )}
-                        {bill.status === "Partially Paid" && (
-                          <span className="inline-flex items-center justify-center gap-1.5 text-xs sm:text-sm font-bold text-amber-600 dark:text-amber-400">
-                            <Clock className="w-4 h-4 stroke-[2]" /> Partially Paid
-                          </span>
-                        )}
-                        {bill.status === "Overdue" && (
-                          <span className="inline-flex items-center justify-center gap-1.5 text-xs sm:text-sm font-bold text-rose-600 dark:text-rose-400">
-                            <AlertTriangle className="w-4 h-4 stroke-[2]" /> Overdue
-                          </span>
-                        )}
-                        {bill.status === "Pending Verification" && (
-                          <span className="inline-flex items-center justify-center gap-1.5 text-xs sm:text-sm font-bold text-amber-600 dark:text-amber-400">
-                            <Clock className="w-4 h-4 stroke-[2]" /> Pending Verification
-                          </span>
-                        )}
-                        {bill.status !== "Paid" &&
-                          bill.status !== "Partially Paid" &&
-                          bill.status !== "Overdue" &&
-                          bill.status !== "Pending Verification" && (
-                            <span className="inline-flex items-center justify-center gap-1.5 text-xs sm:text-sm font-bold text-slate-600 dark:text-zinc-400">
-                              {bill.status}
+                        {/* Status Badge */}
+                        <td className="py-2.5 sm:py-3.5 px-3 text-center whitespace-nowrap">
+                          {bill.status === "Paid" && (
+                            <span className="inline-flex items-center justify-center gap-1.5 text-xs sm:text-sm font-bold text-emerald-600 dark:text-emerald-400">
+                              <Check className="w-4 h-4 stroke-[2.5]" /> Paid
                             </span>
                           )}
-                      </td>
+                          {bill.status === "Partially Paid" && (
+                            <span className="inline-flex items-center justify-center gap-1.5 text-xs sm:text-sm font-bold text-amber-600 dark:text-amber-400">
+                              <Clock className="w-4 h-4 stroke-[2]" /> Partially
+                              Paid
+                            </span>
+                          )}
+                          {bill.status === "Overdue" && (
+                            <span className="inline-flex items-center justify-center gap-1.5 text-xs sm:text-sm font-bold text-rose-600 dark:text-rose-400">
+                              <AlertTriangle className="w-4 h-4 stroke-[2]" />{" "}
+                              Overdue
+                            </span>
+                          )}
+                          {bill.status !== "Paid" &&
+                            bill.status !== "Partially Paid" &&
+                            bill.status !== "Overdue" && (
+                              <span className="inline-flex items-center justify-center gap-1.5 text-xs sm:text-sm font-bold text-slate-600 dark:text-zinc-400">
+                                {bill.status}
+                              </span>
+                            )}
+                        </td>
 
-                      {/* Due Date */}
-                      <td className="py-2.5 sm:py-3.5 px-3 text-center whitespace-nowrap text-sm sm:text-base font-medium text-slate-600 dark:text-zinc-400">
-                        {bill.due_date
-                          ? new Date(bill.due_date).toLocaleDateString("en-US", {
-                              month: "short",
-                              day: "numeric",
-                              year: "numeric",
-                            })
-                          : "N/A"}
-                      </td>
+                        {/* Due Date */}
+                        <td className="py-2.5 sm:py-3.5 px-3 text-center whitespace-nowrap text-sm sm:text-base font-medium text-slate-600 dark:text-zinc-400">
+                          {bill.due_date
+                            ? new Date(bill.due_date).toLocaleDateString(
+                                "en-US",
+                                {
+                                  month: "short",
+                                  day: "numeric",
+                                  year: "numeric",
+                                },
+                              )
+                            : "N/A"}
+                        </td>
 
-                      {/* Paid Amount */}
-                      <td className="py-2.5 sm:py-3.5 px-3 text-center whitespace-nowrap text-sm sm:text-base font-medium font-mono text-slate-600 dark:text-zinc-300">
-                        ₱ {Number(bill.amount_paid || 0).toLocaleString("en-US", { minimumFractionDigits: 2 })}
-                      </td>
+                        {/* Paid Amount */}
+                        <td className="py-2.5 sm:py-3.5 px-3 text-center whitespace-nowrap text-sm sm:text-base font-medium font-mono text-slate-600 dark:text-zinc-300">
+                          ₱{" "}
+                          {Number(bill.amount_paid || 0).toLocaleString(
+                            "en-US",
+                            { minimumFractionDigits: 2 },
+                          )}
+                        </td>
 
-                      {/* Balance */}
-                      <td className={`py-2.5 sm:py-3.5 px-3 text-center whitespace-nowrap font-mono text-sm sm:text-base ${Number(bill.balance) > 0 ? "font-bold text-rose-600 dark:text-rose-400" : "font-medium text-slate-600 dark:text-zinc-300"}`}>
-                        ₱ {Number(bill.balance).toLocaleString("en-US", { minimumFractionDigits: 2 })}
-                      </td>
+                        {/* Balance */}
+                        <td
+                          className={`py-2.5 sm:py-3.5 px-3 text-center whitespace-nowrap font-mono text-sm sm:text-base ${Number(bill.balance) > 0 ? "font-bold text-rose-600 dark:text-rose-400" : "font-medium text-slate-600 dark:text-zinc-300"}`}
+                        >
+                          ₱{" "}
+                          {Number(bill.balance).toLocaleString("en-US", {
+                            minimumFractionDigits: 2,
+                          })}
+                        </td>
 
-                      {/* Actions */}
-                      <td
-                        className="py-2.5 sm:py-3.5 px-4 text-center whitespace-nowrap relative"
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        <div className="inline-flex items-center justify-center gap-2">
-                          <button
-                            onClick={() => {
-                              handleSelectTenantRow(bill);
-                              openViewModal(bill);
-                            }}
-                            className="text-sm font-bold text-blue-600 hover:text-blue-700 dark:text-blue-400 hover:underline cursor-pointer"
-                          >
-                            View
-                          </button>
-
-                          <div className="relative inline-block text-left">
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setActiveMenuBillId(
-                                  activeMenuBillId === bill.id ? null : bill.id,
-                                );
-                              }}
-                              className="p-1 text-slate-400 hover:text-slate-700 dark:hover:text-white rounded-lg hover:bg-slate-100 dark:hover:bg-zinc-800 cursor-pointer"
+                        {/* Actions */}
+                        <td
+                          className={`py-2.5 sm:py-3.5 px-4 text-center whitespace-nowrap relative ${
+                            activeMenuBillId === bill.id ? "z-30" : ""
+                          }`}
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <div className="inline-flex items-center justify-center">
+                            <div
+                              className={`relative inline-block text-left ${activeMenuBillId === bill.id ? "z-30" : ""}`}
                             >
-                              <MoreVertical className="w-4 h-4" />
-                            </button>
-
-                            {activeMenuBillId === bill.id && (
-                              <div
-                                className="absolute right-0 mt-1 w-52 bg-white dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 rounded-xl shadow-lg z-30 py-1.5 text-left text-sm"
-                                onClick={(e) => e.stopPropagation()}
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setActiveMenuBillId(
+                                    activeMenuBillId === bill.id
+                                      ? null
+                                      : bill.id,
+                                  );
+                                }}
+                                className="p-1 text-slate-400 hover:text-slate-700 dark:hover:text-white rounded-lg hover:bg-slate-100 dark:hover:bg-zinc-800 cursor-pointer"
                               >
-                                <button
-                                  onClick={() => {
-                                    setActiveMenuBillId(null);
-                                    handleSelectTenantRow(bill);
-                                    setTimeout(() => {
-                                      document
-                                        .getElementById("tenant-payment-history-panel")
-                                        ?.scrollIntoView({ behavior: "smooth", block: "nearest" });
-                                    }, 50);
-                                  }}
-                                  className="w-full px-3 py-2 text-sm text-slate-700 dark:text-zinc-200 hover:bg-slate-50 dark:hover:bg-zinc-700 flex items-center gap-2 font-medium cursor-pointer"
+                                <MoreVertical className="w-4 h-4" />
+                              </button>
+
+                              {activeMenuBillId === bill.id && (
+                                <div
+                                  className={`absolute right-0 ${
+                                    isDropup
+                                      ? "bottom-full mb-1"
+                                      : "top-full mt-1"
+                                  } w-52 bg-white dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 rounded-xl shadow-lg z-30 py-1.5 text-left text-sm`}
+                                  onClick={(e) => e.stopPropagation()}
                                 >
-                                  <Receipt className="w-4 h-4 text-[#0062cc]" />
-                                  View Payment History
-                                </button>
-                                <button
-                                  onClick={() => {
-                                    setActiveMenuBillId(null);
-                                    openViewModal(bill);
-                                  }}
-                                  className="w-full px-3 py-2 text-sm text-slate-700 dark:text-zinc-200 hover:bg-slate-50 dark:hover:bg-zinc-700 flex items-center gap-2 font-medium cursor-pointer"
-                                >
-                                  <Eye className="w-4 h-4 text-blue-600" />
-                                  View Statement
-                                </button>
-                                <button
-                                  onClick={() => {
-                                    setActiveMenuBillId(null);
-                                    openPayModal(bill);
-                                  }}
-                                  className="w-full px-3 py-2 text-sm text-slate-700 dark:text-zinc-200 hover:bg-slate-50 dark:hover:bg-zinc-700 flex items-center gap-2 font-medium cursor-pointer"
-                                >
-                                  <CreditCard className="w-4 h-4 text-emerald-600" />
-                                  Record Payment
-                                </button>
-                                <button
-                                  onClick={() => {
-                                    setActiveMenuBillId(null);
-                                    openEditModal(bill);
-                                  }}
-                                  className="w-full px-3 py-2 text-sm text-slate-700 dark:text-zinc-200 hover:bg-slate-50 dark:hover:bg-zinc-700 flex items-center gap-2 font-medium cursor-pointer"
-                                >
-                                  <Edit className="w-4 h-4 text-slate-600" />
-                                  Edit Invoice
-                                </button>
-                                {bill.status === "Pending Verification" && (
                                   <button
                                     onClick={() => {
                                       setActiveMenuBillId(null);
-                                      const matchIdx = pendingPayments.findIndex(
-                                        (p) => p.bill_id === bill.id,
-                                      );
-                                      setCurrentVerifyIndex(
-                                        matchIdx >= 0 ? matchIdx : 0,
-                                      );
-                                      setIsVerifyModalOpen(true);
+                                      handleSelectTenantRow(bill);
+                                      setTimeout(() => {
+                                        document
+                                          .getElementById(
+                                            "tenant-payment-history-panel",
+                                          )
+                                          ?.scrollIntoView({
+                                            behavior: "smooth",
+                                            block: "nearest",
+                                          });
+                                      }, 50);
                                     }}
-                                    className="w-full px-3 py-2 text-sm text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-950/40 flex items-center gap-2 font-medium cursor-pointer"
+                                    className="w-full px-3 py-2 text-sm text-slate-700 dark:text-zinc-200 hover:bg-slate-50 dark:hover:bg-zinc-700 flex items-center gap-2 font-medium cursor-pointer"
                                   >
-                                    <Clock className="w-4 h-4 text-amber-600" />
-                                    Verify Payment
+                                    <Receipt className="w-4 h-4 text-[#0062cc]" />
+                                    View Payment History
                                   </button>
-                                )}
-                              </div>
-                            )}
+                                  <button
+                                    onClick={() => {
+                                      setActiveMenuBillId(null);
+                                      openViewModal(bill);
+                                    }}
+                                    className="w-full px-3 py-2 text-sm text-slate-700 dark:text-zinc-200 hover:bg-slate-50 dark:hover:bg-zinc-700 flex items-center gap-2 font-medium cursor-pointer"
+                                  >
+                                    <Eye className="w-4 h-4 text-blue-600" />
+                                    View Statement
+                                  </button>
+                                  <button
+                                    onClick={() => {
+                                      setActiveMenuBillId(null);
+                                      openPayModal(bill);
+                                    }}
+                                    className="w-full px-3 py-2 text-sm text-slate-700 dark:text-zinc-200 hover:bg-slate-50 dark:hover:bg-zinc-700 flex items-center gap-2 font-medium cursor-pointer"
+                                  >
+                                    <CreditCard className="w-4 h-4 text-emerald-600" />
+                                    Record Payment
+                                  </button>
+                                  <button
+                                    onClick={() => {
+                                      setActiveMenuBillId(null);
+                                      openEditModal(bill);
+                                    }}
+                                    className="w-full px-3 py-2 text-sm text-slate-700 dark:text-zinc-200 hover:bg-slate-50 dark:hover:bg-zinc-700 flex items-center gap-2 font-medium cursor-pointer"
+                                  >
+                                    <Edit className="w-4 h-4 text-slate-600" />
+                                    Edit Invoice
+                                  </button>
+                                </div>
+                              )}
+                            </div>
                           </div>
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
-                {paginatedBills.length < 5 &&
-                  Array.from({ length: 5 - paginatedBills.length }).map(
-                    (_, idx) => (
-                      <tr
-                        key={`filler-${idx}`}
-                        className="h-[52px] pointer-events-none select-none"
-                        aria-hidden="true"
-                      >
-                        <td
-                          colSpan={10}
-                          className="py-2.5 px-3 text-transparent text-sm"
-                        >
-                          &nbsp;
                         </td>
                       </tr>
-                    ),
-                  )}
-              </>
-            )}
-          </tbody>
+                    );
+                  })}
+                  {paginatedBills.length < 5 &&
+                    Array.from({ length: 5 - paginatedBills.length }).map(
+                      (_, idx) => (
+                        <tr
+                          key={`filler-${idx}`}
+                          className="h-[52px] pointer-events-none select-none"
+                          aria-hidden="true"
+                        >
+                          <td
+                            colSpan={10}
+                            className="py-2.5 px-3 text-transparent text-sm"
+                          >
+                            &nbsp;
+                          </td>
+                        </tr>
+                      ),
+                    )}
+                </>
+              )}
+            </tbody>
           </table>
         </div>
 
@@ -2936,8 +3007,8 @@ function BillingContent() {
                       {selectedHistoryTenant.name}
                     </p>
                     <p className="text-xs text-slate-400 dark:text-zinc-500 mt-0.5">
-                      Payments settled via Cash or verified online (QR Ph, GCash) will appear
-                      here automatically.
+                      Payments settled via Cash or verified online (QR Ph,
+                      GCash) will appear here automatically.
                     </p>
                   </div>
                 ) : (
@@ -3009,18 +3080,22 @@ function BillingContent() {
 
                             {/* Method */}
                             <td className="py-2.5 px-3 text-center whitespace-nowrap font-semibold text-slate-700 dark:text-zinc-300">
-                              {normalizeAdminPaymentMethod(payment.payment_method, "Cash")}
+                              {normalizeAdminPaymentMethod(
+                                payment.payment_method,
+                                "Cash",
+                              )}
                             </td>
 
                             {/* Amount Paid */}
                             <td className="py-2.5 px-3 text-right whitespace-nowrap font-mono font-bold text-slate-900 dark:text-white">
                               ₱{" "}
-                              {Number(
-                                payment.amount_paid || 0,
-                              ).toLocaleString("en-US", {
-                                minimumFractionDigits: 2,
-                                maximumFractionDigits: 2,
-                              })}
+                              {Number(payment.amount_paid || 0).toLocaleString(
+                                "en-US",
+                                {
+                                  minimumFractionDigits: 2,
+                                  maximumFractionDigits: 2,
+                                },
+                              )}
                             </td>
 
                             {/* Status (Colored text only - no background/outline) */}
@@ -3029,13 +3104,6 @@ function BillingContent() {
                                 <span className="inline-flex items-center justify-center gap-1 text-xs sm:text-sm font-bold text-emerald-600 dark:text-emerald-400">
                                   <Check className="w-3.5 h-3.5 stroke-[2.5]" />{" "}
                                   Paid
-                                </span>
-                              )}
-                              {payment.normalizedStatus ===
-                                "Pending Verification" && (
-                                <span className="inline-flex items-center justify-center gap-1 text-xs sm:text-sm font-bold text-amber-600 dark:text-amber-400">
-                                  <Clock className="w-3.5 h-3.5 stroke-[2]" />{" "}
-                                  Pending Verification
                                 </span>
                               )}
                               {payment.normalizedStatus === "Rejected" && (
@@ -3342,11 +3410,11 @@ function BillingContent() {
                                   Electricity Charges
                                 </div>
                                 <div className="text-[11px] text-slate-400 dark:text-zinc-500">
-                                  Submeter electrical consumption
+                                  Fixed monthly electricity utility allocation
                                 </div>
                               </td>
                               <td className="py-2.5 px-3.5 text-center text-[11px] text-slate-500 dark:text-zinc-400 hidden sm:table-cell">
-                                Submeter Reading
+                                Fixed Utility
                               </td>
                               <td className="py-2.5 px-3.5 text-right font-mono font-bold text-slate-800 dark:text-zinc-200">
                                 ₱
@@ -3356,28 +3424,45 @@ function BillingContent() {
                               </td>
                             </tr>
 
-                            {/* Other Fees */}
-                            {(Number(billDetails.other_fees) || 0) > 0 && (
-                              <tr>
+                            {/* Additional Charges */}
+                            {(Array.isArray(billDetails.additional_charges) &&
+                            billDetails.additional_charges.length > 0
+                              ? billDetails.additional_charges
+                              : (Number(billDetails.other_fees) || 0) > 0
+                                ? [
+                                    {
+                                      label:
+                                        billDetails.notes &&
+                                        billDetails.notes !==
+                                          "Auto-generated bill"
+                                          ? billDetails.notes
+                                          : "Additional Charge",
+                                      amount:
+                                        Number(billDetails.other_fees) || 0,
+                                    },
+                                  ]
+                                : []
+                            ).map((charge, idx) => (
+                              <tr key={idx}>
                                 <td className="py-2.5 px-3.5">
                                   <div className="font-semibold text-slate-800 dark:text-zinc-200">
-                                    Other Fees / Maintenance
+                                    {charge.label}
                                   </div>
                                   <div className="text-[11px] text-slate-400 dark:text-zinc-500">
-                                    Incidental property dues or surcharges
+                                    Added charge / room damage assessment
                                   </div>
                                 </td>
                                 <td className="py-2.5 px-3.5 text-center text-[11px] text-slate-500 dark:text-zinc-400 hidden sm:table-cell">
-                                  Incidental
+                                  Added Charge
                                 </td>
                                 <td className="py-2.5 px-3.5 text-right font-mono font-bold text-slate-800 dark:text-zinc-200">
                                   ₱
                                   {(
-                                    Number(billDetails.other_fees) || 0
+                                    Number(charge.amount) || 0
                                   ).toLocaleString()}
                                 </td>
                               </tr>
-                            )}
+                            ))}
                           </tbody>
                         </table>
                       </div>
@@ -3558,17 +3643,32 @@ function BillingContent() {
                         ).toLocaleString()}
                       </span>
                     </div>
-                    {(Number(selectedBill.other_fees) || 0) > 0 && (
-                      <div className="flex justify-between items-center text-rose-600 dark:text-rose-400 font-semibold">
-                        <span>Other Fees / Surcharges</span>
+                    {(Array.isArray(selectedBill.additional_charges) &&
+                    selectedBill.additional_charges.length > 0
+                      ? selectedBill.additional_charges
+                      : (Number(selectedBill.other_fees) || 0) > 0
+                        ? [
+                            {
+                              label:
+                                selectedBill.notes &&
+                                selectedBill.notes !== "Auto-generated bill"
+                                  ? selectedBill.notes
+                                  : "Additional Charge",
+                              amount: Number(selectedBill.other_fees) || 0,
+                            },
+                          ]
+                        : []
+                    ).map((charge, idx) => (
+                      <div
+                        key={idx}
+                        className="flex justify-between items-center text-rose-600 dark:text-rose-400 font-semibold"
+                      >
+                        <span>{charge.label}</span>
                         <span className="font-mono font-bold">
-                          +₱
-                          {(
-                            Number(selectedBill.other_fees) || 0
-                          ).toLocaleString()}
+                          +₱{(Number(charge.amount) || 0).toLocaleString()}
                         </span>
                       </div>
-                    )}
+                    ))}
                   </div>
 
                   {/* Statement Total & Balance */}
@@ -3803,7 +3903,7 @@ function BillingContent() {
                   <div className="text-xs font-bold uppercase text-slate-500">
                     Itemized Charges (₱)
                   </div>
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
                     <div className="space-y-1">
                       <label className="text-[11px] font-semibold text-slate-600 dark:text-zinc-400">
                         Base Rent
@@ -3824,7 +3924,7 @@ function BillingContent() {
                     </div>
                     <div className="space-y-1">
                       <label className="text-[11px] font-semibold text-slate-600 dark:text-zinc-400">
-                        Water
+                        Water (Fixed)
                       </label>
                       <input
                         required
@@ -3842,7 +3942,7 @@ function BillingContent() {
                     </div>
                     <div className="space-y-1">
                       <label className="text-[11px] font-semibold text-slate-600 dark:text-zinc-400">
-                        Electricity
+                        Electricity (Fixed)
                       </label>
                       <input
                         required
@@ -3859,24 +3959,113 @@ function BillingContent() {
                         className="w-full py-1.5 px-2 text-xs font-mono font-bold rounded-md bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-700 text-right"
                       />
                     </div>
-                    <div className="space-y-1">
-                      <label className="text-[11px] font-semibold text-slate-600 dark:text-zinc-400">
-                        Other Fees
-                      </label>
-                      <input
-                        required
-                        type="number"
-                        step="0.01"
-                        value={billForm.other_fees}
-                        onChange={(e) =>
+                  </div>
+
+                  {/* Additional Named Charges */}
+                  <div className="pt-2 border-t border-slate-200 dark:border-zinc-800 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[11px] font-bold uppercase text-slate-500 dark:text-zinc-400">
+                        Additional Charges (e.g. Room Damage)
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const updated = [
+                            ...(billForm.additional_charges || []),
+                            { label: "", amount: 0 },
+                          ];
                           setBillForm({
                             ...billForm,
-                            other_fees: parseFloat(e.target.value) || 0,
-                          })
-                        }
-                        className="w-full py-1.5 px-2 text-xs font-mono font-bold rounded-md bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-700 text-right"
-                      />
+                            additional_charges: updated,
+                          });
+                        }}
+                        className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-[11px] font-bold bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-500/15 dark:hover:bg-indigo-500/25 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-500/30 transition-colors cursor-pointer"
+                      >
+                        <Plus className="w-3 h-3" />
+                        <span>Add Charge</span>
+                      </button>
                     </div>
+
+                    {(billForm.additional_charges || []).length > 0 ? (
+                      <div className="space-y-2">
+                        {billForm.additional_charges.map((charge, idx) => (
+                          <div key={idx} className="flex items-center gap-2">
+                            <input
+                              type="text"
+                              placeholder="Charge description (e.g. Damaged things in room)"
+                              value={charge.label}
+                              onChange={(e) => {
+                                const updated = [
+                                  ...billForm.additional_charges,
+                                ];
+                                updated[idx] = {
+                                  ...updated[idx],
+                                  label: e.target.value,
+                                };
+                                setBillForm({
+                                  ...billForm,
+                                  additional_charges: updated,
+                                });
+                              }}
+                              className="flex-1 py-1.5 px-2.5 text-xs font-semibold rounded-md bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-700"
+                            />
+                            <input
+                              type="number"
+                              step="0.01"
+                              min="0"
+                              placeholder="0.00"
+                              value={charge.amount || ""}
+                              onChange={(e) => {
+                                const updated = [
+                                  ...billForm.additional_charges,
+                                ];
+                                updated[idx] = {
+                                  ...updated[idx],
+                                  amount: parseFloat(e.target.value) || 0,
+                                };
+                                const totalOther = updated.reduce(
+                                  (sum, c) => sum + (Number(c.amount) || 0),
+                                  0,
+                                );
+                                setBillForm({
+                                  ...billForm,
+                                  additional_charges: updated,
+                                  other_fees: totalOther,
+                                });
+                              }}
+                              className="w-28 py-1.5 px-2 text-xs font-mono font-bold rounded-md bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-700 text-right"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const updated =
+                                  billForm.additional_charges.filter(
+                                    (_, i) => i !== idx,
+                                  );
+                                const totalOther = updated.reduce(
+                                  (sum, c) => sum + (Number(c.amount) || 0),
+                                  0,
+                                );
+                                setBillForm({
+                                  ...billForm,
+                                  additional_charges: updated,
+                                  other_fees: totalOther,
+                                });
+                              }}
+                              className="p-1.5 rounded-md text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-500/15 transition-colors cursor-pointer shrink-0"
+                              title="Remove charge"
+                            >
+                              <X className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-[11px] text-slate-400 dark:text-zinc-500 italic">
+                        No extra charges added. Click &ldquo;Add Charge&rdquo;
+                        to bill for room damages or incidentals.
+                      </p>
+                    )}
                   </div>
 
                   {/*  Total Calculation */}
@@ -3895,7 +4084,6 @@ function BillingContent() {
                     </span>
                   </div>
                 </div>
-
 
                 <div className="flex justify-end gap-2 pt-2">
                   <button
@@ -3943,7 +4131,8 @@ function BillingContent() {
                     Edit Invoice Charges
                   </h2>
                   <p className="text-sm text-slate-500 dark:text-zinc-400 mt-0.5 font-medium">
-                    {formatInvoiceNumber(selectedBill)} for {selectedBill.tenant_name}
+                    {formatInvoiceNumber(selectedBill)} for{" "}
+                    {selectedBill.tenant_name}
                   </p>
                 </div>
                 <button
@@ -3993,7 +4182,7 @@ function BillingContent() {
                   <div className="text-xs font-bold uppercase text-slate-500">
                     Adjust Charges (₱)
                   </div>
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
                     <div className="space-y-1">
                       <label className="text-[11px] font-semibold text-slate-600 dark:text-zinc-400">
                         Rent
@@ -4014,7 +4203,7 @@ function BillingContent() {
                     </div>
                     <div className="space-y-1">
                       <label className="text-[11px] font-semibold text-slate-600 dark:text-zinc-400">
-                        Water
+                        Water (Fixed)
                       </label>
                       <input
                         required
@@ -4032,7 +4221,7 @@ function BillingContent() {
                     </div>
                     <div className="space-y-1">
                       <label className="text-[11px] font-semibold text-slate-600 dark:text-zinc-400">
-                        Electricity
+                        Electricity (Fixed)
                       </label>
                       <input
                         required
@@ -4049,27 +4238,131 @@ function BillingContent() {
                         className="w-full py-1.5 px-2 text-xs font-mono font-bold rounded-md bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-700 text-right"
                       />
                     </div>
-                    <div className="space-y-1">
-                      <label className="text-[11px] font-semibold text-slate-600 dark:text-zinc-400">
-                        Other
-                      </label>
-                      <input
-                        required
-                        type="number"
-                        step="0.01"
-                        value={billForm.other_fees}
-                        onChange={(e) =>
+                  </div>
+
+                  {/* Additional Named Charges */}
+                  <div className="pt-2 border-t border-slate-200 dark:border-zinc-800 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[11px] font-bold uppercase text-slate-500 dark:text-zinc-400">
+                        Additional Charges (e.g. Room Damage)
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const updated = [
+                            ...(billForm.additional_charges || []),
+                            { label: "", amount: 0 },
+                          ];
                           setBillForm({
                             ...billForm,
-                            other_fees: parseFloat(e.target.value) || 0,
-                          })
-                        }
-                        className="w-full py-1.5 px-2 text-xs font-mono font-bold rounded-md bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-700 text-right"
-                      />
+                            additional_charges: updated,
+                          });
+                        }}
+                        className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-[11px] font-bold bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-500/15 dark:hover:bg-indigo-500/25 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-500/30 transition-colors cursor-pointer"
+                      >
+                        <Plus className="w-3 h-3" />
+                        <span>Add Charge</span>
+                      </button>
                     </div>
+
+                    {(billForm.additional_charges || []).length > 0 ? (
+                      <div className="space-y-2">
+                        {billForm.additional_charges.map((charge, idx) => (
+                          <div key={idx} className="flex items-center gap-2">
+                            <input
+                              type="text"
+                              placeholder="Charge description (e.g. Damaged things in room)"
+                              value={charge.label}
+                              onChange={(e) => {
+                                const updated = [
+                                  ...billForm.additional_charges,
+                                ];
+                                updated[idx] = {
+                                  ...updated[idx],
+                                  label: e.target.value,
+                                };
+                                setBillForm({
+                                  ...billForm,
+                                  additional_charges: updated,
+                                });
+                              }}
+                              className="flex-1 py-1.5 px-2.5 text-xs font-semibold rounded-md bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-700"
+                            />
+                            <input
+                              type="number"
+                              step="0.01"
+                              min="0"
+                              placeholder="0.00"
+                              value={charge.amount || ""}
+                              onChange={(e) => {
+                                const updated = [
+                                  ...billForm.additional_charges,
+                                ];
+                                updated[idx] = {
+                                  ...updated[idx],
+                                  amount: parseFloat(e.target.value) || 0,
+                                };
+                                const totalOther = updated.reduce(
+                                  (sum, c) => sum + (Number(c.amount) || 0),
+                                  0,
+                                );
+                                setBillForm({
+                                  ...billForm,
+                                  additional_charges: updated,
+                                  other_fees: totalOther,
+                                });
+                              }}
+                              className="w-28 py-1.5 px-2 text-xs font-mono font-bold rounded-md bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-700 text-right"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const updated =
+                                  billForm.additional_charges.filter(
+                                    (_, i) => i !== idx,
+                                  );
+                                const totalOther = updated.reduce(
+                                  (sum, c) => sum + (Number(c.amount) || 0),
+                                  0,
+                                );
+                                setBillForm({
+                                  ...billForm,
+                                  additional_charges: updated,
+                                  other_fees: totalOther,
+                                });
+                              }}
+                              className="p-1.5 rounded-md text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-500/15 transition-colors cursor-pointer shrink-0"
+                              title="Remove charge"
+                            >
+                              <X className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-[11px] text-slate-400 dark:text-zinc-500 italic">
+                        No extra charges added. Click &ldquo;Add Charge&rdquo;
+                        to bill for room damages or incidentals.
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Calculated Invoice Total */}
+                  <div className="pt-2 border-t border-slate-200 dark:border-zinc-800 flex justify-between items-center text-xs">
+                    <span className="font-bold text-slate-700 dark:text-zinc-300">
+                      Updated Invoice Total:
+                    </span>
+                    <span className="text-base font-mono font-bold text-slate-900 dark:text-zinc-100">
+                      ₱
+                      {(
+                        (Number(billForm.rent_amount) || 0) +
+                        (Number(billForm.water_charges) || 0) +
+                        (Number(billForm.electricity_charges) || 0) +
+                        (Number(billForm.other_fees) || 0)
+                      ).toLocaleString()}
+                    </span>
                   </div>
                 </div>
-
 
                 <div className="flex justify-end gap-2 pt-2">
                   <button
@@ -4093,217 +4386,6 @@ function BillingContent() {
                   </button>
                 </div>
               </form>
-            </motion.div>
-          </motion.div>
-        )}
-
-        {/* VERIFY ONLINE E-RECEIPTS (GCASH */}
-        {isVerifyModalOpen && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/60 backdrop-blur-xs z-50 flex items-center justify-center p-3"
-          >
-            <motion.div
-              initial={{ scale: 0.96, y: 8, opacity: 0 }}
-              animate={{ scale: 1, y: 0, opacity: 1 }}
-              exit={{ scale: 0.96, opacity: 0 }}
-              className="bg-card border border-slate-200 dark:border-zinc-800 rounded-2xl w-full max-w-3xl overflow-hidden shadow-2xl flex flex-col max-h-[90vh]"
-            >
-              <div className="p-4 border-b border-slate-200 dark:border-zinc-800 flex justify-between items-center bg-slate-50/80 dark:bg-zinc-900/60">
-                <div className="flex items-center gap-2">
-                  <ShieldCheck className="w-5 h-5 text-amber-500" />
-                  <div>
-                    <h2 className="text-lg sm:text-xl font-extrabold text-slate-900 dark:text-white">
-                      Digital Receipt Verification
-                    </h2>
-                    <p className="text-sm text-slate-500 dark:text-zinc-400 font-medium">
-                      {pendingPayments.length} submission
-                      {pendingPayments.length !== 1 ? "s" : ""} awaiting review
-                    </p>
-                  </div>
-                </div>
-                <button
-                  onClick={() => setIsVerifyModalOpen(false)}
-                  className="p-1 rounded-lg hover:bg-slate-200 dark:hover:bg-zinc-700 text-slate-500"
-                >
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
-
-              <div className="p-5 overflow-y-auto custom-scrollbar flex-1">
-                {pendingPayments.length === 0 ? (
-                  <div className="py-12 text-center text-slate-400">
-                    <CheckCircle2 className="w-10 h-10 mx-auto mb-2 text-emerald-500" />
-                    <p className="font-bold text-sm">
-                      All caught up! No pending receipts.
-                    </p>
-                  </div>
-                ) : (
-                  (() => {
-                    const safeIndex = Math.max(
-                      0,
-                      Math.min(currentVerifyIndex, pendingPayments.length - 1),
-                    );
-                    const payment = pendingPayments[safeIndex];
-
-                    return (
-                      <div className="space-y-4">
-                        {/* Carousel Controls */}
-                        <div className="flex justify-between items-center text-xs font-semibold text-slate-500">
-                          <span>
-                            Submission {safeIndex + 1} of{" "}
-                            {pendingPayments.length}
-                          </span>
-                          <div className="flex gap-1.5">
-                            <button
-                              disabled={safeIndex === 0}
-                              onClick={() =>
-                                setCurrentVerifyIndex(safeIndex - 1)
-                              }
-                              className="px-2.5 py-1 bg-slate-100 dark:bg-zinc-800 rounded disabled:opacity-40"
-                            >
-                              Previous
-                            </button>
-                            <button
-                              disabled={
-                                safeIndex === pendingPayments.length - 1
-                              }
-                              onClick={() =>
-                                setCurrentVerifyIndex(safeIndex + 1)
-                              }
-                              className="px-2.5 py-1 bg-slate-100 dark:bg-zinc-800 rounded disabled:opacity-40"
-                            >
-                              Next
-                            </button>
-                          </div>
-                        </div>
-
-                        {/* Split details & image */}
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          <div className="space-y-3">
-                            <div className="bg-slate-50 dark:bg-zinc-900/60 p-3.5 rounded-xl border border-slate-200 dark:border-zinc-800 space-y-2 text-xs">
-                              <div>
-                                <span className="text-[10px] uppercase font-bold text-slate-400">
-                                  Resident
-                                </span>
-                                <div className="text-sm font-extrabold text-slate-900 dark:text-white mt-0.5">
-                                  {payment.tenant_name}
-                                </div>
-                                <div className="text-slate-500">
-                                  Room {payment.room_number || "N/A"} ·{" "}
-                                  {payment.billing_month}
-                                </div>
-                              </div>
-
-                              <div className="grid grid-cols-2 gap-2 pt-2 border-t border-slate-100 dark:border-zinc-800">
-                                <div>
-                                  <span className="text-[10px] uppercase font-bold text-slate-400">
-                                    Payment Method
-                                  </span>
-                                  <div className="font-bold text-slate-800 dark:text-zinc-200">
-                                    {normalizeAdminPaymentMethod(payment.payment_method, "E-Wallet")}
-                                  </div>
-                                </div>
-                                <div>
-                                  <span className="text-[10px] uppercase font-bold text-slate-400">
-                                    Payment Date
-                                  </span>
-                                  <div className="font-bold text-slate-800 dark:text-zinc-200">
-                                    {new Date(
-                                      payment.payment_date,
-                                    ).toLocaleDateString()}
-                                  </div>
-                                </div>
-                              </div>
-
-                              <div className="pt-2 border-t border-slate-100 dark:border-zinc-800">
-                                <span className="text-[10px] uppercase font-bold text-slate-400">
-                                  Amount Claimed
-                                </span>
-                                <div className="text-2xl font-mono font-black text-emerald-600 dark:text-emerald-400">
-                                  ₱
-                                  {Number(payment.amount_paid).toLocaleString()}
-                                </div>
-                                <div className="text-[11px] text-slate-500">
-                                  Bill Total: ₱
-                                  {Number(payment.bill_total).toLocaleString()}
-                                </div>
-                              </div>
-
-                              {(payment.reference_number || payment.notes) && (
-                                <div className="pt-2 border-t border-slate-100 dark:border-zinc-800">
-                                  <span className="text-[10px] uppercase font-bold text-slate-400">
-                                    Reference Number (QR Ph / GCash)
-                                  </span>
-                                  <div className="font-mono font-bold text-slate-900 dark:text-white mt-0.5">
-                                    {payment.reference_number ||
-                                      (payment.notes
-                                        ? payment.notes.replace(
-                                            /^Ref[:#]?\s*/i,
-                                            "",
-                                          )
-                                        : "N/A")}
-                                  </div>
-                                </div>
-                              )}
-                            </div>
-
-                            {/* Actions */}
-                            <div className="flex gap-2">
-                              <button
-                                onClick={() => {
-                                  handleVerifyPayment(payment.id, "approve");
-                                  if (safeIndex > 0)
-                                    setCurrentVerifyIndex(safeIndex - 1);
-                                }}
-                                className="flex-1 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow-xs"
-                              >
-                                <Check className="w-4 h-4" />
-                                <span>Approve Payment</span>
-                              </button>
-                              <button
-                                onClick={() => {
-                                  handleVerifyPayment(payment.id, "reject");
-                                  if (safeIndex > 0)
-                                    setCurrentVerifyIndex(safeIndex - 1);
-                                }}
-                                className="flex-1 py-2.5 rounded-xl border border-rose-200 dark:border-rose-500/20 bg-rose-50 hover:bg-rose-100 dark:bg-rose-500/10 dark:hover:bg-rose-500/20 text-rose-700 dark:text-rose-400 font-bold text-xs flex items-center justify-center gap-1.5"
-                              >
-                                <X className="w-4 h-4" />
-                                <span>Reject Proof</span>
-                              </button>
-                            </div>
-                          </div>
-
-                          {/* Receipt Preview */}
-                          <div className="border border-slate-200 dark:border-zinc-800 rounded-xl overflow-hidden bg-slate-100 dark:bg-zinc-900 flex items-center justify-center min-h-[260px]">
-                            {payment.receipt_url ? (
-                              <img
-                                src={`http://localhost:5000${payment.receipt_url}`}
-                                alt="Payment Receipt"
-                                className="max-h-[340px] max-w-full object-contain cursor-zoom-in"
-                                onClick={() =>
-                                  window.open(
-                                    `http://localhost:5000${payment.receipt_url}`,
-                                    "_blank",
-                                  )
-                                }
-                                title="Click to view full receipt"
-                              />
-                            ) : (
-                              <div className="text-xs text-slate-400 font-semibold p-4 text-center">
-                                No uploaded screenshot attachment found.
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })()
-                )}
-              </div>
             </motion.div>
           </motion.div>
         )}
@@ -4336,13 +4418,16 @@ function BillingContent() {
                       QR Ph National QR Code
                     </h3>
                     <p className="text-xs sm:text-sm text-slate-500 dark:text-zinc-400">
-                      Single interoperable QR code for GCash, Maya, BPI, BDO, GoTyme, etc.
+                      Single interoperable QR code for GCash, Maya, BPI, BDO,
+                      GoTyme, etc.
                     </p>
                   </div>
                 </div>
                 <button
                   type="button"
-                  onClick={() => !isSavingGcashQr && setIsGcashQrModalOpen(false)}
+                  onClick={() =>
+                    !isSavingGcashQr && setIsGcashQrModalOpen(false)
+                  }
                   className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 dark:hover:bg-zinc-800 transition-colors cursor-pointer"
                 >
                   <X className="w-4 h-4" />
@@ -4361,7 +4446,6 @@ function BillingContent() {
                 {gcashQrImage ? (
                   <div className="space-y-3">
                     <div className="rounded-xl border border-slate-200 dark:border-zinc-800 bg-slate-50 dark:bg-zinc-950 p-3 flex items-center justify-center max-h-80 overflow-hidden">
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img
                         src={resolveReceiptUrl(gcashQrImage) || gcashQrImage}
                         alt="QR Ph Code Preview"
@@ -4398,7 +4482,8 @@ function BillingContent() {
                       Click to upload QR Ph code screenshot
                     </p>
                     <p className="text-[11px] text-slate-500 dark:text-zinc-400 mt-1">
-                      Supports GCash, Maya, BDO, BPI, UnionBank, GoTyme & all QR Ph banks
+                      Supports GCash, Maya, BDO, BPI, UnionBank, GoTyme & all QR
+                      Ph banks
                     </p>
                   </div>
                 )}
