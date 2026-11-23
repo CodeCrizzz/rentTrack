@@ -1,97 +1,24 @@
 const cron = require('node-cron');
 const db = require('../config/db');
-const { generateUniqueInvoiceNumber } = require('../utils/invoiceNumberGenerator');
+const { autoGenerateBills } = require('../utils/billingUtils');
 
-// 1. Automatic Monthly Bill Generation
+// 1. Automatic Monthly Bill Generation (Generates statements 7 days before due date)
 const runAutoBilling = async () => {
-    console.log('[AUTO-BILLING] Running automatic monthly billing generation...');
+    console.log('[AUTO-BILLING] Checking and generating billing statements (7 days before due date)...');
     try {
-        // Find all active tenants with an assigned room
-        const activeTenantsQuery = `
-            SELECT u.id as tenant_id, u.room_id, u.created_at, r.price as rent_amount, r.rental_type
-            FROM users u
-            JOIN rooms r ON u.room_id = r.id
-            WHERE u.role = 'tenant' AND u.status = 'Active' AND u.room_id IS NOT NULL
-            ORDER BY u.created_at ASC
-        `;
-        const { rows: allTenants } = await db.query(activeTenantsQuery);
-
-        if (allTenants.length === 0) {
-            console.log('[AUTO-BILLING] No active tenants found for automatic billing.');
-            return;
+        const result = await autoGenerateBills(db);
+        if (result.generatedCount > 0) {
+            console.log(`[AUTO-BILLING] Generated ${result.generatedCount} billing statement(s) for cycle(s): ${result.cyclesChecked?.join(', ')}.`);
+        } else {
+            console.log(`[AUTO-BILLING] No new statements needed. Cycles evaluated: ${result.cyclesChecked?.join(', ')}.`);
         }
-
-        const billedRoomIds = new Set();
-        const tenantsToBill = [];
-
-        for (const tenant of allTenants) {
-            if (tenant.rental_type === 'Whole Room') {
-                if (!billedRoomIds.has(tenant.room_id)) {
-                    billedRoomIds.add(tenant.room_id);
-                    tenantsToBill.push(tenant);
-                }
-            } else {
-                tenantsToBill.push(tenant);
-            }
-        }
-
-        const currentDate = new Date();
-        const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
-        const currentMonthName = monthNames[currentDate.getMonth()];
-        const currentYear = currentDate.getFullYear();
-        const billingMonthStr = `${currentMonthName} ${currentYear}`;
-
-        // Due date: 5th of the current month
-        const dueDate = new Date(currentDate.getFullYear(), currentDate.getMonth(), 5);
-
-        for (const tenant of tenantsToBill) {
-            const checkBillQuery = `
-                SELECT id FROM bills WHERE tenant_id = $1 AND billing_month = $2
-            `;
-            const { rows: existingBills } = await db.query(checkBillQuery, [tenant.tenant_id, billingMonthStr]);
-
-            if (existingBills.length === 0) {
-                const waterCharges = 0;
-                const electricityCharges = 0;
-                const otherFees = 0;
-                const totalAmount = tenant.rent_amount;
-                const balance = totalAmount;
-                const status = 'Unpaid';
-                const notes = 'Auto-generated bill';
-                const invoiceNumber = await generateUniqueInvoiceNumber(db);
-
-                const insertBillQuery = `
-                    INSERT INTO bills (tenant_id, room_id, billing_month, due_date, rent_amount, water_charges, electricity_charges, other_fees, total_amount, balance, status, notes, invoice_number)
-                    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
-                `;
-                const values = [
-                    tenant.tenant_id,
-                    tenant.room_id,
-                    billingMonthStr,
-                    dueDate,
-                    tenant.rent_amount,
-                    waterCharges,
-                    electricityCharges,
-                    otherFees,
-                    totalAmount,
-                    balance,
-                    status,
-                    notes,
-                    invoiceNumber
-                ];
-
-                await db.query(insertBillQuery, values);
-                console.log(`[AUTO-BILLING] Auto-generated bill for tenant ${tenant.tenant_id} (${billingMonthStr}).`);
-            }
-        }
-        console.log('[AUTO-BILLING] Monthly billing check completed successfully.');
     } catch (error) {
         console.error('[AUTO-BILLING ERROR] Error running automatic billing:', error);
     }
 };
 
-// Run on the 1st of every month at 00:00 (midnight)
-cron.schedule('0 0 1 * *', runAutoBilling);
+// Run daily at midnight (00:00) so bills are generated 7 days before due date
+cron.schedule('0 0 * * *', runAutoBilling);
 
 // 2. Daily Payment Due & Overdue Reminders: Runs daily at 08:00 AM
 const { checkAndSendPaymentReminders } = require('../services/reminderService');
@@ -107,7 +34,7 @@ cron.schedule('0 8 * * *', async () => {
 
 // Initial startup checks after 3 seconds
 setTimeout(async () => {
-    console.log('[STARTUP] Checking for auto-generation of current month bills...');
+    console.log('[STARTUP] Checking for auto-generation of billing statements (7 days before due date)...');
     try {
         await runAutoBilling();
     } catch (err) {
