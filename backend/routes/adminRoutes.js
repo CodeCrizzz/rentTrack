@@ -10,7 +10,7 @@ const {
 } = require('../middleware/rbacMiddleware');
 
 const { 
-    getDashboardStats, getAllTenants, getAllRooms, getAllPayments, 
+    getDashboardStats, getAllTenants, createTenant, getAllRooms, getAllPayments, 
     getAllRequests, createAdminRequest, updateTenant, deleteTenant,
     getConversations, getMessages, sendMessage, getUnreadCount,
     getPendingTenantsCount, getPendingRequestsCount,
@@ -26,6 +26,9 @@ const {
     getActivityLogs,
     getGcashQrCode,
     updateGcashQrCode,
+    getAdminProfile,
+    updateAdminProfile,
+    updateAdminPassword,
 } = require('../controllers/adminController');
 const { updateRequest, deleteRequest } = require('../controllers/requestController');
 const {
@@ -79,6 +82,7 @@ router.get('/cashflow', hasPermission(PERMISSIONS.REPORTS_READ), getCashFlowOver
 
 // Tenant Management (RBAC & Least Privilege)
 router.get('/tenants', hasPermission(PERMISSIONS.TENANTS_READ), getAllTenants);
+router.post('/tenants', hasPermission(PERMISSIONS.TENANTS_CREATE), createTenant);
 router.get('/tenants/pending-count', hasPermission(PERMISSIONS.TENANTS_READ), getPendingTenantsCount);
 router.put('/tenants/:id', hasPermission(PERMISSIONS.TENANTS_UPDATE), updateTenant);
 router.delete('/tenants/:id', hasPermission(PERMISSIONS.TENANTS_DELETE), deleteTenant);
@@ -118,6 +122,11 @@ router.delete('/announcements/:id', hasPermission(PERMISSIONS.ANNOUNCEMENTS_DELE
 // Reports & Audit Logs
 router.get('/reports', hasPermission(PERMISSIONS.REPORTS_READ), getReportData);
 router.get('/activity-logs', hasPermission(PERMISSIONS.ACTIVITY_LOGS_READ), getActivityLogs);
+
+// Admin Profile & Security
+router.get('/profile', getAdminProfile);
+router.put('/profile', updateAdminProfile);
+router.put('/profile/password', updateAdminPassword);
 
 // QR Ph / GCash QR Code Configuration for Billing Operations
 router.get('/gcash-qr', hasPermission(PERMISSIONS.BILLS_READ), getGcashQrCode);
