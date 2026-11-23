@@ -1,6 +1,38 @@
 const db = require('../config/db');
 const { generateUniqueInvoiceNumber } = require('../utils/invoiceNumberGenerator');
-const { generateUniqueTransactionNumber } = require('../utils/transactionNumberGenerator');
+const { generateUniqueReferenceNumber } = require('../utils/referenceNumberGenerator');
+const { FIXED_WATER_CHARGE, FIXED_ELECTRICITY_CHARGE, resolveUtilityCharges, autoGenerateBills } = require('../utils/billingUtils');
+const { sendBillGeneratedEmail } = require('../services/emailService');
+
+let additionalChargesColumnEnsured = false;
+const ensureAdditionalChargesColumn = async () => {
+    if (additionalChargesColumnEnsured) return;
+    await db.query(`ALTER TABLE bills ADD COLUMN IF NOT EXISTS additional_charges JSONB DEFAULT '[]'::jsonb`);
+    additionalChargesColumnEnsured = true;
+};
+
+const sanitizeAdditionalCharges = (rawCharges, fallbackOtherFees = 0, fallbackNotes = null) => {
+    if (Array.isArray(rawCharges)) {
+        return rawCharges
+            .map((item) => ({
+                label: String(item?.label || '').trim() || 'Additional Charge',
+                amount: Math.max(0, parseFloat(item?.amount) || 0),
+            }))
+            .filter((item) => item.amount > 0);
+    }
+    const other = Math.max(0, parseFloat(fallbackOtherFees) || 0);
+    if (other > 0) {
+        const label =
+            fallbackNotes &&
+            typeof fallbackNotes === 'string' &&
+            fallbackNotes.trim() &&
+            fallbackNotes.trim() !== 'Auto-generated bill'
+                ? fallbackNotes.trim()
+                : 'Additional Charge';
+        return [{ label, amount: other }];
+    }
+    return [];
+};
 
 // Normalize online / QRPh / GCash payment method names to "E-Wallet"
 const normalizeOnlinePaymentMethod = (method, fallback = 'Cash') => {
@@ -26,53 +58,9 @@ const normalizeOnlinePaymentMethod = (method, fallback = 'Cash') => {
 // @access  Private/Admin
 const getAllBills = async (req, res) => {
     try {
-        // --- 1. AUTO-GENERATE BILLS FOR CURRENT MONTH ---
-        const activeTenantsQuery = `
-            SELECT u.id as tenant_id, u.room_id, r.price as rent_amount, r.rental_type
-            FROM users u
-            JOIN rooms r ON u.room_id = r.id
-            WHERE u.role = 'tenant' AND u.status = 'Active' AND u.room_id IS NOT NULL
-        `;
-        const { rows: tenants } = await db.query(activeTenantsQuery);
-
-        if (tenants.length > 0) {
-            const currentDate = new Date();
-            const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
-            const currentMonthName = monthNames[currentDate.getMonth()];
-            const currentYear = currentDate.getFullYear();
-            const billingMonthStr = `${currentMonthName} ${currentYear}`;
-            const dueDate = new Date(currentDate.getFullYear(), currentDate.getMonth(), 5);
-
-            const tenantsToBill = [];
-            for (const tenant of tenants) {
-                if (tenant.rental_type === 'Whole Room') {
-                    const isAlreadyAdded = tenantsToBill.find(t => t.room_id === tenant.room_id);
-                    if (!isAlreadyAdded) {
-                        tenantsToBill.push(tenant);
-                    }
-                } else {
-                    tenantsToBill.push(tenant);
-                }
-            }
-
-            for (const tenant of tenantsToBill) {
-                const checkBillQuery = `SELECT id FROM bills WHERE tenant_id = $1 AND billing_month = $2`;
-                const { rows: existingBills } = await db.query(checkBillQuery, [tenant.tenant_id, billingMonthStr]);
-
-                if (existingBills.length === 0) {
-                    const totalAmount = tenant.rent_amount;
-                    const invoiceNumber = await generateUniqueInvoiceNumber(db);
-                    const insertBillQuery = `
-                        INSERT INTO bills (tenant_id, room_id, billing_month, due_date, rent_amount, water_charges, electricity_charges, other_fees, total_amount, balance, status, notes, invoice_number)
-                        VALUES ($1, $2, $3, $4, $5, 0, 0, 0, $6, $7, 'Unpaid', 'Auto-generated bill', $8)
-                    `;
-                    await db.query(insertBillQuery, [
-                        tenant.tenant_id, tenant.room_id, billingMonthStr, dueDate,
-                        tenant.rent_amount, totalAmount, totalAmount, invoiceNumber
-                    ]);
-                }
-            }
-        }
+        await ensureAdditionalChargesColumn();
+        // --- 1. AUTO-GENERATE BILLS (7 DAYS BEFORE DUE DATE) ---
+        await autoGenerateBills(db);
         // ------------------------------------------------
 
         const query = `
@@ -93,7 +81,12 @@ const getAllBills = async (req, res) => {
             if (bill.balance > 0 && dueDate < currentDate && status !== 'Overdue') {
                 status = 'Overdue';
             }
-            return { ...bill, status };
+            const additional_charges = sanitizeAdditionalCharges(
+                bill.additional_charges,
+                bill.other_fees,
+                bill.notes
+            );
+            return { ...bill, status, additional_charges };
         });
 
         res.json(updatedRows);
@@ -108,6 +101,7 @@ const getAllBills = async (req, res) => {
 // @access  Private/Admin
 const getBillById = async (req, res) => {
     try {
+        await ensureAdditionalChargesColumn();
         const billId = req.params.id;
         const billQuery = `
             SELECT b.*, u.name as tenant_name, u.email as tenant_email, u.phone as tenant_phone, r.room_number 
@@ -138,6 +132,11 @@ const getBillById = async (req, res) => {
 
         res.json({
             ...bill,
+            additional_charges: sanitizeAdditionalCharges(
+                bill.additional_charges,
+                bill.other_fees,
+                bill.notes
+            ),
             payments: paymentRows.map((p) => ({
                 ...p,
                 payment_method: normalizeOnlinePaymentMethod(p.payment_method, 'Cash')
@@ -154,12 +153,15 @@ const getBillById = async (req, res) => {
 // @access  Private/Admin
 const createBill = async (req, res) => {
     try {
-        const { tenant_id, room_id, billing_month, due_date, rent_amount, water_charges, electricity_charges, other_fees, notes } = req.body;
+        await ensureAdditionalChargesColumn();
+        const { tenant_id, room_id, billing_month, due_date, rent_amount, water_charges, electricity_charges, other_fees, additional_charges, notes } = req.body;
 
         const rent = parseFloat(rent_amount || 0);
-        const water = parseFloat(water_charges || 0);
-        const electricity = parseFloat(electricity_charges || 0);
-        const other = parseFloat(other_fees || 0);
+        const { water, electricity } = resolveUtilityCharges(water_charges, electricity_charges);
+        const cleanCharges = sanitizeAdditionalCharges(additional_charges, other_fees, notes);
+        const other = Array.isArray(additional_charges)
+            ? cleanCharges.reduce((sum, item) => sum + item.amount, 0)
+            : parseFloat(other_fees || 0);
         
         const total_amount = rent + water + electricity + other;
         const balance = total_amount; // newly created bill has no payments yet
@@ -168,14 +170,63 @@ const createBill = async (req, res) => {
         const invoiceNumber = await generateUniqueInvoiceNumber(db);
 
         const query = `
-            INSERT INTO bills (tenant_id, room_id, billing_month, due_date, rent_amount, water_charges, electricity_charges, other_fees, total_amount, balance, status, notes, invoice_number)
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+            INSERT INTO bills (tenant_id, room_id, billing_month, due_date, rent_amount, water_charges, electricity_charges, other_fees, additional_charges, total_amount, balance, status, notes, invoice_number)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9::jsonb, $10, $11, $12, $13, $14)
             RETURNING *
         `;
-        const values = [tenant_id, room_id, billing_month, due_date, rent, water, electricity, other, total_amount, balance, status, notes, invoiceNumber];
+        const values = [tenant_id, room_id, billing_month, due_date, rent, water, electricity, other, JSON.stringify(cleanCharges), total_amount, balance, status, notes, invoiceNumber];
 
         const { rows } = await db.query(query, values);
-        res.status(201).json(rows[0]);
+        const createdBill = rows[0];
+
+        // Send email notification to the tenant's sign-up email account
+        try {
+            const tenantRes = await db.query(
+                `SELECT u.name, u.email, r.room_number 
+                 FROM users u 
+                 LEFT JOIN rooms r ON COALESCE(u.room_id, $2) = r.id 
+                 WHERE u.id = $1`,
+                [tenant_id, createdBill.room_id || null]
+            );
+            const tenantData = tenantRes.rows[0];
+            if (tenantData?.email) {
+                sendBillGeneratedEmail({
+                    to: tenantData.email,
+                    tenantName: tenantData.name,
+                    roomNumber: tenantData.room_number,
+                    invoiceNumber: createdBill.invoice_number,
+                    billingMonth: createdBill.billing_month,
+                    dueDate: createdBill.due_date,
+                    totalAmount: createdBill.total_amount,
+                    balance: createdBill.balance,
+                    breakdown: {
+                        rent: createdBill.rent_amount,
+                        water: createdBill.water_charges,
+                        electricity: createdBill.electricity_charges,
+                        other: createdBill.other_fees,
+                    },
+                    additionalCharges: cleanCharges,
+                    notes: createdBill.notes
+                }).catch((emailErr) => {
+                    console.error('[createBill] Failed to dispatch bill email:', emailErr.message);
+                });
+            }
+
+            // Also record in-app notification for the tenant
+            await db.query(
+                `INSERT INTO "rentTrack_schema".notifications (user_id, title, message, type, is_read)
+                 VALUES ($1, $2, $3, 'billing', FALSE)`,
+                [
+                    tenant_id,
+                    `New Bill Statement: ${createdBill.billing_month}`,
+                    `Your bill for ${createdBill.billing_month} (Invoice #${createdBill.invoice_number}) for ₱${Number(createdBill.total_amount).toLocaleString()} has been generated.`
+                ]
+            ).catch(() => {});
+        } catch (notifErr) {
+            console.error('[createBill] Notification dispatch error:', notifErr.message);
+        }
+
+        res.status(201).json(createdBill);
     } catch (error) {
         console.error('Error creating bill:', error);
         res.status(500).json({ message: 'Server error creating bill' });
@@ -187,8 +238,9 @@ const createBill = async (req, res) => {
 // @access  Private/Admin
 const updateBill = async (req, res) => {
     try {
+        await ensureAdditionalChargesColumn();
         const billId = req.params.id;
-        const { billing_month, due_date, rent_amount, water_charges, electricity_charges, other_fees, notes } = req.body;
+        const { billing_month, due_date, rent_amount, water_charges, electricity_charges, other_fees, additional_charges, notes } = req.body;
 
         // Fetch current bill to get amount_paid
         const { rows: currentBillRows } = await db.query('SELECT amount_paid FROM bills WHERE id = $1', [billId]);
@@ -199,9 +251,11 @@ const updateBill = async (req, res) => {
         const amount_paid = parseFloat(currentBillRows[0].amount_paid);
 
         const rent = parseFloat(rent_amount || 0);
-        const water = parseFloat(water_charges || 0);
-        const electricity = parseFloat(electricity_charges || 0);
-        const other = parseFloat(other_fees || 0);
+        const { water, electricity } = resolveUtilityCharges(water_charges, electricity_charges);
+        const cleanCharges = sanitizeAdditionalCharges(additional_charges, other_fees, notes);
+        const other = Array.isArray(additional_charges)
+            ? cleanCharges.reduce((sum, item) => sum + item.amount, 0)
+            : parseFloat(other_fees || 0);
         
         const total_amount = rent + water + electricity + other;
         const balance = Math.max(0, total_amount - amount_paid);
@@ -215,11 +269,11 @@ const updateBill = async (req, res) => {
 
         const query = `
             UPDATE bills
-            SET billing_month = $1, due_date = $2, rent_amount = $3, water_charges = $4, electricity_charges = $5, other_fees = $6, total_amount = $7, balance = $8, status = $9, notes = $10
-            WHERE id = $11
+            SET billing_month = $1, due_date = $2, rent_amount = $3, water_charges = $4, electricity_charges = $5, other_fees = $6, additional_charges = $7::jsonb, total_amount = $8, balance = $9, status = $10, notes = $11
+            WHERE id = $12
             RETURNING *
         `;
-        const values = [billing_month, due_date, rent, water, electricity, other, total_amount, balance, status, notes, billId];
+        const values = [billing_month, due_date, rent, water, electricity, other, JSON.stringify(cleanCharges), total_amount, balance, status, notes, billId];
 
         const { rows } = await db.query(query, values);
         res.json(rows[0]);
@@ -274,18 +328,15 @@ const payBill = async (req, res) => {
             newStatus = 'Paid';
         }
 
-        // Auto-generate random, collision-proof 8-digit transaction number if not provided
-        let refNumber = req.body.transaction_number || req.body.transactionNumber || req.body.reference_number || req.body.referenceNumber;
-        if (!refNumber) {
-            refNumber = await generateUniqueTransactionNumber(db, 'TXN');
-        }
+        // Auto-generate a random 10-digit reference for every recorded payment.
+        const refNumber = await generateUniqueReferenceNumber(db);
 
         // Must run in transaction or sequentially
         await db.query('BEGIN');
 
         // 1. Insert Payment
         const paymentQuery = `
-            INSERT INTO payments (bill_id, amount_paid, payment_date, payment_method, notes, status, transaction_number)
+            INSERT INTO payments (bill_id, amount_paid, payment_date, payment_method, notes, status, reference_number)
             VALUES ($1, $2, $3, $4, $5, 'Approved', $6)
             RETURNING *
         `;
@@ -320,80 +371,16 @@ const payBill = async (req, res) => {
 // @access  Private/Admin
 const generateMonthlyBills = async (req, res) => {
     try {
-        const activeTenantsQuery = `
-            SELECT u.id as tenant_id, u.room_id, u.created_at, r.price as rent_amount, r.rental_type
-            FROM users u
-            JOIN rooms r ON u.room_id = r.id
-            WHERE u.role = 'tenant' AND u.status = 'Active' AND u.room_id IS NOT NULL
-            ORDER BY u.created_at ASC
-        `;
-        const { rows: allTenants } = await db.query(activeTenantsQuery);
-
-        if (allTenants.length === 0) {
-            return res.json({ message: 'No active tenants found for automatic billing.' });
-        }
-
-        // Filter tenants based on rental_type
-        // For 'Whole Room', only bill the first active tenant in that room
-        const billedRoomIds = new Set();
-        const tenantsToBill = [];
-
-        for (const tenant of allTenants) {
-            if (tenant.rental_type === 'Whole Room') {
-                if (!billedRoomIds.has(tenant.room_id)) {
-                    billedRoomIds.add(tenant.room_id);
-                    tenantsToBill.push(tenant);
-                }
-            } else {
-                // For 'Per Bed / Bedspace', bill everyone
-                tenantsToBill.push(tenant);
-            }
-        }
-
-        const currentDate = new Date();
-        const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
-        const currentMonthName = monthNames[currentDate.getMonth()];
-        const currentYear = currentDate.getFullYear();
-        const billingMonthStr = `${currentMonthName} ${currentYear}`;
-
-        const dueDate = new Date(currentDate.getFullYear(), currentDate.getMonth(), 5);
-        let billsGenerated = 0;
-
-        for (const tenant of tenantsToBill) {
-            const checkBillQuery = `
-                SELECT id FROM bills WHERE tenant_id = $1 AND billing_month = $2
-            `;
-            const { rows: existingBills } = await db.query(checkBillQuery, [tenant.tenant_id, billingMonthStr]);
-
-            if (existingBills.length === 0) {
-                const waterCharges = 0;
-                const electricityCharges = 0;
-                const otherFees = 0;
-                const totalAmount = tenant.rent_amount;
-                const balance = totalAmount;
-                const status = 'Unpaid';
-                const notes = 'Auto-generated bill';
-
-                const invoiceNumber = await generateUniqueInvoiceNumber(db);
-                const insertBillQuery = `
-                    INSERT INTO bills (tenant_id, room_id, billing_month, due_date, rent_amount, water_charges, electricity_charges, other_fees, total_amount, balance, status, notes, invoice_number)
-                    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
-                `;
-                const values = [
-                    tenant.tenant_id, tenant.room_id, billingMonthStr, dueDate,
-                    tenant.rent_amount, waterCharges, electricityCharges, otherFees,
-                    totalAmount, balance, status, notes, invoiceNumber
-                ];
-
-                await db.query(insertBillQuery, values);
-                billsGenerated++;
-            }
-        }
-
-        res.json({ message: `Successfully generated ${billsGenerated} bills for ${billingMonthStr}.` });
+        await ensureAdditionalChargesColumn();
+        const result = await autoGenerateBills(db, new Date(), true);
+        res.json({
+            message: `Successfully processed billing statements (${result.generatedCount} generated).`,
+            billsGenerated: result.generatedCount,
+            cycles: result.cyclesChecked
+        });
     } catch (error) {
-        console.error('Error generating monthly bills:', error);
-        res.status(500).json({ message: 'Server error generating monthly bills' });
+        console.error('Error generating bills:', error);
+        res.status(500).json({ message: 'Server error generating bills' });
     }
 };
 
@@ -402,17 +389,7 @@ const generateMonthlyBills = async (req, res) => {
 // @access  Private/Admin
 const getPendingPayments = async (req, res) => {
     try {
-        const query = `
-            SELECT p.*, b.tenant_id, b.billing_month, b.invoice_number, b.total_amount as bill_total, b.balance as bill_balance, u.name as tenant_name, r.room_number 
-            FROM payments p
-            JOIN bills b ON p.bill_id = b.id
-            JOIN users u ON b.tenant_id = u.id
-            LEFT JOIN rooms r ON b.room_id = r.id
-            WHERE p.status = 'Pending Verification' AND (p.payment_method IS NULL OR (p.payment_method NOT ILIKE '%gcash%' AND p.payment_method NOT ILIKE '%qrph%' AND p.payment_method NOT ILIKE '%qr ph%' AND p.payment_method NOT ILIKE '%e-wallet%' AND p.payment_method NOT ILIKE '%ewallet%'))
-            ORDER BY p.payment_date ASC
-        `;
-        const { rows } = await db.query(query);
-        res.json(rows);
+        res.json([]);
     } catch (error) {
         console.error('Error fetching pending payments:', error);
         res.status(500).json({ message: 'Server error fetching pending payments' });
@@ -424,15 +401,7 @@ const getPendingPayments = async (req, res) => {
 // @access  Private/Admin
 const getPendingPaymentsCount = async (req, res) => {
     try {
-        const query = `
-            SELECT COUNT(*) as pending_count 
-            FROM payments p 
-            JOIN bills b ON p.bill_id = b.id
-            JOIN users u ON b.tenant_id = u.id
-            WHERE p.status = 'Pending Verification'
-        `;
-        const { rows } = await db.query(query);
-        res.json({ pendingCount: parseInt(rows[0].pending_count) });
+        res.json({ pendingCount: 0 });
     } catch (error) {
         console.error('Error fetching pending payments count:', error);
         res.status(500).json({ message: 'Server error fetching pending payments count' });
@@ -528,7 +497,7 @@ const verifyPayment = async (req, res) => {
 const getAllPayments = async (req, res) => {
     try {
         const query = `
-            SELECT p.*, b.tenant_id, b.billing_month, b.invoice_number, b.total_amount as bill_total, b.balance as bill_balance, u.name as tenant_name, r.room_number 
+            SELECT p.*, p.reference_number AS referenceNumber, b.tenant_id, b.billing_month, b.invoice_number, b.total_amount as bill_total, b.balance as bill_balance, u.name as tenant_name, r.room_number 
             FROM payments p
             JOIN bills b ON p.bill_id = b.id
             JOIN users u ON b.tenant_id = u.id
@@ -561,7 +530,7 @@ const getPaymentHistory = async (req, res) => {
             whereClause = 'WHERE b.tenant_id = $1';
         }
         const query = `
-            SELECT p.*, b.tenant_id, b.billing_month, b.invoice_number, b.total_amount as bill_total, b.balance as bill_balance, u.name as tenant_name, r.room_number
+            SELECT p.*, p.reference_number AS referenceNumber, b.tenant_id, b.billing_month, b.invoice_number, b.total_amount as bill_total, b.balance as bill_balance, u.name as tenant_name, r.room_number
             FROM payments p
             JOIN bills b ON p.bill_id = b.id
             JOIN users u ON b.tenant_id = u.id
