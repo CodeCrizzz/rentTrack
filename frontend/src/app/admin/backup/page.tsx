@@ -667,9 +667,8 @@ export default function AdminBackupPage() {
                 Database Records
               </span>
             </div>
-            <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-bold bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-400 border border-emerald-200/80 dark:border-emerald-900/50 shrink-0">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-              <span>Healthy</span>
+            <span className="text-[11px] font-bold text-emerald-600 dark:text-emerald-400 shrink-0">
+              Healthy
             </span>
           </div>
 
@@ -712,7 +711,7 @@ export default function AdminBackupPage() {
                 Backup Schedule
               </span>
             </div>
-            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-bold bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-400 border border-emerald-200/80 dark:border-emerald-900/50 shrink-0 capitalize">
+            <span className="text-[11px] font-bold text-emerald-600 dark:text-emerald-400 shrink-0 capitalize">
               {data?.config.schedule === "manual" ? "Manual Only" : "Automated"}
             </span>
           </div>
@@ -814,7 +813,7 @@ export default function AdminBackupPage() {
                 Stored Archives
               </span>
             </div>
-            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-bold font-mono bg-purple-50 dark:bg-purple-950/50 text-purple-700 dark:text-purple-400 border border-purple-200/80 dark:border-purple-900/50 shrink-0">
+            <span className="text-[11px] font-bold font-mono text-purple-600 dark:text-purple-400 shrink-0">
               {isLoading ? "..." : formatBytes(data?.storage.totalStorageBytes || 0)}
             </span>
           </div>
