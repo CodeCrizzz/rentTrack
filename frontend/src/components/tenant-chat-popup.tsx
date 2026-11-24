@@ -446,39 +446,36 @@ export default function TenantChatPopup() {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 20, scale: 0.95 }}
             transition={{ duration: 0.18, ease: "easeOut" }}
-            className="fixed bottom-4 right-4 z-50 w-[calc(100vw-2rem)] sm:w-[350px] md:w-[360px] h-[500px] max-h-[85vh] bg-[#242526] text-white rounded-2xl shadow-2xl border border-[#393a3b] overflow-hidden flex flex-col font-sans select-none"
-            style={{
-              boxShadow: "0 12px 36px rgba(0,0,0,0.45), 0 0 0 1px rgba(255,255,255,0.06)",
-            }}
+            className="fixed bottom-4 right-4 z-50 w-[calc(100vw-2rem)] sm:w-[350px] md:w-[360px] h-[500px] max-h-[85vh] bg-white dark:bg-[#242526] text-slate-900 dark:text-white rounded-2xl shadow-2xl border border-slate-200 dark:border-[#393a3b] overflow-hidden flex flex-col font-sans select-none"
           >
             {/* Top Facebook-Style Chat Header */}
-            <div className="h-14 px-3.5 bg-[#242526] border-b border-[#393a3b] flex items-center justify-between shrink-0 select-none">
+            <div className="h-14 px-3.5 bg-white dark:bg-[#242526] border-b border-slate-200 dark:border-[#393a3b] flex items-center justify-between shrink-0 select-none">
               {/* Left Profile: Avatar + Name (Static) */}
               <div className="flex items-center gap-2.5 py-1 px-1.5 select-none">
                 <div className="relative">
-                  <div className="w-9 h-9 rounded-full bg-slate-700 border border-white/10 flex items-center justify-center text-sm font-black text-white shadow-xs">
+                  <div className="w-9 h-9 rounded-full bg-indigo-600 dark:bg-slate-700 border border-indigo-500/20 dark:border-white/10 flex items-center justify-center text-sm font-black text-white shadow-xs">
                     A
                   </div>
                   {/* Green Active Dot */}
-                  <span className="absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full bg-emerald-500 border-2 border-[#242526]" />
+                  <span className="absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full bg-emerald-500 border-2 border-white dark:border-[#242526]" />
                 </div>
 
                 <div className="flex flex-col min-w-0">
-                  <span className="text-sm font-extrabold text-[#e4e6eb] truncate max-w-[150px]">
+                  <span className="text-sm font-extrabold text-slate-900 dark:text-[#e4e6eb] truncate max-w-[150px]">
                     Admin
                   </span>
-                  <span className="text-[11px] text-[#22c55e] font-semibold leading-none">
+                  <span className="text-[11px] text-emerald-600 dark:text-[#22c55e] font-semibold leading-none">
                     Active now
                   </span>
                 </div>
               </div>
 
               {/* Right Header Action Controls: Minus, Close */}
-              <div className="flex items-center gap-0.5 text-[#b0b3b8]">
+              <div className="flex items-center gap-0.5 text-slate-500 dark:text-[#b0b3b8]">
                 <button
                   type="button"
                   onClick={() => setIsMinimized(true)}
-                  className="p-2 rounded-full hover:bg-white/10 hover:text-white transition-colors cursor-pointer"
+                  className="p-2 rounded-full hover:bg-slate-100 dark:hover:bg-white/10 hover:text-slate-900 dark:hover:text-white transition-colors cursor-pointer"
                   title="Minimize Chat"
                 >
                   <Minus className="w-4 h-4" />
@@ -490,7 +487,7 @@ export default function TenantChatPopup() {
                     setIsOpen(false);
                     setIsMinimized(false);
                   }}
-                  className="p-2 rounded-full hover:bg-white/10 hover:text-white transition-colors cursor-pointer"
+                  className="p-2 rounded-full hover:bg-slate-100 dark:hover:bg-white/10 hover:text-slate-900 dark:hover:text-white transition-colors cursor-pointer"
                   title="Close Chat"
                 >
                   <X className="w-4 h-4" />
@@ -498,24 +495,24 @@ export default function TenantChatPopup() {
               </div>
             </div>
 
-            {/* Middle Message Feed (Facebook Messenger Dark Scheme) */}
+            {/* Middle Message Feed */}
             <div
               ref={scrollRef}
               onScroll={handleScroll}
-              className="flex-1 min-h-0 overflow-y-auto custom-scrollbar p-3.5 space-y-2.5 bg-[#18191a]"
+              className="flex-1 min-h-0 overflow-y-auto custom-scrollbar p-3.5 space-y-2.5 bg-slate-50 dark:bg-[#18191a]"
             >
               {isLoading ? (
-                <div className="h-full flex flex-col items-center justify-center text-center p-4 text-[#b0b3b8]">
+                <div className="h-full flex flex-col items-center justify-center text-center p-4 text-slate-500 dark:text-[#b0b3b8]">
                   <div className="w-6 h-6 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin mb-2" />
                   <span className="text-xs font-medium">Loading conversation...</span>
                 </div>
               ) : messages.length === 0 ? (
-                <div className="h-full flex flex-col items-center justify-center text-center p-6 text-[#b0b3b8]">
-                  <div className="w-12 h-12 rounded-full bg-[#242526] flex items-center justify-center text-indigo-400 mb-2 shadow-xs">
+                <div className="h-full flex flex-col items-center justify-center text-center p-6 text-slate-500 dark:text-[#b0b3b8]">
+                  <div className="w-12 h-12 rounded-full bg-white dark:bg-[#242526] border border-slate-200 dark:border-transparent flex items-center justify-center text-indigo-600 dark:text-indigo-400 mb-2 shadow-xs">
                     <MessageSquare className="w-6 h-6" />
                   </div>
-                  <h4 className="text-sm font-bold text-[#e4e6eb]">Message Admin</h4>
-                  <p className="text-xs text-[#b0b3b8] mt-1 max-w-[200px]">
+                  <h4 className="text-sm font-bold text-slate-900 dark:text-[#e4e6eb]">Message Admin</h4>
+                  <p className="text-xs text-slate-500 dark:text-[#b0b3b8] mt-1 max-w-[200px]">
                     Have a question or request? Send a message to management.
                   </p>
                 </div>
@@ -548,7 +545,7 @@ export default function TenantChatPopup() {
                           className={`px-3.5 py-2 text-[13px] leading-snug break-words rounded-[18px] ${
                             isTenant
                               ? "bg-indigo-600 text-white rounded-br-sm shadow-xs"
-                              : "bg-[#3a3b3c] text-[#e4e6eb] rounded-bl-sm shadow-xs"
+                              : "bg-white dark:bg-[#3a3b3c] text-slate-900 dark:text-[#e4e6eb] border border-slate-200 dark:border-transparent rounded-bl-sm shadow-xs"
                           }`}
                         >
                           {isMaintenanceCard ? (() => {
@@ -567,12 +564,12 @@ export default function TenantChatPopup() {
                             const statusLower = (reqStatus || "").toLowerCase();
                             const statusBadgeClass =
                               statusLower === "resolved"
-                                ? "bg-emerald-500/20 text-emerald-200 border border-emerald-400/30"
+                                ? "text-emerald-600 dark:text-emerald-400"
                                 : statusLower === "in progress"
-                                ? "bg-sky-500/20 text-sky-200 border border-sky-400/30"
+                                ? "text-sky-600 dark:text-sky-400"
                                 : statusLower === "cancelled"
-                                ? "bg-rose-500/20 text-rose-200 border border-rose-400/30"
-                                : "bg-amber-500/20 text-amber-200 border border-amber-400/30";
+                                ? "text-rose-600 dark:text-rose-400"
+                                : "text-amber-600 dark:text-amber-400";
 
                             return (
                               <div className="space-y-2 py-0.5">
@@ -581,8 +578,12 @@ export default function TenantChatPopup() {
                                     {prefix}
                                   </p>
                                 )}
-                                <div className="rounded-xl bg-black/25 border border-white/15 p-2.5 space-y-1.5">
-                                  <div className="flex items-center justify-between gap-2 border-b border-white/15 pb-1.5">
+                                <div className={`rounded-xl p-2.5 space-y-1.5 border ${
+                                  isTenant
+                                    ? "bg-black/20 border-white/15"
+                                    : "bg-slate-50 dark:bg-black/25 border-slate-200 dark:border-white/15"
+                                }`}>
+                                  <div className="flex items-center justify-between gap-2 border-b border-current/15 pb-1.5">
                                     <div className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider opacity-90 min-w-0">
                                       <Wrench className="w-3 h-3 shrink-0" />
                                       <span className="truncate">
@@ -590,7 +591,7 @@ export default function TenantChatPopup() {
                                       </span>
                                     </div>
                                     {reqStatus && (
-                                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0 ${statusBadgeClass}`}>
+                                      <span className={`text-[10px] font-bold shrink-0 ${statusBadgeClass}`}>
                                         {reqStatus}
                                       </span>
                                     )}
@@ -626,8 +627,10 @@ export default function TenantChatPopup() {
                                     </a>
                                   )}
                                   <Link
-                                    href="/tenant/rooms"
-                                    className="inline-flex items-center gap-1 text-[11px] font-bold text-sky-200 hover:underline pt-0.5"
+                                    href="/tenant/my_room"
+                                    className={`inline-flex items-center gap-1 text-[11px] font-bold hover:underline pt-0.5 ${
+                                      isTenant ? "text-sky-100" : "text-indigo-600 dark:text-sky-200"
+                                    }`}
                                   >
                                     <span>Inspect in Rooms</span>
                                     <ChevronRight className="w-3 h-3" />
@@ -662,10 +665,10 @@ export default function TenantChatPopup() {
                                       className={`flex items-center gap-2 p-2 rounded-xl text-xs font-semibold transition-colors ${
                                         isTenant
                                           ? "bg-white/15 hover:bg-white/25 text-white"
-                                          : "bg-black/20 hover:bg-black/30 text-[#e4e6eb]"
+                                          : "bg-slate-100 hover:bg-slate-200 dark:bg-black/20 dark:hover:bg-black/30 text-slate-900 dark:text-[#e4e6eb]"
                                       }`}
                                     >
-                                      <FileText className="w-4 h-4 shrink-0 text-sky-200" />
+                                      <FileText className={`w-4 h-4 shrink-0 ${isTenant ? "text-sky-200" : "text-indigo-600 dark:text-sky-200"}`} />
                                       <span className="truncate max-w-[160px]">
                                         {msg.file_name || "Attachment"}
                                       </span>
@@ -685,7 +688,7 @@ export default function TenantChatPopup() {
                       </div>
 
                       {/* Message Timestamp / Status */}
-                      <span className="text-[10px] text-[#b0b3b8]/70 px-2 font-medium">
+                      <span className="text-[10px] text-slate-400 dark:text-[#b0b3b8]/70 px-2 font-medium">
                         {isTenant ? msg.status || "Sent" : ""} {formatTime(msg.created_at)}
                       </span>
                     </div>
@@ -705,24 +708,24 @@ export default function TenantChatPopup() {
 
             {/* Selected File Attachment Preview Bar */}
             {selectedFile && (
-              <div className="px-3 py-2 bg-[#1f2021] border-t border-[#393a3b] flex items-center justify-between gap-2 text-xs">
+              <div className="px-3 py-2 bg-slate-50 dark:bg-[#1f2021] border-t border-slate-200 dark:border-[#393a3b] flex items-center justify-between gap-2 text-xs">
                 <div className="flex items-center gap-2 min-w-0">
                   {selectedFilePreview ? (
                     <img
                       src={selectedFilePreview}
                       alt="Preview"
-                      className="w-10 h-10 rounded-lg object-cover border border-[#4e4f50] shrink-0"
+                      className="w-10 h-10 rounded-lg object-cover border border-slate-200 dark:border-[#4e4f50] shrink-0"
                     />
                   ) : (
-                    <div className="w-10 h-10 rounded-lg bg-[#3a3b3c] flex items-center justify-center shrink-0 text-indigo-400">
+                    <div className="w-10 h-10 rounded-lg bg-slate-200 dark:bg-[#3a3b3c] flex items-center justify-center shrink-0 text-indigo-600 dark:text-indigo-400">
                       <FileText className="w-5 h-5" />
                     </div>
                   )}
                   <div className="min-w-0">
-                    <p className="font-semibold text-[#e4e6eb] truncate max-w-[190px]">
+                    <p className="font-semibold text-slate-900 dark:text-[#e4e6eb] truncate max-w-[190px]">
                       {selectedFile.name}
                     </p>
-                    <span className="text-[10px] text-[#b0b3b8]">
+                    <span className="text-[10px] text-slate-500 dark:text-[#b0b3b8]">
                       {(selectedFile.size / 1024).toFixed(1)} KB
                     </span>
                   </div>
@@ -730,7 +733,7 @@ export default function TenantChatPopup() {
                 <button
                   type="button"
                   onClick={clearSelectedFile}
-                  className="p-1 rounded-full hover:bg-white/10 text-[#b0b3b8] hover:text-white transition-colors cursor-pointer"
+                  className="p-1 rounded-full hover:bg-slate-200 dark:hover:bg-white/10 text-slate-500 dark:text-[#b0b3b8] hover:text-slate-900 dark:hover:text-white transition-colors cursor-pointer"
                   title="Remove attachment"
                 >
                   <X className="w-4 h-4" />
@@ -744,14 +747,14 @@ export default function TenantChatPopup() {
                 e.preventDefault();
                 handleSendMessage();
               }}
-              className="p-2.5 bg-[#242526] border-t border-[#393a3b] flex items-center gap-1.5 shrink-0"
+              className="p-2.5 bg-white dark:bg-[#242526] border-t border-slate-200 dark:border-[#393a3b] flex items-center gap-1.5 shrink-0"
             >
               {/* Media / Utility Icons: Wrench for Maintenance Report & Plus for Attachment */}
               <div className="flex items-center gap-0.5 shrink-0">
                 <button
                   type="button"
                   onClick={() => setShowMaintenanceModal(true)}
-                  className="p-2 text-indigo-400 hover:bg-white/10 rounded-full transition-colors cursor-pointer"
+                  className="p-2 text-indigo-600 dark:text-indigo-400 hover:bg-slate-100 dark:hover:bg-white/10 rounded-full transition-colors cursor-pointer"
                   title="File Maintenance Ticket"
                 >
                   <Wrench className="w-4 h-4" />
@@ -759,7 +762,7 @@ export default function TenantChatPopup() {
                 <button
                   type="button"
                   onClick={() => fileInputRef.current?.click()}
-                  className="p-2 text-indigo-400 hover:scale-110 hover:bg-white/10 transition-all rounded-full cursor-pointer"
+                  className="p-2 text-indigo-600 dark:text-indigo-400 hover:scale-110 hover:bg-slate-100 dark:hover:bg-white/10 transition-all rounded-full cursor-pointer"
                   title="Attach image or file"
                 >
                   <Plus className="w-5 h-5 stroke-[2.5]" />
@@ -767,19 +770,19 @@ export default function TenantChatPopup() {
               </div>
 
               {/* Pill Input Container */}
-              <div className="flex-1 relative flex items-center bg-[#3a3b3c] rounded-full px-3 py-1.5">
+              <div className="flex-1 relative flex items-center bg-slate-100 dark:bg-[#3a3b3c] rounded-full px-3 py-1.5">
                 <input
                   type="text"
                   value={newMessage}
                   onChange={(e) => setNewMessage(e.target.value)}
                   onPaste={handlePaste}
                   placeholder="Aa"
-                  className="w-full bg-transparent text-[13px] text-[#e4e6eb] placeholder-[#b0b3b8] outline-none font-normal"
+                  className="w-full bg-transparent text-[13px] text-slate-900 dark:text-[#e4e6eb] placeholder-slate-400 dark:placeholder-[#b0b3b8] outline-none font-normal"
                 />
                 <button
                   type="button"
                   onClick={() => setNewMessage((prev) => prev + " 😊")}
-                  className="text-indigo-400 hover:scale-110 transition-transform p-0.5 cursor-pointer"
+                  className="text-indigo-600 dark:text-indigo-400 hover:scale-110 transition-transform p-0.5 cursor-pointer"
                   title="Emoji"
                 >
                   <Smile className="w-4 h-4" />
@@ -791,7 +794,7 @@ export default function TenantChatPopup() {
                 <button
                   type="submit"
                   disabled={isSending}
-                  className="p-2 text-indigo-400 hover:bg-white/10 rounded-full transition-colors cursor-pointer disabled:opacity-40"
+                  className="p-2 text-indigo-600 dark:text-indigo-400 hover:bg-slate-100 dark:hover:bg-white/10 rounded-full transition-colors cursor-pointer disabled:opacity-40"
                   title="Send Message"
                 >
                   <Send className="w-4 h-4" />
@@ -801,17 +804,17 @@ export default function TenantChatPopup() {
 
             {/* Quick Maintenance Modal Popup within Chat */}
             {showMaintenanceModal && (
-              <div className="absolute inset-0 z-50 bg-[#18191a]/95 backdrop-blur-xs flex flex-col p-4 text-white overflow-y-auto custom-scrollbar">
-                <div className="flex items-center justify-between pb-3 border-b border-[#393a3b]">
+              <div className="absolute inset-0 z-50 bg-white/95 dark:bg-[#18191a]/95 backdrop-blur-xs flex flex-col p-4 text-slate-900 dark:text-white overflow-y-auto custom-scrollbar">
+                <div className="flex items-center justify-between pb-3 border-b border-slate-200 dark:border-[#393a3b]">
                   <div className="flex items-center gap-2">
-                    <Wrench className="w-4 h-4 text-indigo-400" />
-                    <h3 className="text-sm font-bold text-[#e4e6eb]">
+                    <Wrench className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+                    <h3 className="text-sm font-bold text-slate-900 dark:text-[#e4e6eb]">
                       Quick Maintenance Report
                     </h3>
                   </div>
                   <button
                     onClick={() => setShowMaintenanceModal(false)}
-                    className="p-1 text-[#b0b3b8] hover:text-white rounded-full hover:bg-white/10 cursor-pointer"
+                    className="p-1 text-slate-400 dark:text-[#b0b3b8] hover:text-slate-900 dark:hover:text-white rounded-full hover:bg-slate-100 dark:hover:bg-white/10 cursor-pointer"
                   >
                     <X className="w-4 h-4" />
                   </button>
@@ -823,7 +826,7 @@ export default function TenantChatPopup() {
                 >
                   <div className="space-y-3">
                     <div>
-                      <label className="text-[11px] font-bold text-[#b0b3b8] block mb-1">
+                      <label className="text-[11px] font-bold text-slate-600 dark:text-[#b0b3b8] block mb-1">
                         Issue Title
                       </label>
                       <input
@@ -832,19 +835,19 @@ export default function TenantChatPopup() {
                         value={maintTitle}
                         onChange={(e) => setMaintTitle(e.target.value)}
                         placeholder="e.g. Leaking faucet, broken light"
-                        className="w-full px-3 py-2 text-xs rounded-xl bg-[#3a3b3c] border border-[#4e4f50] text-[#e4e6eb] placeholder-[#b0b3b8] outline-none focus:border-indigo-500"
+                        className="w-full px-3 py-2 text-xs rounded-xl bg-slate-50 dark:bg-[#3a3b3c] border border-slate-200 dark:border-[#4e4f50] text-slate-900 dark:text-[#e4e6eb] placeholder-slate-400 dark:placeholder-[#b0b3b8] outline-none focus:border-indigo-500"
                       />
                     </div>
 
                     <div className="grid grid-cols-2 gap-2">
                       <div>
-                        <label className="text-[11px] font-bold text-[#b0b3b8] block mb-1">
+                        <label className="text-[11px] font-bold text-slate-600 dark:text-[#b0b3b8] block mb-1">
                           Category
                         </label>
                         <select
                           value={maintCategory}
                           onChange={(e) => setMaintCategory(e.target.value)}
-                          className="w-full px-2.5 py-1.5 text-xs rounded-xl bg-[#3a3b3c] border border-[#4e4f50] text-[#e4e6eb] outline-none"
+                          className="w-full px-2.5 py-1.5 text-xs rounded-xl bg-slate-50 dark:bg-[#3a3b3c] border border-slate-200 dark:border-[#4e4f50] text-slate-900 dark:text-[#e4e6eb] outline-none"
                         >
                           <option value="Plumbing">Plumbing</option>
                           <option value="Electrical">Electrical</option>
@@ -855,13 +858,13 @@ export default function TenantChatPopup() {
                       </div>
 
                       <div>
-                        <label className="text-[11px] font-bold text-[#b0b3b8] block mb-1">
+                        <label className="text-[11px] font-bold text-slate-600 dark:text-[#b0b3b8] block mb-1">
                           Priority
                         </label>
                         <select
                           value={maintPriority}
                           onChange={(e) => setMaintPriority(e.target.value)}
-                          className="w-full px-2.5 py-1.5 text-xs rounded-xl bg-[#3a3b3c] border border-[#4e4f50] text-[#e4e6eb] outline-none"
+                          className="w-full px-2.5 py-1.5 text-xs rounded-xl bg-slate-50 dark:bg-[#3a3b3c] border border-slate-200 dark:border-[#4e4f50] text-slate-900 dark:text-[#e4e6eb] outline-none"
                         >
                           <option value="Low">Low</option>
                           <option value="Medium">Medium</option>
@@ -872,7 +875,7 @@ export default function TenantChatPopup() {
                     </div>
 
                     <div>
-                      <label className="text-[11px] font-bold text-[#b0b3b8] block mb-1">
+                      <label className="text-[11px] font-bold text-slate-600 dark:text-[#b0b3b8] block mb-1">
                         Details
                       </label>
                       <textarea
@@ -881,18 +884,18 @@ export default function TenantChatPopup() {
                         value={maintDesc}
                         onChange={(e) => setMaintDesc(e.target.value)}
                         placeholder="Describe the problem..."
-                        className="w-full px-3 py-2 text-xs rounded-xl bg-[#3a3b3c] border border-[#4e4f50] text-[#e4e6eb] placeholder-[#b0b3b8] outline-none focus:border-indigo-500"
+                        className="w-full px-3 py-2 text-xs rounded-xl bg-slate-50 dark:bg-[#3a3b3c] border border-slate-200 dark:border-[#4e4f50] text-slate-900 dark:text-[#e4e6eb] placeholder-slate-400 dark:placeholder-[#b0b3b8] outline-none focus:border-indigo-500"
                       />
                     </div>
 
                     {/* Damage Proof Photo Upload */}
                     <div>
                       <div className="flex items-center justify-between mb-1">
-                        <label className="text-[11px] font-bold text-[#b0b3b8] flex items-center gap-1.5">
-                          <ImageIcon className="w-3.5 h-3.5 text-indigo-400" />
+                        <label className="text-[11px] font-bold text-slate-600 dark:text-[#b0b3b8] flex items-center gap-1.5">
+                          <ImageIcon className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
                           <span>Damage Proof Photo</span>
                         </label>
-                        <span className="text-[10px] text-[#b0b3b8]/70">Required / Recommended</span>
+                        <span className="text-[10px] text-slate-400 dark:text-[#b0b3b8]/70">Required / Recommended</span>
                       </div>
 
                       <input
@@ -904,7 +907,7 @@ export default function TenantChatPopup() {
                       />
 
                       {maintImagePreview ? (
-                        <div className="relative rounded-xl overflow-hidden border border-[#4e4f50] bg-black/40 group">
+                        <div className="relative rounded-xl overflow-hidden border border-slate-200 dark:border-[#4e4f50] bg-slate-100 dark:bg-black/40 group">
                           <img
                             src={maintImagePreview}
                             alt="Damage preview"
@@ -914,7 +917,7 @@ export default function TenantChatPopup() {
                             <button
                               type="button"
                               onClick={() => maintFileInputRef.current?.click()}
-                              className="px-2.5 py-1 text-xs font-semibold bg-[#242526] hover:bg-[#3a3b3c] text-white rounded-lg transition-colors cursor-pointer"
+                              className="px-2.5 py-1 text-xs font-semibold bg-white hover:bg-slate-100 dark:bg-[#242526] dark:hover:bg-[#3a3b3c] text-slate-900 dark:text-white rounded-lg transition-colors cursor-pointer"
                             >
                               Change
                             </button>
@@ -935,15 +938,15 @@ export default function TenantChatPopup() {
                         <button
                           type="button"
                           onClick={() => maintFileInputRef.current?.click()}
-                          className="w-full py-2.5 px-3 rounded-xl border border-dashed border-[#4e4f50] hover:border-indigo-500 bg-[#3a3b3c]/50 hover:bg-[#3a3b3c] text-center transition-all cursor-pointer flex flex-col items-center justify-center gap-1"
+                          className="w-full py-2.5 px-3 rounded-xl border border-dashed border-slate-300 dark:border-[#4e4f50] hover:border-indigo-500 bg-slate-50 hover:bg-slate-100 dark:bg-[#3a3b3c]/50 dark:hover:bg-[#3a3b3c] text-center transition-all cursor-pointer flex flex-col items-center justify-center gap-1"
                         >
-                          <div className="w-7 h-7 rounded-full bg-[#242526] text-indigo-400 flex items-center justify-center">
+                          <div className="w-7 h-7 rounded-full bg-white dark:bg-[#242526] border border-slate-200 dark:border-transparent text-indigo-600 dark:text-indigo-400 flex items-center justify-center">
                             <ImageIcon className="w-3.5 h-3.5" />
                           </div>
-                          <span className="text-xs font-semibold text-[#e4e6eb]">
+                          <span className="text-xs font-semibold text-slate-800 dark:text-[#e4e6eb]">
                             Upload photo of room damage
                           </span>
-                          <span className="text-[10px] text-[#b0b3b8]">
+                          <span className="text-[10px] text-slate-500 dark:text-[#b0b3b8]">
                             JPG, PNG, WEBP (Max 10MB proof)
                           </span>
                         </button>
@@ -955,7 +958,7 @@ export default function TenantChatPopup() {
                     <button
                       type="button"
                       onClick={() => setShowMaintenanceModal(false)}
-                      className="flex-1 py-2 rounded-xl text-xs font-semibold bg-[#3a3b3c] hover:bg-[#4e4f50] text-[#e4e6eb] cursor-pointer"
+                      className="flex-1 py-2 rounded-xl text-xs font-semibold bg-slate-100 hover:bg-slate-200 dark:bg-[#3a3b3c] dark:hover:bg-[#4e4f50] text-slate-700 dark:text-[#e4e6eb] cursor-pointer"
                     >
                       Cancel
                     </button>
