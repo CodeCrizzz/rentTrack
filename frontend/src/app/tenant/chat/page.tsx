@@ -395,7 +395,7 @@ export default function TenantChat() {
                                                                         </div>
                                                                     )}
                                                                     <a
-                                                                        href="/tenant/rooms"
+                                                                        href="/tenant/my_room"
                                                                         className="inline-flex items-center gap-1 text-xs font-semibold mt-2 hover:underline opacity-90 text-[#0062cc] dark:text-blue-400"
                                                                     >
                                                                         View in Rooms <ArrowRight className="w-3 h-3" />
