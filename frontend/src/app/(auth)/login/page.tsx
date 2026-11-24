@@ -70,7 +70,7 @@ export default function LoginPage() {
         router.push(
           response.data.user.role === "admin"
             ? "/admin/dashboard"
-            : "/tenant/dashboard",
+            : "/tenant/overview",
         );
       } else {
         throw new Error("No token returned");
