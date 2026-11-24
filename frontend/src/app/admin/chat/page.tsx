@@ -323,7 +323,7 @@ export default function AdminChat() {
                             }
                         }
 
-                        const roomDetails = [c.room_type, c.rental_type].filter(Boolean).join(' • ');
+                        const roomDetails = [c.rental_type].filter(Boolean).join(' • ');
 
                         return {
                             id: c.id,

@@ -52,6 +52,7 @@ export default function SignupPage() {
   const [lastName, setLastName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
+  const [gender, setGender] = useState<"Male" | "Female">("Male");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showPasswords, setShowPasswords] = useState(false);
@@ -100,6 +101,7 @@ export default function SignupPage() {
         lastName: lastName.trim(),
         email: email.trim().toLowerCase(),
         phone,
+        gender,
         password,
         role: "tenant",
       });
@@ -374,6 +376,39 @@ export default function SignupPage() {
                       className="w-full bg-transparent text-sm text-slate-900 placeholder:text-slate-400 outline-none font-medium min-w-0"
                     />
                   </div>
+                </div>
+              </div>
+
+              {/* Gender Selection (for room matching) */}
+              <div>
+                <label className="block text-xs font-bold text-slate-800 mb-1.5 ml-0.5">
+                  Gender
+                </label>
+                <div className="grid grid-cols-2 gap-2.5">
+                  <button
+                    type="button"
+                    onClick={() => setGender("Male")}
+                    disabled={isLoading}
+                    className={`h-11 sm:h-12 rounded-xl border flex items-center justify-center gap-2 text-sm font-bold transition-all cursor-pointer ${
+                      gender === "Male"
+                        ? "bg-blue-50 border-blue-600 text-blue-700 ring-2 ring-blue-100 shadow-2xs"
+                        : "bg-white border-slate-200 text-slate-600 hover:border-slate-300 hover:bg-slate-50"
+                    }`}
+                  >
+                    <span>Male</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setGender("Female")}
+                    disabled={isLoading}
+                    className={`h-11 sm:h-12 rounded-xl border flex items-center justify-center gap-2 text-sm font-bold transition-all cursor-pointer ${
+                      gender === "Female"
+                        ? "bg-rose-50 border-rose-500 text-rose-700 ring-2 ring-rose-100 shadow-2xs"
+                        : "bg-white border-slate-200 text-slate-600 hover:border-slate-300 hover:bg-slate-50"
+                    }`}
+                  >
+                    <span>Female</span>
+                  </button>
                 </div>
               </div>
 
