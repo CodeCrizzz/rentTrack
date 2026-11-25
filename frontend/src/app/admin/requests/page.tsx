@@ -17,8 +17,6 @@ export interface MaintenanceRequest {
   status: string;
   created_at: string;
   assigned_to: string | null;
-  admin_notes: string | null;
-  scheduled_date: string | null;
   date_resolved: string | null;
   tenant_name: string;
   room_number: string | null;
@@ -101,7 +99,6 @@ function MaintenanceRequestsContent() {
     status: "In Progress",
     priority: "High",
     assigned_to: "Maintenance Team",
-    admin_notes: "",
   });
   const [isSubmittingStatus, setIsSubmittingStatus] = useState(false);
 
@@ -443,7 +440,6 @@ function MaintenanceRequestsContent() {
         status: statusForm.status,
         priority: statusForm.priority,
         assigned_to: statusForm.assigned_to,
-        admin_notes: statusForm.admin_notes,
         date_resolved:
           statusForm.status === "Resolved" ? new Date().toISOString() : null,
       });
@@ -457,7 +453,6 @@ function MaintenanceRequestsContent() {
                 status: statusForm.status,
                 priority: statusForm.priority,
                 assigned_to: statusForm.assigned_to,
-                admin_notes: statusForm.admin_notes,
               }
             : r,
         ),
@@ -485,7 +480,6 @@ function MaintenanceRequestsContent() {
       status: normalizeStatus(req.status),
       priority: normalizePriority(req.priority),
       assigned_to: req.assigned_to || "Maintenance Team",
-      admin_notes: req.admin_notes || "",
     });
     setIsUpdateStatusModalOpen(true);
     setActiveMenuId(null);
@@ -1178,10 +1172,9 @@ function MaintenanceRequestsContent() {
                           {activeRequest.assigned_to || "Maintenance Team"}
                         </div>
                         <div className="text-xs sm:text-sm text-slate-400 dark:text-zinc-400 leading-tight mt-0.5">
-                          {activeRequest.admin_notes ||
-                            (normalizeStatus(activeRequest.status) === "Resolved"
-                              ? "Work completed"
-                              : "Ongoing repair")}
+                          {normalizeStatus(activeRequest.status) === "Resolved"
+                            ? "Work completed"
+                            : "Ongoing repair"}
                         </div>
                       </div>
                     </div>
@@ -1534,23 +1527,6 @@ function MaintenanceRequestsContent() {
                   />
                 </div>
 
-                <div className="space-y-1.5">
-                  <label className="text-xs sm:text-sm font-bold text-slate-700 dark:text-zinc-300 uppercase tracking-wider">
-                    Admin Notes
-                  </label>
-                  <textarea
-                    rows={3}
-                    placeholder="Add work order notes..."
-                    value={statusForm.admin_notes}
-                    onChange={(e) =>
-                      setStatusForm({
-                        ...statusForm,
-                        admin_notes: e.target.value,
-                      })
-                    }
-                    className="w-full px-3.5 py-2.5 text-sm sm:text-base rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-slate-900 dark:text-white resize-none font-medium"
-                  />
-                </div>
 
                 <div className="flex items-center justify-end gap-2.5 pt-2.5 border-t border-slate-100 dark:border-zinc-800">
                   <button
