@@ -41,7 +41,6 @@ export interface MaintenanceTicket {
   status?: string;
   assigned_to?: string | null;
   room_number?: string | null;
-  scheduled_date?: string | null;
   date_resolved?: string | null;
   created_at: string;
 }

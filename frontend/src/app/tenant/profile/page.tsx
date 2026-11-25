@@ -28,7 +28,6 @@ interface ProfileData {
   status: string;
   created_at: string;
   date_moved_in: string | null;
-  contract_end_date: string | null;
   room_number: string | null;
   type: string | null;
   floor: string | null;
@@ -339,9 +338,9 @@ export default function TenantProfile() {
                   Assigned Room
                 </span>
                 <span className="font-mono font-extrabold text-slate-900 dark:text-slate-100">
-                  {profile.room_number
+                  {profile.room_number && String(profile.room_number).trim() !== "" && String(profile.room_number).toLowerCase() !== "null"
                     ? `Room ${profile.room_number}`
-                    : "Unassigned"}
+                    : "Not Assigned"}
                 </span>
               </div>
               <div className="py-2.5 flex items-center justify-between gap-3">

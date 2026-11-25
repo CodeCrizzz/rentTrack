@@ -209,7 +209,7 @@ const getTenantProfile = async (req, res) => {
     const tenantId = req.user.id;
     try {
         const result = await db.query(
-            `SELECT u.id, u.name, u.email, u.phone, u.gender, u.status, u.created_at, u.date_moved_in, u.contract_end_date, u.bed_space, r.room_number, r.capacity, r.price, r.floor, r.rental_type 
+            `SELECT u.id, u.name, u.email, u.phone, u.gender, u.status, u.created_at, u.date_moved_in, u.bed_space, r.room_number, r.capacity, r.price, r.floor, r.rental_type 
              FROM users u 
              LEFT JOIN rooms r ON u.room_id = r.id 
              WHERE u.id = $1`,
@@ -295,12 +295,11 @@ const getTenantPayments = async (req, res) => {
         const result = await db.query(
             `SELECT p.id, 
                     TO_CHAR(p.payment_date, 'YYYY-MM-DD') AS date, 
-                    COALESCE(p.notes, 'Payment for ' || b.billing_month) AS description, 
+                    ('Payment for ' || b.billing_month) AS description, 
                     p.amount_paid AS amount, 
                     COALESCE(p.status, 'Paid') AS status, 
                     p.payment_method,
                     p.payment_method AS method, 
-                    p.notes,
                     COALESCE(p.reference_number, p.id::text) AS "referenceNumber",
                     COALESCE(p.reference_number, p.id::text) AS reference_number,
                     p.created_at,
@@ -313,7 +312,6 @@ const getTenantPayments = async (req, res) => {
                     b.electricity_charges,
                     b.other_fees,
                     b.additional_charges,
-                    b.notes AS bill_notes,
                     b.total_amount AS bill_total,
                     b.balance AS bill_balance,
                     b.amount_paid AS bill_amount_paid,
@@ -414,7 +412,8 @@ const sendTenantMessage = async (req, res) => {
                 title: 'New Message',
                 message: `${tenantName} sent: "${snippet}"`,
                 type: 'chat_message',
-                link: '/admin/chat'
+                link: '/admin/chat',
+                messageId: sentMsg.id
             });
         } catch (notifErr) {
             console.error('Error queuing offline chat notification:', notifErr.message);
@@ -559,7 +558,7 @@ const getCurrentBill = async (req, res) => {
         const roomNumber = user?.room_number || null;
 
         const result = await db.query(
-            "SELECT id, billing_month, total_amount, amount_paid, balance, rent_amount, water_charges, electricity_charges, other_fees, additional_charges, notes, TO_CHAR(due_date, 'YYYY-MM-DD') AS due_date, status, invoice_number FROM bills WHERE tenant_id = $1 AND status != 'Paid' ORDER BY due_date ASC LIMIT 1",
+            "SELECT id, billing_month, total_amount, amount_paid, balance, rent_amount, water_charges, electricity_charges, other_fees, additional_charges, TO_CHAR(due_date, 'YYYY-MM-DD') AS due_date, status, invoice_number FROM bills WHERE tenant_id = $1 AND status != 'Paid' ORDER BY due_date ASC LIMIT 1",
             [tenantId]
         );
 
@@ -579,13 +578,7 @@ const getCurrentBill = async (req, res) => {
                     : otherAmount > 0
                       ? [
                             {
-                                label:
-                                    bill.notes &&
-                                    typeof bill.notes === 'string' &&
-                                    bill.notes.trim() &&
-                                    bill.notes.trim() !== 'Auto-generated bill'
-                                        ? bill.notes.trim()
-                                        : 'Additional Charge',
+                                label: 'Additional Charge',
                                 amount: otherAmount,
                             },
                         ]
@@ -600,7 +593,6 @@ const getCurrentBill = async (req, res) => {
                 remainingBalance: parseFloat(bill.balance),
                 dueDate: bill.due_date,
                 status: bill.status,
-                notes: bill.notes || null,
                 tenantName,
                 roomNumber,
                 hasBill: true,
@@ -638,7 +630,7 @@ const getCurrentBill = async (req, res) => {
 
             // Fall back to latest bill (e.g. recently paid current statement with 0 balance)
             const latestBillRes = await db.query(
-                "SELECT id, billing_month, total_amount, amount_paid, balance, rent_amount, water_charges, electricity_charges, other_fees, additional_charges, notes, TO_CHAR(due_date, 'YYYY-MM-DD') AS due_date, status, invoice_number FROM bills WHERE tenant_id = $1 ORDER BY due_date DESC, id DESC LIMIT 1",
+                "SELECT id, billing_month, total_amount, amount_paid, balance, rent_amount, water_charges, electricity_charges, other_fees, additional_charges, TO_CHAR(due_date, 'YYYY-MM-DD') AS due_date, status, invoice_number FROM bills WHERE tenant_id = $1 ORDER BY due_date DESC, id DESC LIMIT 1",
                 [tenantId]
             );
             if (latestBillRes.rows.length > 0) {
@@ -1082,8 +1074,8 @@ const completeGcashPayment = async (req, res) => {
 
         // Insert into payments as Paid
         const insertPaymentQuery = `
-            INSERT INTO payments (bill_id, amount_paid, payment_date, payment_method, notes, status, reference_number)
-            VALUES ($1, $2, CURRENT_TIMESTAMP, $3, 'Online E-Wallet Payment (QRPh National Standard)', 'Verified', $4)
+            INSERT INTO payments (bill_id, amount_paid, payment_date, payment_method, status, reference_number)
+            VALUES ($1, $2, CURRENT_TIMESTAMP, $3, 'Verified', $4)
             RETURNING *
         `;
         const paymentRes = await db.query(insertPaymentQuery, [bill.id, payAmount, paymentMethod, refNumber]);
@@ -1221,13 +1213,14 @@ const sendTenantPaymentReceipt = async (req, res) => {
         try {
             await db.query(
                 `INSERT INTO "rentTrack_schema".notifications
-                    (user_id, title, message, type, is_read)
-                 VALUES ($1, $2, $3, $4, TRUE)`,
+                    (user_id, title, message, type, payment_id, is_read)
+                 VALUES ($1, $2, $3, $4, $5, TRUE)`,
                 [
                     tenantId,
                     'Receipt Sent',
                     `Your receipt for ${bill.invoice_number || 'this payment'} was sent to ${recipient}.`,
                     'payment_verification',
+                    payment.id,
                 ]
             );
         } catch (notifyError) {

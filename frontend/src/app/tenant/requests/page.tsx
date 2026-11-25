@@ -15,7 +15,6 @@ interface Request {
     priority: string;
     status: string;
     created_at: string;
-    admin_notes: string | null;
     image_url?: string | null;
     attachment_url?: string | null;
     schedule?: string | null;
@@ -634,11 +633,6 @@ export default function TenantMaintenance() {
                                                 <div className="absolute -left-[21px] top-1 w-2.5 h-2.5 rounded-full bg-blue-500"></div>
                                                 <p className="text-xs font-medium text-slate-500 dark:text-zinc-400">Admin</p>
                                                 <p className="text-xs font-bold text-blue-600 dark:text-blue-400">In Progress</p>
-                                                {selectedRequest.admin_notes && (
-                                                    <p className="text-xs italic text-slate-600 dark:text-zinc-400 mt-1 bg-secondary/50 p-2 rounded">
-                                                        &quot;{selectedRequest.admin_notes}&quot;
-                                                    </p>
-                                                )}
                                             </div>
                                         )}
                                         {selectedRequest.status === 'Resolved' && (

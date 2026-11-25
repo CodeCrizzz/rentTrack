@@ -415,8 +415,7 @@ const sendBillGeneratedEmail = async ({
     totalAmount,
     balance,
     breakdown = {},
-    additionalCharges = [],
-    notes
+    additionalCharges = []
 }) => {
     try {
         if (!to || typeof to !== 'string' || !to.includes('@')) {
@@ -478,7 +477,6 @@ const sendBillGeneratedEmail = async ({
         ${breakdown.electricity !== undefined ? `<div class="highlight-row"><span>Electricity Charges:</span> <span>${formatCurrency(breakdown.electricity)}</span></div>` : ''}
         ${breakdown.other && Number(breakdown.other) > 0 ? `<div class="highlight-row"><span>Other Fees:</span> <span>${formatCurrency(breakdown.other)}</span></div>` : ''}
         ${Array.isArray(additionalCharges) && additionalCharges.length > 0 ? additionalCharges.map(c => `<div class="highlight-row"><span>${c.label}:</span> <span>${formatCurrency(c.amount)}</span></div>`).join('') : ''}
-        ${notes && notes.trim() && notes !== 'Auto-generated bill' ? `<div class="highlight-row"><span>Notes:</span> <span>${notes}</span></div>` : ''}
         <div class="total-row">
           <span>Total Amount Due:</span>
           <span class="total-amount">${formattedTotal}</span>

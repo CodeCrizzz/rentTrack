@@ -88,14 +88,6 @@ export interface RoomMatrixItem {
   tenants?: RoomTenant[];
 }
 
-interface ExpiringContract {
-  id: number;
-  name: string;
-  room_number: string | null;
-  contract_end_date: string;
-  days_left: number;
-}
-
 interface DashboardStats {
   rooms: {
     totalRooms: number;
@@ -176,11 +168,9 @@ interface DashboardStats {
     status?: string;
     assigned_to?: string | null;
     room_number?: string | null;
-    scheduled_date?: string | null;
     date_resolved?: string | null;
     created_at: string;
   }[];
-  expiringContracts: ExpiringContract[];
   overdueAccounts: {
     tenant_id: number;
     tenant_name: string;
@@ -611,7 +601,6 @@ export default function AdminDashboard() {
   const [showAnnouncementModal, setShowAnnouncementModal] = useState(false);
   const [currentAnnouncement, setCurrentAnnouncement] = useState<{
     id: number;
-    title?: string;
     content: string;
     created_at?: string;
   } | null>(null);
@@ -647,13 +636,8 @@ export default function AdminDashboard() {
 
     setIsPostingAnnouncement(true);
     try {
-      const firstLine = text.split("\n")[0];
-      const title =
-        firstLine.length > 60 ? firstLine.slice(0, 57) + "..." : firstLine;
       const { data } = await api.post("/admin/announcements", {
-        title,
         content: text,
-        type: "General",
       });
       toast.success("Announcement Published", {
         description: "Notice posted to community bulletin board.",
@@ -1164,8 +1148,7 @@ export default function AdminDashboard() {
                         ) : currentAnnouncement ? (
                           <div>
                             <p className="whitespace-pre-wrap font-medium">
-                              {currentAnnouncement.content ||
-                                currentAnnouncement.title}
+                              {currentAnnouncement.content}
                             </p>
                             {currentAnnouncement.created_at && (
                               <p className="text-xs text-slate-400 dark:text-zinc-500 font-mono mt-1.5">

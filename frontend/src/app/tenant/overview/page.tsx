@@ -279,23 +279,23 @@ export default function TenantDashboard() {
       {/* Header Strip */}
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 pb-3 border-b border-slate-200 dark:border-slate-800 shrink-0">
         <div className="shrink-0">
-          <div className="flex flex-wrap items-center gap-2.5">
-            <h1 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-slate-100 tracking-tight">
-              Hello, {userName.split(" ")[0] || "Resident"}
-            </h1>
-            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-indigo-50 dark:bg-indigo-500/15 border border-indigo-200 dark:border-indigo-500/30 text-indigo-700 dark:text-indigo-300 text-xs font-bold">
-              <Building2 className="w-3.5 h-3.5 shrink-0" />
-              <span>
-                Assigned Room:{" "}
-                <strong className="font-mono font-extrabold text-indigo-900 dark:text-indigo-200">
-                  {tenantData.status === "Active"
-                    ? `Room ${tenantData.roomNumber}`
-                    : "Pending"}
-                </strong>
-              </span>
-            </div>
+          <h1 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-slate-100 tracking-tight">
+            Hello, {userName.split(" ")[0] || "Resident"}
+          </h1>
+          <div className="flex items-center gap-1.5 text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-1">
+            <Building2 className="w-3.5 h-3.5 shrink-0 text-indigo-600 dark:text-indigo-400" />
+            <span>
+              Assigned Room:{" "}
+              <strong className="font-semibold text-slate-800 dark:text-slate-200">
+                {tenantData.roomNumber &&
+                String(tenantData.roomNumber).trim() !== "" &&
+                String(tenantData.roomNumber).toLowerCase() !== "null"
+                  ? `Room ${tenantData.roomNumber}`
+                  : "Not Assigned"}
+              </strong>
+            </span>
           </div>
-          <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-0.5">
+          <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-1">
             Track your bills, monitor utilities, and view payment history.
           </p>
         </div>
@@ -477,7 +477,7 @@ export default function TenantDashboard() {
             <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-100 dark:bg-slate-800/90 border border-slate-200 dark:border-slate-700/80 text-slate-700 dark:text-slate-200 text-xs sm:text-[13px] font-bold shrink-0 self-start sm:self-center">
               <Calendar className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
               <span>
-                1o122ssssswezzw21z14xc 2 Due Date:{" "}
+                Due Date:{" "}
                 <span className="font-mono font-extrabold text-slate-900 dark:text-white">
                   {currentBill?.dueDate
                     ? new Date(currentBill.dueDate).toLocaleDateString(

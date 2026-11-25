@@ -51,7 +51,8 @@ const createRequest = async (req, res) => {
                 title: 'New Maintenance Request',
                 message: `${tenantName} submitted request "${title}" (${createdReq.request_number || request_number}).`,
                 type: 'maintenance_request',
-                link: '/admin/requests'
+                link: '/admin/requests',
+                requestId: createdReq.id
             });
         } catch (notifErr) {
             console.error('Error queuing offline maintenance notification:', notifErr.message);
@@ -96,7 +97,7 @@ const getAllRequests = async (req, res) => {
     try {
         const requests = await db.query(`
             SELECT 
-                r.id, r.request_number, r.title, r.description, r.category, r.priority, r.status, r.created_at, r.assigned_to, r.admin_notes, r.scheduled_date, r.date_resolved, r.attachment_url,
+                r.id, r.request_number, r.title, r.description, r.category, r.priority, r.status, r.created_at, r.assigned_to, r.date_resolved, r.attachment_url,
                 u.name as tenant_name,
                 rm.room_number
             FROM requests r
@@ -121,7 +122,7 @@ const getAllRequests = async (req, res) => {
 const updateRequest = async (req, res) => {
     try {
         const { id } = req.params;
-        const { status, priority, assigned_to, admin_notes, scheduled_date, date_resolved } = req.body;
+        const { status, priority, assigned_to, date_resolved } = req.body;
 
         const reqDb = await db.query('SELECT * FROM requests WHERE id = $1', [id]);
         if (reqDb.rows.length === 0) {
@@ -134,16 +135,12 @@ const updateRequest = async (req, res) => {
              SET status = $1,
                  priority = $2,
                  assigned_to = $3,
-                 admin_notes = $4,
-                 scheduled_date = $5,
-                 date_resolved = $6
-             WHERE id = $7 RETURNING *`,
+                 date_resolved = $4
+             WHERE id = $5 RETURNING *`,
             [
                 status !== undefined ? status : existing.status,
                 priority !== undefined ? priority : existing.priority,
                 assigned_to !== undefined ? assigned_to : existing.assigned_to,
-                admin_notes !== undefined ? admin_notes : existing.admin_notes,
-                scheduled_date !== undefined ? scheduled_date : existing.scheduled_date,
                 date_resolved !== undefined ? date_resolved : existing.date_resolved,
                 id
             ]
@@ -162,8 +159,7 @@ const updateRequest = async (req, res) => {
                     `Status: ${updated.status}`,
                     updated.category ? `Category: ${updated.category}` : null,
                     updated.priority ? `Priority: ${updated.priority}` : null,
-                    updated.assigned_to ? `Assigned To: ${updated.assigned_to}` : null,
-                    updated.admin_notes ? `Notes: ${updated.admin_notes}` : null
+                    updated.assigned_to ? `Assigned To: ${updated.assigned_to}` : null
                 ].filter(Boolean).join('\n');
 
                 await db.query(
@@ -185,13 +181,14 @@ const updateRequest = async (req, res) => {
             // Also notify the tenant in notifications table
             try {
                 await db.query(
-                    `INSERT INTO notifications (user_id, title, message, type)
-                     VALUES ($1, $2, $3, $4)`,
+                    `INSERT INTO notifications (user_id, title, message, type, request_id)
+                     VALUES ($1, $2, $3, $4, $5)`,
                     [
                         existing.tenant_id,
                         'Maintenance Request Status Updated',
                         `Your maintenance request "${updated.title}" (${request_number}) is now marked as "${updated.status}".`,
-                        'maintenance'
+                        'maintenance',
+                        updated.id
                     ]
                 );
             } catch (notifErr) {
