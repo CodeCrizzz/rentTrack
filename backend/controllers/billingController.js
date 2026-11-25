@@ -11,7 +11,7 @@ const ensureAdditionalChargesColumn = async () => {
     additionalChargesColumnEnsured = true;
 };
 
-const sanitizeAdditionalCharges = (rawCharges, fallbackOtherFees = 0, fallbackNotes = null) => {
+const sanitizeAdditionalCharges = (rawCharges, fallbackOtherFees = 0) => {
     if (Array.isArray(rawCharges)) {
         return rawCharges
             .map((item) => ({
@@ -22,13 +22,7 @@ const sanitizeAdditionalCharges = (rawCharges, fallbackOtherFees = 0, fallbackNo
     }
     const other = Math.max(0, parseFloat(fallbackOtherFees) || 0);
     if (other > 0) {
-        const label =
-            fallbackNotes &&
-            typeof fallbackNotes === 'string' &&
-            fallbackNotes.trim() &&
-            fallbackNotes.trim() !== 'Auto-generated bill'
-                ? fallbackNotes.trim()
-                : 'Additional Charge';
+        const label = 'Additional Charge';
         return [{ label, amount: other }];
     }
     return [];
@@ -81,11 +75,7 @@ const getAllBills = async (req, res) => {
             if (bill.balance > 0 && dueDate < currentDate && status !== 'Overdue') {
                 status = 'Overdue';
             }
-            const additional_charges = sanitizeAdditionalCharges(
-                bill.additional_charges,
-                bill.other_fees,
-                bill.notes
-            );
+            const additional_charges = sanitizeAdditionalCharges(bill.additional_charges, bill.other_fees);
             return { ...bill, status, additional_charges };
         });
 
@@ -132,11 +122,7 @@ const getBillById = async (req, res) => {
 
         res.json({
             ...bill,
-            additional_charges: sanitizeAdditionalCharges(
-                bill.additional_charges,
-                bill.other_fees,
-                bill.notes
-            ),
+            additional_charges: sanitizeAdditionalCharges(bill.additional_charges, bill.other_fees),
             payments: paymentRows.map((p) => ({
                 ...p,
                 payment_method: normalizeOnlinePaymentMethod(p.payment_method, 'Cash')
@@ -154,11 +140,11 @@ const getBillById = async (req, res) => {
 const createBill = async (req, res) => {
     try {
         await ensureAdditionalChargesColumn();
-        const { tenant_id, room_id, billing_month, due_date, rent_amount, water_charges, electricity_charges, other_fees, additional_charges, notes } = req.body;
+        const { tenant_id, room_id, billing_month, due_date, rent_amount, water_charges, electricity_charges, other_fees, additional_charges } = req.body;
 
         const rent = parseFloat(rent_amount || 0);
         const { water, electricity } = resolveUtilityCharges(water_charges, electricity_charges);
-        const cleanCharges = sanitizeAdditionalCharges(additional_charges, other_fees, notes);
+        const cleanCharges = sanitizeAdditionalCharges(additional_charges, other_fees);
         const other = Array.isArray(additional_charges)
             ? cleanCharges.reduce((sum, item) => sum + item.amount, 0)
             : parseFloat(other_fees || 0);
@@ -170,11 +156,11 @@ const createBill = async (req, res) => {
         const invoiceNumber = await generateUniqueInvoiceNumber(db);
 
         const query = `
-            INSERT INTO bills (tenant_id, room_id, billing_month, due_date, rent_amount, water_charges, electricity_charges, other_fees, additional_charges, total_amount, balance, status, notes, invoice_number)
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9::jsonb, $10, $11, $12, $13, $14)
+            INSERT INTO bills (tenant_id, room_id, billing_month, due_date, rent_amount, water_charges, electricity_charges, other_fees, additional_charges, total_amount, balance, status, invoice_number)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9::jsonb, $10, $11, $12, $13)
             RETURNING *
         `;
-        const values = [tenant_id, room_id, billing_month, due_date, rent, water, electricity, other, JSON.stringify(cleanCharges), total_amount, balance, status, notes, invoiceNumber];
+        const values = [tenant_id, room_id, billing_month, due_date, rent, water, electricity, other, JSON.stringify(cleanCharges), total_amount, balance, status, invoiceNumber];
 
         const { rows } = await db.query(query, values);
         const createdBill = rows[0];
@@ -205,8 +191,7 @@ const createBill = async (req, res) => {
                         electricity: createdBill.electricity_charges,
                         other: createdBill.other_fees,
                     },
-                    additionalCharges: cleanCharges,
-                    notes: createdBill.notes
+                    additionalCharges: cleanCharges
                 }).catch((emailErr) => {
                     console.error('[createBill] Failed to dispatch bill email:', emailErr.message);
                 });
@@ -214,12 +199,13 @@ const createBill = async (req, res) => {
 
             // Also record in-app notification for the tenant
             await db.query(
-                `INSERT INTO "rentTrack_schema".notifications (user_id, title, message, type, is_read)
-                 VALUES ($1, $2, $3, 'billing', FALSE)`,
+                `INSERT INTO "rentTrack_schema".notifications (user_id, title, message, type, bill_id, is_read)
+                 VALUES ($1, $2, $3, 'billing', $4, FALSE)`,
                 [
                     tenant_id,
                     `New Bill Statement: ${createdBill.billing_month}`,
-                    `Your bill for ${createdBill.billing_month} (Invoice #${createdBill.invoice_number}) for ₱${Number(createdBill.total_amount).toLocaleString()} has been generated.`
+                    `Your bill for ${createdBill.billing_month} (Invoice #${createdBill.invoice_number}) for ₱${Number(createdBill.total_amount).toLocaleString()} has been generated.`,
+                    createdBill.id
                 ]
             ).catch(() => {});
         } catch (notifErr) {
@@ -240,7 +226,7 @@ const updateBill = async (req, res) => {
     try {
         await ensureAdditionalChargesColumn();
         const billId = req.params.id;
-        const { billing_month, due_date, rent_amount, water_charges, electricity_charges, other_fees, additional_charges, notes } = req.body;
+        const { billing_month, due_date, rent_amount, water_charges, electricity_charges, other_fees, additional_charges } = req.body;
 
         // Fetch current bill to get amount_paid
         const { rows: currentBillRows } = await db.query('SELECT amount_paid FROM bills WHERE id = $1', [billId]);
@@ -252,7 +238,7 @@ const updateBill = async (req, res) => {
 
         const rent = parseFloat(rent_amount || 0);
         const { water, electricity } = resolveUtilityCharges(water_charges, electricity_charges);
-        const cleanCharges = sanitizeAdditionalCharges(additional_charges, other_fees, notes);
+        const cleanCharges = sanitizeAdditionalCharges(additional_charges, other_fees);
         const other = Array.isArray(additional_charges)
             ? cleanCharges.reduce((sum, item) => sum + item.amount, 0)
             : parseFloat(other_fees || 0);
@@ -269,11 +255,11 @@ const updateBill = async (req, res) => {
 
         const query = `
             UPDATE bills
-            SET billing_month = $1, due_date = $2, rent_amount = $3, water_charges = $4, electricity_charges = $5, other_fees = $6, additional_charges = $7::jsonb, total_amount = $8, balance = $9, status = $10, notes = $11
-            WHERE id = $12
+            SET billing_month = $1, due_date = $2, rent_amount = $3, water_charges = $4, electricity_charges = $5, other_fees = $6, additional_charges = $7::jsonb, total_amount = $8, balance = $9, status = $10
+            WHERE id = $11
             RETURNING *
         `;
-        const values = [billing_month, due_date, rent, water, electricity, other, JSON.stringify(cleanCharges), total_amount, balance, status, notes, billId];
+        const values = [billing_month, due_date, rent, water, electricity, other, JSON.stringify(cleanCharges), total_amount, balance, status, billId];
 
         const { rows } = await db.query(query, values);
         res.json(rows[0]);
@@ -309,7 +295,7 @@ const deleteBill = async (req, res) => {
 const payBill = async (req, res) => {
     try {
         const billId = req.params.id;
-        const { amount_paid, payment_date, payment_method, notes } = req.body;
+        const { amount_paid, payment_date, payment_method } = req.body;
 
         const paymentAmount = parseFloat(amount_paid);
 
@@ -336,11 +322,11 @@ const payBill = async (req, res) => {
 
         // 1. Insert Payment
         const paymentQuery = `
-            INSERT INTO payments (bill_id, amount_paid, payment_date, payment_method, notes, status, reference_number)
-            VALUES ($1, $2, $3, $4, $5, 'Approved', $6)
+            INSERT INTO payments (bill_id, amount_paid, payment_date, payment_method, status, reference_number)
+            VALUES ($1, $2, $3, $4, 'Approved', $5)
             RETURNING *
         `;
-        const paymentValues = [billId, paymentAmount, payment_date || new Date(), payment_method || 'Cash', notes || null, refNumber];
+        const paymentValues = [billId, paymentAmount, payment_date || new Date(), payment_method || 'Cash', refNumber];
         const { rows: paymentResult } = await db.query(paymentQuery, paymentValues);
 
         // 2. Update Bill Status
