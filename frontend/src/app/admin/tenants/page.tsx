@@ -59,10 +59,8 @@ interface Tenant {
   floor?: string;
   gender?: string;
   address?: string;
-  id_document?: string;
   bed_space?: string;
   date_moved_in?: string;
-  contract_end_date?: string;
   monthly_rent?: number;
   payment_status?: "Paid" | "Unpaid" | "Overdue" | "No Bills Yet" | "N/A";
   last_payment_date?: string;
@@ -133,7 +131,6 @@ function TenantsContent() {
     gender: "",
     monthly_rent: "",
     date_moved_in: "",
-    contract_end_date: "",
     status: "Active",
   });
 
@@ -174,13 +171,9 @@ function TenantsContent() {
         phone: formatPhoneNumber(t.phone, ""),
         gender: t.gender || "Not Specified",
         address: t.address || "",
-        id_document: t.id_document ? "Verified" : "Pending",
         bed_space: t.bed_space || "N/A",
         date_moved_in: t.date_moved_in
           ? new Date(t.date_moved_in).toISOString().split("T")[0]
-          : "",
-        contract_end_date: t.contract_end_date
-          ? new Date(t.contract_end_date).toISOString().split("T")[0]
           : "",
         monthly_rent: Number(t.monthly_rent) || 0,
         payment_status:
@@ -390,8 +383,7 @@ function TenantsContent() {
       gender: "Male",
       monthly_rent: "",
       date_moved_in: new Date().toISOString().split("T")[0],
-      contract_end_date: "",
-      status: "Active",
+        status: "Active",
     });
     setError("");
     setIsModalOpen(true);
@@ -416,7 +408,6 @@ function TenantsContent() {
       gender: tenant.gender || "Male",
       monthly_rent: tenant.monthly_rent?.toString() || "",
       date_moved_in: tenant.date_moved_in || "",
-      contract_end_date: tenant.contract_end_date || "",
       status: tenant.status || "Active",
     });
     setError("");
