@@ -678,7 +678,6 @@ export default function TenantPayments() {
           p.referenceNumber ||
           p.reference_number ||
           p.referenceNumber ||
-          (p.notes ? p.notes.replace(/^(Ref|Txn)[:#]?\s*/i, "") : "") ||
           `REF-${p.id}`
         ).toString();
 
@@ -824,9 +823,9 @@ export default function TenantPayments() {
                   Unit / Period
                 </span>
                 <p className="font-semibold text-slate-700 dark:text-slate-200 mt-0.5">
-                  {currentBill.roomNumber
+                  {currentBill.roomNumber && String(currentBill.roomNumber).trim() !== "" && String(currentBill.roomNumber).toLowerCase() !== "null"
                     ? `Room ${currentBill.roomNumber}`
-                    : "Assigned Room"}{" "}
+                    : "Not Assigned"}{" "}
                   · {statementPeriodMonth}
                 </p>
               </div>
@@ -878,11 +877,7 @@ export default function TenantPayments() {
                   : (currentBill.breakdown?.other || 0) > 0
                     ? [
                         {
-                          label:
-                            currentBill.notes &&
-                            currentBill.notes !== "Auto-generated bill"
-                              ? currentBill.notes
-                              : "Additional Charge",
+                          label: "Additional Charge",
                           amount: currentBill.breakdown.other,
                         },
                       ]
@@ -1288,11 +1283,7 @@ export default function TenantPayments() {
                 : (currentBill.breakdown?.other || 0) > 0
                   ? [
                       {
-                        label:
-                          currentBill.notes &&
-                          currentBill.notes !== "Auto-generated bill"
-                            ? currentBill.notes
-                            : "Additional Charge",
+                        label: "Additional Charge",
                         amount: currentBill.breakdown.other,
                       },
                     ]
@@ -1455,9 +1446,7 @@ export default function TenantPayments() {
                         p.referenceNumber ||
                         p.reference_number ||
                         p.referenceNumber ||
-                        (p.notes
-                          ? p.notes.replace(/^(Ref|Txn)[:#]?\s*/i, "")
-                          : `REF-${p.id}`);
+                        `REF-${p.id}`;
                       return (
                         <tr
                           key={i}
@@ -1606,9 +1595,12 @@ export default function TenantPayments() {
                       Assigned Room
                     </span>
                     <span className="font-mono font-bold text-slate-800 dark:text-slate-200">
-                      {viewingPayment.room_number || currentBill?.roomNumber
-                        ? `Room ${viewingPayment.room_number || currentBill?.roomNumber}`
-                        : "Assigned Room"}
+                      {(() => {
+                        const rn = viewingPayment.room_number || currentBill?.roomNumber;
+                        return rn && String(rn).trim() !== "" && String(rn).toLowerCase() !== "null"
+                          ? `Room ${rn}`
+                          : "Not Assigned";
+                      })()}
                     </span>
                   </div>
 
@@ -1702,12 +1694,7 @@ export default function TenantPayments() {
                       : (Number(viewingPayment.other_fees) || 0) > 0
                         ? [
                             {
-                              label:
-                                viewingPayment.bill_notes &&
-                                viewingPayment.bill_notes !==
-                                  "Auto-generated bill"
-                                  ? viewingPayment.bill_notes
-                                  : "Additional Charge",
+                              label: "Additional Charge",
                               amount: Number(viewingPayment.other_fees) || 0,
                             },
                           ]
@@ -1791,12 +1778,7 @@ export default function TenantPayments() {
                         : (Number(viewingPayment.other_fees) || 0) > 0
                           ? [
                               {
-                                label:
-                                  viewingPayment.bill_notes &&
-                                  viewingPayment.bill_notes !==
-                                    "Auto-generated bill"
-                                    ? viewingPayment.bill_notes
-                                    : "Additional Charge",
+                                label: "Additional Charge",
                                 amount: Number(viewingPayment.other_fees) || 0,
                               },
                             ]
@@ -1815,10 +1797,12 @@ export default function TenantPayments() {
                         viewingPayment.tenant_name ||
                         currentBill?.tenantName ||
                         "Resident",
-                      roomNumber:
-                        viewingPayment.room_number || currentBill?.roomNumber
-                          ? `Room ${viewingPayment.room_number || currentBill?.roomNumber}`
-                          : "Assigned Room",
+                      roomNumber: (() => {
+                        const rn = viewingPayment.room_number || currentBill?.roomNumber;
+                        return rn && String(rn).trim() !== "" && String(rn).toLowerCase() !== "null"
+                          ? `Room ${rn}`
+                          : "Not Assigned";
+                      })(),
                       billingMonth:
                         viewingPayment.billing_month ||
                         viewingPayment.statement_month ||
@@ -1850,7 +1834,6 @@ export default function TenantPayments() {
                           ? viewingPayment.amount
                           : viewingPayment.bill_amount_paid || 0,
                       ),
-                      notes: viewingPayment.notes || null,
                     });
                     toast.success("Official Receipt (.docx) downloaded");
                   }}
