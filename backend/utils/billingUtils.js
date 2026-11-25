@@ -141,16 +141,15 @@ const autoGenerateBills = async (db, refDate = new Date(), forceUpcoming = false
                     const totalAmount = rentAmount + waterCharges + electricityCharges + otherFees;
                     const balance = totalAmount;
                     const status = 'Unpaid';
-                    const notes = 'Auto-generated bill';
                     const invoiceNumber = await generateUniqueInvoiceNumber(db);
 
                     const insertBillQuery = `
                         INSERT INTO bills (
                             tenant_id, room_id, billing_month, due_date,
                             rent_amount, water_charges, electricity_charges, other_fees,
-                            total_amount, balance, status, notes, invoice_number
+                            total_amount, balance, status, invoice_number
                         )
-                        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+                        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
                         RETURNING *
                     `;
                     const values = [
@@ -165,7 +164,6 @@ const autoGenerateBills = async (db, refDate = new Date(), forceUpcoming = false
                         totalAmount,
                         balance,
                         status,
-                        notes,
                         invoiceNumber
                     ];
 
@@ -191,19 +189,19 @@ const autoGenerateBills = async (db, refDate = new Date(), forceUpcoming = false
                                     electricity: billRecord.electricity_charges,
                                     other: billRecord.other_fees,
                                 },
-                                notes: billRecord.notes
                             }).catch((emailErr) => {
                                 console.error('[autoGenerateBills] Failed to dispatch bill email:', emailErr.message);
                             });
 
                             // Record in-app notification
                             db.query(
-                                `INSERT INTO "rentTrack_schema".notifications (user_id, title, message, type, is_read)
-                                 VALUES ($1, $2, $3, 'billing', FALSE)`,
+                                `INSERT INTO "rentTrack_schema".notifications (user_id, title, message, type, bill_id, is_read)
+                                 VALUES ($1, $2, $3, 'billing', $4, FALSE)`,
                                 [
                                     tenant.tenant_id,
                                     `New Bill Statement: ${billRecord.billing_month}`,
-                                    `Your bill for ${billRecord.billing_month} (Invoice #${billRecord.invoice_number}) for ₱${Number(billRecord.total_amount).toLocaleString()} has been generated.`
+                                    `Your bill for ${billRecord.billing_month} (Invoice #${billRecord.invoice_number}) for ₱${Number(billRecord.total_amount).toLocaleString()} has been generated.`,
+                                    billRecord.id
                                 ]
                             ).catch(() => {});
                         }
@@ -264,9 +262,9 @@ const autoGenerateBillsForTenant = async (db, tenantId, refDate = new Date()) =>
                     INSERT INTO bills (
                         tenant_id, room_id, billing_month, due_date,
                         rent_amount, water_charges, electricity_charges, other_fees,
-                        total_amount, balance, status, notes, invoice_number
+                        total_amount, balance, status, invoice_number
                     )
-                    VALUES ($1, $2, $3, $4, $5, $6, $7, 0, $8, $9, 'Unpaid', 'Auto-generated bill', $10)
+                    VALUES ($1, $2, $3, $4, $5, $6, $7, 0, $8, $9, 'Unpaid', $10)
                     RETURNING *
                 `;
                 const { rows } = await db.query(insertBillQuery, [
@@ -302,18 +300,18 @@ const autoGenerateBillsForTenant = async (db, tenantId, refDate = new Date()) =>
                                 electricity: billRecord.electricity_charges,
                                 other: billRecord.other_fees,
                             },
-                            notes: billRecord.notes
                         }).catch((emailErr) => {
                             console.error('[autoGenerateBillsForTenant] Failed to dispatch bill email:', emailErr.message);
                         });
 
                         db.query(
-                            `INSERT INTO "rentTrack_schema".notifications (user_id, title, message, type, is_read)
-                             VALUES ($1, $2, $3, 'billing', FALSE)`,
+                            `INSERT INTO "rentTrack_schema".notifications (user_id, title, message, type, bill_id, is_read)
+                             VALUES ($1, $2, $3, 'billing', $4, FALSE)`,
                             [
                                 tenant.tenant_id,
                                 `New Bill Statement: ${billRecord.billing_month}`,
-                                `Your bill for ${billRecord.billing_month} (Invoice #${billRecord.invoice_number}) for ₱${Number(billRecord.total_amount).toLocaleString()} has been generated.`
+                                `Your bill for ${billRecord.billing_month} (Invoice #${billRecord.invoice_number}) for ₱${Number(billRecord.total_amount).toLocaleString()} has been generated.`,
+                                billRecord.id
                             ]
                         ).catch(() => {});
                     }
