@@ -34,7 +34,7 @@ const getDashboardStats = async (req, res) => {
             tenantsResult, tenantStatusResult, recentTenantsResult,
             incomeResult, duesResult,
             requestsResult, recentPaymentsResult, recentRequestsResult,
-            expiringContractsResult, totalBilledResult, historicalIncomeResult,
+            totalBilledResult, historicalIncomeResult,
             overdueAccountsResult, upcomingRentResult, recentMessagesResult, pendingTenantsListResult, pendingPaymentVerificationsResult, lastMonthIncomeResult,
             announcementsResult
         ] = await Promise.all([
@@ -91,7 +91,7 @@ const getDashboardStats = async (req, res) => {
                 ORDER BY p.payment_date DESC LIMIT 50
             `),
             db.query(`
-                SELECT r.id, r.request_number, r.title, r.description, r.category, r.priority, r.status, r.created_at, r.assigned_to, r.date_resolved, r.scheduled_date,
+                SELECT r.id, r.request_number, r.title, r.description, r.category, r.priority, r.status, r.created_at, r.assigned_to, r.date_resolved,
                        u.name as tenant_name,
                        rm.room_number
                 FROM requests r 
@@ -100,18 +100,6 @@ const getDashboardStats = async (req, res) => {
                 ORDER BY r.created_at DESC LIMIT 100
             `),
 
-            // Expiring Contracts (within next 30 days)
-            db.query(`
-                SELECT u.id, u.name, u.contract_end_date, r.room_number
-                FROM users u
-                LEFT JOIN rooms r ON u.room_id = r.id
-                WHERE u.role = 'tenant' 
-                  AND u.status = 'Active'
-                  AND u.contract_end_date IS NOT NULL
-                  AND u.contract_end_date <= CURRENT_DATE + INTERVAL '30 days'
-                ORDER BY u.contract_end_date ASC
-                LIMIT 5
-            `),
 
             // Total billed this month (for collection rate, active bills only)
             db.query("SELECT COALESCE(SUM(total_amount), 0) as sum FROM bills WHERE EXTRACT(MONTH FROM due_date) = EXTRACT(MONTH FROM CURRENT_DATE) AND EXTRACT(YEAR FROM due_date) = EXTRACT(YEAR FROM CURRENT_DATE) AND status != 'Cancelled'"),
@@ -177,7 +165,7 @@ const getDashboardStats = async (req, res) => {
             db.query("SELECT COALESCE(SUM(amount_paid), 0) as sum FROM payments WHERE EXTRACT(MONTH FROM payment_date) = EXTRACT(MONTH FROM CURRENT_DATE - INTERVAL '1 month') AND EXTRACT(YEAR FROM payment_date) = EXTRACT(YEAR FROM CURRENT_DATE - INTERVAL '1 month') AND status IN ('Verified', 'Approved')"),
 
             // Recent Announcements
-            db.query("SELECT id, title, content, type, created_at FROM announcements ORDER BY created_at DESC LIMIT 10")
+            db.query("SELECT id, content, created_at FROM announcements ORDER BY created_at DESC LIMIT 10")
         ]);
 
         // --- Process Room Stats & Bed Capacities ---
@@ -343,9 +331,9 @@ const getDashboardStats = async (req, res) => {
                     id: `a_${a.id}`,
                     type: 'announcement',
                     title: 'New announcement',
-                    subRow1: a.title,
+                    subRow1: a.content,
                     subRow2: null,
-                    description: a.title,
+                    description: a.content,
                     date: a.created_at,
                     link: `/admin/dashboard`
                 });
@@ -423,19 +411,10 @@ const getDashboardStats = async (req, res) => {
             status: r.status || 'Pending',
             assigned_to: r.assigned_to || null,
             room_number: r.room_number || null,
-            scheduled_date: r.scheduled_date || null,
             date_resolved: r.date_resolved || null,
             created_at: r.created_at
         }));
 
-        // --- Process Expiring Contracts ---
-        const expiringContracts = expiringContractsResult.rows.map(t => ({
-            id: t.id,
-            name: t.name,
-            room_number: t.room_number,
-            contract_end_date: t.contract_end_date,
-            days_left: Math.max(0, Math.ceil((new Date(t.contract_end_date) - new Date()) / (1000 * 60 * 60 * 24)))
-        }));
 
         // --- Collection Rate ---
         const totalBilled = parseFloat(totalBilledResult.rows[0].sum) || 0;
@@ -477,7 +456,6 @@ const getDashboardStats = async (req, res) => {
             pendingTenantsList,
             recentPayments,
             recentRequests,
-            expiringContracts,
             overdueAccounts,
             upcomingRent,
             pendingPaymentVerifications: pendingPaymentVerificationsResult.rows,
@@ -875,7 +853,7 @@ const getAllTenants = async (req, res) => {
 // @route   POST /api/admin/tenants
 const createTenant = async (req, res) => {
     try {
-        const { name, first_name, last_name, email, phone, password, room_id, gender, address, date_moved_in, contract_end_date, status } = req.body;
+        const { name, first_name, last_name, email, phone, password, room_id, gender, address, date_moved_in, status } = req.body;
         const resolvedName = (first_name && last_name ? `${first_name.trim()} ${last_name.trim()}` : name || '').trim();
         
         if (!resolvedName || !email || !phone) {
@@ -914,8 +892,8 @@ const createTenant = async (req, res) => {
 
         const insertQuery = `
             INSERT INTO users (
-                name, email, phone, password, role, room_id, gender, address, date_moved_in, contract_end_date, status
-            ) VALUES ($1, $2, $3, $4, 'tenant', $5, $6, $7, $8, $9, $10)
+                name, email, phone, password, role, room_id, gender, address, date_moved_in, status
+            ) VALUES ($1, $2, $3, $4, 'tenant', $5, $6, $7, $8, $9)
             RETURNING *
         `;
 
@@ -928,7 +906,6 @@ const createTenant = async (req, res) => {
             gender || 'Not Specified',
             address || null,
             date_moved_in || null,
-            contract_end_date || null,
             status || 'Active'
         ]);
 
@@ -954,7 +931,7 @@ const updateTenant = async (req, res) => {
             return res.status(200).json({ message: 'Status updated', tenant: result.rows[0] });
         }
 
-        const { name, first_name, last_name, email, phone, room_id, gender, address, date_moved_in, contract_end_date, status } = req.body;
+        const { name, first_name, last_name, email, phone, room_id, gender, address, date_moved_in, status } = req.body;
         const resolvedName = (first_name && last_name ? `${first_name.trim()} ${last_name.trim()}` : name || '').trim();
         const formattedPhone = phone ? formatPhoneNumber(phone) : null;
 
@@ -993,9 +970,8 @@ const updateTenant = async (req, res) => {
                 gender = $5,
                 address = $6,
                 date_moved_in = $7,
-                contract_end_date = $8,
-                status = $9
-            WHERE id = $10 AND role = 'tenant'
+                status = $8
+            WHERE id = $9 AND role = 'tenant'
             RETURNING *
         `;
         
@@ -1007,7 +983,6 @@ const updateTenant = async (req, res) => {
             gender || 'Not Specified',
             address || null,
             date_moved_in || null,
-            contract_end_date || null,
             status || 'Pending',
             id
         ]);
@@ -1380,14 +1355,14 @@ const getAnnouncements = async (req, res) => {
 
 // @desc    Create a new announcement
 const createAnnouncement = async (req, res) => {
-    const { title, content, type } = req.body;
+    const { content } = req.body;
     try {
         const query = `
-            INSERT INTO announcements (title, content, type, created_by) 
-            VALUES ($1, $2, $3, $4) 
+            INSERT INTO announcements (content, created_by) 
+            VALUES ($1, $2) 
             RETURNING *
         `;
-        const result = await db.query(query, [title, content, type || 'Info', req.user.id]);
+        const result = await db.query(query, [content, req.user.id]);
         
         // Fetch the created user's name to return full data
         const newAnn = result.rows[0];
@@ -1706,7 +1681,7 @@ const getActivityLogs = async (req, res) => {
             `),
             // Registered Tenants & Moveouts
             db.query(`
-                SELECT u.id, u.name, u.status, u.created_at, u.date_moved_in, u.contract_end_date, rm.room_number
+                SELECT u.id, u.name, u.status, u.created_at, u.date_moved_in, rm.room_number
                 FROM users u
                 LEFT JOIN rooms rm ON u.room_id = rm.id
                 WHERE u.role = 'tenant' AND u.status != 'Pending'
