@@ -8,7 +8,10 @@ const presenceService = require("./presenceService");
  * When the admin opens the system again, they can review what occurred while offline.
  */
 
-const notifyAdminsIfOffline = async ({ title, message, type, link }) => {
+const notifyAdminsIfOffline = async ({
+  title, message, type, link,
+  requestId = null, billId = null, paymentId = null, messageId = null, announcementId = null
+}) => {
   try {
     const adminsResult = await db.query(
       "SELECT id, last_active_at FROM users WHERE role = 'admin'",
@@ -20,9 +23,10 @@ const notifyAdminsIfOffline = async ({ title, message, type, link }) => {
       // Always insert notification for admins so live counts and alerts stay up to date
       await db.query(
         `INSERT INTO "rentTrack_schema".notifications 
-                 (user_id, title, message, type, link, is_read, created_at)
-                 VALUES ($1, $2, $3, $4, $5, FALSE, NOW())`,
-        [admin.id, title, message, type || "general", link || null],
+                 (user_id, title, message, type, link, request_id, bill_id, payment_id, message_id, announcement_id, is_read, created_at)
+                 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, FALSE, NOW())`,
+        [admin.id, title, message, type || "general", link || null,
+         requestId, billId, paymentId, messageId, announcementId],
       );
       console.log(
         `[AdminNotification] Notification queued for Admin ID ${admin.id}: "${title}"`,
