@@ -64,7 +64,7 @@ export default function GoogleSignInButton({
       router.push(
         resData.user.role === "admin"
           ? "/admin/dashboard"
-          : "/tenant/dashboard",
+          : "/tenant/overview",
       );
     }
   };
