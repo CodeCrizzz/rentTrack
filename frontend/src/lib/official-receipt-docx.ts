@@ -13,7 +13,6 @@ export interface OfficialReceiptData {
   additionalCharges: { label: string; amount: number }[];
   totalStatementAmount: number;
   amountPaid: number;
-  notes?: string | null;
 }
 
 const escapeXml = (str: string): string =>
@@ -314,21 +313,6 @@ export const downloadOfficialReceiptDocx = (data: OfficialReceiptData): void => 
       ${buildTableRowXml("TOTAL AMOUNT RECEIVED (PAID)", formatPhpCurrency(data.amountPaid), { bold: true, shadingHex: "EEF2FF", textColorHex: "3730A3", fontSizeHalfPt: 24 })}
     </w:tbl>
 
-    ${
-      data.notes
-        ? `<w:p>
-            <w:pPr><w:spacing w:before="200" w:after="80"/></w:pPr>
-            <w:r>
-              <w:rPr><w:b/><w:color w:val="475569"/><w:sz w:val="20"/></w:rPr>
-              <w:t>Remarks / Notes: </w:t>
-            </w:r>
-            <w:r>
-              <w:rPr><w:color w:val="475569"/><w:sz w:val="20"/></w:rPr>
-              <w:t>${escapeXml(data.notes)}</w:t>
-            </w:r>
-          </w:p>`
-        : ""
-    }
 
     <w:p>
       <w:pPr>

@@ -83,7 +83,6 @@ export interface Bill {
   amount_paid: number;
   balance: number;
   status: string;
-  notes: string | null;
   invoice_number?: string;
   created_at?: string;
   payments?: any[];
@@ -99,14 +98,12 @@ export interface BillFormData {
   electricity_charges: number;
   other_fees: number;
   additional_charges: AdditionalChargeItem[];
-  notes: string;
 }
 
 export interface PaymentFormData {
   amount_paid: number | "";
   payment_date: string;
   payment_method: string;
-  notes: string;
 }
 
 interface Tenant {
@@ -548,7 +545,6 @@ function BillingContent() {
     electricity_charges: 700,
     other_fees: 0,
     additional_charges: [],
-    notes: "",
   };
   const [billForm, setBillForm] = useState<BillFormData>(initialBillForm);
 
@@ -556,7 +552,6 @@ function BillingContent() {
     amount_paid: "",
     payment_date: new Date().toISOString().split("T")[0],
     payment_method: "Cash",
-    notes: "",
   };
   const [paymentForm, setPaymentForm] =
     useState<PaymentFormData>(initialPaymentForm);
@@ -1263,12 +1258,8 @@ function BillingContent() {
             ?.toString()
             .toLowerCase()
             .includes(q);
-          const matchNotes = bill.notes
-            ? bill.notes.toLowerCase().includes(q)
-            : false;
           const matchMonth = bill.billing_month?.toLowerCase().includes(q);
-          if (!matchTenant && !matchRoom && !matchNotes && !matchMonth)
-            return false;
+          if (!matchTenant && !matchRoom && !matchMonth) return false;
         }
 
         return true;
@@ -1325,8 +1316,7 @@ function BillingContent() {
           payment.reference_number ||
           payment.referenceNumber ||
           payment.reference_number ||
-          payment.referenceNumber ||
-          payment.notes
+          payment.referenceNumber
         )
           ?.toLowerCase()
           .includes(q);
@@ -1431,7 +1421,6 @@ function BillingContent() {
           p.referenceNumber ||
           p.reference_number ||
           p.referenceNumber ||
-          (p.notes ? String(p.notes).replace(/^Ref[:#]?\s*/i, "") : "") ||
           `PAY-${String(p.id).padStart(4, "0")}`;
 
         const invoiceNum =
@@ -1646,10 +1635,7 @@ function BillingContent() {
         : (Number(bill.other_fees) || 0) > 0
           ? [
               {
-                label:
-                  bill.notes && bill.notes !== "Auto-generated bill"
-                    ? bill.notes
-                    : "Room Damage",
+                label: "Room Damage",
                 amount: Number(bill.other_fees) || 0,
               },
             ]
@@ -1669,7 +1655,6 @@ function BillingContent() {
         0,
       ),
       additional_charges: existingCharges,
-      notes: bill.notes || "",
     });
     setIsEditOpen(true);
   };
@@ -1680,7 +1665,6 @@ function BillingContent() {
       amount_paid: Number(bill.balance) || "",
       payment_date: new Date().toISOString().split("T")[0],
       payment_method: "Cash",
-      notes: "",
     });
     setIsPayOpen(true);
   };
@@ -3431,12 +3415,7 @@ function BillingContent() {
                               : (Number(billDetails.other_fees) || 0) > 0
                                 ? [
                                     {
-                                      label:
-                                        billDetails.notes &&
-                                        billDetails.notes !==
-                                          "Auto-generated bill"
-                                          ? billDetails.notes
-                                          : "Additional Charge",
+                                      label: "Additional Charge",
                                       amount:
                                         Number(billDetails.other_fees) || 0,
                                     },
@@ -3649,11 +3628,7 @@ function BillingContent() {
                       : (Number(selectedBill.other_fees) || 0) > 0
                         ? [
                             {
-                              label:
-                                selectedBill.notes &&
-                                selectedBill.notes !== "Auto-generated bill"
-                                  ? selectedBill.notes
-                                  : "Additional Charge",
+                              label: "Additional Charge",
                               amount: Number(selectedBill.other_fees) || 0,
                             },
                           ]

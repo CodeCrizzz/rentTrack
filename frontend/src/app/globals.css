@@ -75,8 +75,39 @@
   --sidebar-ring: #0062cc;
 }
 
-/* "Midnight Slate" Palette for Resident / Tenant Portal */
+/* Light & "Midnight Slate" Dark Palette for Resident / Tenant Portal */
 .tenant-theme {
+  --background: #f8fafc; /* slate-50 */
+  --foreground: #0f172a; /* slate-900 */
+  --card: #ffffff;
+  --card-foreground: #0f172a;
+  --popover: #ffffff;
+  --popover-foreground: #0f172a;
+  --primary: #4f46e5; /* indigo-600 */
+  --primary-foreground: #ffffff;
+  --secondary: #f1f5f9; /* slate-100 */
+  --secondary-foreground: #0f172a;
+  --muted: #f1f5f9;
+  --muted-foreground: #64748b; /* slate-500 */
+  --accent: #f1f5f9;
+  --accent-foreground: #0f172a;
+  --destructive: #e11d48; /* rose-600 */
+  --destructive-foreground: #ffffff;
+  --border: #e2e8f0; /* slate-200 */
+  --input: #e2e8f0;
+  --ring: #6366f1;
+  --sidebar: #020617; /* slate-950 */
+  --sidebar-foreground: #f8fafc;
+  --sidebar-primary: #6366f1; /* indigo-500 */
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: rgba(255, 255, 255, 0.08);
+  --sidebar-accent-foreground: #ffffff;
+  --sidebar-border: #1e293b;
+  --sidebar-ring: #6366f1;
+}
+
+.dark .tenant-theme,
+.tenant-theme.dark {
   --background: #020617; /* slate-950 */
   --foreground: #f8fafc; /* slate-50 */
   --card: #0f172a; /* slate-900 */
@@ -176,18 +207,18 @@
   background: #94a3b8;
 }
 .dark .custom-scrollbar::-webkit-scrollbar-thumb {
-  background: #1f2736;
+  background: #334155;
   border-radius: 9999px;
 }
 .dark .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-  background: #2e384d;
+  background: #475569;
 }
 .custom-scrollbar {
   scrollbar-width: thin;
   scrollbar-color: #cbd5e1 transparent;
 }
 .dark .custom-scrollbar {
-  scrollbar-color: #1f2736 transparent;
+  scrollbar-color: #334155 transparent;
 }
 
 .chat-scrollbar::-webkit-scrollbar {
