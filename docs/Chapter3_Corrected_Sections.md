@@ -22,7 +22,7 @@ Table 1 lists the eleven functional requirements of the system. The nine core fe
 | Functional Requirements | Description |
 |---|---|
 | Manage User Login | Provides secure authentication for administrators and tenants through email and password or Google Sign-In, loads the correct role and permissions after login, and blocks accounts that are still pending approval. |
-| Manage Room | Allows the administrator to add and update room information such as room number, type, floor, bed capacity, monthly rate, amenities, gender restriction, and status, and to monitor occupancy and availability in real time. |
+| Manage Room | Allows the administrator to add and update room information such as room number, type, floor, bed capacity, monthly rate, gender restriction, and status, and to monitor occupancy and availability in real time. |
 | Manage Tenants | Allows the administrator to review new tenant registrations, approve or decline accounts, add and update tenant profiles, assign a room and bedspace, and process move-in and move-out records. |
 | Bills and Payments | Automatically computes the monthly bill of every active tenant from base rent, water and electricity submeter consumption, and applicable fees; records payments made through QR Ph or cash; tracks outstanding balances; and issues digital statements and receipts. |
 | Maintenance Request | Allows tenants to submit repair concerns with a description, category, priority level, and photo attachment, and allows the administrator to review, assign, and update each ticket from Pending to In Progress to Resolved. |
@@ -44,11 +44,11 @@ This section describes the specific data and information that users must enter i
 | Input Requirements | Description |
 |---|---|
 | Manage User Login | Registered email address and password, or a Google account for Google Sign-In. |
-| Manage Room | Room number, room type, floor, bed capacity, monthly rate, amenities, gender restriction, and room status. |
-| Manage Tenants | Full name, email address, contact number, emergency contact, home address, gender, identification document, assigned room and bedspace, move-in date, and contract end date. |
+| Manage Room | Room number, room type, floor, bed capacity, monthly rate, gender restriction, and room status. |
+| Manage Tenants | Full name, email address, contact number, emergency contact, home address, gender, assigned room and bedspace, move-in date. |
 | Bills and Payments | Billing month, due date, base rent, water submeter reading, electricity submeter reading, other fees, amount paid, payment method, reference number, and proof of payment. |
 | Maintenance Request | Room number, issue category, priority level, description of the problem, and an optional photo attachment. |
-| Chat | Recipient, message content, and, for announcements, the announcement title, content, and type. |
+| Chat | Recipient, message content, and, for announcements, the announcement content. |
 | Generate Report | Report type (financial, occupancy, delinquency, or maintenance), date range, and optional tenant or room filter. |
 | CCTV Monitoring | Camera label, camera stream (RTSP) address or credentials, and an enabled flag for each authorized camera. |
 | Backup and Recovery | Backup label, destination folder, schedule setting (manual, daily, or weekly), and the backup file selected for restoration. |
@@ -102,7 +102,7 @@ This process manages access to RentTrack by verifying login credentials. When a 
 
 #### 2.0  Manage Room
 
-This process manages room and bedspace information. The administrator records the room number, type, floor, bed capacity, monthly rate, amenities, gender restriction, and status, and the system stores these details in D2 rooms. Because capacity and tenant assignments are evaluated together, the system can report each room as vacant, partially occupied, fully occupied, or under maintenance without overbooking. Tenants read the resulting availability from the same store when they view the room inventory in the tenant portal.
+This process manages room and bedspace information. The administrator records the room number, type, floor, bed capacity, monthly rate, gender restriction, and status, and the system stores these details in D2 rooms. Because capacity and tenant assignments are evaluated together, the system can report each room as vacant, partially occupied, fully occupied, or under maintenance without overbooking. Tenants read the resulting availability from the same store when they view the room inventory in the tenant portal.
 
 
 #### 3.0  Manage Tenants
@@ -189,7 +189,7 @@ A tenant views and updates their personal information so that account details st
 
 #### 4. Add or Update Room
 
-The Admin/Owner creates a room or edits its number, type, floor, capacity, rate, amenities, gender restriction, and status.
+The Admin/Owner creates a room or edits its number, type, floor, capacity, rate, gender restriction, and status.
 
 
 #### 5. View Room and Occupancy Status
